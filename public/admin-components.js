@@ -347,7 +347,7 @@ function AdminPanel({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                 <AdminTeams teams={teams} allPlayers={allPlayers} sessionId={sessionId} onUpdate={onUpdate} />
             )}
             {activeSection === 'players' && (
-                <AdminPlayers players={allPlayers} sessionId={sessionId} onUpdate={onUpdate} />
+                <AdminPlayers players={allPlayers} teams={teams} sessionId={sessionId} onUpdate={onUpdate} />
             )}
             {activeSection === 'matches' && (
                 <AdminMatches teams={teams} allPlayers={allPlayers} teamMatches={teamMatches} sessionId={sessionId} onUpdate={onUpdate} />
