@@ -631,7 +631,7 @@ function AdminPlayers({ players, sessionId, onUpdate }) {
         if (!confirm('Удалить игрока?')) return;
         
         try {
-            await fetch(`/api/admin/players/${id}`, {
+            await fetch(`${API_BASE}/api/admin/players/${id}`, {
                 method: 'DELETE',
                 headers: { 'x-session-id': sessionId }
             });
