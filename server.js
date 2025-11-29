@@ -23,7 +23,7 @@ app.get('/api/matches/:battleTag', async (req, res) => {
             `https://website-backend.w3champions.com/api/matches/search`,
             {
                 params: {
-                    playerId: battleTag,
+                    playerIds: battleTag,
                     gateway: gateway,
                     season: season,
                     offset: offset,
