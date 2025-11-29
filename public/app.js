@@ -135,30 +135,51 @@ function App() {
                 const player = playersToLoad[i];
                 const tag = player.battleTag;
                 
+                console.log(`Loading player ${i+1}/${playersToLoad.length}:`, {
+                    battleTag: tag,
+                    dbRace: player.race,
+                    dbMmr: player.currentMmr,
+                    teamId: player.teamId
+                });
+                
                 try {
                     const response = await fetch(`${API_BASE}/api/matches/${encodeURIComponent(tag)}?gateway=20&season=23&pageSize=100`);
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     
                     const matchesData = await response.json();
-                    console.log(`Matches for ${tag}:`, matchesData);
+                    console.log(`✅ Matches loaded for ${tag}: ${matchesData.count} matches`);
 
                     const playerStats = processMatches(tag, matchesData.matches || []);
+                    console.log(`Stats processed for ${tag}:`, { 
+                        statsRace: playerStats.race, 
+                        statsMmr: playerStats.mmr,
+                        wins: playerStats.wins,
+                        losses: playerStats.losses 
+                    });
 
-                    loadedPlayers.push({
+                    const finalPlayer = {
                         id: player.id || (i + 1),
                         name: player.name || tag.split('#')[0],
                         battleTag: tag,
                         ...playerStats,
-                        // Use race from DB if processMatches returned 0 (Random)
+                        // Use race from DB if processMatches returned 0 (Random) or undefined
                         race: playerStats.race || player.race || 0,
-                        // Use MMR from DB if API didn't return matches
+                        // Use MMR from DB if API didn't return valid MMR
                         mmr: playerStats.mmr || player.currentMmr || 0,
                         teamId: player.teamId || null,
+                    };
+                    
+                    console.log(`Final player data for ${tag}:`, {
+                        race: finalPlayer.race,
+                        mmr: finalPlayer.mmr,
+                        wins: finalPlayer.wins
                     });
+                    
+                    loadedPlayers.push(finalPlayer);
                 } catch (error) {
-                    console.error(`Error loading ${tag}:`, error);
+                    console.error(`❌ Error loading ${tag}:`, error);
                     // Use data from database when API fails
-                    loadedPlayers.push({
+                    const fallbackPlayer = {
                         id: player.id || (i + 1),
                         name: player.name || tag.split('#')[0],
                         battleTag: tag,
@@ -172,7 +193,14 @@ function App() {
                         matchHistory: [], 
                         activityData: generateActivityData(), 
                         error: true
+                    };
+                    
+                    console.log(`Using fallback data for ${tag}:`, {
+                        race: fallbackPlayer.race,
+                        mmr: fallbackPlayer.mmr
                     });
+                    
+                    loadedPlayers.push(fallbackPlayer);
                 }
             }
             setPlayers(loadedPlayers);
