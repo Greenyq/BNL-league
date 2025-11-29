@@ -11,60 +11,31 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Proxy endpoint for W3Champions API - Player basic info
-app.get('/api/player/:battleTag', async (req, res) => {
+// Proxy endpoint for W3Champions matches - THIS IS THE MAIN ONE
+app.get('/api/matches/:battleTag', async (req, res) => {
     try {
         const battleTag = req.params.battleTag;
+        const { gateway = 20, season = 23, pageSize = 100, offset = 0 } = req.query;
         
-        console.log(`Fetching data for: ${battleTag}`);
-        
-        // Use direct player endpoint
-        const response = await axios.get(
-            `https://website-backend.w3champions.com/api/players/${encodeURIComponent(battleTag)}`
-        );
-        
-        res.json(response.data);
-    } catch (error) {
-        console.error('Error fetching player data:', error.message);
-        res.status(500).json({ error: 'Failed to fetch player data', details: error.message });
-    }
-});
-
-// Get player game mode stats
-app.get('/api/player/:battleTag/stats', async (req, res) => {
-    try {
-        const battleTag = req.params.battleTag;
+        console.log(`Fetching matches for: ${battleTag}`);
         
         const response = await axios.get(
-            `https://website-backend.w3champions.com/api/players/${encodeURIComponent(battleTag)}/game-mode-stats?gateWay=10&season=0`
-        );
-        
-        res.json(response.data);
-    } catch (error) {
-        console.error('Error fetching player stats:', error.message);
-        res.status(500).json({ error: 'Failed to fetch player stats' });
-    }
-});
-
-// Get player MMR timeline - for match history graphs
-app.get('/api/player/:battleTag/mmr-timeline', async (req, res) => {
-    try {
-        const battleTag = req.params.battleTag;
-        const { race = 1, gateWay = 20, season = 23, gameMode = 1 } = req.query;
-        
-        console.log(`Fetching MMR timeline for: ${battleTag}`);
-        
-        const response = await axios.get(
-            `https://website-backend.w3champions.com/api/players/${encodeURIComponent(battleTag)}/mmr-rp-timeline`,
+            `https://website-backend.w3champions.com/api/matches/search`,
             {
-                params: { race, gateWay, season, gameMode }
+                params: {
+                    playerId: battleTag,
+                    gateway: gateway,
+                    season: season,
+                    offset: offset,
+                    pageSize: pageSize
+                }
             }
         );
         
         res.json(response.data);
     } catch (error) {
-        console.error('Error fetching MMR timeline:', error.message);
-        res.status(500).json({ error: 'Failed to fetch MMR timeline' });
+        console.error('Error fetching matches:', error.message);
+        res.status(500).json({ error: 'Failed to fetch matches', details: error.message });
     }
 });
 
@@ -75,5 +46,5 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`🚀 GNL League server running on http://localhost:${PORT}`);
-    console.log(`📊 API proxy ready for W3Champions data`);
+    console.log(`📊 Using W3Champions matches API`);
 });

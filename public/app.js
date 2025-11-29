@@ -1,36 +1,41 @@
 const { useState, useEffect } = React;
 
-// Race icons
+// Race mapping - W3Champions API
 const raceIcons = {
-    human: '👑', hu: '👑', 1: '👑',
-    orc: '⚔️', 2: '⚔️',
-    undead: '💀', ud: '💀', 4: '💀',
-    nightelf: '🌙', ne: '🌙', 8: '🌙',
-    random: '🎲', 0: '🎲'
+    0: '🎲', // Random
+    1: '👑', // Human
+    2: '⚔️', // Orc  
+    3: '💀', // Undead
+    4: '🌙', // Night Elf
 };
 
 const raceNames = {
-    1: 'Human', 2: 'Orc', 4: 'Undead', 8: 'Night Elf', 0: 'Random'
+    0: 'Random',
+    1: 'Human',
+    2: 'Orc',
+    3: 'Undead',
+    4: 'Night Elf',
 };
 
 // Achievements
 const achievements = {
     winStreak3: { icon: "🔥", name: "On Fire", desc: "3 wins in a row", points: 15 },
+    winStreak5: { icon: "🔥🔥", name: "Hot Streak", desc: "5 wins in a row", points: 25 },
     centurion: { icon: "💯", name: "Centurion", desc: "100 total wins", points: 50 },
-    gladiator: { icon: "🏛️", name: "Gladiator", desc: "Win 10 games this week", points: 20 },
-    goldRush: { icon: "💰", name: "Gold Rush", desc: "Earn 1000 points", points: 30 },
-    veteran: { icon: "🎖️", name: "Veteran", desc: "500 total games", points: 35 },
+    gladiator: { icon: "🏛️", name: "Gladiator", desc: "10+ wins this week", points: 20 },
+    goldRush: { icon: "💰", name: "Gold Rush", desc: "1000+ points", points: 30 },
+    comeback: { icon: "↩️", name: "Comeback", desc: "Win after 3 losses", points: 20 },
+    veteran: { icon: "🎖️", name: "Veteran", desc: "500+ total games", points: 35 },
 };
 
-// API Base URL
-const API_BASE = '';  // Same server
+const API_BASE = '';
 
 function App() {
     const [activeTab, setActiveTab] = useState('players');
     const [players, setPlayers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    
+
     const [teams] = useState([
         {
             id: 1,
@@ -50,7 +55,7 @@ function App() {
             ]
         }
     ]);
-    
+
     const [schedule] = useState([
         { id: 1, team1: "Chinese Panda", team2: "Elite Warriors", date: "2025-12-01 18:00", status: "upcoming" },
         { id: 2, team1: "Chinese Panda", team2: "Elite Warriors", date: "2025-11-28 20:00", status: "live" }
@@ -71,46 +76,39 @@ function App() {
 
         for (let i = 0; i < battleTags.length; i++) {
             const tag = battleTags[i];
-            
+
             try {
-                console.log(`Loading player: ${tag}`);
-                const response = await fetch(`${API_BASE}/api/player/${encodeURIComponent(tag)}`);
-                
+                console.log(`Loading matches for: ${tag}`);
+                const response = await fetch(`${API_BASE}/api/matches/${encodeURIComponent(tag)}?gateway=20&season=23&pageSize=100`);
+
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
-                
-                const playerData = await response.json();
-                console.log('Player data received:', playerData);
-                
-                // W3Champions API returns player with gameMode stats
-                // Extract 1v1 stats (gameMode: 1)
-                const soloStats = playerData.gameModeStats?.find(gm => gm.gameMode === 1) || {};
-                
+
+                const matchesData = await response.json();
+                console.log(`Matches for ${tag}:`, matchesData);
+
+                // Process matches
+                const playerStats = processMatches(tag, matchesData);
+
                 loadedPlayers.push({
                     id: i + 1,
                     name: tag.split('#')[0],
                     battleTag: tag,
-                    race: soloStats.race || 0,
-                    mmr: soloStats.mmr || playerData.mmr || 1500,
-                    wins: soloStats.wins || 0,
-                    losses: soloStats.losses || 0,
-                    achievements: determineAchievements(soloStats.wins || 0, soloStats.losses || 0),
+                    ...playerStats,
                     teamId: i < 2 ? 1 : 2,
-                    matchHistory: generateMatchHistory(soloStats.wins || 0, soloStats.losses || 0),
-                    activityData: generateActivityData()
                 });
             } catch (error) {
                 console.error(`Error loading ${tag}:`, error);
-                // Add placeholder on error
                 loadedPlayers.push({
                     id: i + 1,
                     name: tag.split('#')[0],
                     battleTag: tag,
                     race: 0,
-                    mmr: 1500,
+                    mmr: 0,
                     wins: 0,
                     losses: 0,
+                    points: 0,
                     achievements: [],
                     teamId: i < 2 ? 1 : 2,
                     matchHistory: [],
@@ -124,26 +122,119 @@ function App() {
         setLoading(false);
     };
 
-    const determineAchievements = (wins, losses) => {
+    // Process matches from API and calculate points
+    const processMatches = (battleTag, matches) => {
+        if (!matches || matches.length === 0) {
+            return {
+                race: 0,
+                mmr: 0,
+                wins: 0,
+                losses: 0,
+                points: 0,
+                achievements: [],
+                matchHistory: [],
+                activityData: generateActivityData()
+            };
+        }
+
+        // Filter matches from November 27, 2025
+        const cutoffDate = new Date('2025-11-27T00:00:00Z');
+        const recentMatches = matches.filter(match => {
+            const matchDate = new Date(match.startTime);
+            return matchDate >= cutoffDate;
+        });
+
+        let wins = 0;
+        let losses = 0;
+        let totalPoints = 0;
+        let currentMMR = 0;
+        let playerRace = 0;
+        const matchHistory = [];
+
+        // Process each match
+        recentMatches.forEach(match => {
+            // Find player's team
+            const playerTeam = match.teams.find(team =>
+                team.players.some(p => p.battleTag === battleTag)
+            );
+
+            if (!playerTeam) return;
+
+            const player = playerTeam.players.find(p => p.battleTag === battleTag);
+            const opponentTeam = match.teams.find(team => team !== playerTeam);
+
+            if (!player || !opponentTeam) return;
+
+            const opponent = opponentTeam.players[0];
+            const won = playerTeam.won;
+
+            // Get MMR
+            currentMMR = player.currentMMR || currentMMR;
+            playerRace = player.race || playerRace;
+
+            // Calculate MMR difference
+            const playerMMR = player.oldMMR || player.currentMMR || 1500;
+            const opponentMMR = opponent.oldMMR || opponent.currentMMR || 1500;
+            const mmrDiff = opponentMMR - playerMMR;
+
+            // Points calculation based on MMR difference
+            let matchPoints = 0;
+
+            if (won) {
+                wins++;
+                matchHistory.push('win');
+
+                if (mmrDiff >= 20) {
+                    // Opponent stronger (+20-30 MMR)
+                    matchPoints = 40 + Math.floor(mmrDiff / 10); // 40-50 points
+                } else if (mmrDiff <= -20) {
+                    // Opponent weaker (-20-30 MMR)
+                    matchPoints = 10 + Math.floor(Math.abs(mmrDiff) / 20); // 10-20 points
+                } else {
+                    // Similar MMR (±20)
+                    matchPoints = 25; // 25 points
+                }
+            } else {
+                losses++;
+                matchHistory.push('loss');
+                matchPoints = 0; // No points for losses
+            }
+
+            totalPoints += matchPoints;
+        });
+
+        // Determine achievements
+        const achs = determineAchievements(wins, losses, totalPoints, recentMatches.length);
+
+        // Add achievement bonuses
+        achs.forEach(achKey => {
+            totalPoints += achievements[achKey].points;
+        });
+
+        return {
+            race: playerRace,
+            mmr: currentMMR,
+            wins: wins,
+            losses: losses,
+            points: totalPoints,
+            achievements: achs,
+            matchHistory: matchHistory.slice(0, 100).reverse(), // Latest 100 matches
+            activityData: generateActivityData()
+        };
+    };
+
+    const determineAchievements = (wins, losses, points, totalGames) => {
         const achs = [];
         if (wins >= 100) achs.push('centurion');
-        if (wins >= 150) achs.push('gladiator');
-        if (wins + losses >= 500) achs.push('veteran');
-        if (wins * 10 >= 1000) achs.push('goldRush');
+        if (wins >= 10) achs.push('gladiator');
+        if (totalGames >= 500) achs.push('veteran');
+        if (points >= 1000) achs.push('goldRush');
+        // Can add winStreak detection by analyzing matchHistory
         return achs;
     };
 
-    const generateMatchHistory = (wins, losses) => {
-        const total = wins + losses;
-        const history = [];
-        for (let i = 0; i < Math.min(total, 100); i++) {
-            history.push(Math.random() < (wins / total) ? 'win' : 'loss');
-        }
-        return history;
-    };
-
     const generateActivityData = () => {
-        return Array(7).fill(0).map(() => 
+        return Array(7).fill(0).map(() =>
             Array(20).fill(0).map(() => Math.random() > 0.4)
         );
     };
@@ -154,7 +245,7 @@ function App() {
                 <Header />
                 <Nav activeTab={activeTab} setActiveTab={setActiveTab} />
                 <div className="app">
-                    <div className="loading">⚔️ Загрузка данных с W3Champions...</div>
+                    <div className="loading">⚔️ Загрузка матчей с W3Champions...<br />Подсчет очков с 27.11.2025...</div>
                 </div>
             </div>
         );
@@ -179,6 +270,7 @@ function Header() {
         <div className="header">
             <div className="header-content">
                 <h1 className="league-title">CURRENT GNL</h1>
+                <div style={{ color: '#888', marginTop: '10px' }}>📅 Season 23 • Starting Nov 27, 2025</div>
             </div>
         </div>
     );
@@ -198,42 +290,27 @@ function Nav({ activeTab, setActiveTab }) {
 }
 
 function Players({ players }) {
-    const calculatePoints = (player) => {
-        let points = player.wins * 10 - player.losses * 5;
-        player.achievements.forEach(achKey => {
-            points += achievements[achKey].points;
-        });
-        return points;
-    };
-
-    const sortedPlayers = [...players].sort((a, b) => calculatePoints(b) - calculatePoints(a));
+    // Sort by points (descending)
+    const sortedPlayers = [...players].sort((a, b) => (b.points || 0) - (a.points || 0));
 
     return (
         <div>
             <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>Профили игроков</h2>
             {sortedPlayers.map((player, index) => (
-                <PlayerCard key={player.id} player={player} totalPoints={calculatePoints(player)} rank={index + 1} />
+                <PlayerCard key={player.id} player={player} rank={index + 1} />
             ))}
         </div>
     );
 }
 
-function PlayerCard({ player, totalPoints, rank }) {
-    const getRaceIcon = (race) => {
-        return raceIcons[race] || raceIcons[0];
-    };
-
-    const getRaceName = (race) => {
-        return raceNames[race] || 'Random';
-    };
-
+function PlayerCard({ player, rank }) {
     return (
         <div className="player-card">
             <div className="player-card-inner">
                 <div className="player-header">
                     <div className="player-title">
                         <div className="player-avatar">
-                            {getRaceIcon(player.race)}
+                            {raceIcons[player.race] || '🎲'}
                         </div>
                         <div>
                             <div className="player-name">
@@ -242,7 +319,7 @@ function PlayerCard({ player, totalPoints, rank }) {
                             </div>
                             {player.error && (
                                 <div style={{ color: '#f44336', fontSize: '0.5em', marginTop: '5px' }}>
-                                    ⚠️ Данные не загружены
+                                    ⚠️ Не удалось загрузить данные
                                 </div>
                             )}
                         </div>
@@ -250,7 +327,7 @@ function PlayerCard({ player, totalPoints, rank }) {
                     <div className="rank-mmr">
                         <div className="rank-label">Rank</div>
                         <div className="rank-number">#{rank}</div>
-                        <div className="rank-label" style={{ marginTop: '15px' }}>{getRaceName(player.race)}</div>
+                        <div className="rank-label" style={{ marginTop: '15px' }}>{raceNames[player.race] || 'Random'}</div>
                         <div className="mmr-display">{player.mmr} MMR</div>
                         <div className="rating-stars">
                             {[...Array(5)].map((_, i) => (
@@ -261,7 +338,7 @@ function PlayerCard({ player, totalPoints, rank }) {
                 </div>
 
                 <div className="achievement-icons">
-                    {player.achievements.map(achKey => {
+                    {player.achievements && player.achievements.map(achKey => {
                         const ach = achievements[achKey];
                         return (
                             <div key={achKey} className="achievement-icon">
@@ -276,7 +353,7 @@ function PlayerCard({ player, totalPoints, rank }) {
                     })}
                 </div>
 
-                {player.matchHistory.length > 0 && (
+                {player.matchHistory && player.matchHistory.length > 0 && (
                     <div className="match-graph">
                         {player.matchHistory.map((result, idx) => {
                             const height = 30 + Math.random() * 120;
@@ -286,19 +363,19 @@ function PlayerCard({ player, totalPoints, rank }) {
                 )}
 
                 <div className="points-section">
-                    <div className="points-value">{totalPoints}</div>
+                    <div className="points-value">{player.points || 0}</div>
                     <div className="points-label">⚔️ points</div>
                 </div>
 
                 <div className="win-loss-stats">
                     <div className="stat-box wins">
                         <div className="stat-icon">🗡️</div>
-                        <div className="stat-value">{player.wins}</div>
+                        <div className="stat-value">{player.wins || 0}</div>
                         <div className="stat-label">Wins</div>
                     </div>
                     <div className="stat-box losses">
                         <div className="stat-icon">💀</div>
-                        <div className="stat-value">{player.losses}</div>
+                        <div className="stat-value">{player.losses || 0}</div>
                         <div className="stat-label">Losses</div>
                     </div>
                 </div>
@@ -309,14 +386,6 @@ function PlayerCard({ player, totalPoints, rank }) {
 
 function Teams({ teams, players }) {
     const [expandedTeam, setExpandedTeam] = useState(null);
-
-    const calculatePoints = (player) => {
-        let points = player.wins * 10 - player.losses * 5;
-        player.achievements.forEach(achKey => {
-            points += achievements[achKey].points;
-        });
-        return points;
-    };
 
     const getTeamPlayers = (teamId) => players.filter(p => p.teamId === teamId);
     const getTeamLeader = (teamId) => {
@@ -331,7 +400,7 @@ function Teams({ teams, players }) {
                 const teamPlayers = getTeamPlayers(team.id);
                 const leader = getTeamLeader(team.id);
                 const captain = teamPlayers[0];
-                const totalPoints = teamPlayers.reduce((sum, p) => sum + calculatePoints(p), 0);
+                const totalPoints = teamPlayers.reduce((sum, p) => sum + (p.points || 0), 0);
 
                 return (
                     <div key={team.id} className="team-card" onClick={() => setExpandedTeam(expandedTeam === team.id ? null : team.id)}>
@@ -379,7 +448,7 @@ function Teams({ teams, players }) {
                                         <div>
                                             <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{player.name}</span>
                                             <span style={{ color: '#888', marginLeft: '15px' }}>
-                                                {raceNames[player.race] || 'Random'} • {player.mmr} MMR
+                                                {raceNames[player.race] || 'Random'} • {player.mmr} MMR • {player.points} pts
                                             </span>
                                         </div>
                                         {leader && player.id === leader.id && (
@@ -421,29 +490,21 @@ function Schedule({ schedule }) {
 }
 
 function Stats({ players, teams }) {
-    const calculatePoints = (player) => {
-        let points = player.wins * 10 - player.losses * 5;
-        player.achievements.forEach(achKey => {
-            points += achievements[achKey].points;
-        });
-        return points;
-    };
+    const totalGames = players.reduce((sum, p) => sum + (p.wins || 0) + (p.losses || 0), 0);
 
-    const totalGames = players.reduce((sum, p) => sum + p.wins + p.losses, 0);
-    
     const teamStats = teams.map(team => {
         const teamPlayers = players.filter(p => p.teamId === team.id);
-        const points = teamPlayers.reduce((sum, p) => sum + calculatePoints(p), 0);
-        const games = teamPlayers.reduce((sum, p) => sum + p.wins + p.losses, 0);
+        const points = teamPlayers.reduce((sum, p) => sum + (p.points || 0), 0);
+        const games = teamPlayers.reduce((sum, p) => sum + (p.wins || 0) + (p.losses || 0), 0);
         return { ...team, points, games };
     }).sort((a, b) => b.points - a.points);
 
     return (
         <div>
             <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>Статистика лиги</h2>
-            
+
             <div className="team-stats-section">
-                <div className="total-games">{totalGames} GNL LADDER GAMES WERE PLAYED THIS SEASON!</div>
+                <div className="total-games">{totalGames} GNL GAMES PLAYED SINCE NOV 27, 2025!</div>
                 <div style={{ fontSize: '2em', fontWeight: '800', textAlign: 'center', marginBottom: '30px', background: 'linear-gradient(135deg, #f4e4b8 0%, #c9a961 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                     CURRENT GNL LADDER GODS
                 </div>
@@ -452,9 +513,9 @@ function Stats({ players, teams }) {
                     <div key={team.id} className="team-bar-container">
                         <div className="team-name-label">
                             <span style={{ fontWeight: '800', fontSize: '1.2em' }}>#{idx + 1} {team.name}</span>
-                            <span style={{ color: '#888' }}>{team.games} games</span>
+                            <span style={{ color: '#888' }}>{team.games} games • {team.points} points</span>
                         </div>
-                        <div className="team-bar" style={{ width: `${(team.points / teamStats[0].points) * 100}%` }}>
+                        <div className="team-bar" style={{ width: teamStats[0].points > 0 ? `${(team.points / teamStats[0].points) * 100}%` : '0%' }}>
                             <div className="team-points-display">{team.points}</div>
                             <div style={{ fontSize: '1.1em', color: 'rgba(0,0,0,0.7)', fontWeight: '600' }}>⚔️ points</div>
                         </div>
