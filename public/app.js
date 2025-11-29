@@ -180,9 +180,9 @@ function App() {
                 playerRace = player.race;
             }
 
-            // Calculate MMR difference
-            const playerMMR = player.oldMMR || player.currentMMR || 1500;
-            const opponentMMR = opponent.oldMMR || opponent.currentMMR || 1500;
+            // Calculate MMR difference (note: API uses camelCase)
+            const playerMMR = player.oldMmr || player.currentMmr || 1500;
+            const opponentMMR = opponent.oldMmr || opponent.currentMmr || 1500;
             const mmrDiff = opponentMMR - playerMMR;
 
             // Points calculation based on MMR difference
