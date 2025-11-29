@@ -2,15 +2,51 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const path = require('path');
-const fs = require('fs').promises;
 const crypto = require('crypto');
+const mongoose = require('mongoose');
+const multer = require('multer');
+const { Team, Player, TeamMatch, AdminSession } = require('./models');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// MongoDB Connection
+const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost:27017/gnl_league';
+mongoose.connect(MONGO_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => {
+    console.log('✅ Connected to MongoDB');
+}).catch(err => {
+    console.error('❌ MongoDB connection error:', err);
+});
+
 // Admin credentials
 const ADMIN_LOGIN = 'admin777';
 const ADMIN_PASSWORD = '@dmin1122!';
+
+// Multer configuration for file uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'public/uploads/');
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'team-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg') {
+            cb(null, true);
+        } else {
+            cb(new Error('Only JPEG images are allowed'));
+        }
+    }
+});
 
 // Enable CORS
 app.use(cors());
