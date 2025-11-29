@@ -65,146 +65,188 @@ function App() {
         loadPlayers();
     }, []);
 
-    const loadPlayers = async () => {
-        const battleTags = [
-            "ZugZugMaster#1399",
-            "ЖИВОТНОЕ#21901",
-            "jabker#2902"
-        ];
+   const loadPlayers = async () => {
+    // use raw tags (not pre-encoded)
+    const battleTags = [
+        "ZugZugMaster#1399",
+        "ЖИВОТНОЕ#21901",
+        "jabker#2902"
+    ];
 
-        const loadedPlayers = [];
+    const loadedPlayers = [];
 
-        for (let i = 0; i < battleTags.length; i++) {
-            const tag = battleTags[i];
+    for (let i = 0; i < battleTags.length; i++) {
+        const rawTag = battleTags[i];
+        const encodedTag = encodeURIComponent(rawTag); // encode JUST for URL
+        console.log(`\n--- Loading for index ${i} ---`);
+        console.log('rawTag:', rawTag);
+        console.log('encodedTag(for URL):', encodedTag);
 
-            try {
-                console.log(`Loading matches for: ${tag}`);
-                const response = await fetch(`${API_BASE}/api/matches/${encodeURIComponent(tag)}?gateway=20&season=23&pageSize=100`);
+        try {
+            const resp = await fetch(`${API_BASE}/api/matches/${encodedTag}?gateway=20&season=23&pageSize=100`);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const matchesData = await resp.json();
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const matchesData = await response.json();
-                console.log(`Matches for ${tag}:`, matchesData);
-
-                // Process matches
-                const playerStats = processMatches(tag, matchesData.matches || []);
-
-                loadedPlayers.push({
-                    id: i + 1,
-                    name: tag.split('#')[0],
-                    battleTag: tag,
-                    ...playerStats,
-                    teamId: i < 2 ? 1 : 2,
-                });
-            } catch (error) {
-                console.error(`Error loading ${tag}:`, error);
-                loadedPlayers.push({
-                    id: i + 1,
-                    name: tag.split('#')[0],
-                    battleTag: tag,
-                    race: 0,
-                    mmr: 0,
-                    wins: 0,
-                    losses: 0,
-                    points: 0,
-                    achievements: [],
-                    teamId: i < 2 ? 1 : 2,
-                    matchHistory: [],
-                    activityData: generateActivityData(),
-                    error: true
-                });
+            console.log(`Response for ${rawTag}: matches length =`, matchesData?.matches?.length);
+            // show first match small preview
+            if (matchesData?.matches?.length) {
+                const preview = matchesData.matches.slice(0,2).map(m => ({
+                    id: m.id,
+                    startTime: m.startTime,
+                    durationInSeconds: m.durationInSeconds,
+                    teamsCount: m.teams?.length
+                }));
+                console.log('preview matches:', preview);
+                // list out all player battleTags present in first match for visibility
+                const first = matchesData.matches[0];
+                const playersInFirst = (first.teams || []).flatMap(t => t.players?.map(p => ({ battleTag: p.battleTag, inviteName: p.inviteName, name: p.name })) || []);
+                console.log('players in first match:', playersInFirst);
             }
-        }
 
-        setPlayers(loadedPlayers);
-        setLoading(false);
-    };
+            // Decode tag for matching logic
+            const decodedTag = decodeURIComponent(encodedTag);
+            // Process matches (pass decoded tag and full matches array)
+            const playerStats = processMatches(decodedTag, matchesData.matches || []);
 
-    // Process matches from API and calculate points
-    const processMatches = (battleTag, matches) => {
-        if (!matches || matches.length === 0) {
-            return {
+            loadedPlayers.push({
+                id: i + 1,
+                name: rawTag.split('#')[0],
+                battleTag: rawTag,
+                ...playerStats,
+                teamId: i < 2 ? 1 : 2,
+            });
+        } catch (error) {
+            console.error(`Error loading ${rawTag}:`, error);
+            loadedPlayers.push({
+                id: i + 1,
+                name: rawTag.split('#')[0],
+                battleTag: rawTag,
                 race: 0,
                 mmr: 0,
                 wins: 0,
                 losses: 0,
                 points: 0,
                 achievements: [],
+                teamId: i < 2 ? 1 : 2,
                 matchHistory: [],
-                activityData: generateActivityData()
-            };
+                activityData: generateActivityData(),
+                error: true
+            });
         }
+    }
 
-        // Filter matches from November 27, 2025
-        const cutoffDate = new Date('2025-11-27T00:00:00Z');
-        const recentMatches = matches.filter(match => {
-            const matchDate = new Date(match.startTime);
-            return matchDate >= cutoffDate;
-        });
+    setPlayers(loadedPlayers);
+    setLoading(false);
+};
 
-        let wins = 0;
-        let losses = 0;
-        let totalPoints = 0;
-        let currentMMR = 0;
-        let playerRace = 0;
-        const matchHistory = [];
+    // Process matches from API and calculate points
+const processMatches = (battleTag, matches) => {
+    // normalize tag for comparison
+    const normTag = (battleTag || '').toString().trim();
 
-        // Process each match
-        recentMatches.forEach(match => {
-            // Find player's team
-            const playerTeam = match.teams.find(team =>
-                team.players.some(p => p.battleTag === battleTag)
-            );
+    if (!matches || matches.length === 0) {
+        console.log(`processMatches: no matches for ${normTag}`);
+        return {
+            race: 0,
+            mmr: 0,
+            wins: 0,
+            losses: 0,
+            points: 0,
+            achievements: [],
+            matchHistory: [],
+            activityData: generateActivityData()
+        };
+    }
 
-            if (!playerTeam) return;
+    // -------- TEMP DEBUG: disable date filter to see all matches during debugging --------
+    // const cutoffDate = new Date('2025-11-27T00:00:00Z');
+    // const recentMatches = matches.filter(match => new Date(match.startTime) >= cutoffDate);
+    const recentMatches = matches;
 
-            const player = playerTeam.players.find(p => p.battleTag === battleTag);
-            const opponentTeam = match.teams.find(team => team !== playerTeam);
+    let wins = 0;
+    let losses = 0;
+    let totalPoints = 0;
+    let currentMMR = 0;
+    let playerRace = 0;
+    const matchHistory = [];
 
-            if (!player || !opponentTeam) return;
+    recentMatches.forEach(match => {
+        // robust player lookup: check several fields and normalize
+        const findPlayerInTeam = (team) => {
+            if (!team?.players) return null;
+            return team.players.find(p => {
+                // fields that may contain the player's tag/name
+                const candidates = [
+                    p.battleTag,
+                    p.inviteName,
+                    p.name
+                ].filter(Boolean);
 
-            const opponent = opponentTeam.players[0];
-            const won = playerTeam.won;
+                // normalize both sides to compare (decode and toLowerCase)
+                return candidates.some(c => {
+                    try {
+                        const decodedC = decodeURIComponent(c).toString().toLowerCase();
+                        const decodedTag = decodeURIComponent(normTag).toString().toLowerCase();
+                        return decodedC === decodedTag;
+                    } catch (e) {
+                        // fallback plain compare
+                        return c.toString().toLowerCase() === normTag.toString().toLowerCase();
+                    }
+                });
+            }) || null;
+        };
 
-            // Get MMR
-            currentMMR = player.currentMMR || currentMMR;
-            playerRace = player.race || playerRace;
+        // find team containing player
+        const playerTeam = (match.teams || []).find(team => !!findPlayerInTeam(team));
+        if (!playerTeam) return; // player not in this match
 
-            // Calculate MMR difference
-            const playerMMR = player.oldMMR || player.currentMMR || 1500;
-            const opponentMMR = opponent.oldMMR || opponent.currentMMR || 1500;
-            const mmrDiff = opponentMMR - playerMMR;
+        const player = findPlayerInTeam(playerTeam);
+        const opponentTeam = (match.teams || []).find(t => t !== playerTeam);
+        if (!player || !opponentTeam) return;
+        const opponent = opponentTeam.players && opponentTeam.players[0];
 
-            // Points calculation based on MMR difference
-            let matchPoints = 0;
+        const won = !!player.won || !!playerTeam.won;
 
-            if (won) {
-                wins++;
-                matchHistory.push('win');
+        // update mmr/race
+        currentMMR = player.currentMmr || player.oldMmr || currentMMR;
+        playerRace = player.race || playerRace;
 
-                if (mmrDiff >= 20) {
-                    // Opponent stronger (+20-30 MMR)
-                    matchPoints = 40 + Math.floor(mmrDiff / 10); // 40-50 points
-                } else if (mmrDiff <= -20) {
-                    // Opponent weaker (-20-30 MMR)
-                    matchPoints = 10 + Math.floor(Math.abs(mmrDiff) / 20); // 10-20 points
-                } else {
-                    // Similar MMR (±20)
-                    matchPoints = 25; // 25 points
-                }
-            } else {
-                losses++;
-                matchHistory.push('loss');
-                matchPoints = 0; // No points for losses
-            }
+        // mmr diff
+        const playerMMR = player.oldMmr || player.currentMmr || 1500;
+        const opponentMMR = (opponent && (opponent.oldMmr || opponent.currentMmr)) || 1500;
+        const mmrDiff = opponentMMR - playerMMR;
 
-            totalPoints += matchPoints;
-        });
+        let matchPoints = 0;
+        if (won) {
+            wins++;
+            matchHistory.push('win');
+            if (mmrDiff >= 20) matchPoints = 40 + Math.floor(mmrDiff / 10);
+            else if (mmrDiff <= -20) matchPoints = 10 + Math.floor(Math.abs(mmrDiff) / 20);
+            else matchPoints = 25;
+        } else {
+            losses++;
+            matchHistory.push('loss');
+        }
+        totalPoints += matchPoints;
+    });
 
-        // Determine achievements
-        const achs = determineAchievements(wins, losses, totalPoints, recentMatches.length);
+    const achs = determineAchievements(wins, losses, totalPoints, recentMatches.length);
+    achs.forEach(k => totalPoints += (achievements[k]?.points || 0));
+
+    console.log(`processMatches(${battleTag}): games=${recentMatches.length}, wins=${wins}, losses=${losses}, mmr=${currentMMR}`);
+
+    return {
+        race: playerRace,
+        mmr: currentMMR,
+        wins,
+        losses,
+        points: totalPoints,
+        achievements: achs,
+        matchHistory: matchHistory.slice(0, 100).reverse(),
+        activityData: generateActivityData()
+    };
+};
+
 
         // Add achievement bonuses
         achs.forEach(achKey => {
