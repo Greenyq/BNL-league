@@ -388,7 +388,7 @@ function Header() {
     );
 }
 
-function Nav({ activeTab, setActiveTab }) {
+function Nav({ activeTab, setActiveTab, isAdmin, setShowLoginModal }) {
     return (
         <div className="nav">
             <div className="nav-container">
@@ -396,6 +396,12 @@ function Nav({ activeTab, setActiveTab }) {
                 <button className={`nav-btn ${activeTab === 'teams' ? 'active' : ''}`} onClick={() => setActiveTab('teams')}>Команды</button>
                 <button className={`nav-btn ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => setActiveTab('schedule')}>Расписание</button>
                 <button className={`nav-btn ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>Статистика</button>
+                <button className={`nav-btn ${activeTab === 'team-matches' ? 'active' : ''}`} onClick={() => setActiveTab('team-matches')}>Командные матчи</button>
+                {isAdmin ? (
+                    <button className={`nav-btn ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>⚙️ Админка</button>
+                ) : (
+                    <button className="nav-btn" onClick={() => setShowLoginModal(true)}>🔐 Вход</button>
+                )}
             </div>
         </div>
     );
