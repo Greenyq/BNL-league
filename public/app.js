@@ -363,8 +363,12 @@ function App() {
             </div>
             {showLoginModal && (
                 <LoginModal 
-                    onClose={() => setShowLoginModal(false)}
+                    onClose={() => {
+                        console.log('Closing login modal');
+                        setShowLoginModal(false);
+                    }}
                     onSuccess={(newSessionId) => {
+                        console.log('Login successful, sessionId:', newSessionId);
                         setSessionId(newSessionId);
                         setIsAdmin(true);
                         localStorage.setItem('adminSessionId', newSessionId);
