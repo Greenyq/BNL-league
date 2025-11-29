@@ -642,6 +642,29 @@ function AdminPlayers({ players, teams, sessionId, onUpdate }) {
         }
     };
 
+    const handleUpdateTeam = async (playerId, teamId) => {
+        try {
+            const player = players.find(p => p.id === playerId);
+            const response = await fetch(`${API_BASE}/api/admin/players/${playerId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-session-id': sessionId
+                },
+                body: JSON.stringify({
+                    ...player,
+                    teamId: teamId ? parseInt(teamId) : null
+                })
+            });
+
+            if (response.ok) {
+                onUpdate();
+            }
+        } catch (error) {
+            alert('Ошибка при обновлении команды игрока');
+        }
+    };
+
     const raceIcons = {
         0: '🎲', 1: '👑', 2: '⚔️', 4: '🌙', 8: '💀',
     };
