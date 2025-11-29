@@ -580,7 +580,7 @@ function AdminPlayers({ players, sessionId, onUpdate }) {
         setSearchResult(null);
 
         try {
-            const response = await fetch('/api/admin/players/search', {
+            const response = await fetch(`${API_BASE}/api/admin/players/search`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
