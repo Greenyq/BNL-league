@@ -427,21 +427,29 @@ function Players({ players }) {
     return (
         <div>
             <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>Профили игроков</h2>
-            {sortedPlayers.map((player, index) => (
-                <PlayerCard key={player.id} player={player} rank={index + 1} />
-            ))}
+            <div className="players-grid">
+                {sortedPlayers.map((player, index) => (
+                    <PlayerCard key={player.id} player={player} rank={index + 1} />
+                ))}
+            </div>
         </div>
     );
 }
 
 function PlayerCard({ player, rank }) {
+    const raceImage = raceImages[player.race];
+    
     return (
         <div className="player-card">
             <div className="player-card-inner">
                 <div className="player-header">
                     <div className="player-title">
                         <div className="player-avatar">
-                            {raceIcons[player.race] || '🎲'}
+                            {raceImage ? (
+                                <img src={raceImage} alt={raceNames[player.race]} />
+                            ) : (
+                                <span>{raceIcons[player.race] || '🎲'}</span>
+                            )}
                         </div>
                         <div>
                             <div className="player-name">
