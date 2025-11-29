@@ -5,16 +5,24 @@ const raceIcons = {
     0: '🎲', // Random
     1: '👑', // Human
     2: '⚔️', // Orc  
-    4: '💀', // Undead
-    8: '🌙', // Night Elf
+    4: '🌙', // Night Elf
+    8: '💀', // Undead
 };
 
 const raceNames = {
     0: 'Random',
     1: 'Human',
     2: 'Orc',
-    4: 'Undead',
-    8: 'Night Elf',
+    4: 'Night Elf',
+    8: 'Undead',
+};
+
+const raceImages = {
+    0: null, // Random
+    1: 'https://customer-assets.emergentagent.com/job_w3champs-fix/artifacts/9lll6oa9_warcraft__human_by_keyan3d_d49moyb-375w-2x.jpg',
+    2: 'https://customer-assets.emergentagent.com/job_w3champs-fix/artifacts/60sdfn1t_warcraft__orc_by_keyan3d_d4b63qn-375w-2x.jpg',
+    4: 'https://customer-assets.emergentagent.com/job_w3champs-fix/artifacts/b7qv146l_warcraft__night_elf_by_keyan3d_d537o3q-375w-2x.jpg',
+    8: 'https://customer-assets.emergentagent.com/job_w3champs-fix/artifacts/9yo16zmi_warcraft__forsaken_by_keyan3d_d5ul0ii-375w-2x.jpg',
 };
 
 // Achievements
