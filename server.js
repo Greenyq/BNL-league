@@ -192,6 +192,18 @@ app.post('/api/admin/players', checkAuth, async (req, res) => {
     res.json(newPlayer);
 });
 
+app.put('/api/admin/players/:id', checkAuth, async (req, res) => {
+    const players = await readData('players.json');
+    const index = players.findIndex(p => p.id === parseInt(req.params.id));
+    if (index !== -1) {
+        players[index] = { ...players[index], ...req.body, updatedAt: new Date().toISOString() };
+        await writeData('players.json', players);
+        res.json(players[index]);
+    } else {
+        res.status(404).json({ error: 'Player not found' });
+    }
+});
+
 app.delete('/api/admin/players/:id', checkAuth, async (req, res) => {
     const players = await readData('players.json');
     const filtered = players.filter(p => p.id !== parseInt(req.params.id));
