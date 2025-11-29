@@ -602,7 +602,7 @@ function AdminPlayers({ players, sessionId, onUpdate }) {
         if (!searchResult || !searchResult.found) return;
 
         try {
-            const response = await fetch('/api/admin/players', {
+            const response = await fetch(`${API_BASE}/api/admin/players`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
