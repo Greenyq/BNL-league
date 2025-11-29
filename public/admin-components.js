@@ -367,7 +367,7 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const url = editingId ? `/api/admin/teams/${editingId}` : '/api/admin/teams';
+            const url = editingId ? `${API_BASE}/api/admin/teams/${editingId}` : `${API_BASE}/api/admin/teams`;
             const method = editingId ? 'PUT' : 'POST';
             
             const response = await fetch(url, {
