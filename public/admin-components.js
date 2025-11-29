@@ -778,36 +778,65 @@ function AdminPlayers({ players, teams, sessionId, onUpdate }) {
                         Игроков пока нет
                     </div>
                 )}
-                {players.map(player => (
-                    <div key={player.id} style={{
-                        background: '#1a1a1a', padding: '20px', borderRadius: '15px',
-                        marginBottom: '15px', border: '1px solid #333'
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                <span style={{ fontSize: '2em' }}>{raceIcons[player.race]}</span>
-                                <div>
-                                    <div style={{ fontSize: '1.3em', fontWeight: '700', color: '#fff' }}>
-                                        {player.name}
-                                    </div>
-                                    <div style={{ color: '#888', fontSize: '0.9em', marginTop: '5px' }}>
-                                        {player.battleTag} • {player.currentMmr} MMR
+                {players.map(player => {
+                    const playerTeam = teams.find(t => t.id === player.teamId);
+                    return (
+                        <div key={player.id} style={{
+                            background: '#1a1a1a', padding: '20px', borderRadius: '15px',
+                            marginBottom: '15px', border: '1px solid #333'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1 }}>
+                                    <span style={{ fontSize: '2em' }}>{raceIcons[player.race]}</span>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: '1.3em', fontWeight: '700', color: '#fff' }}>
+                                            {player.name}
+                                        </div>
+                                        <div style={{ color: '#888', fontSize: '0.9em', marginTop: '5px' }}>
+                                            {player.battleTag} • {player.currentMmr} MMR
+                                        </div>
                                     </div>
                                 </div>
+                                <button
+                                    onClick={() => handleDelete(player.id)}
+                                    style={{
+                                        padding: '8px 16px', borderRadius: '8px',
+                                        background: '#f44336', color: '#fff',
+                                        border: 'none', cursor: 'pointer'
+                                    }}
+                                >
+                                    🗑️ Удалить
+                                </button>
                             </div>
-                            <button
-                                onClick={() => handleDelete(player.id)}
-                                style={{
-                                    padding: '8px 16px', borderRadius: '8px',
-                                    background: '#f44336', color: '#fff',
-                                    border: 'none', cursor: 'pointer'
-                                }}
-                            >
-                                🗑️ Удалить
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <label style={{ color: '#fff', minWidth: '100px' }}>Команда:</label>
+                                <select
+                                    value={player.teamId || ''}
+                                    onChange={(e) => handleUpdateTeam(player.id, e.target.value)}
+                                    style={{
+                                        flex: 1, padding: '8px', borderRadius: '8px',
+                                        border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                    }}
+                                >
+                                    <option value="">Без команды</option>
+                                    {teams.map(team => (
+                                        <option key={team.id} value={team.id}>
+                                            {team.emoji} {team.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {playerTeam && (
+                                    <div style={{
+                                        padding: '5px 10px', background: '#c9a961',
+                                        color: '#000', borderRadius: '5px', fontSize: '0.9em', fontWeight: '600'
+                                    }}>
+                                        {playerTeam.emoji} {playerTeam.name}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
