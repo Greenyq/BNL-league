@@ -53,27 +53,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Helper functions for data management
-const readData = async (filename) => {
-    try {
-        const data = await fs.readFile(path.join(__dirname, 'data', filename), 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.error(`Error reading ${filename}:`, error);
-        return filename === 'admin_session.json' ? { isLoggedIn: false, sessionId: null, timestamp: null } : [];
-    }
-};
-
-const writeData = async (filename, data) => {
-    try {
-        await fs.writeFile(path.join(__dirname, 'data', filename), JSON.stringify(data, null, 2));
-        return true;
-    } catch (error) {
-        console.error(`Error writing ${filename}:`, error);
-        return false;
-    }
-};
-
 // Middleware to check admin authentication
 const checkAuth = async (req, res, next) => {
     const sessionId = req.headers['x-session-id'];
@@ -81,19 +60,23 @@ const checkAuth = async (req, res, next) => {
         return res.status(401).json({ error: 'Unauthorized' });
     }
     
-    const session = await readData('admin_session.json');
-    if (!session.isLoggedIn || session.sessionId !== sessionId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+    try {
+        const session = await AdminSession.findOne({ sessionId });
+        if (!session || !session.isLoggedIn) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+        
+        // Check if session expired (24 hours)
+        const sessionAge = Date.now() - session.timestamp;
+        if (sessionAge > 24 * 60 * 60 * 1000) {
+            await AdminSession.deleteOne({ sessionId });
+            return res.status(401).json({ error: 'Session expired' });
+        }
+        
+        next();
+    } catch (error) {
+        res.status(500).json({ error: 'Session check failed' });
     }
-    
-    // Check if session expired (24 hours)
-    const sessionAge = Date.now() - session.timestamp;
-    if (sessionAge > 24 * 60 * 60 * 1000) {
-        await writeData('admin_session.json', { isLoggedIn: false, sessionId: null, timestamp: null });
-        return res.status(401).json({ error: 'Session expired' });
-    }
-    
-    next();
 };
 
 // ==================== ADMIN AUTH ENDPOINTS ====================
