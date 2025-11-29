@@ -404,7 +404,10 @@ function Nav({ activeTab, setActiveTab, isAdmin, setShowLoginModal }) {
                 {isAdmin ? (
                     <button className={`nav-btn ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>⚙️ Админка</button>
                 ) : (
-                    <button className="nav-btn" onClick={() => setShowLoginModal(true)}>🔐 Вход</button>
+                    <button className="nav-btn" onClick={() => {
+                        console.log('Login button clicked, showLoginModal will be set to true');
+                        setShowLoginModal(true);
+                    }}>🔐 Вход</button>
                 )}
             </div>
         </div>
