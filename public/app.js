@@ -89,7 +89,7 @@ function App() {
                 console.log(`Matches for ${tag}:`, matchesData);
 
                 // Process matches
-                const playerStats = processMatches(tag, matchesData);
+                const playerStats = processMatches(tag, matchesData.matches || []);
 
                 loadedPlayers.push({
                     id: i + 1,
