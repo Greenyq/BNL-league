@@ -834,7 +834,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
         if (!confirm('Удалить матч?')) return;
         
         try {
-            await fetch(`/api/admin/team-matches/${id}`, {
+            await fetch(`${API_BASE}/api/admin/team-matches/${id}`, {
                 method: 'DELETE',
                 headers: { 'x-session-id': sessionId }
             });
