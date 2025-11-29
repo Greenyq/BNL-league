@@ -1,3 +1,6 @@
+// API Base URL (empty string for same domain)
+const API_BASE = '';
+
 // ==================== LOGIN MODAL ====================
 function LoginModal({ onClose, onSuccess }) {
     const [login, setLogin] = React.useState('');
@@ -15,7 +18,7 @@ function LoginModal({ onClose, onSuccess }) {
         console.log('Attempting login with:', login);
 
         try {
-            const response = await fetch('/api/admin/login', {
+            const response = await fetch(`${API_BASE}/api/admin/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ login, password })
