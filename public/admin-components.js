@@ -642,7 +642,7 @@ function AdminPlayers({ players, sessionId, onUpdate }) {
     };
 
     const raceIcons = {
-        0: '🎲', 1: '👑', 2: '⚔️', 4: '💀', 8: '🌙',
+        0: '🎲', 1: '👑', 2: '⚔️', 4: '🌙', 8: '💀',
     };
 
     return (
