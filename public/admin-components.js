@@ -370,13 +370,19 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
             const url = editingId ? `${API_BASE}/api/admin/teams/${editingId}` : `${API_BASE}/api/admin/teams`;
             const method = editingId ? 'PUT' : 'POST';
             
+            // Use default emoji if not provided
+            const teamData = {
+                ...formData,
+                emoji: formData.emoji || '👥'
+            };
+            
             const response = await fetch(url, {
                 method,
                 headers: {
                     'Content-Type': 'application/json',
                     'x-session-id': sessionId
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(teamData)
             });
 
             if (response.ok) {
