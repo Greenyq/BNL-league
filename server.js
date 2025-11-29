@@ -2,14 +2,239 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const path = require('path');
+const fs = require('fs').promises;
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Admin credentials
+const ADMIN_LOGIN = 'admin777';
+const ADMIN_PASSWORD = '@dmin1122!';
 
 // Enable CORS
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+// Helper functions for data management
+const readData = async (filename) => {
+    try {
+        const data = await fs.readFile(path.join(__dirname, 'data', filename), 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        console.error(`Error reading ${filename}:`, error);
+        return filename === 'admin_session.json' ? { isLoggedIn: false, sessionId: null, timestamp: null } : [];
+    }
+};
+
+const writeData = async (filename, data) => {
+    try {
+        await fs.writeFile(path.join(__dirname, 'data', filename), JSON.stringify(data, null, 2));
+        return true;
+    } catch (error) {
+        console.error(`Error writing ${filename}:`, error);
+        return false;
+    }
+};
+
+// Middleware to check admin authentication
+const checkAuth = async (req, res, next) => {
+    const sessionId = req.headers['x-session-id'];
+    if (!sessionId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const session = await readData('admin_session.json');
+    if (!session.isLoggedIn || session.sessionId !== sessionId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    // Check if session expired (24 hours)
+    const sessionAge = Date.now() - session.timestamp;
+    if (sessionAge > 24 * 60 * 60 * 1000) {
+        await writeData('admin_session.json', { isLoggedIn: false, sessionId: null, timestamp: null });
+        return res.status(401).json({ error: 'Session expired' });
+    }
+    
+    next();
+};
+
+// ==================== ADMIN AUTH ENDPOINTS ====================
+app.post('/api/admin/login', async (req, res) => {
+    const { login, password } = req.body;
+    
+    if (login === ADMIN_LOGIN && password === ADMIN_PASSWORD) {
+        const sessionId = crypto.randomBytes(32).toString('hex');
+        await writeData('admin_session.json', {
+            isLoggedIn: true,
+            sessionId: sessionId,
+            timestamp: Date.now()
+        });
+        res.json({ success: true, sessionId });
+    } else {
+        res.status(401).json({ error: 'Invalid credentials' });
+    }
+});
+
+app.post('/api/admin/logout', checkAuth, async (req, res) => {
+    await writeData('admin_session.json', { isLoggedIn: false, sessionId: null, timestamp: null });
+    res.json({ success: true });
+});
+
+app.get('/api/admin/verify', async (req, res) => {
+    const sessionId = req.headers['x-session-id'];
+    if (!sessionId) {
+        return res.json({ isAuthenticated: false });
+    }
+    
+    const session = await readData('admin_session.json');
+    const sessionAge = Date.now() - session.timestamp;
+    
+    if (session.isLoggedIn && session.sessionId === sessionId && sessionAge < 24 * 60 * 60 * 1000) {
+        res.json({ isAuthenticated: true });
+    } else {
+        res.json({ isAuthenticated: false });
+    }
+});
+
+// ==================== TEAMS ENDPOINTS ====================
+app.get('/api/teams', async (req, res) => {
+    const teams = await readData('teams.json');
+    res.json(teams);
+});
+
+app.post('/api/admin/teams', checkAuth, async (req, res) => {
+    const teams = await readData('teams.json');
+    const newTeam = {
+        id: Date.now(),
+        ...req.body,
+        createdAt: new Date().toISOString()
+    };
+    teams.push(newTeam);
+    await writeData('teams.json', teams);
+    res.json(newTeam);
+});
+
+app.put('/api/admin/teams/:id', checkAuth, async (req, res) => {
+    const teams = await readData('teams.json');
+    const index = teams.findIndex(t => t.id === parseInt(req.params.id));
+    if (index !== -1) {
+        teams[index] = { ...teams[index], ...req.body, updatedAt: new Date().toISOString() };
+        await writeData('teams.json', teams);
+        res.json(teams[index]);
+    } else {
+        res.status(404).json({ error: 'Team not found' });
+    }
+});
+
+app.delete('/api/admin/teams/:id', checkAuth, async (req, res) => {
+    const teams = await readData('teams.json');
+    const filtered = teams.filter(t => t.id !== parseInt(req.params.id));
+    await writeData('teams.json', filtered);
+    res.json({ success: true });
+});
+
+// ==================== PLAYERS ENDPOINTS ====================
+app.get('/api/players', async (req, res) => {
+    const players = await readData('players.json');
+    res.json(players);
+});
+
+app.post('/api/admin/players/search', checkAuth, async (req, res) => {
+    try {
+        const { battleTag } = req.body;
+        const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(battleTag)}&gateway=20&season=23&pageSize=10`;
+        
+        const response = await axios.get(apiUrl, {
+            headers: {
+                'User-Agent': 'GNL-League-App',
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (response.data.matches && response.data.matches.length > 0) {
+            const firstMatch = response.data.matches[0];
+            const playerTeam = firstMatch.teams.find(team =>
+                team.players.some(p => p.battleTag === battleTag)
+            );
+            
+            if (playerTeam) {
+                const player = playerTeam.players.find(p => p.battleTag === battleTag);
+                res.json({
+                    found: true,
+                    battleTag: player.battleTag,
+                    name: player.name,
+                    race: player.race,
+                    currentMmr: player.currentMmr,
+                    matchCount: response.data.count
+                });
+            } else {
+                res.json({ found: false, message: 'Player not found in matches' });
+            }
+        } else {
+            res.json({ found: false, message: 'No matches found for this player' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to search player', details: error.message });
+    }
+});
+
+app.post('/api/admin/players', checkAuth, async (req, res) => {
+    const players = await readData('players.json');
+    const newPlayer = {
+        id: Date.now(),
+        ...req.body,
+        createdAt: new Date().toISOString()
+    };
+    players.push(newPlayer);
+    await writeData('players.json', players);
+    res.json(newPlayer);
+});
+
+app.delete('/api/admin/players/:id', checkAuth, async (req, res) => {
+    const players = await readData('players.json');
+    const filtered = players.filter(p => p.id !== parseInt(req.params.id));
+    await writeData('players.json', filtered);
+    res.json({ success: true });
+});
+
+// ==================== TEAM MATCHES ENDPOINTS ====================
+app.get('/api/team-matches', async (req, res) => {
+    const matches = await readData('team_matches.json');
+    res.json(matches);
+});
+
+app.post('/api/admin/team-matches', checkAuth, async (req, res) => {
+    const matches = await readData('team_matches.json');
+    const newMatch = {
+        id: Date.now(),
+        ...req.body,
+        createdAt: new Date().toISOString()
+    };
+    matches.push(newMatch);
+    await writeData('team_matches.json', matches);
+    res.json(newMatch);
+});
+
+app.put('/api/admin/team-matches/:id', checkAuth, async (req, res) => {
+    const matches = await readData('team_matches.json');
+    const index = matches.findIndex(m => m.id === parseInt(req.params.id));
+    if (index !== -1) {
+        matches[index] = { ...matches[index], ...req.body, updatedAt: new Date().toISOString() };
+        await writeData('team_matches.json', matches);
+        res.json(matches[index]);
+    } else {
+        res.status(404).json({ error: 'Match not found' });
+    }
+});
+
+app.delete('/api/admin/team-matches/:id', checkAuth, async (req, res) => {
+    const matches = await readData('team_matches.json');
+    const filtered = matches.filter(m => m.id !== parseInt(req.params.id));
+    await writeData('team_matches.json', filtered);
+    res.json({ success: true });
+});
 
 // Proxy endpoint for W3Champions matches - THIS IS THE MAIN ONE
 app.get('/api/matches/:battleTag', async (req, res) => {
