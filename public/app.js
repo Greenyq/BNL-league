@@ -141,7 +141,6 @@ function App() {
                     
                     const matchesData = await response.json();
                     console.log(`Matches for ${tag}:`, matchesData);
-                    console.log(`MMR check for first match:`, matchesData.matches?.[0]?.teams);
 
                     const playerStats = processMatches(tag, matchesData.matches || []);
 
@@ -150,17 +149,29 @@ function App() {
                         name: player.name || tag.split('#')[0],
                         battleTag: tag,
                         ...playerStats,
+                        // Use race from DB if processMatches returned 0 (Random)
+                        race: playerStats.race || player.race || 0,
+                        // Use MMR from DB if API didn't return matches
+                        mmr: playerStats.mmr || player.currentMmr || 0,
                         teamId: player.teamId || null,
                     });
                 } catch (error) {
                     console.error(`Error loading ${tag}:`, error);
+                    // Use data from database when API fails
                     loadedPlayers.push({
                         id: player.id || (i + 1),
                         name: player.name || tag.split('#')[0],
                         battleTag: tag,
-                        race: 0, mmr: 0, wins: 0, losses: 0, points: 0,
-                        achievements: [], teamId: player.teamId || null,
-                        matchHistory: [], activityData: generateActivityData(), error: true
+                        race: player.race || 0,
+                        mmr: player.currentMmr || 0,
+                        wins: 0, 
+                        losses: 0, 
+                        points: 0,
+                        achievements: [], 
+                        teamId: player.teamId || null,
+                        matchHistory: [], 
+                        activityData: generateActivityData(), 
+                        error: true
                     });
                 }
             }
