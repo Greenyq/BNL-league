@@ -1,1 +1,5 @@
-{"isLoggedIn":false,"sessionId":null,"timestamp":null}
+{
+  "isLoggedIn": true,
+  "sessionId": "f699498d8a472ec57a86fb6abeda8b056194be59b257f64baacfd351f146c939",
+  "timestamp": 1764431642196
+}
