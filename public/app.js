@@ -224,6 +224,18 @@ function App() {
             totalPoints += matchPoints;
         });
 
+        // Determine most played race
+        let mostPlayedRace = 0;
+        let maxCount = 0;
+        for (const [race, count] of Object.entries(raceCounts)) {
+            if (count > maxCount) {
+                maxCount = count;
+                mostPlayedRace = parseInt(race);
+            }
+        }
+        playerRace = mostPlayedRace;
+        console.log(`Most played race for ${battleTag}:`, playerRace, raceNames[playerRace]);
+
         // Determine achievements
         const achs = determineAchievements(wins, losses, totalPoints, recentMatches.length);
 
