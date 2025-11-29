@@ -439,6 +439,16 @@ function Players({ players }) {
 function PlayerCard({ player, rank }) {
     const raceImage = raceImages[player.race];
     
+    // Debug logging
+    React.useEffect(() => {
+        console.log(`PlayerCard for ${player.name}:`, {
+            race: player.race,
+            raceName: raceNames[player.race],
+            raceImage: raceImage,
+            hasImage: !!raceImage
+        });
+    }, [player.race]);
+    
     return (
         <div className="player-card">
             <div className="player-card-inner">
@@ -446,7 +456,10 @@ function PlayerCard({ player, rank }) {
                     <div className="player-title">
                         <div className="player-avatar">
                             {raceImage ? (
-                                <img src={raceImage} alt={raceNames[player.race]} />
+                                <img src={raceImage} alt={raceNames[player.race] || 'Race'} onError={(e) => {
+                                    console.error(`Failed to load image for ${player.name}:`, raceImage);
+                                    e.target.style.display = 'none';
+                                }} />
                             ) : (
                                 <span>{raceIcons[player.race] || '🎲'}</span>
                             )}
