@@ -16,3 +16,7 @@ data/admin_session.json
 
 # Keep data directory structure
 !data/.gitkeep
+-e 
+# Environment files
+*.env
+*.env.*
