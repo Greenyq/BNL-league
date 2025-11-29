@@ -67,7 +67,7 @@ function App() {
 
     const loadPlayers = async () => {
         const battleTags = [
-            "ZugZugMaster#1399",
+            "ZugZugMaster%231399",
             "ЖИВОТНОЕ#21901",
             "jabker#2902"
         ];
