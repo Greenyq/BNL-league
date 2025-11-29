@@ -451,13 +451,11 @@ function PlayerCard({ player, rank }) {
                                 <span>{raceIcons[player.race] || '🎲'}</span>
                             )}
                         </div>
-                        <div>
-                            <div className="player-name">
-                                {player.name}
-                                <div className="battle-tag">{player.battleTag}</div>
-                            </div>
+                        <div className="player-info">
+                            <div className="player-name">{player.name}</div>
+                            <div className="battle-tag">{player.battleTag}</div>
                             {player.error && (
-                                <div style={{ color: '#f44336', fontSize: '0.5em', marginTop: '5px' }}>
+                                <div style={{ color: '#f44336', fontSize: '0.7em', marginTop: '5px' }}>
                                     ⚠️ Не удалось загрузить данные
                                 </div>
                             )}
