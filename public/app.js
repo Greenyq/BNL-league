@@ -159,7 +159,10 @@ function App() {
                 team.players.some(p => p.battleTag === battleTag)
             );
 
-            if (!playerTeam) return;
+            if (!playerTeam) {
+                console.log(`Player ${battleTag} not found in match`);
+                return;
+            }
 
             const player = playerTeam.players.find(p => p.battleTag === battleTag);
             const opponentTeam = match.teams.find(team => team !== playerTeam);
@@ -169,9 +172,13 @@ function App() {
             const opponent = opponentTeam.players[0];
             const won = playerTeam.won;
 
-            // Get MMR
-            currentMMR = player.currentMMR || currentMMR;
-            playerRace = player.race || playerRace;
+            // Get MMR and Race
+            if (player.currentMmr) {
+                currentMMR = player.currentMmr;
+            }
+            if (player.race) {
+                playerRace = player.race;
+            }
 
             // Calculate MMR difference
             const playerMMR = player.oldMMR || player.currentMMR || 1500;
