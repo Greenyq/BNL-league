@@ -200,7 +200,7 @@ body {
 }
 
 .rank-number {
-    font-size: 3em;
+    font-size: 2em;
     font-weight: 900;
     background: linear-gradient(135deg, #f4e4b8 0%, #c9a961 100%);
     -webkit-background-clip: text;
@@ -210,22 +210,23 @@ body {
 
 .rank-label {
     color: #888;
-    font-size: 0.9em;
-    margin-bottom: 10px;
+    font-size: 0.8em;
+    margin-bottom: 5px;
 }
 
 .mmr-display {
-    font-size: 2em;
+    font-size: 1.3em;
     font-weight: 800;
     color: #fff;
-    margin-top: 10px;
+    margin-top: 5px;
 }
 
 .rating-stars {
     display: flex;
-    gap: 3px;
+    gap: 2px;
     justify-content: flex-end;
-    margin-top: 5px;
+    margin-top: 3px;
+    font-size: 0.8em;
 }
 
 .achievement-icons {
