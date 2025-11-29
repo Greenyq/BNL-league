@@ -85,11 +85,17 @@ app.post('/api/admin/login', async (req, res) => {
     
     if (login === ADMIN_LOGIN && password === ADMIN_PASSWORD) {
         const sessionId = crypto.randomBytes(32).toString('hex');
-        await writeData('admin_session.json', {
+        
+        // Remove old sessions
+        await AdminSession.deleteMany({});
+        
+        // Create new session
+        await AdminSession.create({
+            sessionId,
             isLoggedIn: true,
-            sessionId: sessionId,
             timestamp: Date.now()
         });
+        
         res.json({ success: true, sessionId });
     } else {
         res.status(401).json({ error: 'Invalid credentials' });
@@ -97,7 +103,8 @@ app.post('/api/admin/login', async (req, res) => {
 });
 
 app.post('/api/admin/logout', checkAuth, async (req, res) => {
-    await writeData('admin_session.json', { isLoggedIn: false, sessionId: null, timestamp: null });
+    const sessionId = req.headers['x-session-id'];
+    await AdminSession.deleteOne({ sessionId });
     res.json({ success: true });
 });
 
@@ -107,12 +114,16 @@ app.get('/api/admin/verify', async (req, res) => {
         return res.json({ isAuthenticated: false });
     }
     
-    const session = await readData('admin_session.json');
-    const sessionAge = Date.now() - session.timestamp;
-    
-    if (session.isLoggedIn && session.sessionId === sessionId && sessionAge < 24 * 60 * 60 * 1000) {
-        res.json({ isAuthenticated: true });
-    } else {
+    try {
+        const session = await AdminSession.findOne({ sessionId });
+        const sessionAge = session ? Date.now() - session.timestamp : Infinity;
+        
+        if (session && session.isLoggedIn && sessionAge < 24 * 60 * 60 * 1000) {
+            res.json({ isAuthenticated: true });
+        } else {
+            res.json({ isAuthenticated: false });
+        }
+    } catch (error) {
         res.json({ isAuthenticated: false });
     }
 });
