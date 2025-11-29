@@ -117,61 +117,59 @@ function App() {
     };
 
     const loadPlayers = async () => {
-        const battleTags = [
-            "ZugZugMaster#1399",
-            "ЖИВОТНОЕ#21901",
-            "jabker#2902"
-        ];
+        try {
+            // Загружаем игроков из API (добавленных через админку)
+            const playersResponse = await fetch(`${API_BASE}/api/players`);
+            const apiPlayers = await playersResponse.json();
+            
+            const loadedPlayers = [];
 
-        const loadedPlayers = [];
+            // Если игроков нет в админке, используем дефолтных
+            const playersToLoad = apiPlayers.length > 0 ? apiPlayers : [
+                { battleTag: "ZugZugMaster#1399", name: "ZugZugMaster", teamId: null },
+                { battleTag: "ЖИВОТНОЕ#21901", name: "ЖИВОТНОЕ", teamId: null },
+                { battleTag: "jabker#2902", name: "jabker", teamId: null }
+            ];
 
-        for (let i = 0; i < battleTags.length; i++) {
-            const tag = battleTags[i];
+            for (let i = 0; i < playersToLoad.length; i++) {
+                const player = playersToLoad[i];
+                const tag = player.battleTag;
+                
+                try {
+                    const response = await fetch(`${API_BASE}/api/matches/${encodeURIComponent(tag)}?gateway=20&season=23&pageSize=100`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    
+                    const matchesData = await response.json();
+                    console.log(`Matches for ${tag}:`, matchesData);
+                    console.log(`MMR check for first match:`, matchesData.matches?.[0]?.teams);
 
-            try {
-                console.log(`Loading matches for: ${tag}`);
-                const response = await fetch(`${API_BASE}/api/matches/${encodeURIComponent(tag)}?gateway=20&season=23&pageSize=100`);
+                    const playerStats = processMatches(tag, matchesData.matches || []);
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                    loadedPlayers.push({
+                        id: player.id || (i + 1),
+                        name: player.name || tag.split('#')[0],
+                        battleTag: tag,
+                        ...playerStats,
+                        teamId: player.teamId || null,
+                    });
+                } catch (error) {
+                    console.error(`Error loading ${tag}:`, error);
+                    loadedPlayers.push({
+                        id: player.id || (i + 1),
+                        name: player.name || tag.split('#')[0],
+                        battleTag: tag,
+                        race: 0, mmr: 0, wins: 0, losses: 0, points: 0,
+                        achievements: [], teamId: player.teamId || null,
+                        matchHistory: [], activityData: generateActivityData(), error: true
+                    });
                 }
-
-                const matchesData = await response.json();
-                console.log(`Matches for ${tag}:`, matchesData);
-                console.log(`MMR check for first match:`, matchesData.matches?.[0]?.teams);
-
-                // Process matches
-                const playerStats = processMatches(tag, matchesData.matches || []);
-
-                loadedPlayers.push({
-                    id: i + 1,
-                    name: tag.split('#')[0],
-                    battleTag: tag,
-                    ...playerStats,
-                    teamId: i < 2 ? 1 : 2,
-                });
-            } catch (error) {
-                console.error(`Error loading ${tag}:`, error);
-                loadedPlayers.push({
-                    id: i + 1,
-                    name: tag.split('#')[0],
-                    battleTag: tag,
-                    race: 0,
-                    mmr: 0,
-                    wins: 0,
-                    losses: 0,
-                    points: 0,
-                    achievements: [],
-                    teamId: i < 2 ? 1 : 2,
-                    matchHistory: [],
-                    activityData: generateActivityData(),
-                    error: true
-                });
             }
+            setPlayers(loadedPlayers);
+        } catch (error) {
+            console.error('Error loading players:', error);
+        } finally {
+            setLoading(false);
         }
-
-        setPlayers(loadedPlayers);
-        setLoading(false);
     };
 
     // Process matches from API and calculate points
