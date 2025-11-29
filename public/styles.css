@@ -91,21 +91,38 @@ body {
 }
 
 .app {
-    max-width: 1400px;
+    max-width: 1600px;
     margin: 0 auto;
     padding: 40px 20px;
+}
+
+.players-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+@media (max-width: 768px) {
+    .players-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+    }
 }
 
 .player-card {
     background: linear-gradient(135deg, rgba(42, 42, 42, 0.8) 0%, rgba(26, 26, 26, 0.9) 100%);
     border: 3px solid #000;
-    border-radius: 20px;
+    border-radius: 15px;
     padding: 0;
-    margin-bottom: 40px;
+    margin-bottom: 0;
     position: relative;
     overflow: hidden;
     transition: all 0.4s ease;
     box-shadow: 0 5px 30px rgba(0, 0, 0, 0.5);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .player-card:hover {
