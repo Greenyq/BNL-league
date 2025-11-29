@@ -24,10 +24,10 @@ app.get('/api/matches/:battleTag', async (req, res) => {
             {
                 params: {
                     playerIds: battleTag,
-                    gateway: gateway,
-                    season: season,
-                    offset: offset,
-                    pageSize: pageSize
+                    gateway,
+                    season,
+                    offset,
+                    pageSize
                 }
             }
         );
