@@ -151,6 +151,22 @@ function App() {
         let currentMMR = 0;
         let playerRace = 0;
         const matchHistory = [];
+        const raceCounts = {}; // Track race usage frequency
+
+        // Get current MMR from the most recent match (first in array)
+        if (recentMatches.length > 0) {
+            const firstMatch = recentMatches[0];
+            const firstPlayerTeam = firstMatch.teams.find(team =>
+                team.players.some(p => p.battleTag === battleTag)
+            );
+            if (firstPlayerTeam) {
+                const firstPlayer = firstPlayerTeam.players.find(p => p.battleTag === battleTag);
+                if (firstPlayer) {
+                    currentMMR = firstPlayer.currentMmr || 0;
+                    console.log(`Current MMR for ${battleTag}: ${currentMMR}`);
+                }
+            }
+        }
 
         // Process each match
         recentMatches.forEach(match => {
@@ -172,12 +188,9 @@ function App() {
             const opponent = opponentTeam.players[0];
             const won = playerTeam.won;
 
-            // Get MMR and Race
-            if (player.currentMmr) {
-                currentMMR = player.currentMmr;
-            }
+            // Track race usage
             if (player.race) {
-                playerRace = player.race;
+                raceCounts[player.race] = (raceCounts[player.race] || 0) + 1;
             }
 
             // Calculate MMR difference (note: API uses camelCase)
