@@ -454,7 +454,7 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
                             />
                         </div>
                         <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Эмодзи (например: 🐼)</label>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Эмодзи команды (например: 🐼)</label>
                             <input
                                 type="text"
                                 value={formData.emoji}
@@ -463,8 +463,11 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
                                     width: '100%', padding: '10px', borderRadius: '8px',
                                     border: '1px solid #444', background: '#2a2a2a', color: '#fff'
                                 }}
-                                required
+                                placeholder="🐼"
                             />
+                            <small style={{ color: '#888', fontSize: '0.85em', marginTop: '5px', display: 'block' }}>
+                                Опционально. Если не указан, будет использован 👥
+                            </small>
                         </div>
                         <div style={{ marginBottom: '15px' }}>
                             <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>URL логотипа (опционально)</label>
