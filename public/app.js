@@ -67,7 +67,7 @@ function App() {
 
     const loadPlayers = async () => {
         const battleTags = [
-            "ZugZugMaster%231399",
+            "ZugZugMaster#1399",
             "ЖИВОТНОЕ#21901",
             "jabker#2902"
         ];
@@ -87,6 +87,7 @@ function App() {
 
                 const matchesData = await response.json();
                 console.log(`Matches for ${tag}:`, matchesData);
+                console.log(`MMR check for first match:`, matchesData.matches?.[0]?.teams);
 
                 // Process matches
                 const playerStats = processMatches(tag, matchesData.matches || []);
