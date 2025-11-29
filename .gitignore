@@ -36,3 +36,7 @@ data/admin_session.json
 # Environment files
 *.env
 *.env.*
+-e 
+# Environment files
+*.env
+*.env.*
