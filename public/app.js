@@ -5,16 +5,16 @@ const raceIcons = {
     0: '🎲', // Random
     1: '👑', // Human
     2: '⚔️', // Orc  
-    3: '💀', // Undead
-    4: '🌙', // Night Elf
+    4: '💀', // Undead
+    8: '🌙', // Night Elf
 };
 
 const raceNames = {
     0: 'Random',
     1: 'Human',
     2: 'Orc',
-    3: 'Undead',
-    4: 'Night Elf',
+    4: 'Undead',
+    8: 'Night Elf',
 };
 
 // Achievements
