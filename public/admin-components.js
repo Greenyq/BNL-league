@@ -5,10 +5,14 @@ function LoginModal({ onClose, onSuccess }) {
     const [error, setError] = React.useState('');
     const [loading, setLoading] = React.useState(false);
 
+    console.log('LoginModal rendered');
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
+
+        console.log('Attempting login with:', login);
 
         try {
             const response = await fetch('/api/admin/login', {
@@ -18,6 +22,7 @@ function LoginModal({ onClose, onSuccess }) {
             });
 
             const data = await response.json();
+            console.log('Login response:', data);
             
             if (response.ok) {
                 onSuccess(data.sessionId);
