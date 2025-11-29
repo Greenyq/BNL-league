@@ -1,0 +1,18 @@
+# Node modules
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment variables (if you add sensitive data later)
+# .env
+
+# Data files (keep structure, ignore content)
+data/teams.json
+data/players.json
+data/team_matches.json
+data/admin_session.json
+
+# Keep data directory structure
+!data/.gitkeep
