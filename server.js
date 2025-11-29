@@ -14,27 +14,28 @@ app.use(express.static('public'));
 // Proxy endpoint for W3Champions matches - THIS IS THE MAIN ONE
 app.get('/api/matches/:battleTag', async (req, res) => {
     try {
-        const battleTag = req.params.battleTag;
+        const battleTag = decodeURIComponent(req.params.battleTag);
         const { gateway = 20, season = 23, pageSize = 100, offset = 0 } = req.query;
 
         console.log(`Fetching matches for: ${battleTag}`);
+        
+        // Build the URL with proper encoding
+        const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(battleTag)}&gateway=${gateway}&season=${season}&offset=${offset}&pageSize=${pageSize}`;
+        
+        console.log(`Making request to: ${apiUrl}`);
 
-        const response = await axios.get(
-            `https://website-backend.w3champions.com/api/matches/search`,
-            {
-                params: {
-                    playerIds: battleTag,
-                    gateway,
-                    season,
-                    offset,
-                    pageSize
-                }
+        const response = await axios.get(apiUrl, {
+            headers: {
+                'User-Agent': 'GNL-League-App',
+                'Accept': 'application/json'
             }
-        );
+        });
 
+        console.log(`Response received: ${response.data.count} matches`);
         res.json(response.data);
     } catch (error) {
         console.error('Error fetching matches:', error.message);
+        console.error('Error details:', error.response?.data || error);
         res.status(500).json({ error: 'Failed to fetch matches', details: error.message });
     }
 });
