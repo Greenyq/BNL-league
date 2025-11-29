@@ -2,11 +2,15 @@ const { useState, useEffect } = React;
 
 // Race icons
 const raceIcons = {
-    human: '👑', hu: '👑',
-    orc: '⚔️',
-    undead: '💀', ud: '💀',
-    nightelf: '🌙', ne: '🌙',
-    random: '🎲'
+    human: '👑', hu: '👑', 1: '👑',
+    orc: '⚔️', 2: '⚔️',
+    undead: '💀', ud: '💀', 4: '💀',
+    nightelf: '🌙', ne: '🌙', 8: '🌙',
+    random: '🎲', 0: '🎲'
+};
+
+const raceNames = {
+    1: 'Human', 2: 'Orc', 4: 'Undead', 8: 'Night Elf', 0: 'Random'
 };
 
 // Achievements
@@ -69,30 +73,50 @@ function App() {
             const tag = battleTags[i];
             
             try {
+                console.log(`Loading player: ${tag}`);
                 const response = await fetch(`${API_BASE}/api/player/${encodeURIComponent(tag)}`);
                 
                 if (!response.ok) {
-                    throw new Error('Failed to fetch');
+                    throw new Error(`HTTP ${response.status}`);
                 }
                 
                 const playerData = await response.json();
+                console.log('Player data received:', playerData);
+                
+                // W3Champions API returns player with gameMode stats
+                // Extract 1v1 stats (gameMode: 1)
+                const soloStats = playerData.gameModeStats?.find(gm => gm.gameMode === 1) || {};
                 
                 loadedPlayers.push({
                     id: i + 1,
                     name: tag.split('#')[0],
                     battleTag: tag,
-                    race: playerData.selectedRace || 'random',
-                    mmr: playerData.mmr || 1500,
-                    wins: playerData.wins || 0,
-                    losses: playerData.losses || 0,
-                    achievements: determineAchievements(playerData.wins || 0, playerData.losses || 0),
+                    race: soloStats.race || 0,
+                    mmr: soloStats.mmr || playerData.mmr || 1500,
+                    wins: soloStats.wins || 0,
+                    losses: soloStats.losses || 0,
+                    achievements: determineAchievements(soloStats.wins || 0, soloStats.losses || 0),
                     teamId: i < 2 ? 1 : 2,
-                    matchHistory: generateMatchHistory(playerData.wins || 0, playerData.losses || 0),
+                    matchHistory: generateMatchHistory(soloStats.wins || 0, soloStats.losses || 0),
                     activityData: generateActivityData()
                 });
             } catch (error) {
                 console.error(`Error loading ${tag}:`, error);
-                setError(`Failed to load data for ${tag}`);
+                // Add placeholder on error
+                loadedPlayers.push({
+                    id: i + 1,
+                    name: tag.split('#')[0],
+                    battleTag: tag,
+                    race: 0,
+                    mmr: 1500,
+                    wins: 0,
+                    losses: 0,
+                    achievements: [],
+                    teamId: i < 2 ? 1 : 2,
+                    matchHistory: [],
+                    activityData: generateActivityData(),
+                    error: true
+                });
             }
         }
 
@@ -131,18 +155,6 @@ function App() {
                 <Nav activeTab={activeTab} setActiveTab={setActiveTab} />
                 <div className="app">
                     <div className="loading">⚔️ Загрузка данных с W3Champions...</div>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div>
-                <Header />
-                <Nav activeTab={activeTab} setActiveTab={setActiveTab} />
-                <div className="app">
-                    <div className="error">{error}</div>
                 </div>
             </div>
         );
@@ -207,24 +219,38 @@ function Players({ players }) {
 }
 
 function PlayerCard({ player, totalPoints, rank }) {
+    const getRaceIcon = (race) => {
+        return raceIcons[race] || raceIcons[0];
+    };
+
+    const getRaceName = (race) => {
+        return raceNames[race] || 'Random';
+    };
+
     return (
         <div className="player-card">
             <div className="player-card-inner">
                 <div className="player-header">
                     <div className="player-title">
                         <div className="player-avatar">
-                            {raceIcons[player.race.toLowerCase()] || '🎲'}
+                            {getRaceIcon(player.race)}
                         </div>
                         <div>
                             <div className="player-name">
                                 {player.name}
                                 <div className="battle-tag">{player.battleTag}</div>
                             </div>
+                            {player.error && (
+                                <div style={{ color: '#f44336', fontSize: '0.5em', marginTop: '5px' }}>
+                                    ⚠️ Данные не загружены
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div className="rank-mmr">
                         <div className="rank-label">Rank</div>
                         <div className="rank-number">#{rank}</div>
+                        <div className="rank-label" style={{ marginTop: '15px' }}>{getRaceName(player.race)}</div>
                         <div className="mmr-display">{player.mmr} MMR</div>
                         <div className="rating-stars">
                             {[...Array(5)].map((_, i) => (
@@ -242,19 +268,22 @@ function PlayerCard({ player, totalPoints, rank }) {
                                 {ach.icon}
                                 <div className="achievement-tooltip">
                                     <div style={{ fontWeight: '700' }}>{ach.name}</div>
-                                    <div style={{ color: '#4caf50' }}>+{ach.points} pts</div>
+                                    <div style={{ color: '#888', fontSize: '0.9em', marginTop: '3px' }}>{ach.desc}</div>
+                                    <div style={{ color: '#4caf50', marginTop: '5px' }}>+{ach.points} pts</div>
                                 </div>
                             </div>
                         );
                     })}
                 </div>
 
-                <div className="match-graph">
-                    {player.matchHistory.map((result, idx) => {
-                        const height = 30 + Math.random() * 120;
-                        return <div key={idx} className={`match-bar ${result}`} style={{ height: `${height}px` }} />;
-                    })}
-                </div>
+                {player.matchHistory.length > 0 && (
+                    <div className="match-graph">
+                        {player.matchHistory.map((result, idx) => {
+                            const height = 30 + Math.random() * 120;
+                            return <div key={idx} className={`match-bar ${result}`} style={{ height: `${height}px` }} />;
+                        })}
+                    </div>
+                )}
 
                 <div className="points-section">
                     <div className="points-value">{totalPoints}</div>
@@ -350,7 +379,7 @@ function Teams({ teams, players }) {
                                         <div>
                                             <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{player.name}</span>
                                             <span style={{ color: '#888', marginLeft: '15px' }}>
-                                                {player.race.toUpperCase()} • {player.mmr} MMR
+                                                {raceNames[player.race] || 'Random'} • {player.mmr} MMR
                                             </span>
                                         </div>
                                         {leader && player.id === leader.id && (

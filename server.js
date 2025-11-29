@@ -11,28 +11,22 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Proxy endpoint for W3Champions API
+// Proxy endpoint for W3Champions API - Player basic info
 app.get('/api/player/:battleTag', async (req, res) => {
     try {
         const battleTag = req.params.battleTag;
-        const searchName = battleTag.split('#')[0];
         
         console.log(`Fetching data for: ${battleTag}`);
         
+        // Use direct player endpoint
         const response = await axios.get(
-            `https://website-backend.w3champions.com/api/players/search?search=${encodeURIComponent(searchName)}`
+            `https://website-backend.w3champions.com/api/players/${encodeURIComponent(battleTag)}`
         );
         
-        if (response.data && response.data.length > 0) {
-            // Find exact match or return first result
-            const player = response.data.find(p => p.battleTag === battleTag) || response.data[0];
-            res.json(player);
-        } else {
-            res.status(404).json({ error: 'Player not found' });
-        }
+        res.json(response.data);
     } catch (error) {
         console.error('Error fetching player data:', error.message);
-        res.status(500).json({ error: 'Failed to fetch player data' });
+        res.status(500).json({ error: 'Failed to fetch player data', details: error.message });
     }
 });
 
@@ -49,6 +43,28 @@ app.get('/api/player/:battleTag/stats', async (req, res) => {
     } catch (error) {
         console.error('Error fetching player stats:', error.message);
         res.status(500).json({ error: 'Failed to fetch player stats' });
+    }
+});
+
+// Get player MMR timeline - for match history graphs
+app.get('/api/player/:battleTag/mmr-timeline', async (req, res) => {
+    try {
+        const battleTag = req.params.battleTag;
+        const { race = 1, gateWay = 20, season = 23, gameMode = 1 } = req.query;
+        
+        console.log(`Fetching MMR timeline for: ${battleTag}`);
+        
+        const response = await axios.get(
+            `https://website-backend.w3champions.com/api/players/${encodeURIComponent(battleTag)}/mmr-rp-timeline`,
+            {
+                params: { race, gateWay, season, gameMode }
+            }
+        );
+        
+        res.json(response.data);
+    } catch (error) {
+        console.error('Error fetching MMR timeline:', error.message);
+        res.status(500).json({ error: 'Failed to fetch MMR timeline' });
     }
 });
 
