@@ -319,7 +319,12 @@ function App() {
         return (
             <div>
                 <Header />
-                <Nav activeTab={activeTab} setActiveTab={setActiveTab} />
+                <Nav 
+                    activeTab={activeTab} 
+                    setActiveTab={setActiveTab} 
+                    isAdmin={isAdmin} 
+                    setShowLoginModal={setShowLoginModal} 
+                />
                 <div className="app">
                     <div className="loading">⚔️ Загрузка матчей с W3Champions...<br />Подсчет очков с 27.11.2025...</div>
                 </div>
@@ -330,13 +335,44 @@ function App() {
     return (
         <div>
             <Header />
-            <Nav activeTab={activeTab} setActiveTab={setActiveTab} />
+            <Nav 
+                activeTab={activeTab} 
+                setActiveTab={setActiveTab} 
+                isAdmin={isAdmin} 
+                setShowLoginModal={setShowLoginModal} 
+            />
             <div className="app">
                 {activeTab === 'players' && <Players players={players} />}
                 {activeTab === 'teams' && <Teams teams={teams} players={players} />}
                 {activeTab === 'schedule' && <Schedule schedule={schedule} />}
                 {activeTab === 'stats' && <Stats players={players} teams={teams} />}
+                {activeTab === 'team-matches' && <TeamMatches teamMatches={teamMatches} teams={teams} allPlayers={allPlayers} />}
+                {activeTab === 'admin' && isAdmin && (
+                    <AdminPanel 
+                        teams={teams} 
+                        allPlayers={allPlayers} 
+                        teamMatches={teamMatches}
+                        sessionId={sessionId}
+                        onUpdate={() => {
+                            loadTeams();
+                            loadAllPlayers();
+                            loadTeamMatches();
+                        }}
+                    />
+                )}
             </div>
+            {showLoginModal && (
+                <LoginModal 
+                    onClose={() => setShowLoginModal(false)}
+                    onSuccess={(newSessionId) => {
+                        setSessionId(newSessionId);
+                        setIsAdmin(true);
+                        localStorage.setItem('adminSessionId', newSessionId);
+                        setShowLoginModal(false);
+                        setActiveTab('admin');
+                    }}
+                />
+            )}
         </div>
     );
 }
