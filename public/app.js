@@ -35,26 +35,16 @@ function App() {
     const [players, setPlayers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
-    const [teams] = useState([
-        {
-            id: 1,
-            name: "Chinese Panda",
-            emoji: "🐼",
-            coaches: [
-                { id: 101, name: "RobotNinja", expertise: "Night Elf" },
-                { id: 102, name: "Daedalius", expertise: "Orc" }
-            ]
-        },
-        {
-            id: 2,
-            name: "Elite Warriors",
-            emoji: "⚔️",
-            coaches: [
-                { id: 103, name: "MasterCoach", expertise: "Human" }
-            ]
-        }
-    ]);
+    
+    // Admin states
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const [sessionId, setSessionId] = useState(localStorage.getItem('adminSessionId'));
+    
+    // Data from backend
+    const [teams, setTeams] = useState([]);
+    const [allPlayers, setAllPlayers] = useState([]);
+    const [teamMatches, setTeamMatches] = useState([]);
 
     const [schedule] = useState([
         { id: 1, team1: "Chinese Panda", team2: "Elite Warriors", date: "2025-12-01 18:00", status: "upcoming" },
@@ -63,7 +53,60 @@ function App() {
 
     useEffect(() => {
         loadPlayers();
+        loadTeams();
+        loadAllPlayers();
+        loadTeamMatches();
+        if (sessionId) {
+            verifySession();
+        }
     }, []);
+
+    const verifySession = async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/admin/verify`, {
+                headers: { 'x-session-id': sessionId }
+            });
+            const data = await response.json();
+            setIsAdmin(data.isAuthenticated);
+            if (!data.isAuthenticated) {
+                localStorage.removeItem('adminSessionId');
+                setSessionId(null);
+            }
+        } catch (error) {
+            console.error('Session verification failed:', error);
+            setIsAdmin(false);
+        }
+    };
+
+    const loadTeams = async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/teams`);
+            const data = await response.json();
+            setTeams(data);
+        } catch (error) {
+            console.error('Error loading teams:', error);
+        }
+    };
+
+    const loadAllPlayers = async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/players`);
+            const data = await response.json();
+            setAllPlayers(data);
+        } catch (error) {
+            console.error('Error loading players:', error);
+        }
+    };
+
+    const loadTeamMatches = async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/team-matches`);
+            const data = await response.json();
+            setTeamMatches(data);
+        } catch (error) {
+            console.error('Error loading team matches:', error);
+        }
+    };
 
     const loadPlayers = async () => {
         const battleTags = [
