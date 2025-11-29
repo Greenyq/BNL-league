@@ -807,7 +807,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
         }
 
         try {
-            const response = await fetch('/api/admin/team-matches', {
+            const response = await fetch(`${API_BASE}/api/admin/team-matches`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
