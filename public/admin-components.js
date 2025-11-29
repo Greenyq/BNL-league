@@ -568,11 +568,12 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
 }
 
 // ==================== ADMIN PLAYERS ====================
-function AdminPlayers({ players, sessionId, onUpdate }) {
+function AdminPlayers({ players, teams, sessionId, onUpdate }) {
     const [showForm, setShowForm] = React.useState(false);
     const [battleTag, setBattleTag] = React.useState('');
     const [searchResult, setSearchResult] = React.useState(null);
     const [searching, setSearching] = React.useState(false);
+    const [editingPlayer, setEditingPlayer] = React.useState(null);
 
     const handleSearch = async (e) => {
         e.preventDefault();
