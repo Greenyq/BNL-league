@@ -406,7 +406,7 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
         if (!confirm('Удалить команду?')) return;
         
         try {
-            await fetch(`/api/admin/teams/${id}`, {
+            await fetch(`${API_BASE}/api/admin/teams/${id}`, {
                 method: 'DELETE',
                 headers: { 'x-session-id': sessionId }
             });
