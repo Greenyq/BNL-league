@@ -134,7 +134,7 @@ app.get('/api/matches/:battleTag', async (req, res) => {
         const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(battleTag)}&gateway=${gateway}&season=${season}&offset=${offset}&pageSize=${pageSize}`;
         
         const response = await axios.get(apiUrl, {
-            headers: { 'User-Agent': 'GNL-League-App', 'Accept': 'application/json' }
+            headers: { 'User-Agent': 'BNL-League-App', 'Accept': 'application/json' }
         });
         
         res.json(response.data);
