@@ -101,10 +101,17 @@ app.post('/api/admin/login', async (req, res) => {
     const { login, password } = req.body;
     
     if (login === ADMIN_LOGIN && password === ADMIN_PASSWORD) {
-        const sessionId = crypto.randomBytes(32).toString('hex');
-        await AdminSession.deleteMany({});
-        await AdminSession.create({ sessionId, isLoggedIn: true, timestamp: Date.now() });
-        res.json({ success: true, sessionId });
+        try {
+            const sessionId = crypto.randomBytes(32).toString('hex');
+            // Delete old sessions
+            await AdminSession.deleteMany({});
+            // Create new session
+            await AdminSession.create({ sessionId, isLoggedIn: true, timestamp: Date.now() });
+            res.json({ success: true, sessionId });
+        } catch (error) {
+            console.error('Login error:', error);
+            res.status(500).json({ error: 'Database error', details: error.message });
+        }
     } else {
         res.status(401).json({ error: 'Invalid credentials' });
     }
