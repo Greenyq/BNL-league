@@ -13,11 +13,30 @@ const PORT = process.env.PORT || 3000;
 
 // MongoDB Connection
 const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost:27017/gnl_league';
-mongoose.connect(MONGO_URL).then(() => {
-    console.log('✅ Connected to MongoDB');
-}).catch(err => {
-    console.error('❌ MongoDB connection error:', err);
-});
+
+// Configure mongoose to not buffer commands
+mongoose.set('bufferCommands', false);
+mongoose.set('bufferTimeoutMS', 30000);
+
+// Connect to MongoDB
+const connectDB = async () => {
+    try {
+        await mongoose.connect(MONGO_URL, {
+            serverSelectionTimeoutMS: 30000,
+            socketTimeoutMS: 45000,
+        });
+        console.log('✅ Connected to MongoDB');
+        console.log('📍 Database:', mongoose.connection.db.databaseName);
+    } catch (err) {
+        console.error('❌ MongoDB connection error:', err.message);
+        console.error('💡 Check MONGO_URL environment variable');
+        // Exit if cannot connect to DB
+        process.exit(1);
+    }
+};
+
+// Start DB connection
+connectDB();
 
 // Admin credentials
 const ADMIN_LOGIN = 'admin777';
