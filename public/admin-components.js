@@ -496,7 +496,7 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
                             <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Капитан</label>
                             <select
                                 value={formData.captainId || ''}
-                                onChange={(e) => setFormData({...formData, captainId: e.target.value ? parseInt(e.target.value) : null})}
+                                onChange={(e) => setFormData({...formData, captainId: e.target.value || null})}
                                 style={{
                                     width: '100%', padding: '10px', borderRadius: '8px',
                                     border: '1px solid #444', background: '#2a2a2a', color: '#fff'
