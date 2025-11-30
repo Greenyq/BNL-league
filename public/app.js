@@ -430,7 +430,7 @@ function Header() {
     return (
         <div className="header">
             <div className="header-content">
-                <h1 className="league-title">CURRENT GNL</h1>
+                <h1 className="league-title">CURRENT BNL</h1>
                 <div style={{ color: '#888', marginTop: '10px' }}>📅 Season 23 • Starting Nov 27, 2025</div>
             </div>
         </div>
