@@ -370,10 +370,12 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
             const url = editingId ? `${API_BASE}/api/admin/teams/${editingId}` : `${API_BASE}/api/admin/teams`;
             const method = editingId ? 'PUT' : 'POST';
             
-            // Use default emoji if not provided
+            // Create team first
             const teamData = {
-                ...formData,
-                emoji: formData.emoji || '👥'
+                name: formData.name,
+                emoji: '👥', // Default emoji
+                captainId: formData.captainId || null,
+                coaches: formData.coaches || []
             };
             
             const response = await fetch(url, {
@@ -386,8 +388,24 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
             });
 
             if (response.ok) {
+                const team = await response.json();
+                
+                // Upload logo if file selected
+                if (formData.logoFile) {
+                    const formDataFile = new FormData();
+                    formDataFile.append('logo', formData.logoFile);
+                    
+                    await fetch(`${API_BASE}/api/admin/teams/${team._id}/upload-logo`, {
+                        method: 'POST',
+                        headers: {
+                            'x-session-id': sessionId
+                        },
+                        body: formDataFile
+                    });
+                }
+                
                 setShowForm(false);
-                setFormData({ name: '', emoji: '', logo: '', captainId: null, coaches: [] });
+                setFormData({ name: '', emoji: '', logo: '', logoFile: null, captainId: null, coaches: [] });
                 setEditingId(null);
                 onUpdate();
             }
