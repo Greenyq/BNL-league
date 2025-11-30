@@ -740,6 +740,24 @@ function Teams({ teams, players }) {
 }
 
 function Schedule({ schedule, teams, allPlayers, teamMatches }) {
+    // Generate unique color for each team based on ID
+    const getTeamColor = (teamId) => {
+        const colors = [
+            { primary: '#4caf50', secondary: '#66bb6a' }, // Green
+            { primary: '#2196f3', secondary: '#42a5f5' }, // Blue
+            { primary: '#ff9800', secondary: '#ffb74d' }, // Orange
+            { primary: '#9c27b0', secondary: '#ba68c8' }, // Purple
+            { primary: '#f44336', secondary: '#ef5350' }, // Red
+            { primary: '#00bcd4', secondary: '#26c6da' }, // Cyan
+            { primary: '#ffeb3b', secondary: '#fff176' }, // Yellow
+            { primary: '#e91e63', secondary: '#f06292' }, // Pink
+        ];
+
+        // Use team ID to consistently assign color
+        const index = teams.findIndex(t => (t._id || t.id) === teamId);
+        return colors[index % colors.length];
+    };
+
     // Calculate team points from completed matches
     const teamPoints = {};
     teams.forEach(team => {
@@ -788,7 +806,11 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                 const totalPoints = matchup.team1Points + matchup.team2Points;
                 const team1Percent = totalPoints > 0 ? (matchup.team1Points / totalPoints) * 100 : 50;
                 const team2Percent = totalPoints > 0 ? (matchup.team2Points / totalPoints) * 100 : 50;
-                
+
+                // Get team colors
+                const team1Color = getTeamColor(matchup.team1?._id || matchup.team1?.id);
+                const team2Color = getTeamColor(matchup.team2?._id || matchup.team2?.id);
+
                 return (
                     <div key={idx} style={{ marginBottom: '40px' }}>
                         {/* Team vs Team Header */}
@@ -798,7 +820,24 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                                 <div style={{ flex: 1, textAlign: 'center' }}>
-                                    <div style={{ fontSize: '2em', marginBottom: '10px' }}>{matchup.team1?.emoji}</div>
+                                    {matchup.team1?.logo ? (
+                                        <img
+                                            src={matchup.team1.logo}
+                                            alt={matchup.team1.name}
+                                            style={{
+                                                width: '80px',
+                                                height: '80px',
+                                                borderRadius: '10px',
+                                                objectFit: 'cover',
+                                                margin: '0 auto 10px'
+                                            }}
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextElementSibling.style.display = 'block';
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div style={{ fontSize: '2em', marginBottom: '10px', display: matchup.team1?.logo ? 'none' : 'block' }}>{matchup.team1?.emoji}</div>
                                     <div style={{ fontSize: '1.3em', fontWeight: '700', color: '#fff' }}>
                                         {matchup.team1?.name}
                                     </div>
@@ -810,7 +849,24 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                                     VS
                                 </div>
                                 <div style={{ flex: 1, textAlign: 'center' }}>
-                                    <div style={{ fontSize: '2em', marginBottom: '10px' }}>{matchup.team2?.emoji}</div>
+                                    {matchup.team2?.logo ? (
+                                        <img
+                                            src={matchup.team2.logo}
+                                            alt={matchup.team2.name}
+                                            style={{
+                                                width: '80px',
+                                                height: '80px',
+                                                borderRadius: '10px',
+                                                objectFit: 'cover',
+                                                margin: '0 auto 10px'
+                                            }}
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextElementSibling.style.display = 'block';
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div style={{ fontSize: '2em', marginBottom: '10px', display: matchup.team2?.logo ? 'none' : 'block' }}>{matchup.team2?.emoji}</div>
                                     <div style={{ fontSize: '1.3em', fontWeight: '700', color: '#fff' }}>
                                         {matchup.team2?.name}
                                     </div>
@@ -824,7 +880,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                             <div style={{ display: 'flex', height: '30px', borderRadius: '15px', overflow: 'hidden', marginBottom: '10px' }}>
                                 <div style={{
                                     width: `${team1Percent}%`,
-                                    background: 'linear-gradient(90deg, #4caf50, #66bb6a)',
+                                    background: `linear-gradient(90deg, ${team1Color.primary}, ${team1Color.secondary})`,
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -836,7 +892,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                                 </div>
                                 <div style={{
                                     width: `${team2Percent}%`,
-                                    background: 'linear-gradient(90deg, #2196f3, #42a5f5)',
+                                    background: `linear-gradient(90deg, ${team2Color.primary}, ${team2Color.secondary})`,
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
