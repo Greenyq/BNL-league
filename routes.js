@@ -85,7 +85,7 @@ router.post('/admin/players/search', async (req, res) => {
         
         const response = await axios.get(apiUrl, {
             headers: {
-                'User-Agent': 'GNL-League-App',
+                'User-Agent': 'BNL-League-App',
                 'Accept': 'application/json'
             }
         });
