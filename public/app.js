@@ -695,7 +695,7 @@ function Stats({ players, teams }) {
             <div className="team-stats-section">
                 <div className="total-games">{totalGames} BNL GAMES PLAYED SINCE NOV 27, 2025!</div>
                 <div style={{ fontSize: '2em', fontWeight: '800', textAlign: 'center', marginBottom: '30px', background: 'linear-gradient(135deg, #f4e4b8 0%, #c9a961 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    CURRENT GNL LADDER GODS
+                    CURRENT BNL LADDER GODS
                 </div>
 
                 {teamStats.map((team, idx) => (
