@@ -168,8 +168,11 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 BNL (Battle Newbie League) server running on http://localhost:${PORT}`);
-    console.log(`📊 Using W3Champions matches API`);
-    console.log(`💾 Connected to MongoDB`);
+// Start server only after DB connection
+mongoose.connection.once('open', () => {
+    app.listen(PORT, () => {
+        console.log(`🚀 BNL (Battle Newbie League) server running on http://localhost:${PORT}`);
+        console.log(`📊 Using W3Champions matches API`);
+        console.log(`💾 MongoDB Ready`);
+    });
 });
