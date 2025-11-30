@@ -27,8 +27,10 @@ const raceImages = {
 
 // Achievements
 const achievements = {
-    winStreak3: { icon: "🔥", name: "On Fire", desc: "3 wins in a row", points: 15 },
-    winStreak5: { icon: "🔥🔥", name: "Hot Streak", desc: "5 wins in a row", points: 25 },
+    winStreak3: { icon: "🔥", name: "On Fire", desc: "3 wins in a row", points: 30 },
+    winStreak5: { icon: "🔥🔥", name: "Hot Streak", desc: "5 wins in a row", points: 50 },
+    loseStreak3: { icon: "💪", name: "Не расстраивайся дави на газ", desc: "3 losses in a row", points: 10 },
+    giantSlayer: { icon: "⚔️", name: "И кто тут папа?", desc: "Beat opponent with +50 MMR", points: 25 },
     centurion: { icon: "💯", name: "Centurion", desc: "100 total wins", points: 50 },
     gladiator: { icon: "🏛️", name: "Gladiator", desc: "10+ wins this week", points: 20 },
     goldRush: { icon: "💰", name: "Gold Rush", desc: "1000+ points", points: 30 },
@@ -291,7 +293,7 @@ function App() {
 
             if (won) {
                 wins++;
-                matchHistory.push('win');
+                matchHistory.push({ result: 'win', mmrDiff, playerMMR, opponentMMR });
 
                 if (mmrDiff >= 20) {
                     // Opponent stronger (+20-30 MMR)
@@ -305,7 +307,7 @@ function App() {
                 }
             } else {
                 losses++;
-                matchHistory.push('loss');
+                matchHistory.push({ result: 'loss', mmrDiff, playerMMR, opponentMMR });
                 matchPoints = 0; // No points for losses
             }
 
@@ -325,7 +327,7 @@ function App() {
         console.log(`Most played race for ${battleTag}:`, playerRace, raceNames[playerRace]);
 
         // Determine achievements
-        const achs = determineAchievements(wins, losses, totalPoints, recentMatches.length);
+        const achs = determineAchievements(wins, losses, totalPoints, recentMatches.length, matchHistory);
 
         // Add achievement bonuses
         achs.forEach(achKey => {
@@ -344,13 +346,66 @@ function App() {
         };
     };
 
-    const determineAchievements = (wins, losses, points, totalGames) => {
+    const determineAchievements = (wins, losses, points, totalGames, matchHistory = []) => {
         const achs = [];
+
+        // Basic achievements
         if (wins >= 100) achs.push('centurion');
         if (wins >= 10) achs.push('gladiator');
         if (totalGames >= 500) achs.push('veteran');
         if (points >= 1000) achs.push('goldRush');
-        // Can add winStreak detection by analyzing matchHistory
+
+        // Analyze streaks (check last 10 matches)
+        const recentMatches = matchHistory.slice(0, 10);
+
+        // Check for 3+ win streak
+        let currentWinStreak = 0;
+        let maxWinStreak = 0;
+        for (const match of recentMatches) {
+            if (match.result === 'win') {
+                currentWinStreak++;
+                maxWinStreak = Math.max(maxWinStreak, currentWinStreak);
+            } else {
+                currentWinStreak = 0;
+            }
+        }
+
+        if (maxWinStreak >= 5) achs.push('winStreak5');
+        else if (maxWinStreak >= 3) achs.push('winStreak3');
+
+        // Check for 3+ loss streak
+        let currentLossStreak = 0;
+        for (const match of recentMatches) {
+            if (match.result === 'loss') {
+                currentLossStreak++;
+                if (currentLossStreak >= 3) {
+                    achs.push('loseStreak3');
+                    break;
+                }
+            } else {
+                currentLossStreak = 0;
+            }
+        }
+
+        // Check for giant slayer (win against +50 MMR opponent)
+        for (const match of recentMatches) {
+            if (match.result === 'win' && match.mmrDiff >= 50) {
+                achs.push('giantSlayer');
+                break;
+            }
+        }
+
+        // Check for comeback (win after 3 losses)
+        for (let i = 0; i < recentMatches.length - 3; i++) {
+            if (recentMatches[i].result === 'win' &&
+                recentMatches[i + 1].result === 'loss' &&
+                recentMatches[i + 2].result === 'loss' &&
+                recentMatches[i + 3].result === 'loss') {
+                achs.push('comeback');
+                break;
+            }
+        }
+
         return achs;
     };
 
@@ -460,6 +515,7 @@ function Nav({ activeTab, setActiveTab, isAdmin, setShowLoginModal }) {
 }
 
 function Players({ players }) {
+    const [selectedPlayer, setSelectedPlayer] = useState(null);
     // Sort by points (descending)
     const sortedPlayers = [...players].sort((a, b) => (b.points || 0) - (a.points || 0));
 
@@ -468,16 +524,27 @@ function Players({ players }) {
             <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>Профили игроков</h2>
             <div className="players-grid">
                 {sortedPlayers.map((player, index) => (
-                    <PlayerCard key={player.id} player={player} rank={index + 1} />
+                    <PlayerCard
+                        key={player.id}
+                        player={player}
+                        rank={index + 1}
+                        onClick={() => setSelectedPlayer(player)}
+                    />
                 ))}
             </div>
+            {selectedPlayer && (
+                <PlayerDetailModal
+                    player={selectedPlayer}
+                    onClose={() => setSelectedPlayer(null)}
+                />
+            )}
         </div>
     );
 }
 
-function PlayerCard({ player, rank }) {
+function PlayerCard({ player, rank, onClick }) {
     const raceImage = raceImages[player.race];
-    
+
     // Debug logging
     React.useEffect(() => {
         console.log(`PlayerCard for ${player.name}:`, {
@@ -487,9 +554,9 @@ function PlayerCard({ player, rank }) {
             hasImage: !!raceImage
         });
     }, [player.race]);
-    
+
     return (
-        <div className="player-card">
+        <div className="player-card" onClick={onClick} style={{ cursor: 'pointer' }}>
             <div className="player-card-inner">
                 <div className="player-header">
                     <div className="player-title">
@@ -579,7 +646,7 @@ function Teams({ teams, players }) {
     const getTeamPlayers = (teamId) => players.filter(p => p.teamId === teamId);
     const getTeamLeader = (teamId) => {
         const teamPlayers = getTeamPlayers(teamId);
-        return teamPlayers.reduce((leader, player) => player.mmr > (leader?.mmr || 0) ? player : leader, null);
+        return teamPlayers.reduce((leader, player) => (player.points || 0) > (leader?.points || 0) ? player : leader, null);
     };
 
     return (
@@ -865,6 +932,270 @@ function Stats({ players, teams }) {
                         </div>
                     </div>
                 ))}
+            </div>
+        </div>
+    );
+}
+
+// Player Detail Modal
+function PlayerDetailModal({ player, onClose }) {
+    const totalGames = (player.wins || 0) + (player.losses || 0);
+    const winRate = totalGames > 0 ? ((player.wins || 0) / totalGames * 100).toFixed(1) : 0;
+
+    return (
+        <div
+            style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0, 0, 0, 0.8)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+                padding: '20px'
+            }}
+            onClick={onClose}
+        >
+            <div
+                style={{
+                    background: '#1a1a1a',
+                    borderRadius: '20px',
+                    maxWidth: '800px',
+                    width: '100%',
+                    maxHeight: '90vh',
+                    overflow: 'auto',
+                    border: '2px solid #c9a961',
+                    position: 'relative'
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div style={{
+                    background: 'linear-gradient(135deg, #c9a961 0%, #8b7355 100%)',
+                    padding: '30px',
+                    borderRadius: '18px 18px 0 0',
+                    position: 'relative'
+                }}>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            position: 'absolute',
+                            top: '15px',
+                            right: '15px',
+                            background: 'rgba(0,0,0,0.3)',
+                            border: 'none',
+                            color: '#fff',
+                            fontSize: '24px',
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        ×
+                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        {raceImages[player.race] && (
+                            <img
+                                src={raceImages[player.race]}
+                                alt={raceNames[player.race]}
+                                style={{
+                                    width: '80px',
+                                    height: '80px',
+                                    borderRadius: '50%',
+                                    border: '3px solid rgba(255,255,255,0.3)'
+                                }}
+                            />
+                        )}
+                        <div>
+                            <h2 style={{ fontSize: '2.5em', fontWeight: '900', color: '#000', marginBottom: '5px' }}>
+                                {player.name}
+                            </h2>
+                            <div style={{ fontSize: '1.1em', color: 'rgba(0,0,0,0.6)' }}>{player.battleTag}</div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Content */}
+                <div style={{ padding: '30px' }}>
+                    {/* Stats Grid */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                        gap: '20px',
+                        marginBottom: '30px'
+                    }}>
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>Очки</div>
+                            <div style={{ fontSize: '2em', fontWeight: '800', color: '#c9a961' }}>
+                                {player.points || 0}
+                            </div>
+                        </div>
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>MMR</div>
+                            <div style={{ fontSize: '2em', fontWeight: '800', color: '#4caf50' }}>
+                                {player.mmr || 0}
+                            </div>
+                        </div>
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>Винрейт</div>
+                            <div style={{ fontSize: '2em', fontWeight: '800', color: '#2196f3' }}>
+                                {winRate}%
+                            </div>
+                        </div>
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>Игр</div>
+                            <div style={{ fontSize: '2em', fontWeight: '800', color: '#fff' }}>
+                                {totalGames}
+                            </div>
+                        </div>
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>Побед</div>
+                            <div style={{ fontSize: '2em', fontWeight: '800', color: '#4caf50' }}>
+                                {player.wins || 0}
+                            </div>
+                        </div>
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>Поражений</div>
+                            <div style={{ fontSize: '2em', fontWeight: '800', color: '#f44336' }}>
+                                {player.losses || 0}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Race */}
+                    <div style={{
+                        background: '#2a2a2a',
+                        padding: '20px',
+                        borderRadius: '15px',
+                        marginBottom: '30px'
+                    }}>
+                        <div style={{ fontSize: '1.2em', fontWeight: '700', marginBottom: '15px', color: '#c9a961' }}>
+                            🎮 Раса
+                        </div>
+                        <div style={{ fontSize: '1.5em', fontWeight: '800', color: '#fff' }}>
+                            {raceNames[player.race] || 'Unknown'}
+                        </div>
+                    </div>
+
+                    {/* Achievements */}
+                    {player.achievements && player.achievements.length > 0 && (
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px',
+                            marginBottom: '30px'
+                        }}>
+                            <div style={{ fontSize: '1.2em', fontWeight: '700', marginBottom: '15px', color: '#c9a961' }}>
+                                🏆 Достижения
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
+                                {player.achievements.map(achKey => {
+                                    const ach = achievements[achKey];
+                                    if (!ach) return null;
+                                    return (
+                                        <div
+                                            key={achKey}
+                                            style={{
+                                                background: '#1a1a1a',
+                                                padding: '15px',
+                                                borderRadius: '10px',
+                                                border: '1px solid #c9a961',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '10px'
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '2em' }}>{ach.icon}</span>
+                                            <div>
+                                                <div style={{ fontWeight: '700', color: '#fff', fontSize: '0.95em' }}>
+                                                    {ach.name}
+                                                </div>
+                                                <div style={{ fontSize: '0.8em', color: '#888' }}>
+                                                    {ach.desc}
+                                                </div>
+                                                <div style={{ fontSize: '0.85em', color: '#c9a961', marginTop: '3px' }}>
+                                                    +{ach.points} pts
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Match History */}
+                    {player.matchHistory && player.matchHistory.length > 0 && (
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px'
+                        }}>
+                            <div style={{ fontSize: '1.2em', fontWeight: '700', marginBottom: '15px', color: '#c9a961' }}>
+                                📜 История матчей (последние {Math.min(20, player.matchHistory.length)})
+                            </div>
+                            <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                                {player.matchHistory.slice(0, 20).map((match, idx) => (
+                                    <div
+                                        key={idx}
+                                        style={{
+                                            width: '30px',
+                                            height: '30px',
+                                            borderRadius: '5px',
+                                            background: match.result === 'win' ? '#4caf50' : '#f44336',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#fff',
+                                            fontWeight: '700',
+                                            fontSize: '0.8em'
+                                        }}
+                                        title={`${match.result === 'win' ? 'Win' : 'Loss'} (${match.mmrDiff >= 0 ? '+' : ''}${match.mmrDiff} MMR diff)`}
+                                    >
+                                        {match.result === 'win' ? 'W' : 'L'}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
