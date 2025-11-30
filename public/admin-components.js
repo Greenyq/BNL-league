@@ -460,33 +460,19 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
                             />
                         </div>
                         <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Эмодзи команды (например: 🐼)</label>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Загрузить логотип команды</label>
                             <input
-                                type="text"
-                                value={formData.emoji}
-                                onChange={(e) => setFormData({...formData, emoji: e.target.value})}
+                                type="file"
+                                accept="image/jpeg,image/jpg"
+                                onChange={(e) => setFormData({...formData, logoFile: e.target.files[0]})}
                                 style={{
                                     width: '100%', padding: '10px', borderRadius: '8px',
                                     border: '1px solid #444', background: '#2a2a2a', color: '#fff'
                                 }}
-                                placeholder="🐼"
                             />
                             <small style={{ color: '#888', fontSize: '0.85em', marginTop: '5px', display: 'block' }}>
-                                Опционально. Если не указан, будет использован 👥
+                                Только JPEG/JPG, максимум 20MB
                             </small>
-                        </div>
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>URL логотипа (опционально)</label>
-                            <input
-                                type="text"
-                                value={formData.logo}
-                                onChange={(e) => setFormData({...formData, logo: e.target.value})}
-                                style={{
-                                    width: '100%', padding: '10px', borderRadius: '8px',
-                                    border: '1px solid #444', background: '#2a2a2a', color: '#fff'
-                                }}
-                                placeholder="https://example.com/logo.png"
-                            />
                         </div>
                         <div style={{ marginBottom: '15px' }}>
                             <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Капитан</label>
