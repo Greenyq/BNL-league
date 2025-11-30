@@ -658,6 +658,12 @@ function AdminPlayers({ players, teams, sessionId, onUpdate }) {
     const handleUpdateTeam = async (playerId, teamId) => {
         try {
             const player = players.find(p => p.id === playerId);
+            if (!player) {
+                console.error('Player not found:', playerId);
+                alert('Игрок не найден');
+                return;
+            }
+            
             const response = await fetch(`${API_BASE}/api/admin/players/${playerId}`, {
                 method: 'PUT',
                 headers: {
@@ -665,15 +671,23 @@ function AdminPlayers({ players, teams, sessionId, onUpdate }) {
                     'x-session-id': sessionId
                 },
                 body: JSON.stringify({
-                    ...player,
-                    teamId: teamId ? parseInt(teamId) : null
+                    battleTag: player.battleTag,
+                    name: player.name,
+                    race: player.race,
+                    currentMmr: player.currentMmr,
+                    teamId: teamId || null
                 })
             });
 
             if (response.ok) {
-                onUpdate();
+                await onUpdate();
+            } else {
+                const errorData = await response.json();
+                console.error('Failed to update player team:', errorData);
+                alert('Ошибка при обновлении команды игрока');
             }
         } catch (error) {
+            console.error('Error updating player team:', error);
             alert('Ошибка при обновлении команды игрока');
         }
     };
