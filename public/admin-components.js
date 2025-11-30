@@ -538,7 +538,23 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
                     }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                <span style={{ fontSize: '2em' }}>{team.emoji}</span>
+                                {team.logo ? (
+                                    <img
+                                        src={team.logo}
+                                        alt={team.name}
+                                        style={{
+                                            width: '60px',
+                                            height: '60px',
+                                            borderRadius: '10px',
+                                            objectFit: 'cover'
+                                        }}
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            e.target.nextElementSibling.style.display = 'inline';
+                                        }}
+                                    />
+                                ) : null}
+                                <span style={{ fontSize: '2em', display: team.logo ? 'none' : 'inline' }}>{team.emoji}</span>
                                 <div>
                                     <div style={{ fontSize: '1.3em', fontWeight: '700', color: '#fff' }}>
                                         {team.name}

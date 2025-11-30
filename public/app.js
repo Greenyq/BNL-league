@@ -595,7 +595,24 @@ function Teams({ teams, players }) {
                     <div key={team.id} className="team-card" onClick={() => setExpandedTeam(expandedTeam === team.id ? null : team.id)}>
                         <div className="team-header">
                             <div style={{ display: 'flex', alignItems: 'center' }}>
-                                <span className="team-emoji">{team.emoji}</span>
+                                {team.logo ? (
+                                    <img
+                                        src={team.logo}
+                                        alt={team.name}
+                                        className="team-emoji"
+                                        style={{
+                                            width: '60px',
+                                            height: '60px',
+                                            borderRadius: '10px',
+                                            objectFit: 'cover'
+                                        }}
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            e.target.nextElementSibling.style.display = 'inline';
+                                        }}
+                                    />
+                                ) : null}
+                                <span className="team-emoji" style={{ display: team.logo ? 'none' : 'inline' }}>{team.emoji}</span>
                                 <div>
                                     <div className="team-name">{team.name}</div>
                                     <div style={{ color: '#888', fontSize: '1em' }}>{teamPlayers.length} игроков</div>
