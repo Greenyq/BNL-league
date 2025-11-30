@@ -150,7 +150,7 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 GNL League server running on http://localhost:${PORT}`);
+    console.log(`🚀 BNL (Battle Newbie League) server running on http://localhost:${PORT}`);
     console.log(`📊 Using W3Champions matches API`);
     console.log(`💾 Connected to MongoDB`);
 });
