@@ -235,15 +235,44 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
                             marginBottom: '15px', border: '1px solid #333'
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                                <div style={{ color: '#888', fontSize: '0.9em' }}>
-                                    {new Date(match.createdAt).toLocaleDateString('ru-RU')}
+                                <div>
+                                    <div style={{
+                                        display: 'inline-block',
+                                        padding: '4px 12px',
+                                        background: match.status === 'upcoming' ? '#2196f3' : '#4caf50',
+                                        color: '#fff',
+                                        borderRadius: '15px',
+                                        fontSize: '0.85em',
+                                        fontWeight: '600',
+                                        marginBottom: '5px'
+                                    }}>
+                                        {match.status === 'upcoming' ? '🕐 Предстоящий' : '✅ Завершён'}
+                                    </div>
+                                    {match.status === 'upcoming' && match.scheduledDate && (
+                                        <div style={{ color: '#c9a961', fontSize: '0.9em', marginTop: '5px' }}>
+                                            📅 {new Date(match.scheduledDate).toLocaleString('ru-RU', {
+                                                day: '2-digit',
+                                                month: '2-digit',
+                                                year: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </div>
+                                    )}
+                                    {match.status === 'completed' && (
+                                        <div style={{ color: '#888', fontSize: '0.9em', marginTop: '5px' }}>
+                                            {new Date(match.createdAt).toLocaleDateString('ru-RU')}
+                                        </div>
+                                    )}
                                 </div>
-                                <div style={{
-                                    padding: '5px 15px', background: '#c9a961',
-                                    color: '#000', borderRadius: '20px', fontWeight: '600'
-                                }}>
-                                    +{match.points} pts
-                                </div>
+                                {match.status === 'completed' && (
+                                    <div style={{
+                                        padding: '5px 15px', background: '#c9a961',
+                                        color: '#000', borderRadius: '20px', fontWeight: '600'
+                                    }}>
+                                        +{match.points} pts
+                                    </div>
+                                )}
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ flex: 1, textAlign: 'center' }}>
@@ -1098,7 +1127,8 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                     onChange={(e) => setFormData({...formData, scheduledDate: e.target.value})}
                                     style={{
                                         width: '100%', padding: '10px', borderRadius: '8px',
-                                        border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                        border: '1px solid #444', background: '#2a2a2a', color: '#fff',
+                                        colorScheme: 'dark'
                                     }}
                                 />
                             </div>
@@ -1193,16 +1223,45 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                             marginBottom: '15px', border: '1px solid #333'
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                                <div style={{ color: '#888', fontSize: '0.9em' }}>
-                                    {new Date(match.createdAt).toLocaleDateString('ru-RU')}
+                                <div>
+                                    <div style={{
+                                        display: 'inline-block',
+                                        padding: '4px 12px',
+                                        background: match.status === 'upcoming' ? '#2196f3' : '#4caf50',
+                                        color: '#fff',
+                                        borderRadius: '15px',
+                                        fontSize: '0.85em',
+                                        fontWeight: '600',
+                                        marginBottom: '5px'
+                                    }}>
+                                        {match.status === 'upcoming' ? '🕐 Предстоящий' : '✅ Завершён'}
+                                    </div>
+                                    {match.status === 'upcoming' && match.scheduledDate && (
+                                        <div style={{ color: '#c9a961', fontSize: '0.9em', marginTop: '5px' }}>
+                                            📅 {new Date(match.scheduledDate).toLocaleString('ru-RU', {
+                                                day: '2-digit',
+                                                month: '2-digit',
+                                                year: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </div>
+                                    )}
+                                    {match.status === 'completed' && (
+                                        <div style={{ color: '#888', fontSize: '0.9em', marginTop: '5px' }}>
+                                            {new Date(match.createdAt).toLocaleDateString('ru-RU')}
+                                        </div>
+                                    )}
                                 </div>
                                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                    <div style={{
-                                        padding: '5px 15px', background: '#c9a961',
-                                        color: '#000', borderRadius: '20px', fontWeight: '600'
-                                    }}>
-                                        +{match.points} pts
-                                    </div>
+                                    {match.status === 'completed' && (
+                                        <div style={{
+                                            padding: '5px 15px', background: '#c9a961',
+                                            color: '#000', borderRadius: '20px', fontWeight: '600'
+                                        }}>
+                                            +{match.points} pts
+                                        </div>
+                                    )}
                                     <button
                                         onClick={() => handleDelete(match.id)}
                                         style={{
