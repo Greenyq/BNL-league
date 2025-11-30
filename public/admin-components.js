@@ -395,7 +395,7 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
                     const formDataFile = new FormData();
                     formDataFile.append('logo', formData.logoFile);
                     
-                    await fetch(`${API_BASE}/api/admin/teams/${team._id}/upload-logo`, {
+                    await fetch(`${API_BASE}/api/admin/teams/${team.id}/upload-logo`, {
                         method: 'POST',
                         headers: {
                             'x-session-id': sessionId
