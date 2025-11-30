@@ -42,20 +42,12 @@ connectDB();
 const ADMIN_LOGIN = 'admin777';
 const ADMIN_PASSWORD = '@dmin1122!';
 
-// Multer configuration for file uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'public/uploads/');
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'team-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
+// Multer configuration for file uploads (storing in memory for MongoDB)
+const storage = multer.memoryStorage();
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit for base64
     fileFilter: (req, file, cb) => {
         if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg' || file.mimetype === 'image/png') {
             cb(null, true);
@@ -140,14 +132,23 @@ app.get('/api/admin/verify', async (req, res) => {
 app.use('/api', routes);
 app.use('/api/admin', checkAuth, routes);
 
-// Upload endpoint with multer
+// Upload endpoint with multer - saves as base64 in MongoDB
 app.post('/api/admin/teams/:id/upload-logo', checkAuth, upload.single('logo'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-        const logoUrl = `/uploads/${req.file.filename}`;
-        const team = await Team.findByIdAndUpdate(req.params.id, { logo: logoUrl, updatedAt: Date.now() }, { new: true });
-        res.json({ logoUrl, team });
+
+        // Convert image to base64 data URL
+        const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
+        const team = await Team.findByIdAndUpdate(
+            req.params.id,
+            { logo: base64Image, updatedAt: Date.now() },
+            { new: true }
+        );
+
+        res.json({ logoUrl: base64Image, team });
     } catch (error) {
+        console.error('Upload error:', error);
         res.status(500).json({ error: 'Failed to upload logo' });
     }
 });

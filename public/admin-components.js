@@ -276,7 +276,24 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ flex: 1, textAlign: 'center' }}>
-                                    <div style={{ fontSize: '1.5em', marginBottom: '5px' }}>{team1?.emoji}</div>
+                                    {team1?.logo ? (
+                                        <img
+                                            src={team1.logo}
+                                            alt={team1.name}
+                                            style={{
+                                                width: '60px',
+                                                height: '60px',
+                                                borderRadius: '10px',
+                                                objectFit: 'cover',
+                                                margin: '0 auto 5px'
+                                            }}
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextElementSibling.style.display = 'block';
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div style={{ fontSize: '1.5em', marginBottom: '5px', display: team1?.logo ? 'none' : 'block' }}>{team1?.emoji}</div>
                                     <div style={{
                                         fontWeight: isTeam1Winner ? '700' : '400',
                                         color: isTeam1Winner ? '#4caf50' : '#888',
@@ -295,7 +312,24 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
                                     VS
                                 </div>
                                 <div style={{ flex: 1, textAlign: 'center' }}>
-                                    <div style={{ fontSize: '1.5em', marginBottom: '5px' }}>{team2?.emoji}</div>
+                                    {team2?.logo ? (
+                                        <img
+                                            src={team2.logo}
+                                            alt={team2.name}
+                                            style={{
+                                                width: '60px',
+                                                height: '60px',
+                                                borderRadius: '10px',
+                                                objectFit: 'cover',
+                                                margin: '0 auto 5px'
+                                            }}
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextElementSibling.style.display = 'block';
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div style={{ fontSize: '1.5em', marginBottom: '5px', display: team2?.logo ? 'none' : 'block' }}>{team2?.emoji}</div>
                                     <div style={{
                                         fontWeight: !isTeam1Winner ? '700' : '400',
                                         color: !isTeam1Winner ? '#4caf50' : '#888',
@@ -560,6 +594,100 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
                                 ))}
                             </select>
                         </div>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Тренеры</label>
+                            <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                                {(formData.coaches || []).map((coach, idx) => (
+                                    <div
+                                        key={idx}
+                                        style={{
+                                            background: '#2a2a2a',
+                                            padding: '8px 12px',
+                                            borderRadius: '8px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            border: '1px solid #444'
+                                        }}
+                                    >
+                                        <span style={{ color: '#fff' }}>{coach}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const newCoaches = formData.coaches.filter((_, i) => i !== idx);
+                                                setFormData({...formData, coaches: newCoaches});
+                                            }}
+                                            style={{
+                                                background: '#f44336',
+                                                color: '#fff',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                padding: '2px 6px',
+                                                cursor: 'pointer',
+                                                fontSize: '0.8em'
+                                            }}
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <input
+                                    type="text"
+                                    placeholder="Имя тренера"
+                                    id="coachNameInput"
+                                    style={{
+                                        flex: 1,
+                                        padding: '10px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #444',
+                                        background: '#2a2a2a',
+                                        color: '#fff'
+                                    }}
+                                    onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            const input = e.target;
+                                            if (input.value.trim()) {
+                                                setFormData({
+                                                    ...formData,
+                                                    coaches: [...(formData.coaches || []), input.value.trim()]
+                                                });
+                                                input.value = '';
+                                            }
+                                        }
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const input = document.getElementById('coachNameInput');
+                                        if (input.value.trim()) {
+                                            setFormData({
+                                                ...formData,
+                                                coaches: [...(formData.coaches || []), input.value.trim()]
+                                            });
+                                            input.value = '';
+                                        }
+                                    }}
+                                    style={{
+                                        padding: '10px 20px',
+                                        borderRadius: '8px',
+                                        background: '#2196f3',
+                                        color: '#fff',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        fontWeight: '600'
+                                    }}
+                                >
+                                    ➕ Добавить
+                                </button>
+                            </div>
+                            <small style={{ color: '#888', fontSize: '0.85em', marginTop: '5px', display: 'block' }}>
+                                Введите имя тренера и нажмите Enter или кнопку "Добавить"
+                            </small>
+                        </div>
                         <button
                             type="submit"
                             style={{
@@ -614,6 +742,11 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
                                     {team.captainId && (
                                         <div style={{ color: '#c9a961', fontSize: '0.9em', marginTop: '5px' }}>
                                             👑 Капитан: {allPlayers.find(p => p.id === team.captainId)?.name || 'Unknown'}
+                                        </div>
+                                    )}
+                                    {team.coaches && team.coaches.length > 0 && (
+                                        <div style={{ color: '#888', fontSize: '0.9em', marginTop: '5px' }}>
+                                            🎓 Тренеры: {team.coaches.join(', ')}
                                         </div>
                                     )}
                                 </div>
@@ -1276,7 +1409,24 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
                                 <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: '1.5em', marginBottom: '5px' }}>{team1?.emoji}</div>
+                                    {team1?.logo ? (
+                                        <img
+                                            src={team1.logo}
+                                            alt={team1.name}
+                                            style={{
+                                                width: '60px',
+                                                height: '60px',
+                                                borderRadius: '10px',
+                                                objectFit: 'cover',
+                                                margin: '0 auto 5px'
+                                            }}
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextElementSibling.style.display = 'block';
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div style={{ fontSize: '1.5em', marginBottom: '5px', display: team1?.logo ? 'none' : 'block' }}>{team1?.emoji}</div>
                                     <div style={{ fontWeight: match.winnerId === match.team1Id ? '700' : '400', color: match.winnerId === match.team1Id ? '#4caf50' : '#888' }}>
                                         {team1?.name}
                                     </div>
@@ -1288,7 +1438,24 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                     VS
                                 </div>
                                 <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: '1.5em', marginBottom: '5px' }}>{team2?.emoji}</div>
+                                    {team2?.logo ? (
+                                        <img
+                                            src={team2.logo}
+                                            alt={team2.name}
+                                            style={{
+                                                width: '60px',
+                                                height: '60px',
+                                                borderRadius: '10px',
+                                                objectFit: 'cover',
+                                                margin: '0 auto 5px'
+                                            }}
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextElementSibling.style.display = 'block';
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div style={{ fontSize: '1.5em', marginBottom: '5px', display: team2?.logo ? 'none' : 'block' }}>{team2?.emoji}</div>
                                     <div style={{ fontWeight: match.winnerId === match.team2Id ? '700' : '400', color: match.winnerId === match.team2Id ? '#4caf50' : '#888' }}>
                                         {team2?.name}
                                     </div>
