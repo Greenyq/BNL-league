@@ -861,16 +861,25 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
     const [formData, setFormData] = React.useState({
         team1Id: null, team2Id: null,
         player1Id: null, player2Id: null,
-        winnerId: null, points: 50, notes: ''
+        winnerId: null, points: 50, notes: '',
+        status: 'upcoming', scheduledDate: ''
     });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (!formData.winnerId) {
-            alert('Выберите победителя');
+        // For completed matches, winner is required
+        if (formData.status === 'completed' && !formData.winnerId) {
+            alert('Для завершенного матча выберите победителя');
             return;
         }
+        
+        // For upcoming matches, winner and points are optional
+        const matchData = {
+            ...formData,
+            winnerId: formData.status === 'upcoming' ? null : formData.winnerId,
+            points: formData.status === 'upcoming' ? 0 : formData.points
+        };
 
         try {
             const response = await fetch(`${API_BASE}/api/admin/team-matches`, {
