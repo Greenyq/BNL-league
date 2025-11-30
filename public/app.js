@@ -611,7 +611,8 @@ function PlayerCard({ player, rank, onClick }) {
 
                 {player.matchHistory && player.matchHistory.length > 0 && (
                     <div className="match-graph">
-                        {player.matchHistory.map((result, idx) => {
+                        {player.matchHistory.slice(0, 20).map((match, idx) => {
+                            const result = typeof match === 'string' ? match : match.result;
                             const height = 30 + Math.random() * 120;
                             return <div key={idx} className={`match-bar ${result}`} style={{ height: `${height}px` }} />;
                         })}
