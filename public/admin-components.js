@@ -1002,7 +1002,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                 <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Игрок из команды 1</label>
                                 <select
                                     value={formData.player1Id || ''}
-                                    onChange={(e) => setFormData({...formData, player1Id: parseInt(e.target.value)})}
+                                    onChange={(e) => setFormData({...formData, player1Id: e.target.value || null})}
                                     style={{
                                         width: '100%', padding: '10px', borderRadius: '8px',
                                         border: '1px solid #444', background: '#2a2a2a', color: '#fff'
