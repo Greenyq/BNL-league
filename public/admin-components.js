@@ -375,15 +375,28 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
 }
 
 // ==================== ADMIN PANEL ====================
-function AdminPanel({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
+function AdminPanel({ teams, allPlayers, teamMatches, sessionId, onUpdate, onLogout }) {
     const [activeSection, setActiveSection] = React.useState('teams');
 
     return (
         <div>
-            <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>
-                ⚙️ Админ панель
-            </h2>
-            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                <h2 style={{ fontSize: '2em', margin: 0, color: '#c9a961' }}>
+                    ⚙️ Админ панель
+                </h2>
+                <button
+                    onClick={onLogout}
+                    style={{
+                        padding: '10px 20px', borderRadius: '8px',
+                        background: '#f44336', color: '#fff',
+                        border: 'none', cursor: 'pointer', fontWeight: '600',
+                        fontSize: '14px'
+                    }}
+                >
+                    🚪 Выход
+                </button>
+            </div>
+
             <div style={{ marginBottom: '30px' }}>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                     <button
@@ -442,6 +455,7 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
         name: '', emoji: '', logo: '', captainId: null, coaches: []
     });
     const [editingId, setEditingId] = React.useState(null);
+    const [selectedPlayer, setSelectedPlayer] = React.useState(null);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -613,46 +627,48 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
                         <div style={{ marginBottom: '15px' }}>
                             <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Тренеры</label>
                             <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                                {(formData.coaches || []).map((coach, idx) => (
-                                    <div
-                                        key={idx}
-                                        style={{
-                                            background: '#2a2a2a',
-                                            padding: '8px 12px',
-                                            borderRadius: '8px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px',
-                                            border: '1px solid #444'
-                                        }}
-                                    >
-                                        <span style={{ color: '#fff' }}>{coach}</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const newCoaches = formData.coaches.filter((_, i) => i !== idx);
-                                                setFormData({...formData, coaches: newCoaches});
-                                            }}
+                                {(formData.coaches || []).map((coachId, idx) => {
+                                    const coachPlayer = allPlayers.find(p => p.id === coachId);
+                                    const coachName = coachPlayer ? coachPlayer.name : coachId;
+                                    return (
+                                        <div
+                                            key={idx}
                                             style={{
-                                                background: '#f44336',
-                                                color: '#fff',
-                                                border: 'none',
-                                                borderRadius: '4px',
-                                                padding: '2px 6px',
-                                                cursor: 'pointer',
-                                                fontSize: '0.8em'
+                                                background: '#2a2a2a',
+                                                padding: '8px 12px',
+                                                borderRadius: '8px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                border: '1px solid #444'
                                             }}
                                         >
-                                            ✕
-                                        </button>
-                                    </div>
-                                ))}
+                                            <span style={{ color: '#fff' }}>{coachName}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const newCoaches = formData.coaches.filter((_, i) => i !== idx);
+                                                    setFormData({...formData, coaches: newCoaches});
+                                                }}
+                                                style={{
+                                                    background: '#f44336',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    padding: '2px 6px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.8em'
+                                                }}
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    );
+                                })}
                             </div>
                             <div style={{ display: 'flex', gap: '10px' }}>
-                                <input
-                                    type="text"
-                                    placeholder="Имя тренера"
-                                    id="coachNameInput"
+                                <select
+                                    id="coachSelect"
                                     style={{
                                         flex: 1,
                                         padding: '10px',
@@ -661,30 +677,25 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
                                         background: '#2a2a2a',
                                         color: '#fff'
                                     }}
-                                    onKeyPress={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            const input = e.target;
-                                            if (input.value.trim()) {
-                                                setFormData({
-                                                    ...formData,
-                                                    coaches: [...(formData.coaches || []), input.value.trim()]
-                                                });
-                                                input.value = '';
-                                            }
-                                        }
-                                    }}
-                                />
+                                >
+                                    <option value="">Выберите тренера...</option>
+                                    {allPlayers
+                                        .filter(player => !(formData.coaches || []).includes(player.id))
+                                        .map(player => (
+                                            <option key={player.id} value={player.id}>{player.name}</option>
+                                        ))
+                                    }
+                                </select>
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        const input = document.getElementById('coachNameInput');
-                                        if (input.value.trim()) {
+                                        const select = document.getElementById('coachSelect');
+                                        if (select.value) {
                                             setFormData({
                                                 ...formData,
-                                                coaches: [...(formData.coaches || []), input.value.trim()]
+                                                coaches: [...(formData.coaches || []), select.value]
                                             });
-                                            input.value = '';
+                                            select.value = '';
                                         }
                                     }}
                                     style={{
@@ -701,7 +712,7 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
                                 </button>
                             </div>
                             <small style={{ color: '#888', fontSize: '0.85em', marginTop: '5px', display: 'block' }}>
-                                Введите имя тренера и нажмите Enter или кнопку "Добавить"
+                                Выберите игрока из списка и нажмите "Добавить"
                             </small>
                         </div>
                         <button
@@ -761,8 +772,61 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
                                         </div>
                                     )}
                                     {team.coaches && team.coaches.length > 0 && (
-                                        <div style={{ color: '#888', fontSize: '0.9em', marginTop: '5px' }}>
-                                            🎓 Тренеры: {team.coaches.join(', ')}
+                                        <div style={{ marginTop: '10px' }}>
+                                            <div style={{ color: '#c9a961', fontSize: '0.95em', marginBottom: '8px', fontWeight: '600' }}>
+                                                🎓 Тренеры:
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                {team.coaches.map((coachId, idx) => {
+                                                    const coach = allPlayers.find(p => p.id === coachId);
+                                                    if (!coach) return null;
+                                                    return (
+                                                        <div
+                                                            key={idx}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedPlayer(coach);
+                                                            }}
+                                                            style={{
+                                                                background: '#2a2a2a',
+                                                                padding: '10px 15px',
+                                                                borderRadius: '10px',
+                                                                cursor: 'pointer',
+                                                                border: '1px solid #444',
+                                                                transition: 'all 0.2s',
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center'
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.background = '#3a3a3a';
+                                                                e.currentTarget.style.borderColor = '#c9a961';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.background = '#2a2a2a';
+                                                                e.currentTarget.style.borderColor = '#444';
+                                                            }}
+                                                        >
+                                                            <div>
+                                                                <div style={{ color: '#fff', fontWeight: '600', marginBottom: '3px' }}>
+                                                                    {coach.name}
+                                                                </div>
+                                                                <div style={{ color: '#888', fontSize: '0.85em' }}>
+                                                                    {coach.battleTag}
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ textAlign: 'right' }}>
+                                                                <div style={{ color: '#c9a961', fontSize: '0.9em' }}>
+                                                                    ⚔️ {coach.points || 0} pts
+                                                                </div>
+                                                                <div style={{ color: '#4caf50', fontSize: '0.85em' }}>
+                                                                    {coach.mmr || 0} MMR
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -792,6 +856,283 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
                         </div>
                     </div>
                 ))}
+            </div>
+            {selectedPlayer && (
+                <PlayerDetailModal
+                    player={selectedPlayer}
+                    onClose={() => setSelectedPlayer(null)}
+                />
+            )}
+        </div>
+    );
+}
+
+// ==================== PLAYER DETAIL MODAL ====================
+function PlayerDetailModal({ player, onClose }) {
+    const totalGames = (player.wins || 0) + (player.losses || 0);
+    const winRate = totalGames > 0 ? ((player.wins || 0) / totalGames * 100).toFixed(1) : 0;
+
+    return (
+        <div
+            style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0, 0, 0, 0.8)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+                padding: '20px'
+            }}
+            onClick={onClose}
+        >
+            <div
+                style={{
+                    background: '#1a1a1a',
+                    borderRadius: '20px',
+                    maxWidth: '800px',
+                    width: '100%',
+                    maxHeight: '90vh',
+                    overflow: 'auto',
+                    border: '2px solid #c9a961',
+                    position: 'relative'
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div style={{
+                    background: 'linear-gradient(135deg, #c9a961 0%, #8b7355 100%)',
+                    padding: '30px',
+                    borderRadius: '18px 18px 0 0',
+                    position: 'relative'
+                }}>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            position: 'absolute',
+                            top: '15px',
+                            right: '15px',
+                            background: 'rgba(0,0,0,0.3)',
+                            border: 'none',
+                            color: '#fff',
+                            fontSize: '24px',
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        ×
+                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        {raceImages[player.race] && (
+                            <img
+                                src={raceImages[player.race]}
+                                alt={raceNames[player.race]}
+                                style={{
+                                    width: '80px',
+                                    height: '80px',
+                                    borderRadius: '50%',
+                                    border: '3px solid rgba(255,255,255,0.3)'
+                                }}
+                            />
+                        )}
+                        <div>
+                            <h2 style={{ fontSize: '2.5em', fontWeight: '900', color: '#000', marginBottom: '5px' }}>
+                                {player.name}
+                            </h2>
+                            <div style={{ fontSize: '1.1em', color: 'rgba(0,0,0,0.6)' }}>{player.battleTag}</div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Content */}
+                <div style={{ padding: '30px' }}>
+                    {/* Stats Grid */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                        gap: '20px',
+                        marginBottom: '30px'
+                    }}>
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>Очки</div>
+                            <div style={{ fontSize: '2em', fontWeight: '800', color: '#c9a961' }}>
+                                {player.points || 0}
+                            </div>
+                        </div>
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>MMR</div>
+                            <div style={{ fontSize: '2em', fontWeight: '800', color: '#4caf50' }}>
+                                {player.mmr || 0}
+                            </div>
+                        </div>
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>Винрейт</div>
+                            <div style={{ fontSize: '2em', fontWeight: '800', color: '#2196f3' }}>
+                                {winRate}%
+                            </div>
+                        </div>
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>Игр</div>
+                            <div style={{ fontSize: '2em', fontWeight: '800', color: '#fff' }}>
+                                {totalGames}
+                            </div>
+                        </div>
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>Побед</div>
+                            <div style={{ fontSize: '2em', fontWeight: '800', color: '#4caf50' }}>
+                                {player.wins || 0}
+                            </div>
+                        </div>
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>Поражений</div>
+                            <div style={{ fontSize: '2em', fontWeight: '800', color: '#f44336' }}>
+                                {player.losses || 0}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Race */}
+                    <div style={{
+                        background: '#2a2a2a',
+                        padding: '20px',
+                        borderRadius: '15px',
+                        marginBottom: '30px'
+                    }}>
+                        <div style={{ fontSize: '1.2em', fontWeight: '700', marginBottom: '15px', color: '#c9a961' }}>
+                            🎮 Раса
+                        </div>
+                        <div style={{ fontSize: '1.5em', fontWeight: '800', color: '#fff' }}>
+                            {raceNames[player.race] || 'Unknown'}
+                        </div>
+                    </div>
+
+                    {/* Achievements */}
+                    {player.achievements && player.achievements.length > 0 && (
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px',
+                            marginBottom: '30px'
+                        }}>
+                            <div style={{ fontSize: '1.2em', fontWeight: '700', marginBottom: '15px', color: '#c9a961' }}>
+                                🏆 Достижения
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
+                                {player.achievements.map(achKey => {
+                                    const ach = achievements[achKey];
+                                    if (!ach) return null;
+                                    return (
+                                        <div
+                                            key={achKey}
+                                            style={{
+                                                background: '#1a1a1a',
+                                                padding: '15px',
+                                                borderRadius: '10px',
+                                                border: '1px solid #c9a961'
+                                            }}
+                                        >
+                                            <div style={{ fontSize: '2em', marginBottom: '10px' }}>{ach.icon}</div>
+                                            <div style={{ fontWeight: '700', color: '#fff', marginBottom: '5px' }}>{ach.name}</div>
+                                            <div style={{ color: '#888', fontSize: '0.9em', marginBottom: '8px' }}>{ach.desc}</div>
+                                            <div style={{ color: '#4caf50', fontWeight: '600' }}>+{ach.points} pts</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Match History */}
+                    {player.matchHistory && player.matchHistory.length > 0 && (
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '15px'
+                        }}>
+                            <div style={{ fontSize: '1.2em', fontWeight: '700', marginBottom: '15px', color: '#c9a961' }}>
+                                📊 Последние матчи
+                            </div>
+                            <div style={{
+                                display: 'flex',
+                                gap: '5px',
+                                height: '150px',
+                                alignItems: 'flex-end',
+                                padding: '10px',
+                                background: '#1a1a1a',
+                                borderRadius: '10px'
+                            }}>
+                                {player.matchHistory.slice(0, 20).map((match, idx) => {
+                                    const result = typeof match === 'string' ? match : match.result;
+                                    const height = 30 + Math.random() * 120;
+                                    const barColor = result === 'win' ? '#4caf50' : '#f44336';
+                                    return (
+                                        <div
+                                            key={idx}
+                                            style={{
+                                                flex: 1,
+                                                height: `${height}px`,
+                                                background: barColor,
+                                                borderRadius: '4px 4px 0 0',
+                                                minWidth: '8px',
+                                                opacity: 0.8,
+                                                transition: 'opacity 0.2s'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                                            onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
+                                        />
+                                    );
+                                })}
+                            </div>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                marginTop: '15px',
+                                fontSize: '0.9em'
+                            }}>
+                                <div style={{ color: '#4caf50' }}>🗡️ Победы</div>
+                                <div style={{ color: '#f44336' }}>💀 Поражения</div>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

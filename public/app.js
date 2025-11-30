@@ -448,15 +448,21 @@ function App() {
                 {activeTab === 'stats' && <Stats players={players} teams={teams} />}
                 {activeTab === 'team-matches' && <TeamMatches teamMatches={teamMatches} teams={teams} allPlayers={allPlayers} />}
                 {activeTab === 'admin' && isAdmin && (
-                    <AdminPanel 
-                        teams={teams} 
-                        allPlayers={allPlayers} 
+                    <AdminPanel
+                        teams={teams}
+                        allPlayers={allPlayers}
                         teamMatches={teamMatches}
                         sessionId={sessionId}
                         onUpdate={() => {
                             loadTeams();
                             loadAllPlayers();
                             loadTeamMatches();
+                        }}
+                        onLogout={() => {
+                            localStorage.removeItem('adminSessionId');
+                            setSessionId(null);
+                            setIsAdmin(false);
+                            setActiveTab('players');
                         }}
                     />
                 )}
@@ -578,6 +584,21 @@ function PlayerCard({ player, rank, onClick }) {
                                     ⚠️ Не удалось загрузить данные
                                 </div>
                             )}
+                            <div className="achievement-icons" style={{ marginTop: '10px' }}>
+                                {player.achievements && player.achievements.map(achKey => {
+                                    const ach = achievements[achKey];
+                                    return (
+                                        <div key={achKey} className="achievement-icon">
+                                            {ach.icon}
+                                            <div className="achievement-tooltip">
+                                                <div style={{ fontWeight: '700' }}>{ach.name}</div>
+                                                <div style={{ color: '#888', fontSize: '0.9em', marginTop: '3px' }}>{ach.desc}</div>
+                                                <div style={{ color: '#4caf50', marginTop: '5px' }}>+{ach.points} pts</div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                     <div className="rank-mmr">
@@ -593,27 +614,11 @@ function PlayerCard({ player, rank, onClick }) {
                     </div>
                 </div>
 
-                <div className="achievement-icons">
-                    {player.achievements && player.achievements.map(achKey => {
-                        const ach = achievements[achKey];
-                        return (
-                            <div key={achKey} className="achievement-icon">
-                                {ach.icon}
-                                <div className="achievement-tooltip">
-                                    <div style={{ fontWeight: '700' }}>{ach.name}</div>
-                                    <div style={{ color: '#888', fontSize: '0.9em', marginTop: '3px' }}>{ach.desc}</div>
-                                    <div style={{ color: '#4caf50', marginTop: '5px' }}>+{ach.points} pts</div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-
                 {player.matchHistory && player.matchHistory.length > 0 && (
                     <div className="match-graph">
                         {player.matchHistory.slice(0, 20).map((match, idx) => {
                             const result = typeof match === 'string' ? match : match.result;
-                            const height = 30 + Math.random() * 120;
+                            const height = 20 + Math.random() * 60;
                             return <div key={idx} className={`match-bar ${result}`} style={{ height: `${height}px` }} />;
                         })}
                     </div>
