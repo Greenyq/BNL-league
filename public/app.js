@@ -648,6 +648,7 @@ function PlayerCard({ player, rank, onClick }) {
 
 function Teams({ teams, players }) {
     const [expandedTeam, setExpandedTeam] = useState(null);
+    const [selectedPlayer, setSelectedPlayer] = useState(null);
 
     const getTeamPlayers = (teamId) => players.filter(p => p.teamId === teamId);
     const getTeamLeader = (teamId) => {
@@ -661,7 +662,8 @@ function Teams({ teams, players }) {
             {teams.map(team => {
                 const teamPlayers = getTeamPlayers(team.id);
                 const leader = getTeamLeader(team.id);
-                const captain = teamPlayers[0];
+                const captain = players.find(p => p.id === team.captainId);
+                const coaches = (team.coaches || []).map(coachId => players.find(p => p.id === coachId)).filter(Boolean);
                 const totalPoints = teamPlayers.reduce((sum, p) => sum + (p.points || 0), 0);
 
                 return (
@@ -698,32 +700,68 @@ function Teams({ teams, players }) {
                             {captain && (
                                 <div className="member-section">
                                     <div className="section-title">👥 Капитан</div>
-                                    <div className="member-item">
+                                    <div
+                                        className="member-item"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedPlayer(captain);
+                                        }}
+                                        style={{ cursor: 'pointer', transition: 'background 0.2s' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#2a2a2a'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
                                         <div>
                                             <span className="member-role-badge">CAPTAIN</span>
                                             <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{captain.name}</span>
+                                            <span style={{ color: '#888', marginLeft: '15px' }}>
+                                                {raceNames[captain.race] || 'Random'} • {captain.mmr} MMR • {captain.points} pts
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
                             )}
 
-                            <div className="member-section">
-                                <div className="section-title">🎓 Тренеры</div>
-                                {team.coaches.map(coach => (
-                                    <div key={coach.id} className="member-item">
-                                        <div>
-                                            <span className="member-role-badge">COACH</span>
-                                            <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{coach.name}</span>
+                            {coaches.length > 0 && (
+                                <div className="member-section">
+                                    <div className="section-title">🎓 Тренеры</div>
+                                    {coaches.map(coach => (
+                                        <div
+                                            key={coach.id}
+                                            className="member-item"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedPlayer(coach);
+                                            }}
+                                            style={{ cursor: 'pointer', transition: 'background 0.2s' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = '#2a2a2a'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            <div>
+                                                <span className="member-role-badge">COACH</span>
+                                                <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{coach.name}</span>
+                                                <span style={{ color: '#888', marginLeft: '15px' }}>
+                                                    {raceNames[coach.race] || 'Random'} • {coach.mmr} MMR • {coach.points} pts
+                                                </span>
+                                            </div>
                                         </div>
-                                        <span style={{ color: '#888' }}>Expertise: {coach.expertise}</span>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
 
                             <div className="member-section">
                                 <div className="section-title">⚔️ Игроки</div>
                                 {teamPlayers.map(player => (
-                                    <div key={player.id} className="member-item">
+                                    <div
+                                        key={player.id}
+                                        className="member-item"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedPlayer(player);
+                                        }}
+                                        style={{ cursor: 'pointer', transition: 'background 0.2s' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#2a2a2a'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
                                         <div>
                                             <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{player.name}</span>
                                             <span style={{ color: '#888', marginLeft: '15px' }}>
@@ -740,6 +778,12 @@ function Teams({ teams, players }) {
                     </div>
                 );
             })}
+            {selectedPlayer && (
+                <PlayerDetailModal
+                    player={selectedPlayer}
+                    onClose={() => setSelectedPlayer(null)}
+                />
+            )}
         </div>
     );
 }
