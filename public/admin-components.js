@@ -888,7 +888,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                     'Content-Type': 'application/json',
                     'x-session-id': sessionId
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(matchData)
             });
 
             if (response.ok) {
