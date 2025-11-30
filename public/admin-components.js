@@ -1022,43 +1022,76 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                             </div>
                         </div>
                         <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Победитель</label>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Статус матча</label>
                             <select
-                                value={formData.winnerId || ''}
-                                onChange={(e) => setFormData({...formData, winnerId: parseInt(e.target.value)})}
+                                value={formData.status}
+                                onChange={(e) => setFormData({...formData, status: e.target.value})}
                                 style={{
                                     width: '100%', padding: '10px', borderRadius: '8px',
                                     border: '1px solid #444', background: '#2a2a2a', color: '#fff'
                                 }}
                                 required
                             >
-                                <option value="">Выберите победителя</option>
-                                {formData.team1Id && (
-                                    <option value={formData.team1Id}>
-                                        {teams.find(t => t.id === formData.team1Id)?.name}
-                                    </option>
-                                )}
-                                {formData.team2Id && (
-                                    <option value={formData.team2Id}>
-                                        {teams.find(t => t.id === formData.team2Id)?.name}
-                                    </option>
-                                )}
+                                <option value="upcoming">🕐 Предстоящий</option>
+                                <option value="completed">✅ Завершен</option>
                             </select>
                         </div>
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Очки за победу</label>
-                            <input
-                                type="number"
-                                value={formData.points}
-                                onChange={(e) => setFormData({...formData, points: parseInt(e.target.value)})}
-                                style={{
-                                    width: '100%', padding: '10px', borderRadius: '8px',
-                                    border: '1px solid #444', background: '#2a2a2a', color: '#fff'
-                                }}
-                                min="1"
-                                required
-                            />
-                        </div>
+                        {formData.status === 'upcoming' && (
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Дата и время матча</label>
+                                <input
+                                    type="datetime-local"
+                                    value={formData.scheduledDate}
+                                    onChange={(e) => setFormData({...formData, scheduledDate: e.target.value})}
+                                    style={{
+                                        width: '100%', padding: '10px', borderRadius: '8px',
+                                        border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                    }}
+                                />
+                            </div>
+                        )}
+                        {formData.status === 'completed' && (
+                            <>
+                                <div style={{ marginBottom: '15px' }}>
+                                    <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Победитель</label>
+                                    <select
+                                        value={formData.winnerId || ''}
+                                        onChange={(e) => setFormData({...formData, winnerId: parseInt(e.target.value)})}
+                                        style={{
+                                            width: '100%', padding: '10px', borderRadius: '8px',
+                                            border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                        }}
+                                        required
+                                    >
+                                        <option value="">Выберите победителя</option>
+                                        {formData.team1Id && (
+                                            <option value={formData.team1Id}>
+                                                {teams.find(t => t.id === formData.team1Id)?.name}
+                                            </option>
+                                        )}
+                                        {formData.team2Id && (
+                                            <option value={formData.team2Id}>
+                                                {teams.find(t => t.id === formData.team2Id)?.name}
+                                            </option>
+                                        )}
+                                    </select>
+                                </div>
+                                <div style={{ marginBottom: '15px' }}>
+                                    <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Очки за победу</label>
+                                    <input
+                                        type="number"
+                                        value={formData.points}
+                                        onChange={(e) => setFormData({...formData, points: parseInt(e.target.value)})}
+                                        style={{
+                                            width: '100%', padding: '10px', borderRadius: '8px',
+                                            border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                        }}
+                                        min="1"
+                                        required
+                                    />
+                                </div>
+                            </>
+                        )}
                         <div style={{ marginBottom: '15px' }}>
                             <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Заметки (опционально)</label>
                             <textarea
