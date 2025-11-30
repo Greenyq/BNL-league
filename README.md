@@ -1,4 +1,4 @@
-# GNL - Warcraft 3 League Website
+# BNL - Battle Newbie League | Warcraft 3
 
 Полноценный сайт лиги по Warcraft 3: Reforged с интеграцией W3Champions Matches API, подсчетом очков по MMR и **админ панелью** для управления командными турнирами.
 
