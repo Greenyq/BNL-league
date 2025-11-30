@@ -191,7 +191,23 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
                                 <span style={{ fontSize: '2em', fontWeight: '800', color: '#c9a961' }}>
                                     #{index + 1}
                                 </span>
-                                <span style={{ fontSize: '2em' }}>{ranking.team.emoji}</span>
+                                {ranking.team.logo ? (
+                                    <img
+                                        src={ranking.team.logo}
+                                        alt={ranking.team.name}
+                                        style={{
+                                            width: '60px',
+                                            height: '60px',
+                                            borderRadius: '10px',
+                                            objectFit: 'cover'
+                                        }}
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            e.target.nextElementSibling.style.display = 'inline';
+                                        }}
+                                    />
+                                ) : null}
+                                <span style={{ fontSize: '2em', display: ranking.team.logo ? 'none' : 'inline' }}>{ranking.team.emoji}</span>
                                 <div>
                                     <div style={{ fontSize: '1.3em', fontWeight: '700', color: '#fff' }}>
                                         {ranking.team.name}
