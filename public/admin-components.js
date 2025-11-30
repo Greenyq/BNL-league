@@ -1095,7 +1095,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                     <input
                                         type="number"
                                         value={formData.points}
-                                        onChange={(e) => setFormData({...formData, points: parseInt(e.target.value)})}
+                                        onChange={(e) => setFormData({...formData, points: parseInt(e.target.value) || 0})}
                                         style={{
                                             width: '100%', padding: '10px', borderRadius: '8px',
                                             border: '1px solid #444', background: '#2a2a2a', color: '#fff'
