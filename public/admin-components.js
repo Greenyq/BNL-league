@@ -389,25 +389,30 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
 
             if (response.ok) {
                 const team = await response.json();
-                
+
                 // Upload logo if file selected
                 if (formData.logoFile) {
                     const formDataFile = new FormData();
                     formDataFile.append('logo', formData.logoFile);
-                    
-                    await fetch(`${API_BASE}/api/admin/teams/${team.id}/upload-logo`, {
+
+                    const uploadResponse = await fetch(`${API_BASE}/api/admin/teams/${team.id}/upload-logo`, {
                         method: 'POST',
                         headers: {
                             'x-session-id': sessionId
                         },
                         body: formDataFile
                     });
+
+                    if (!uploadResponse.ok) {
+                        alert('Ошибка при загрузке логотипа');
+                        return;
+                    }
                 }
-                
+
                 setShowForm(false);
                 setFormData({ name: '', emoji: '', logo: '', logoFile: null, captainId: null, coaches: [] });
                 setEditingId(null);
-                onUpdate();
+                await onUpdate();
             }
         } catch (error) {
             alert('Ошибка при сохранении команды');
@@ -479,9 +484,27 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
                         </div>
                         <div style={{ marginBottom: '15px' }}>
                             <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Загрузить логотип команды</label>
+                            {editingId && formData.logo && !formData.logoFile && (
+                                <div style={{ marginBottom: '10px' }}>
+                                    <img
+                                        src={formData.logo}
+                                        alt="Current logo"
+                                        style={{
+                                            width: '100px',
+                                            height: '100px',
+                                            borderRadius: '10px',
+                                            objectFit: 'cover',
+                                            border: '2px solid #c9a961'
+                                        }}
+                                    />
+                                    <div style={{ color: '#888', fontSize: '0.9em', marginTop: '5px' }}>
+                                        Текущий логотип
+                                    </div>
+                                </div>
+                            )}
                             <input
                                 type="file"
-                                accept="image/jpeg,image/jpg"
+                                accept="image/jpeg,image/jpg,image/png"
                                 onChange={(e) => setFormData({...formData, logoFile: e.target.files[0]})}
                                 style={{
                                     width: '100%', padding: '10px', borderRadius: '8px',
@@ -489,7 +512,7 @@ function AdminTeams({ teams, allPlayers, sessionId, onUpdate }) {
                                 }}
                             />
                             <small style={{ color: '#888', fontSize: '0.85em', marginTop: '5px', display: 'block' }}>
-                                Только JPEG/JPG, максимум 20MB
+                                JPEG/JPG или PNG, максимум 20MB
                             </small>
                         </div>
                         <div style={{ marginBottom: '15px' }}>

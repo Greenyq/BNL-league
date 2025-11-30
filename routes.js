@@ -48,25 +48,7 @@ router.delete('/admin/teams/:id', async (req, res) => {
     }
 });
 
-// Upload team logo
-router.post('/admin/teams/:id/upload-logo', async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
-        }
-        
-        const logoUrl = `/uploads/${req.file.filename}`;
-        const team = await Team.findByIdAndUpdate(
-            req.params.id,
-            { logo: logoUrl, updatedAt: Date.now() },
-            { new: true }
-        );
-        
-        res.json({ logoUrl, team });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to upload logo' });
-    }
-});
+// Note: Upload team logo route is defined in server.js with multer middleware
 
 // ==================== PLAYERS ENDPOINTS ====================
 router.get('/players', async (req, res) => {
