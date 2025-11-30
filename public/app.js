@@ -443,7 +443,7 @@ function App() {
             />
             <div className="app">
                 {activeTab === 'players' && <Players players={players} />}
-                {activeTab === 'teams' && <Teams teams={teams} players={players} />}
+                {activeTab === 'teams' && <Teams teams={teams} players={players} allPlayers={allPlayers} />}
                 {activeTab === 'schedule' && <Schedule schedule={schedule} teams={teams} allPlayers={allPlayers} teamMatches={teamMatches} />}
                 {activeTab === 'stats' && <Stats players={players} teams={teams} />}
                 {activeTab === 'team-matches' && <TeamMatches teamMatches={teamMatches} teams={teams} allPlayers={allPlayers} />}
@@ -584,21 +584,6 @@ function PlayerCard({ player, rank, onClick }) {
                                     ⚠️ Не удалось загрузить данные
                                 </div>
                             )}
-                            <div className="achievement-icons" style={{ marginTop: '10px' }}>
-                                {player.achievements && player.achievements.map(achKey => {
-                                    const ach = achievements[achKey];
-                                    return (
-                                        <div key={achKey} className="achievement-icon">
-                                            {ach.icon}
-                                            <div className="achievement-tooltip">
-                                                <div style={{ fontWeight: '700' }}>{ach.name}</div>
-                                                <div style={{ color: '#888', fontSize: '0.9em', marginTop: '3px' }}>{ach.desc}</div>
-                                                <div style={{ color: '#4caf50', marginTop: '5px' }}>+{ach.points} pts</div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
                         </div>
                     </div>
                     <div className="rank-mmr">
@@ -613,6 +598,32 @@ function PlayerCard({ player, rank, onClick }) {
                         </div>
                     </div>
                 </div>
+
+                {player.achievements && player.achievements.length > 0 && (
+                    <div className="achievement-icons" style={{
+                        display: 'flex',
+                        gap: '8px',
+                        padding: '10px 15px',
+                        flexWrap: 'wrap',
+                        borderTop: '1px solid rgba(201, 169, 97, 0.2)',
+                        borderBottom: '1px solid rgba(201, 169, 97, 0.2)',
+                        margin: '10px 0'
+                    }}>
+                        {player.achievements.map(achKey => {
+                            const ach = achievements[achKey];
+                            return (
+                                <div key={achKey} className="achievement-icon">
+                                    {ach.icon}
+                                    <div className="achievement-tooltip">
+                                        <div style={{ fontWeight: '700' }}>{ach.name}</div>
+                                        <div style={{ color: '#888', fontSize: '0.9em', marginTop: '3px' }}>{ach.desc}</div>
+                                        <div style={{ color: '#4caf50', marginTop: '5px' }}>+{ach.points} pts</div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {player.matchHistory && player.matchHistory.length > 0 && (
                     <div className="match-graph">
@@ -646,7 +657,7 @@ function PlayerCard({ player, rank, onClick }) {
     );
 }
 
-function Teams({ teams, players }) {
+function Teams({ teams, players, allPlayers }) {
     const [expandedTeam, setExpandedTeam] = useState(null);
     const [selectedPlayer, setSelectedPlayer] = useState(null);
 
@@ -662,8 +673,10 @@ function Teams({ teams, players }) {
             {teams.map(team => {
                 const teamPlayers = getTeamPlayers(team.id);
                 const leader = getTeamLeader(team.id);
-                const captain = players.find(p => p.id === team.captainId);
-                const coaches = (team.coaches || []).map(coachId => players.find(p => p.id === coachId)).filter(Boolean);
+                const captain = players.find(p => p.id === team.captainId) || allPlayers.find(p => p.id === team.captainId);
+                const coaches = (team.coaches || []).map(coachId => {
+                    return players.find(p => p.id === coachId) || allPlayers.find(p => p.id === coachId);
+                }).filter(Boolean);
                 const totalPoints = teamPlayers.reduce((sum, p) => sum + (p.points || 0), 0);
 
                 return (
