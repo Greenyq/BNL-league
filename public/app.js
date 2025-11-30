@@ -654,26 +654,164 @@ function Teams({ teams, players }) {
     );
 }
 
-function Schedule({ schedule }) {
+function Schedule({ schedule, teams, allPlayers, teamMatches }) {
+    // Calculate team points from completed matches
+    const teamPoints = {};
+    teams.forEach(team => {
+        teamPoints[team._id || team.id] = 0;
+    });
+    
+    teamMatches.filter(m => m.status === 'completed').forEach(match => {
+        if (match.winnerId && teamPoints[match.winnerId] !== undefined) {
+            teamPoints[match.winnerId] += match.points || 0;
+        }
+    });
+    
+    // Group matches by teams
+    const matchesByTeams = {};
+    teamMatches.forEach(match => {
+        const key = `${match.team1Id}-${match.team2Id}`;
+        if (!matchesByTeams[key]) {
+            matchesByTeams[key] = {
+                team1: teams.find(t => (t._id || t.id) === match.team1Id),
+                team2: teams.find(t => (t._id || t.id) === match.team2Id),
+                team1Points: 0,
+                team2Points: 0,
+                matches: []
+            };
+        }
+        matchesByTeams[key].matches.push(match);
+        if (match.status === 'completed') {
+            if (match.winnerId === match.team1Id) {
+                matchesByTeams[key].team1Points += match.points || 0;
+            } else if (match.winnerId === match.team2Id) {
+                matchesByTeams[key].team2Points += match.points || 0;
+            }
+        }
+    });
+    
+    const getPlayerName = (playerId) => {
+        const player = allPlayers.find(p => (p._id || p.id) === playerId);
+        return player ? player.name : 'Unknown';
+    };
+    
     return (
         <div>
             <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>Расписание матчей</h2>
-            {schedule.map(match => (
-                <div key={match.id} className="match-item">
-                    <div className="match-header-schedule">
-                        <div style={{ color: '#888' }}>📅 {match.date}</div>
-                        <div className={`match-status status-${match.status}`}>
-                            {match.status === 'upcoming' && 'Предстоит'}
-                            {match.status === 'live' && '🔴 LIVE'}
+            
+            {Object.values(matchesByTeams).map((matchup, idx) => {
+                const totalPoints = matchup.team1Points + matchup.team2Points;
+                const team1Percent = totalPoints > 0 ? (matchup.team1Points / totalPoints) * 100 : 50;
+                const team2Percent = totalPoints > 0 ? (matchup.team2Points / totalPoints) * 100 : 50;
+                
+                return (
+                    <div key={idx} style={{ marginBottom: '40px' }}>
+                        {/* Team vs Team Header */}
+                        <div style={{
+                            background: '#1a1a1a', padding: '20px', borderRadius: '15px',
+                            marginBottom: '15px', border: '2px solid #c9a961'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                                <div style={{ flex: 1, textAlign: 'center' }}>
+                                    <div style={{ fontSize: '2em', marginBottom: '10px' }}>{matchup.team1?.emoji}</div>
+                                    <div style={{ fontSize: '1.3em', fontWeight: '700', color: '#fff' }}>
+                                        {matchup.team1?.name}
+                                    </div>
+                                    <div style={{ color: '#c9a961', fontSize: '1.5em', fontWeight: '800', marginTop: '10px' }}>
+                                        {matchup.team1Points}
+                                    </div>
+                                </div>
+                                <div style={{ fontSize: '2em', fontWeight: '800', color: '#c9a961', padding: '0 30px' }}>
+                                    VS
+                                </div>
+                                <div style={{ flex: 1, textAlign: 'center' }}>
+                                    <div style={{ fontSize: '2em', marginBottom: '10px' }}>{matchup.team2?.emoji}</div>
+                                    <div style={{ fontSize: '1.3em', fontWeight: '700', color: '#fff' }}>
+                                        {matchup.team2?.name}
+                                    </div>
+                                    <div style={{ color: '#c9a961', fontSize: '1.5em', fontWeight: '800', marginTop: '10px' }}>
+                                        {matchup.team2Points}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Points Bar */}
+                            <div style={{ display: 'flex', height: '30px', borderRadius: '15px', overflow: 'hidden', marginBottom: '10px' }}>
+                                <div style={{
+                                    width: `${team1Percent}%`,
+                                    background: 'linear-gradient(90deg, #4caf50, #66bb6a)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#fff',
+                                    fontWeight: '700',
+                                    fontSize: '0.9em'
+                                }}>
+                                    {matchup.team1Points > 0 && `${matchup.team1Points} pts`}
+                                </div>
+                                <div style={{
+                                    width: `${team2Percent}%`,
+                                    background: 'linear-gradient(90deg, #2196f3, #42a5f5)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#fff',
+                                    fontWeight: '700',
+                                    fontSize: '0.9em'
+                                }}>
+                                    {matchup.team2Points > 0 && `${matchup.team2Points} pts`}
+                                </div>
+                            </div>
                         </div>
+                        
+                        {/* Individual Matches */}
+                        {matchup.matches.map(match => (
+                            <div key={match._id || match.id} style={{
+                                background: '#2a2a2a', padding: '15px', borderRadius: '10px',
+                                marginBottom: '10px', border: `1px solid ${match.status === 'upcoming' ? '#c9a961' : '#333'}`
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{
+                                            color: match.winnerId === match.team1Id ? '#4caf50' : '#888',
+                                            fontWeight: match.winnerId === match.team1Id ? '700' : '400'
+                                        }}>
+                                            {getPlayerName(match.player1Id)}
+                                            {match.winnerId === match.team1Id && ' ✅'}
+                                        </div>
+                                    </div>
+                                    <div style={{ padding: '0 20px' }}>
+                                        <div style={{
+                                            padding: '5px 15px',
+                                            background: match.status === 'upcoming' ? '#c9a961' : '#333',
+                                            color: match.status === 'upcoming' ? '#000' : '#fff',
+                                            borderRadius: '20px',
+                                            fontSize: '0.9em',
+                                            fontWeight: '600'
+                                        }}>
+                                            {match.status === 'upcoming' ? '🕐 Предстоит' : `+${match.points} pts`}
+                                        </div>
+                                    </div>
+                                    <div style={{ flex: 1, textAlign: 'right' }}>
+                                        <div style={{
+                                            color: match.winnerId === match.team2Id ? '#4caf50' : '#888',
+                                            fontWeight: match.winnerId === match.team2Id ? '700' : '400'
+                                        }}>
+                                            {match.winnerId === match.team2Id && '✅ '}
+                                            {getPlayerName(match.player2Id)}
+                                        </div>
+                                    </div>
+                                </div>
+                                {match.scheduledDate && (
+                                    <div style={{ color: '#888', fontSize: '0.85em', marginTop: '10px', textAlign: 'center' }}>
+                                        📅 {new Date(match.scheduledDate).toLocaleString('ru-RU')}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
                     </div>
-                    <div className="match-teams">
-                        <div className="team-name-match">{match.team1}</div>
-                        <div className="vs-text">VS</div>
-                        <div className="team-name-match">{match.team2}</div>
-                    </div>
-                </div>
-            ))}
+                );
+            })}
         </div>
     );
 }
