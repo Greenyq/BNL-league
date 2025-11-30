@@ -389,7 +389,7 @@ function App() {
             <div className="app">
                 {activeTab === 'players' && <Players players={players} />}
                 {activeTab === 'teams' && <Teams teams={teams} players={players} />}
-                {activeTab === 'schedule' && <Schedule schedule={schedule} />}
+                {activeTab === 'schedule' && <Schedule schedule={schedule} teams={teams} allPlayers={allPlayers} teamMatches={teamMatches} />}
                 {activeTab === 'stats' && <Stats players={players} teams={teams} />}
                 {activeTab === 'team-matches' && <TeamMatches teamMatches={teamMatches} teams={teams} allPlayers={allPlayers} />}
                 {activeTab === 'admin' && isAdmin && (
