@@ -693,7 +693,7 @@ function Stats({ players, teams }) {
             <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>Статистика лиги</h2>
 
             <div className="team-stats-section">
-                <div className="total-games">{totalGames} GNL GAMES PLAYED SINCE NOV 27, 2025!</div>
+                <div className="total-games">{totalGames} BNL GAMES PLAYED SINCE NOV 27, 2025!</div>
                 <div style={{ fontSize: '2em', fontWeight: '800', textAlign: 'center', marginBottom: '30px', background: 'linear-gradient(135deg, #f4e4b8 0%, #c9a961 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                     CURRENT GNL LADDER GODS
                 </div>
