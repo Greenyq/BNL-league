@@ -16,6 +16,10 @@ data/admin_session.json
 
 # Keep data directory structure
 !data/.gitkeep
+
+# Uploaded files (keep structure, ignore content)
+public/uploads/*
+!public/uploads/.gitkeep
 -e 
 # Environment files
 *.env
