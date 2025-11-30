@@ -11,6 +11,16 @@ body {
     min-height: 100vh;
 }
 
+/* Dark theme support for datetime inputs */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}
+
+input[type="datetime-local"] {
+    color-scheme: dark;
+}
+
 .header {
     background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
     padding: 40px 20px;
