@@ -19,10 +19,10 @@ const raceNames = {
 
 const raceImages = {
     0: null, // Random
-    1: '/images/human.jpg',
-    2: '/images/orc.jpg',
+    1: '/images/human.jpg', // Alliance shield with swords
+    2: '/images/orc.jpg', // Horde red symbol
     4: '/images/nightelf.jpg',
-    8: '/images/undead.jpg',
+    8: '/images/undead.jpg', // Death Knight skulls and weapons
 };
 
 // Achievements
