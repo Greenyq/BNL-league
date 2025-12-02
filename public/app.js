@@ -136,48 +136,48 @@ function App() {
             for (let i = 0; i < playersToLoad.length; i++) {
                 const player = playersToLoad[i];
                 const tag = player.battleTag;
-                
+
                 console.log(`Loading player ${i+1}/${playersToLoad.length}:`, {
                     battleTag: tag,
                     dbRace: player.race,
                     dbMmr: player.currentMmr,
                     teamId: player.teamId
                 });
-                
+
                 try {
                     const response = await fetch(`${API_BASE}/api/matches/${encodeURIComponent(tag)}?gateway=20&season=23&pageSize=100`);
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    
+
                     const matchesData = await response.json();
                     console.log(`✅ Matches loaded for ${tag}: ${matchesData.count} matches`);
 
-                    const playerStats = processMatches(tag, matchesData.matches || []);
-                    console.log(`Stats processed for ${tag}:`, { 
-                        statsRace: playerStats.race, 
-                        statsMmr: playerStats.mmr,
-                        wins: playerStats.wins,
-                        losses: playerStats.losses 
-                    });
+                    // processMatches now returns array of profiles (one per race)
+                    const playerProfiles = processMatches(tag, matchesData.matches || []);
+                    console.log(`Profiles created for ${tag}:`, playerProfiles.length);
 
-                    const finalPlayer = {
-                        id: player.id || (i + 1),
-                        name: player.name || tag.split('#')[0],
-                        battleTag: tag,
-                        ...playerStats,
-                        // Use race from DB if processMatches returned 0 (Random) or undefined
-                        race: playerStats.race || player.race || 0,
-                        // Use MMR from DB if API didn't return valid MMR
-                        mmr: playerStats.mmr || player.currentMmr || 0,
-                        teamId: player.teamId || null,
-                    };
-                    
-                    console.log(`Final player data for ${tag}:`, {
-                        race: finalPlayer.race,
-                        mmr: finalPlayer.mmr,
-                        wins: finalPlayer.wins
+                    // Create a card for each race profile
+                    playerProfiles.forEach((profile, profileIndex) => {
+                        const finalPlayer = {
+                            id: `${player.id || (i + 1)}_${profile.race}`,
+                            name: player.name || tag.split('#')[0],
+                            battleTag: tag,
+                            ...profile,
+                            // Use race from profile
+                            race: profile.race || player.race || 0,
+                            // Use MMR from profile or DB
+                            mmr: profile.mmr || player.currentMmr || 0,
+                            teamId: player.teamId || null,
+                        };
+
+                        console.log(`Final player card for ${tag} - ${raceNames[profile.race]}:`, {
+                            race: finalPlayer.race,
+                            mmr: finalPlayer.mmr,
+                            wins: finalPlayer.wins,
+                            points: finalPlayer.points
+                        });
+
+                        loadedPlayers.push(finalPlayer);
                     });
-                    
-                    loadedPlayers.push(finalPlayer);
                 } catch (error) {
                     console.error(`❌ Error loading ${tag}:`, error);
                     // Use data from database when API fails
@@ -187,21 +187,21 @@ function App() {
                         battleTag: tag,
                         race: player.race || 0,
                         mmr: player.currentMmr || 0,
-                        wins: 0, 
-                        losses: 0, 
+                        wins: 0,
+                        losses: 0,
                         points: 0,
-                        achievements: [], 
+                        achievements: [],
                         teamId: player.teamId || null,
-                        matchHistory: [], 
-                        activityData: generateActivityData(), 
+                        matchHistory: [],
+                        activityData: generateActivityData(),
                         error: true
                     };
-                    
+
                     console.log(`Using fallback data for ${tag}:`, {
                         race: fallbackPlayer.race,
                         mmr: fallbackPlayer.mmr
                     });
-                    
+
                     loadedPlayers.push(fallbackPlayer);
                 }
             }
@@ -214,9 +214,10 @@ function App() {
     };
 
     // Process matches from API and calculate points
+    // Returns array of profiles - one per race played
     const processMatches = (battleTag, matches) => {
         if (!matches || matches.length === 0) {
-            return {
+            return [{
                 race: 0,
                 mmr: 0,
                 wins: 0,
@@ -225,7 +226,7 @@ function App() {
                 achievements: [],
                 matchHistory: [],
                 activityData: generateActivityData()
-            };
+            }];
         }
 
         // Filter matches from November 27, 2025
@@ -235,30 +236,10 @@ function App() {
             return matchDate >= cutoffDate;
         });
 
-        let wins = 0;
-        let losses = 0;
-        let totalPoints = 0;
-        let currentMMR = 0;
-        let playerRace = 0;
-        const matchHistory = [];
-        const raceCounts = {}; // Track race usage frequency
+        // Group matches by race
+        const matchesByRace = {};
+        const mmrByRace = {};
 
-        // Get current MMR from the most recent match (first in array)
-        if (recentMatches.length > 0) {
-            const firstMatch = recentMatches[0];
-            const firstPlayerTeam = firstMatch.teams.find(team =>
-                team.players.some(p => p.battleTag === battleTag)
-            );
-            if (firstPlayerTeam) {
-                const firstPlayer = firstPlayerTeam.players.find(p => p.battleTag === battleTag);
-                if (firstPlayer) {
-                    currentMMR = firstPlayer.currentMmr || 0;
-                    console.log(`Current MMR for ${battleTag}: ${currentMMR}`);
-                }
-            }
-        }
-
-        // Process each match
         recentMatches.forEach(match => {
             // Find player's team
             const playerTeam = match.teams.find(team =>
@@ -271,79 +252,115 @@ function App() {
             }
 
             const player = playerTeam.players.find(p => p.battleTag === battleTag);
-            const opponentTeam = match.teams.find(team => team !== playerTeam);
+            if (!player || !player.race) return;
 
-            if (!player || !opponentTeam) return;
+            const race = player.race;
 
-            const opponent = opponentTeam.players[0];
-            const won = playerTeam.won;
-
-            // Track race usage
-            if (player.race) {
-                raceCounts[player.race] = (raceCounts[player.race] || 0) + 1;
+            // Initialize race data if not exists
+            if (!matchesByRace[race]) {
+                matchesByRace[race] = [];
+                mmrByRace[race] = player.currentMmr || 0;
             }
 
-            // Calculate MMR difference (note: API uses camelCase)
-            const playerMMR = player.oldMmr || player.currentMmr || 1500;
-            const opponentMMR = opponent.oldMmr || opponent.currentMmr || 1500;
-            const mmrDiff = opponentMMR - playerMMR;
-
-            // Points calculation based on MMR difference
-            let matchPoints = 0;
-
-            if (won) {
-                wins++;
-                matchHistory.push({ result: 'win', mmrDiff, playerMMR, opponentMMR });
-
-                if (mmrDiff >= 20) {
-                    // Opponent stronger (+20-30 MMR)
-                    matchPoints = 40 + Math.floor(mmrDiff / 10); // 40-50 points
-                } else if (mmrDiff <= -20) {
-                    // Opponent weaker (-20-30 MMR)
-                    matchPoints = 10 + Math.floor(Math.abs(mmrDiff) / 20); // 10-20 points
-                } else {
-                    // Similar MMR (±20)
-                    matchPoints = 25; // 25 points
-                }
-            } else {
-                losses++;
-                matchHistory.push({ result: 'loss', mmrDiff, playerMMR, opponentMMR });
-                matchPoints = 0; // No points for losses
-            }
-
-            totalPoints += matchPoints;
+            matchesByRace[race].push(match);
         });
 
-        // Determine most played race
-        let mostPlayedRace = 0;
-        let maxCount = 0;
-        for (const [race, count] of Object.entries(raceCounts)) {
-            if (count > maxCount) {
-                maxCount = count;
-                mostPlayedRace = parseInt(race);
-            }
+        // If no races found, return empty profile
+        if (Object.keys(matchesByRace).length === 0) {
+            return [{
+                race: 0,
+                mmr: 0,
+                wins: 0,
+                losses: 0,
+                points: 0,
+                achievements: [],
+                matchHistory: [],
+                activityData: generateActivityData()
+            }];
         }
-        playerRace = mostPlayedRace;
-        console.log(`Most played race for ${battleTag}:`, playerRace, raceNames[playerRace]);
 
-        // Determine achievements
-        const achs = determineAchievements(wins, losses, totalPoints, recentMatches.length, matchHistory);
+        // Create profile for each race
+        const profiles = [];
 
-        // Add achievement bonuses
-        achs.forEach(achKey => {
-            totalPoints += achievements[achKey].points;
-        });
+        for (const [race, raceMatches] of Object.entries(matchesByRace)) {
+            const raceInt = parseInt(race);
+            let wins = 0;
+            let losses = 0;
+            let totalPoints = 0;
+            const matchHistory = [];
 
-        return {
-            race: playerRace,
-            mmr: currentMMR,
-            wins: wins,
-            losses: losses,
-            points: totalPoints,
-            achievements: achs,
-            matchHistory: matchHistory.slice(0, 100).reverse(), // Latest 100 matches
-            activityData: generateActivityData()
-        };
+            // Process each match for this race
+            raceMatches.forEach(match => {
+                const playerTeam = match.teams.find(team =>
+                    team.players.some(p => p.battleTag === battleTag)
+                );
+
+                if (!playerTeam) return;
+
+                const player = playerTeam.players.find(p => p.battleTag === battleTag);
+                const opponentTeam = match.teams.find(team => team !== playerTeam);
+
+                if (!player || !opponentTeam) return;
+
+                const opponent = opponentTeam.players[0];
+                const won = playerTeam.won;
+
+                // Calculate MMR difference
+                const playerMMR = player.oldMmr || player.currentMmr || 1500;
+                const opponentMMR = opponent.oldMmr || opponent.currentMmr || 1500;
+                const mmrDiff = opponentMMR - playerMMR;
+
+                // Points calculation based on MMR difference
+                let matchPoints = 0;
+
+                if (won) {
+                    wins++;
+                    matchHistory.push({ result: 'win', mmrDiff, playerMMR, opponentMMR });
+
+                    if (mmrDiff >= 20) {
+                        matchPoints = 40 + Math.floor(mmrDiff / 10);
+                    } else if (mmrDiff <= -20) {
+                        matchPoints = 10 + Math.floor(Math.abs(mmrDiff) / 20);
+                    } else {
+                        matchPoints = 25;
+                    }
+                } else {
+                    losses++;
+                    matchHistory.push({ result: 'loss', mmrDiff, playerMMR, opponentMMR });
+                    matchPoints = 0;
+                }
+
+                totalPoints += matchPoints;
+            });
+
+            // Determine achievements for this race
+            const achs = determineAchievements(wins, losses, totalPoints, raceMatches.length, matchHistory);
+
+            // Add achievement bonuses
+            achs.forEach(achKey => {
+                totalPoints += achievements[achKey].points;
+            });
+
+            console.log(`Profile for ${battleTag} - ${raceNames[raceInt]}:`, {
+                wins,
+                losses,
+                points: totalPoints,
+                mmr: mmrByRace[race]
+            });
+
+            profiles.push({
+                race: raceInt,
+                mmr: mmrByRace[race],
+                wins: wins,
+                losses: losses,
+                points: totalPoints,
+                achievements: achs,
+                matchHistory: matchHistory.slice(0, 100).reverse(),
+                activityData: generateActivityData()
+            });
+        }
+
+        return profiles;
     };
 
     const determineAchievements = (wins, losses, points, totalGames, matchHistory = []) => {
@@ -577,7 +594,19 @@ function PlayerCard({ player, rank, onClick }) {
                             )}
                         </div>
                         <div className="player-info">
-                            <div className="player-name">{player.name}</div>
+                            <div className="player-name">
+                                {player.name}
+                                {player.race && player.race !== 0 && (
+                                    <span style={{
+                                        color: '#c9a961',
+                                        marginLeft: '8px',
+                                        fontSize: '0.85em',
+                                        fontWeight: '600'
+                                    }}>
+                                        ({raceNames[player.race]})
+                                    </span>
+                                )}
+                            </div>
                             <div className="battle-tag">{player.battleTag}</div>
                             {player.error && (
                                 <div style={{ color: '#f44336', fontSize: '0.7em', marginTop: '5px' }}>
@@ -1135,6 +1164,15 @@ function PlayerDetailModal({ player, onClose }) {
                         <div>
                             <h2 style={{ fontSize: '2.5em', fontWeight: '900', color: '#000', marginBottom: '5px' }}>
                                 {player.name}
+                                {player.race && player.race !== 0 && (
+                                    <span style={{
+                                        color: '#8b7355',
+                                        marginLeft: '10px',
+                                        fontSize: '0.75em'
+                                    }}>
+                                        ({raceNames[player.race]})
+                                    </span>
+                                )}
                             </h2>
                             <div style={{ fontSize: '1.1em', color: 'rgba(0,0,0,0.6)' }}>{player.battleTag}</div>
                         </div>
