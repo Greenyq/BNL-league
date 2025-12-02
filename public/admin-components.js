@@ -1261,6 +1261,7 @@ function AdminPlayers({ players, teams, sessionId, onUpdate }) {
     const [searchResult, setSearchResult] = React.useState(null);
     const [searching, setSearching] = React.useState(false);
     const [editingPlayer, setEditingPlayer] = React.useState(null);
+    const [discordInputs, setDiscordInputs] = React.useState({});
 
     const handleSearch = async (e) => {
         e.preventDefault();
@@ -1367,8 +1368,13 @@ function AdminPlayers({ players, teams, sessionId, onUpdate }) {
     };
 
     const handleUpdateDiscord = async (playerId, discordTag, shouldUpdate = false) => {
-        if (!shouldUpdate) return; // Only update on blur
+        // If not saving, just update local state
+        if (!shouldUpdate) {
+            setDiscordInputs(prev => ({ ...prev, [playerId]: discordTag }));
+            return;
+        }
 
+        // Save to backend on blur
         try {
             const player = players.find(p => p.id === playerId);
             if (!player) {
@@ -1394,6 +1400,12 @@ function AdminPlayers({ players, teams, sessionId, onUpdate }) {
 
             if (response.ok) {
                 await onUpdate();
+                // Clear local input state after successful save
+                setDiscordInputs(prev => {
+                    const newState = { ...prev };
+                    delete newState[playerId];
+                    return newState;
+                });
             } else {
                 const errorData = await response.json();
                 console.error('Failed to update player Discord:', errorData);
@@ -1578,7 +1590,7 @@ function AdminPlayers({ players, teams, sessionId, onUpdate }) {
                                 <label style={{ color: '#fff', minWidth: '100px' }}>Discord:</label>
                                 <input
                                     type="text"
-                                    value={player.discordTag || ''}
+                                    value={discordInputs[player.id] !== undefined ? discordInputs[player.id] : (player.discordTag || '')}
                                     placeholder="username#1234"
                                     onChange={(e) => handleUpdateDiscord(player.id, e.target.value)}
                                     onBlur={(e) => handleUpdateDiscord(player.id, e.target.value, true)}
