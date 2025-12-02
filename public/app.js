@@ -69,6 +69,18 @@ function App() {
         if (sessionId) {
             verifySession();
         }
+
+        // Auto-refresh data every 5 minutes
+        const refreshInterval = setInterval(() => {
+            console.log('🔄 Auto-refreshing data...');
+            loadPlayers();
+            loadTeams();
+            loadAllPlayers();
+            loadTeamMatches();
+        }, 5 * 60 * 1000); // 5 minutes
+
+        // Cleanup on unmount
+        return () => clearInterval(refreshInterval);
     }, []);
 
     const verifySession = async () => {
@@ -463,8 +475,7 @@ function App() {
                 {activeTab === 'players' && <Players players={players} />}
                 {activeTab === 'teams' && <Teams teams={teams} players={players} allPlayers={allPlayers} />}
                 {activeTab === 'schedule' && <Schedule schedule={schedule} teams={teams} allPlayers={allPlayers} teamMatches={teamMatches} />}
-                {activeTab === 'stats' && <Stats players={players} teams={teams} />}
-                {activeTab === 'team-matches' && <TeamMatches teamMatches={teamMatches} teams={teams} allPlayers={allPlayers} />}
+                {activeTab === 'stats' && <StatsAndMatches players={players} teams={teams} teamMatches={teamMatches} allPlayers={allPlayers} />}
                 {activeTab === 'admin' && isAdmin && (
                     <AdminPanel
                         teams={teams}
@@ -549,8 +560,7 @@ function Nav({ activeTab, setActiveTab, isAdmin, setShowLoginModal }) {
                 <button className={`nav-btn ${activeTab === 'players' ? 'active' : ''}`} onClick={() => setActiveTab('players')}>Игроки</button>
                 <button className={`nav-btn ${activeTab === 'teams' ? 'active' : ''}`} onClick={() => setActiveTab('teams')}>Команды</button>
                 <button className={`nav-btn ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => setActiveTab('schedule')}>Расписание</button>
-                <button className={`nav-btn ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>Статистика</button>
-                <button className={`nav-btn ${activeTab === 'team-matches' ? 'active' : ''}`} onClick={() => setActiveTab('team-matches')}>Командные матчи</button>
+                <button className={`nav-btn ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>📊 Статистика</button>
                 {isAdmin ? (
                     <button className={`nav-btn ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>⚙️ Админка</button>
                 ) : (
@@ -933,6 +943,61 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace }) {
                         <div className="stat-label">Losses</div>
                     </div>
                 </div>
+
+                {player.discordTag && (
+                    <div style={{
+                        marginTop: '12px',
+                        padding: '10px 14px',
+                        background: '#5865F2',
+                        borderRadius: '10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        border: '2px solid rgba(88, 101, 242, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#4752C4';
+                        e.currentTarget.style.transform = 'scale(1.03)';
+                        e.currentTarget.style.borderColor = '#5865F2';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#5865F2';
+                        e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.borderColor = 'rgba(88, 101, 242, 0.3)';
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(player.discordTag);
+                        const originalBg = e.currentTarget.style.background;
+                        e.currentTarget.style.background = '#43B581';
+                        setTimeout(() => {
+                            e.currentTarget.style.background = originalBg;
+                        }, 300);
+                    }}
+                    title="Нажмите, чтобы скопировать Discord тег"
+                    >
+                        <svg width="18" height="18" viewBox="0 0 71 55" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <g clipPath="url(#clip0)">
+                                <path d="M60.1045 4.8978C55.5792 2.8214 50.7265 1.2916 45.6527 0.41542C45.5603 0.39851 45.468 0.440769 45.4204 0.525289C44.7963 1.6353 44.105 3.0834 43.6209 4.2216C38.1637 3.4046 32.7345 3.4046 27.3892 4.2216C26.905 3.0581 26.1886 1.6353 25.5617 0.525289C25.5141 0.443589 25.4218 0.40133 25.3294 0.41542C20.2584 1.2888 15.4057 2.8186 10.8776 4.8978C10.8384 4.9147 10.8048 4.9429 10.7825 4.9795C1.57795 18.7309 -0.943561 32.1443 0.293408 45.3914C0.299005 45.4562 0.335386 45.5182 0.385761 45.5576C6.45866 50.0174 12.3413 52.7249 18.1147 54.5195C18.2071 54.5477 18.305 54.5139 18.3638 54.4378C19.7295 52.5728 20.9469 50.6063 21.9907 48.5383C22.0523 48.4172 21.9935 48.2735 21.8676 48.2256C19.9366 47.4931 18.0979 46.6 16.3292 45.5858C16.1893 45.5041 16.1781 45.304 16.3068 45.2082C16.679 44.9293 17.0513 44.6391 17.4067 44.3461C17.471 44.2926 17.5606 44.2813 17.6362 44.3151C29.2558 49.6202 41.8354 49.6202 53.3179 44.3151C53.3935 44.2785 53.4831 44.2898 53.5502 44.3433C53.9057 44.6363 54.2779 44.9293 54.6529 45.2082C54.7816 45.304 54.7732 45.5041 54.6333 45.5858C52.8646 46.6197 51.0259 47.4931 49.0921 48.2228C48.9662 48.2707 48.9102 48.4172 48.9718 48.5383C50.038 50.6034 51.2554 52.5699 52.5959 54.435C52.6519 54.5139 52.7526 54.5477 52.845 54.5195C58.6464 52.7249 64.529 50.0174 70.6019 45.5576C70.6551 45.5182 70.6887 45.459 70.6943 45.3942C72.1747 30.0791 68.2147 16.7757 60.1968 4.9823C60.1772 4.9429 60.1437 4.9147 60.1045 4.8978ZM23.7259 37.3253C20.2276 37.3253 17.3451 34.1136 17.3451 30.1693C17.3451 26.225 20.1717 23.0133 23.7259 23.0133C27.308 23.0133 30.1626 26.2532 30.1066 30.1693C30.1066 34.1136 27.28 37.3253 23.7259 37.3253ZM47.3178 37.3253C43.8196 37.3253 40.9371 34.1136 40.9371 30.1693C40.9371 26.225 43.7636 23.0133 47.3178 23.0133C50.9 23.0133 53.7545 26.2532 53.6986 30.1693C53.6986 34.1136 50.9 37.3253 47.3178 37.3253Z" fill="white"/>
+                            </g>
+                            <defs>
+                                <clipPath id="clip0">
+                                    <rect width="71" height="55" fill="white"/>
+                                </clipPath>
+                            </defs>
+                        </svg>
+                        <span style={{
+                            color: '#fff',
+                            fontSize: '0.9em',
+                            fontWeight: '600'
+                        }}>
+                            {player.discordTag}
+                        </span>
+                    </div>
+                )}
 
                 {hasQualified && (
                     <div
@@ -1324,6 +1389,69 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
     );
 }
 
+// Unified Stats and Team Matches Component with sub-tabs
+function StatsAndMatches({ players, teams, teamMatches, allPlayers }) {
+    const [subTab, setSubTab] = useState('team-points');
+
+    return (
+        <div>
+            <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>📊 Статистика</h2>
+
+            {/* Sub-navigation */}
+            <div style={{
+                display: 'flex',
+                gap: '15px',
+                marginBottom: '30px',
+                borderBottom: '2px solid #333',
+                paddingBottom: '10px'
+            }}>
+                <button
+                    onClick={() => setSubTab('team-points')}
+                    style={{
+                        padding: '12px 24px',
+                        borderRadius: '8px 8px 0 0',
+                        background: subTab === 'team-points' ? '#c9a961' : '#2a2a2a',
+                        color: subTab === 'team-points' ? '#000' : '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '1em',
+                        transition: 'all 0.2s',
+                        borderBottom: subTab === 'team-points' ? '3px solid #c9a961' : 'none'
+                    }}
+                >
+                    📈 Индивидуальные очки команд
+                </button>
+                <button
+                    onClick={() => setSubTab('team-matches')}
+                    style={{
+                        padding: '12px 24px',
+                        borderRadius: '8px 8px 0 0',
+                        background: subTab === 'team-matches' ? '#c9a961' : '#2a2a2a',
+                        color: subTab === 'team-matches' ? '#000' : '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '1em',
+                        transition: 'all 0.2s',
+                        borderBottom: subTab === 'team-matches' ? '3px solid #c9a961' : 'none'
+                    }}
+                >
+                    ⚔️ Командные матчи
+                </button>
+            </div>
+
+            {/* Content based on active sub-tab */}
+            {subTab === 'team-points' && (
+                <Stats players={players} teams={teams} />
+            )}
+            {subTab === 'team-matches' && (
+                <TeamMatches teamMatches={teamMatches} teams={teams} allPlayers={allPlayers} />
+            )}
+        </div>
+    );
+}
+
 function Stats({ players, teams }) {
     const totalGames = players.reduce((sum, p) => sum + (p.wins || 0) + (p.losses || 0), 0);
 
@@ -1336,8 +1464,6 @@ function Stats({ players, teams }) {
 
     return (
         <div>
-            <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>Статистика лиги</h2>
-
             <div className="team-stats-section">
                 <div className="total-games">{totalGames} BNL GAMES PLAYED SINCE NOV 27, 2025!</div>
                 <div style={{ fontSize: '2em', fontWeight: '800', textAlign: 'center', marginBottom: '30px', background: 'linear-gradient(135deg, #f4e4b8 0%, #c9a961 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
