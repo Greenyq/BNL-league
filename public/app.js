@@ -515,7 +515,7 @@ function Header() {
                     style={{
                         width: '100%',
                         height: 'auto',
-                        maxHeight: '250px',
+                        maxHeight: '300px',
                         objectFit: 'cover',
                         display: 'block',
                         borderRadius: '15px',
@@ -732,28 +732,6 @@ function PlayerCard({ player, rank, onClick }) {
 
     return (
         <div className="player-card" onClick={onClick} style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
-            {hasQualified && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: '55px',
-                        right: '-35px',
-                        background: 'linear-gradient(135deg, #f4e4b8 0%, #c9a961 100%)',
-                        color: '#1a1a1a',
-                        padding: '5px 45px',
-                        transform: 'rotate(45deg)',
-                        fontSize: '0.75em',
-                        fontWeight: '800',
-                        zIndex: 10,
-                        boxShadow: '0 2px 10px rgba(201, 169, 97, 0.5)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '1px'
-                    }}
-                    title="Поздравляем! Вы прошли во второй тур! Администратор скоро назначит вам команду."
-                >
-                    ✓ QUALIFIED
-                </div>
-            )}
             <div className="player-card-inner">
                 <div className="player-header">
                     <div className="player-title">
@@ -855,6 +833,30 @@ function PlayerCard({ player, rank, onClick }) {
                         <div className="stat-label">Losses</div>
                     </div>
                 </div>
+
+                {hasQualified && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            bottom: '0',
+                            left: '0',
+                            right: '0',
+                            background: 'linear-gradient(90deg, #f4e4b8 0%, #c9a961 50%, #f4e4b8 100%)',
+                            color: '#1a1a1a',
+                            padding: '8px 0',
+                            fontSize: '0.75em',
+                            fontWeight: '800',
+                            textAlign: 'center',
+                            textTransform: 'uppercase',
+                            letterSpacing: '1.5px',
+                            boxShadow: '0 -2px 10px rgba(201, 169, 97, 0.5)',
+                            borderRadius: '0 0 12px 12px'
+                        }}
+                        title="Поздравляем! Вы прошли во второй тур! Администратор скоро назначит вам команду."
+                    >
+                        ✓ QUALIFIED
+                    </div>
+                )}
             </div>
         </div>
     );
