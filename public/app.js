@@ -464,6 +464,7 @@ function App() {
                 {activeTab === 'schedule' && <Schedule schedule={schedule} teams={teams} allPlayers={allPlayers} teamMatches={teamMatches} />}
                 {activeTab === 'stats' && <Stats players={players} teams={teams} />}
                 {activeTab === 'team-matches' && <TeamMatches teamMatches={teamMatches} teams={teams} allPlayers={allPlayers} />}
+                {activeTab === 'rules' && <Rules />}
                 {activeTab === 'admin' && isAdmin && (
                     <AdminPanel
                         teams={teams}
@@ -508,8 +509,29 @@ function Header() {
     return (
         <div className="header">
             <div className="header-content">
-                <h1 className="league-title">CURRENT BNL</h1>
-                <div style={{ color: '#888', marginTop: '10px' }}>📅 Season 23 • Starting Nov 27, 2025</div>
+                <img
+                    src="/images/banner.png"
+                    alt="Welcome to BNL - Warcraft Battle Newbie League"
+                    style={{
+                        maxWidth: '100%',
+                        height: 'auto',
+                        maxHeight: '400px',
+                        objectFit: 'contain',
+                        margin: '0 auto',
+                        display: 'block',
+                        borderRadius: '15px',
+                        boxShadow: '0 10px 40px rgba(201, 169, 97, 0.3)'
+                    }}
+                    onError={(e) => {
+                        // Fallback to text if image not found
+                        e.target.style.display = 'none';
+                        e.target.nextElementSibling.style.display = 'block';
+                    }}
+                />
+                <div style={{ display: 'none' }}>
+                    <h1 className="league-title">CURRENT BNL</h1>
+                    <div style={{ color: '#888', marginTop: '10px' }}>📅 Season 23 • Starting Nov 27, 2025</div>
+                </div>
             </div>
         </div>
     );
@@ -524,6 +546,7 @@ function Nav({ activeTab, setActiveTab, isAdmin, setShowLoginModal }) {
                 <button className={`nav-btn ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => setActiveTab('schedule')}>Расписание</button>
                 <button className={`nav-btn ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>Статистика</button>
                 <button className={`nav-btn ${activeTab === 'team-matches' ? 'active' : ''}`} onClick={() => setActiveTab('team-matches')}>Командные матчи</button>
+                <button className={`nav-btn ${activeTab === 'rules' ? 'active' : ''}`} onClick={() => setActiveTab('rules')}>📜 Правила</button>
                 {isAdmin ? (
                     <button className={`nav-btn ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>⚙️ Админка</button>
                 ) : (
@@ -532,6 +555,134 @@ function Nav({ activeTab, setActiveTab, isAdmin, setShowLoginModal }) {
                         setShowLoginModal(true);
                     }}>🔐 Вход</button>
                 )}
+            </div>
+        </div>
+    );
+}
+
+function Rules() {
+    return (
+        <div>
+            <h2 style={{ fontSize: '2.5em', marginBottom: '30px', color: '#c9a961', textAlign: 'center' }}>
+                📜 Правила Battle Newbie League
+            </h2>
+
+            <div style={{
+                maxWidth: '900px',
+                margin: '0 auto',
+                background: '#1a1a1a',
+                padding: '40px',
+                borderRadius: '20px',
+                border: '2px solid #c9a961'
+            }}>
+                <div style={{ marginBottom: '40px' }}>
+                    <h3 style={{ fontSize: '1.8em', color: '#c9a961', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span>⚔️</span> Этап 1: Ладдерные игры
+                    </h3>
+                    <div style={{ fontSize: '1.1em', lineHeight: '1.8', color: '#e0e0e0' }}>
+                        <p style={{ marginBottom: '15px' }}>
+                            На первом этапе игроки играют в ладдер на W3Champions и зарабатывают очки:
+                        </p>
+                        <ul style={{ marginLeft: '20px', marginBottom: '15px' }}>
+                            <li style={{ marginBottom: '10px' }}>
+                                <strong style={{ color: '#4caf50' }}>+70 очков</strong> — победа над сильным соперником (разница MMR +20 и выше)
+                            </li>
+                            <li style={{ marginBottom: '10px' }}>
+                                <strong style={{ color: '#4caf50' }}>+50 очков</strong> — победа над равным соперником (разница MMR от -19 до +19)
+                            </li>
+                            <li style={{ marginBottom: '10px' }}>
+                                <strong style={{ color: '#f44336' }}>-50 очков</strong> — поражение от равного соперника
+                            </li>
+                            <li style={{ marginBottom: '10px' }}>
+                                <strong style={{ color: '#f44336' }}>-70 очков</strong> — поражение от слабого соперника (разница MMR -20 и ниже)
+                            </li>
+                            <li style={{ marginBottom: '10px' }}>
+                                <strong style={{ color: '#c9a961' }}>Бонус</strong> — дополнительные очки за каждую ачивку
+                            </li>
+                        </ul>
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '10px',
+                            border: '2px solid #c9a961',
+                            marginTop: '20px'
+                        }}>
+                            <p style={{ fontSize: '1.2em', fontWeight: '700', color: '#c9a961', marginBottom: '10px' }}>
+                                🏆 Условие перехода во второй этап:
+                            </p>
+                            <p style={{ fontSize: '1.3em', fontWeight: '800', color: '#4caf50' }}>
+                                Набрать 500 очков
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ marginBottom: '40px' }}>
+                    <h3 style={{ fontSize: '1.8em', color: '#c9a961', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span>👥</span> Этап 2: Командный этап
+                    </h3>
+                    <div style={{ fontSize: '1.1em', lineHeight: '1.8', color: '#e0e0e0' }}>
+                        <p style={{ marginBottom: '15px' }}>
+                            Игроки, набравшие 500 очков, автоматически попадают во второй этап.
+                            Здесь формируются команды с капитанами и тренерами:
+                        </p>
+                        <ul style={{ marginLeft: '20px', marginBottom: '15px' }}>
+                            <li style={{ marginBottom: '10px' }}>
+                                <strong style={{ color: '#c9a961' }}>Капитан</strong> — координирует коммуникацию между командами и организует матчи
+                            </li>
+                            <li style={{ marginBottom: '10px' }}>
+                                <strong style={{ color: '#c9a961' }}>Тренер</strong> — помогает игрокам с советами и анализом игры
+                            </li>
+                        </ul>
+                        <p style={{ marginBottom: '15px' }}>
+                            В течение месяца все игроки из команды А должны сыграть с игроками из команды Б.
+                            Команда, набравшая максимальные очки, побеждает.
+                        </p>
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            marginTop: '15px'
+                        }}>
+                            <p style={{ fontSize: '1.1em', color: '#888' }}>
+                                💡 Очки со второго этапа влияют на преимущества в финале
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 style={{ fontSize: '1.8em', color: '#c9a961', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span>🏆</span> Этап 3: Супер Финал
+                    </h3>
+                    <div style={{ fontSize: '1.1em', lineHeight: '1.8', color: '#e0e0e0' }}>
+                        <p style={{ marginBottom: '15px' }}>
+                            После второго этапа лучшие 2 игрока из каждой команды попадают в супер финал.
+                        </p>
+                        <ul style={{ marginLeft: '20px', marginBottom: '15px' }}>
+                            <li style={{ marginBottom: '10px' }}>
+                                Команда-победитель второго этапа получает право первыми банить и выбирать карту для первой игры
+                            </li>
+                            <li style={{ marginBottom: '10px' }}>
+                                Финал проходит в формате <strong style={{ color: '#c9a961' }}>Best of 3 (BO3)</strong>
+                            </li>
+                            <li style={{ marginBottom: '10px' }}>
+                                Победитель становится чемпионом BNL сезона!
+                            </li>
+                        </ul>
+                        <div style={{
+                            background: 'linear-gradient(135deg, #c9a961 0%, #8b7355 100%)',
+                            padding: '20px',
+                            borderRadius: '10px',
+                            marginTop: '20px',
+                            textAlign: 'center'
+                        }}>
+                            <p style={{ fontSize: '1.4em', fontWeight: '800', color: '#000' }}>
+                                ⚔️ Да начнется битва! ⚔️
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -578,8 +729,32 @@ function PlayerCard({ player, rank, onClick }) {
         });
     }, [player.race]);
 
+    const hasQualified = (player.points || 0) >= 500;
+
     return (
-        <div className="player-card" onClick={onClick} style={{ cursor: 'pointer' }}>
+        <div className="player-card" onClick={onClick} style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
+            {hasQualified && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: '15px',
+                        right: '-35px',
+                        background: 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)',
+                        color: '#fff',
+                        padding: '5px 45px',
+                        transform: 'rotate(45deg)',
+                        fontSize: '0.75em',
+                        fontWeight: '800',
+                        zIndex: 10,
+                        boxShadow: '0 2px 10px rgba(76, 175, 80, 0.5)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px'
+                    }}
+                    title="Поздравляем! Вы прошли во второй тур! Администратор скоро назначит вам команду."
+                >
+                    ✓ QUALIFIED
+                </div>
+            )}
             <div className="player-card-inner">
                 <div className="player-header">
                     <div className="player-title">
@@ -1071,7 +1246,29 @@ function Stats({ players, teams }) {
                 {teamStats.map((team, idx) => (
                     <div key={team.id} className="team-bar-container">
                         <div className="team-name-label">
-                            <span style={{ fontWeight: '800', fontSize: '1.2em' }}>#{idx + 1} {team.name}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
+                                {team.logo ? (
+                                    <img
+                                        src={team.logo}
+                                        alt={team.name}
+                                        style={{
+                                            width: '50px',
+                                            height: '50px',
+                                            borderRadius: '10px',
+                                            objectFit: 'cover',
+                                            border: '2px solid #c9a961'
+                                        }}
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            e.target.nextElementSibling.style.display = 'inline';
+                                        }}
+                                    />
+                                ) : null}
+                                <span style={{ fontSize: '1.5em', display: team.logo ? 'none' : 'inline' }}>{team.emoji}</span>
+                                <div>
+                                    <span style={{ fontWeight: '800', fontSize: '1.2em' }}>#{idx + 1} {team.name}</span>
+                                </div>
+                            </div>
                             <span style={{ color: '#888' }}>{team.games} games • {team.points} points</span>
                         </div>
                         <div className="team-bar" style={{ width: teamStats[0].points > 0 ? `${(team.points / teamStats[0].points) * 100}%` : '0%' }}>
