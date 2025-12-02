@@ -559,6 +559,17 @@ function AdminPanel({ teams, allPlayers, teamMatches, sessionId, onUpdate, onLog
                     >
                         📺 Стримеры
                     </button>
+                    <button
+                        onClick={() => setActiveSection('portraits')}
+                        style={{
+                            padding: '12px 24px', borderRadius: '8px',
+                            background: activeSection === 'portraits' ? '#c9a961' : '#2a2a2a',
+                            color: activeSection === 'portraits' ? '#000' : '#fff',
+                            border: 'none', cursor: 'pointer', fontWeight: '600'
+                        }}
+                    >
+                        🖼️ Портреты
+                    </button>
                 </div>
             </div>
 
@@ -573,6 +584,9 @@ function AdminPanel({ teams, allPlayers, teamMatches, sessionId, onUpdate, onLog
             )}
             {activeSection === 'streamers' && (
                 <AdminStreamers sessionId={sessionId} onUpdate={onUpdate} />
+            )}
+            {activeSection === 'portraits' && (
+                <AdminPortraits sessionId={sessionId} onUpdate={onUpdate} />
             )}
         </div>
     );
@@ -2310,6 +2324,366 @@ function AdminStreamers({ sessionId, onUpdate }) {
                 }}>
                     Нет стримеров. Нажмите "➕ Добавить стримера" чтобы добавить.
                 </div>
+            )}
+        </div>
+    );
+}
+
+// ==================== ADMIN PORTRAITS ====================
+function AdminPortraits({ sessionId, onUpdate }) {
+    const [portraits, setPortraits] = React.useState([]);
+    const [showForm, setShowForm] = React.useState(false);
+    const [formData, setFormData] = React.useState({
+        name: '', race: 1, pointsRequired: 0, imageUrl: ''
+    });
+    const [editingId, setEditingId] = React.useState(null);
+
+    const raceNames = {
+        0: '🎲 Рандом',
+        1: '👑 Хумы',
+        2: '⚔️ Орки',
+        4: '🌙 Эльфы',
+        8: '💀 Андеды'
+    };
+
+    React.useEffect(() => {
+        fetchPortraits();
+    }, []);
+
+    const fetchPortraits = async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/portraits`);
+            const data = await response.json();
+            setPortraits(data);
+        } catch (error) {
+            console.error('Error fetching portraits:', error);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        const url = editingId
+            ? `${API_BASE}/api/admin/portraits/${editingId}`
+            : `${API_BASE}/api/admin/portraits`;
+
+        const method = editingId ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-session-id': sessionId
+                },
+                body: JSON.stringify({
+                    ...formData,
+                    race: parseInt(formData.race),
+                    pointsRequired: parseInt(formData.pointsRequired)
+                })
+            });
+
+            if (response.ok) {
+                setShowForm(false);
+                setFormData({ name: '', race: 1, pointsRequired: 0, imageUrl: '' });
+                setEditingId(null);
+                fetchPortraits();
+            } else {
+                alert('Ошибка при сохранении портрета');
+            }
+        } catch (error) {
+            console.error('Error saving portrait:', error);
+            alert('Ошибка при сохранении портрета');
+        }
+    };
+
+    const handleEdit = (portrait) => {
+        setFormData({
+            name: portrait.name,
+            race: portrait.race,
+            pointsRequired: portrait.pointsRequired,
+            imageUrl: portrait.imageUrl
+        });
+        setEditingId(portrait.id);
+        setShowForm(true);
+    };
+
+    const handleDelete = async (id) => {
+        if (!confirm('Удалить портрет?')) return;
+
+        try {
+            const response = await fetch(`${API_BASE}/api/admin/portraits/${id}`, {
+                method: 'DELETE',
+                headers: { 'x-session-id': sessionId }
+            });
+
+            if (response.ok) {
+                fetchPortraits();
+            } else {
+                alert('Ошибка при удалении портрета');
+            }
+        } catch (error) {
+            console.error('Error deleting portrait:', error);
+            alert('Ошибка при удалении портрета');
+        }
+    };
+
+    const handleCancel = () => {
+        setShowForm(false);
+        setFormData({ name: '', race: 1, pointsRequired: 0, imageUrl: '' });
+        setEditingId(null);
+    };
+
+    // Group portraits by race
+    const portraitsByRace = portraits.reduce((acc, portrait) => {
+        if (!acc[portrait.race]) {
+            acc[portrait.race] = [];
+        }
+        acc[portrait.race].push(portrait);
+        return acc;
+    }, {});
+
+    // Sort portraits within each race by pointsRequired
+    Object.keys(portraitsByRace).forEach(race => {
+        portraitsByRace[race].sort((a, b) => a.pointsRequired - b.pointsRequired);
+    });
+
+    return (
+        <div>
+            <div style={{ marginBottom: '20px' }}>
+                <button
+                    onClick={() => setShowForm(!showForm)}
+                    style={{
+                        padding: '12px 24px', borderRadius: '8px',
+                        background: '#4caf50', color: '#fff',
+                        border: 'none', cursor: 'pointer', fontWeight: '600'
+                    }}
+                >
+                    {showForm ? '❌ Отмена' : '➕ Добавить портрет'}
+                </button>
+            </div>
+
+            <div style={{
+                background: '#2a2a2a', padding: '20px', borderRadius: '12px',
+                marginBottom: '20px', border: '2px solid #c9a961'
+            }}>
+                <h3 style={{ color: '#c9a961', marginBottom: '10px' }}>ℹ️ Требования к портретам:</h3>
+                <ul style={{ color: '#e0e0e0', lineHeight: '1.8' }}>
+                    <li>Рекомендуемый размер: <strong>128x128 пикселей</strong></li>
+                    <li>Формат: PNG или JPG</li>
+                    <li>Портреты разблокируются автоматически при достижении указанного количества очков</li>
+                    <li>Каждый портрет привязан к определенной расе</li>
+                </ul>
+            </div>
+
+            {showForm && (
+                <div style={{
+                    background: '#1a1a1a', padding: '20px', borderRadius: '15px',
+                    marginBottom: '20px', border: '1px solid #c9a961'
+                }}>
+                    <h3 style={{ color: '#c9a961', marginBottom: '20px' }}>
+                        {editingId ? 'Редактировать портрет' : 'Добавить портрет'}
+                    </h3>
+                    <form onSubmit={handleSubmit}>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>
+                                Название портрета
+                            </label>
+                            <input
+                                type="text"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                style={{
+                                    width: '100%', padding: '10px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                }}
+                                placeholder="Например: Орочий Вождь"
+                                required
+                            />
+                        </div>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>
+                                Раса
+                            </label>
+                            <select
+                                value={formData.race}
+                                onChange={(e) => setFormData({ ...formData, race: e.target.value })}
+                                style={{
+                                    width: '100%', padding: '10px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                }}
+                                required
+                            >
+                                <option value={0}>🎲 Рандом</option>
+                                <option value={1}>👑 Хумы</option>
+                                <option value={2}>⚔️ Орки</option>
+                                <option value={4}>🌙 Эльфы</option>
+                                <option value={8}>💀 Андеды</option>
+                            </select>
+                        </div>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>
+                                Очки для разблокировки
+                            </label>
+                            <input
+                                type="number"
+                                value={formData.pointsRequired}
+                                onChange={(e) => setFormData({ ...formData, pointsRequired: e.target.value })}
+                                style={{
+                                    width: '100%', padding: '10px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                }}
+                                placeholder="1000"
+                                required
+                                min="0"
+                            />
+                        </div>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>
+                                URL изображения
+                            </label>
+                            <input
+                                type="text"
+                                value={formData.imageUrl}
+                                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                                style={{
+                                    width: '100%', padding: '10px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                }}
+                                placeholder="https://example.com/portrait.png"
+                                required
+                            />
+                            {formData.imageUrl && (
+                                <div style={{ marginTop: '10px' }}>
+                                    <img
+                                        src={formData.imageUrl}
+                                        alt="Превью"
+                                        style={{
+                                            width: '128px', height: '128px',
+                                            objectFit: 'cover', borderRadius: '8px',
+                                            border: '2px solid #c9a961'
+                                        }}
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                        }}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button
+                                type="submit"
+                                style={{
+                                    padding: '12px 24px', borderRadius: '8px',
+                                    background: '#4caf50', color: '#fff',
+                                    border: 'none', cursor: 'pointer', fontWeight: '600'
+                                }}
+                            >
+                                {editingId ? '💾 Сохранить' : '➕ Добавить'}
+                            </button>
+                            {editingId && (
+                                <button
+                                    type="button"
+                                    onClick={handleCancel}
+                                    style={{
+                                        padding: '12px 24px', borderRadius: '8px',
+                                        background: '#666', color: '#fff',
+                                        border: 'none', cursor: 'pointer', fontWeight: '600'
+                                    }}
+                                >
+                                    ❌ Отмена
+                                </button>
+                            )}
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {Object.keys(portraitsByRace).length === 0 ? (
+                <div style={{
+                    textAlign: 'center', padding: '60px 20px',
+                    color: '#666', fontSize: '1.1em'
+                }}>
+                    Нет портретов. Нажмите "➕ Добавить портрет" чтобы добавить.
+                </div>
+            ) : (
+                Object.entries(portraitsByRace).map(([race, racePortraits]) => (
+                    <div key={race} style={{ marginBottom: '40px' }}>
+                        <h3 style={{
+                            color: '#c9a961', fontSize: '1.5em', marginBottom: '20px',
+                            display: 'flex', alignItems: 'center', gap: '10px'
+                        }}>
+                            {raceNames[race] || `Раса ${race}`}
+                            <span style={{ color: '#666', fontSize: '0.8em', fontWeight: '400' }}>
+                                ({racePortraits.length} портретов)
+                            </span>
+                        </h3>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                            gap: '20px'
+                        }}>
+                            {racePortraits.map(portrait => (
+                                <div key={portrait.id} style={{
+                                    background: '#1a1a1a', padding: '15px', borderRadius: '12px',
+                                    border: '1px solid #444'
+                                }}>
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', gap: '15px',
+                                        marginBottom: '15px'
+                                    }}>
+                                        <img
+                                            src={portrait.imageUrl}
+                                            alt={portrait.name}
+                                            style={{
+                                                width: '80px', height: '80px',
+                                                objectFit: 'cover', borderRadius: '8px',
+                                                border: '2px solid #c9a961'
+                                            }}
+                                        />
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{
+                                                fontSize: '1.1em', fontWeight: '700', color: '#fff',
+                                                marginBottom: '5px'
+                                            }}>
+                                                {portrait.name}
+                                            </div>
+                                            <div style={{
+                                                color: '#c9a961', fontSize: '0.95em', fontWeight: '600'
+                                            }}>
+                                                {portrait.pointsRequired} очков
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button
+                                            onClick={() => handleEdit(portrait)}
+                                            style={{
+                                                flex: 1, padding: '8px 12px', borderRadius: '8px',
+                                                background: '#2196f3', color: '#fff',
+                                                border: 'none', cursor: 'pointer', fontWeight: '600',
+                                                fontSize: '0.9em'
+                                            }}
+                                        >
+                                            ✏️ Изменить
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(portrait.id)}
+                                            style={{
+                                                flex: 1, padding: '8px 12px', borderRadius: '8px',
+                                                background: '#f44336', color: '#fff',
+                                                border: 'none', cursor: 'pointer', fontWeight: '600',
+                                                fontSize: '0.9em'
+                                            }}
+                                        >
+                                            🗑️ Удалить
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))
             )}
         </div>
     );
