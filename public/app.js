@@ -476,6 +476,7 @@ function App() {
                 {activeTab === 'teams' && <Teams teams={teams} players={players} allPlayers={allPlayers} />}
                 {activeTab === 'schedule' && <Schedule schedule={schedule} teams={teams} allPlayers={allPlayers} teamMatches={teamMatches} />}
                 {activeTab === 'stats' && <StatsAndMatches players={players} teams={teams} teamMatches={teamMatches} allPlayers={allPlayers} />}
+                {activeTab === 'streamers' && <Streamers />}
                 {activeTab === 'admin' && isAdmin && (
                     <AdminPanel
                         teams={teams}
@@ -561,6 +562,7 @@ function Nav({ activeTab, setActiveTab, isAdmin, setShowLoginModal }) {
                 <button className={`nav-btn ${activeTab === 'teams' ? 'active' : ''}`} onClick={() => setActiveTab('teams')}>Команды</button>
                 <button className={`nav-btn ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => setActiveTab('schedule')}>Расписание</button>
                 <button className={`nav-btn ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>📊 Статистика</button>
+                <button className={`nav-btn ${activeTab === 'streamers' ? 'active' : ''}`} onClick={() => setActiveTab('streamers')}>📺 Стримеры</button>
                 {isAdmin ? (
                     <button className={`nav-btn ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>⚙️ Админка</button>
                 ) : (
@@ -1778,6 +1780,172 @@ function PlayerDetailModal({ player, onClose }) {
                     )}
                 </div>
             </div>
+        </div>
+    );
+}
+
+// ==================== STREAMERS ====================
+function Streamers() {
+    const [streamers, setStreamers] = React.useState([]);
+    const [liveStatus, setLiveStatus] = React.useState({});
+
+    React.useEffect(() => {
+        fetchStreamers();
+    }, []);
+
+    const fetchStreamers = async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/streamers`);
+            const data = await response.json();
+            setStreamers(data);
+
+            // Check live status for each streamer
+            data.forEach(streamer => {
+                checkLiveStatus(streamer.twitchUsername);
+            });
+        } catch (error) {
+            console.error('Error fetching streamers:', error);
+        }
+    };
+
+    const checkLiveStatus = async (twitchUsername) => {
+        try {
+            const response = await fetch(`${API_BASE}/api/streamers/live/${twitchUsername}`);
+            const data = await response.json();
+            setLiveStatus(prev => ({ ...prev, [twitchUsername]: data.isLive }));
+        } catch (error) {
+            console.error('Error checking live status:', error);
+            setLiveStatus(prev => ({ ...prev, [twitchUsername]: false }));
+        }
+    };
+
+    const handleStreamerClick = (twitchUsername) => {
+        window.open(`https://twitch.tv/${twitchUsername}`, '_blank');
+    };
+
+    return (
+        <div>
+            <h2 style={{ fontSize: '2.5em', marginBottom: '30px', color: '#c9a961', textAlign: 'center' }}>
+                📺 Наши стримеры
+            </h2>
+
+            {streamers.length === 0 ? (
+                <div style={{
+                    textAlign: 'center', padding: '60px 20px',
+                    color: '#666', fontSize: '1.2em'
+                }}>
+                    Пока нет стримеров
+                </div>
+            ) : (
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                    gap: '25px',
+                    maxWidth: '1200px',
+                    margin: '0 auto'
+                }}>
+                    {streamers.map(streamer => {
+                        const isLive = liveStatus[streamer.twitchUsername];
+                        return (
+                            <div
+                                key={streamer.id}
+                                onClick={() => handleStreamerClick(streamer.twitchUsername)}
+                                style={{
+                                    background: '#1a1a1a',
+                                    borderRadius: '15px',
+                                    overflow: 'hidden',
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.2s, box-shadow 0.2s',
+                                    border: isLive ? '2px solid #ff0000' : '2px solid #444',
+                                    position: 'relative'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(-5px)';
+                                    e.currentTarget.style.boxShadow = '0 10px 30px rgba(201, 169, 97, 0.3)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = 'none';
+                                }}
+                            >
+                                {isLive && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '15px',
+                                        right: '15px',
+                                        background: '#ff0000',
+                                        color: '#fff',
+                                        padding: '5px 12px',
+                                        borderRadius: '5px',
+                                        fontWeight: '700',
+                                        fontSize: '0.85em',
+                                        zIndex: 10,
+                                        boxShadow: '0 2px 10px rgba(255, 0, 0, 0.5)',
+                                        animation: 'pulse 2s infinite'
+                                    }}>
+                                        🔴 LIVE
+                                    </div>
+                                )}
+
+                                <div style={{
+                                    width: '100%',
+                                    height: '200px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: isLive ? 'linear-gradient(135deg, #9146FF 0%, #772CE8 100%)' : '#2a2a2a'
+                                }}>
+                                    {streamer.avatarUrl ? (
+                                        <img
+                                            src={streamer.avatarUrl}
+                                            alt={streamer.name}
+                                            style={{
+                                                width: '140px',
+                                                height: '140px',
+                                                borderRadius: '50%',
+                                                objectFit: 'cover',
+                                                border: '4px solid #c9a961'
+                                            }}
+                                        />
+                                    ) : (
+                                        <div style={{
+                                            width: '140px',
+                                            height: '140px',
+                                            borderRadius: '50%',
+                                            background: '#c9a961',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '4em',
+                                            border: '4px solid #8b7355'
+                                        }}>
+                                            📺
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div style={{ padding: '20px' }}>
+                                    <div style={{
+                                        fontSize: '1.4em',
+                                        fontWeight: '700',
+                                        color: '#fff',
+                                        marginBottom: '8px'
+                                    }}>
+                                        {streamer.name}
+                                    </div>
+                                    <div style={{
+                                        color: '#9146FF',
+                                        fontSize: '0.95em',
+                                        fontWeight: '600'
+                                    }}>
+                                        twitch.tv/{streamer.twitchUsername}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }
