@@ -1,6 +1,6 @@
 const express = require('express');
 const axios = require('axios');
-const { Team, Player, TeamMatch } = require('./models');
+const { Team, Player, TeamMatch, Portrait, Streamer } = require('./models');
 
 const router = express.Router();
 
@@ -184,6 +184,116 @@ router.delete('/admin/team-matches/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete match' });
+    }
+});
+
+// ==================== PORTRAITS ENDPOINTS ====================
+router.get('/portraits', async (req, res) => {
+    try {
+        const portraits = await Portrait.find().sort({ race: 1, pointsRequired: 1 });
+        res.json(portraits);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch portraits' });
+    }
+});
+
+router.post('/admin/portraits', async (req, res) => {
+    try {
+        const newPortrait = await Portrait.create(req.body);
+        res.json(newPortrait);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to create portrait' });
+    }
+});
+
+router.put('/admin/portraits/:id', async (req, res) => {
+    try {
+        const portrait = await Portrait.findByIdAndUpdate(
+            req.params.id,
+            { ...req.body, updatedAt: Date.now() },
+            { new: true }
+        );
+        if (!portrait) {
+            return res.status(404).json({ error: 'Portrait not found' });
+        }
+        res.json(portrait);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update portrait' });
+    }
+});
+
+router.delete('/admin/portraits/:id', async (req, res) => {
+    try {
+        await Portrait.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete portrait' });
+    }
+});
+
+// ==================== STREAMERS ENDPOINTS ====================
+router.get('/streamers', async (req, res) => {
+    try {
+        const streamers = await Streamer.find();
+        res.json(streamers);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch streamers' });
+    }
+});
+
+router.post('/admin/streamers', async (req, res) => {
+    try {
+        const newStreamer = await Streamer.create(req.body);
+        res.json(newStreamer);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to create streamer' });
+    }
+});
+
+router.put('/admin/streamers/:id', async (req, res) => {
+    try {
+        const streamer = await Streamer.findByIdAndUpdate(
+            req.params.id,
+            { ...req.body, updatedAt: Date.now() },
+            { new: true }
+        );
+        if (!streamer) {
+            return res.status(404).json({ error: 'Streamer not found' });
+        }
+        res.json(streamer);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update streamer' });
+    }
+});
+
+router.delete('/admin/streamers/:id', async (req, res) => {
+    try {
+        await Streamer.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete streamer' });
+    }
+});
+
+// ==================== TWITCH API ENDPOINT ====================
+// Check if Twitch streamers are live
+router.post('/twitch/check-live', async (req, res) => {
+    try {
+        const { usernames } = req.body;
+
+        // This would require Twitch API credentials
+        // For now, return mock data
+        const liveData = usernames.map(username => ({
+            username,
+            isLive: Math.random() > 0.5, // Mock data
+            viewerCount: Math.floor(Math.random() * 1000),
+            title: `Playing Warcraft 3`,
+            thumbnail: `https://static-cdn.jtvnw.net/previews-ttv/live_user_${username}-440x248.jpg`
+        }));
+
+        res.json(liveData);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to check Twitch status' });
     }
 });
 

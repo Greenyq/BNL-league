@@ -28,6 +28,8 @@ const playerSchema = new mongoose.Schema({
     race: { type: Number },
     currentMmr: { type: Number },
     teamId: { type: String },
+    discordTag: { type: String }, // Discord tag, e.g., "username#1234"
+    selectedPortraitId: { type: String }, // ID of selected portrait
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
@@ -67,6 +69,46 @@ teamMatchSchema.set('toJSON', {
     }
 });
 
+// Portrait Schema
+const portraitSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    race: { type: Number, required: true }, // 0=Random, 1=Human, 2=Orc, 4=NightElf, 8=Undead
+    pointsRequired: { type: Number, required: true }, // Minimum points to unlock
+    imageUrl: { type: String, required: true }, // URL to portrait image
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+// Transform _id to id for JSON responses
+portraitSchema.set('toJSON', {
+    virtuals: true,
+    versionKey: false,
+    transform: function (doc, ret) {
+        ret.id = ret._id.toString();
+        delete ret._id;
+    }
+});
+
+// Streamer Schema
+const streamerSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    twitchUsername: { type: String, required: true }, // Twitch username
+    avatarUrl: { type: String }, // Avatar/logo URL
+    description: { type: String }, // Short description
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+// Transform _id to id for JSON responses
+streamerSchema.set('toJSON', {
+    virtuals: true,
+    versionKey: false,
+    transform: function (doc, ret) {
+        ret.id = ret._id.toString();
+        delete ret._id;
+    }
+});
+
 // Admin Session Schema
 const adminSessionSchema = new mongoose.Schema({
     sessionId: { type: String, unique: true },
@@ -78,5 +120,7 @@ module.exports = {
     Team: mongoose.model('Team', teamSchema),
     Player: mongoose.model('Player', playerSchema),
     TeamMatch: mongoose.model('TeamMatch', teamMatchSchema),
+    Portrait: mongoose.model('Portrait', portraitSchema),
+    Streamer: mongoose.model('Streamer', streamerSchema),
     AdminSession: mongoose.model('AdminSession', adminSessionSchema)
 };

@@ -41,7 +41,7 @@ const achievements = {
 const API_BASE = '';
 
 function App() {
-    const [activeTab, setActiveTab] = useState('players');
+    const [activeTab, setActiveTab] = useState('home');
     const [players, setPlayers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -435,12 +435,12 @@ function App() {
     if (loading) {
         return (
             <div>
-                <Header />
-                <Nav 
-                    activeTab={activeTab} 
-                    setActiveTab={setActiveTab} 
-                    isAdmin={isAdmin} 
-                    setShowLoginModal={setShowLoginModal} 
+                <Header activeTab={activeTab} />
+                <Nav
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    isAdmin={isAdmin}
+                    setShowLoginModal={setShowLoginModal}
                 />
                 <div className="app">
                     <div className="loading">⚔️ Загрузка матчей с W3Champions...<br />Подсчет очков с 27.11.2025...</div>
@@ -451,20 +451,20 @@ function App() {
 
     return (
         <div>
-            <Header />
-            <Nav 
-                activeTab={activeTab} 
-                setActiveTab={setActiveTab} 
-                isAdmin={isAdmin} 
-                setShowLoginModal={setShowLoginModal} 
+            <Header activeTab={activeTab} />
+            <Nav
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                isAdmin={isAdmin}
+                setShowLoginModal={setShowLoginModal}
             />
             <div className="app">
+                {activeTab === 'home' && <Rules />}
                 {activeTab === 'players' && <Players players={players} />}
                 {activeTab === 'teams' && <Teams teams={teams} players={players} allPlayers={allPlayers} />}
                 {activeTab === 'schedule' && <Schedule schedule={schedule} teams={teams} allPlayers={allPlayers} teamMatches={teamMatches} />}
                 {activeTab === 'stats' && <Stats players={players} teams={teams} />}
                 {activeTab === 'team-matches' && <TeamMatches teamMatches={teamMatches} teams={teams} allPlayers={allPlayers} />}
-                {activeTab === 'rules' && <Rules />}
                 {activeTab === 'admin' && isAdmin && (
                     <AdminPanel
                         teams={teams}
@@ -505,7 +505,12 @@ function App() {
     );
 }
 
-function Header() {
+function Header({ activeTab }) {
+    // Only show banner on home page
+    if (activeTab !== 'home') {
+        return null;
+    }
+
     return (
         <div className="header">
             <div className="header-content">
@@ -540,12 +545,12 @@ function Nav({ activeTab, setActiveTab, isAdmin, setShowLoginModal }) {
     return (
         <div className="nav">
             <div className="nav-container">
+                <button className={`nav-btn ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>🏠 Главная</button>
                 <button className={`nav-btn ${activeTab === 'players' ? 'active' : ''}`} onClick={() => setActiveTab('players')}>Игроки</button>
                 <button className={`nav-btn ${activeTab === 'teams' ? 'active' : ''}`} onClick={() => setActiveTab('teams')}>Команды</button>
                 <button className={`nav-btn ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => setActiveTab('schedule')}>Расписание</button>
                 <button className={`nav-btn ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>Статистика</button>
                 <button className={`nav-btn ${activeTab === 'team-matches' ? 'active' : ''}`} onClick={() => setActiveTab('team-matches')}>Командные матчи</button>
-                <button className={`nav-btn ${activeTab === 'rules' ? 'active' : ''}`} onClick={() => setActiveTab('rules')}>📜 Правила</button>
                 {isAdmin ? (
                     <button className={`nav-btn ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>⚙️ Админка</button>
                 ) : (
@@ -689,21 +694,65 @@ function Rules() {
 
 function Players({ players }) {
     const [selectedPlayer, setSelectedPlayer] = useState(null);
-    // Sort by points (descending)
-    const sortedPlayers = [...players].sort((a, b) => (b.points || 0) - (a.points || 0));
+    const [selectedRaces, setSelectedRaces] = useState({});
+
+    // Group players by battleTag and find best race for each
+    const groupedPlayers = React.useMemo(() => {
+        const groups = {};
+
+        players.forEach(player => {
+            if (!groups[player.battleTag]) {
+                groups[player.battleTag] = [];
+            }
+            groups[player.battleTag].push(player);
+        });
+
+        // For each battleTag, sort races by points and select the best one
+        return Object.entries(groups).map(([battleTag, raceProfiles]) => {
+            // Sort by points descending
+            const sorted = raceProfiles.sort((a, b) => (b.points || 0) - (a.points || 0));
+            return {
+                battleTag,
+                profiles: sorted,
+                bestProfile: sorted[0]
+            };
+        });
+    }, [players]);
+
+    // Sort by best profile points (descending)
+    const sortedPlayers = [...groupedPlayers].sort((a, b) =>
+        (b.bestProfile.points || 0) - (a.bestProfile.points || 0)
+    );
+
+    const toggleRace = (battleTag) => {
+        setSelectedRaces(prev => {
+            const currentIndex = prev[battleTag] || 0;
+            const group = groupedPlayers.find(g => g.battleTag === battleTag);
+            const nextIndex = (currentIndex + 1) % group.profiles.length;
+            return { ...prev, [battleTag]: nextIndex };
+        });
+    };
 
     return (
         <div>
             <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>Профили игроков</h2>
             <div className="players-grid">
-                {sortedPlayers.map((player, index) => (
-                    <PlayerCard
-                        key={player.id}
-                        player={player}
-                        rank={index + 1}
-                        onClick={() => setSelectedPlayer(player)}
-                    />
-                ))}
+                {sortedPlayers.map((group, index) => {
+                    const selectedIndex = selectedRaces[group.battleTag] || 0;
+                    const displayedProfile = group.profiles[selectedIndex];
+                    const hasMultipleRaces = group.profiles.length > 1;
+
+                    return (
+                        <PlayerCard
+                            key={group.battleTag}
+                            player={displayedProfile}
+                            rank={index + 1}
+                            hasMultipleRaces={hasMultipleRaces}
+                            onToggleRace={() => toggleRace(group.battleTag)}
+                            onClick={() => setSelectedPlayer(displayedProfile)}
+                        />
+                    );
+                })}
             </div>
             {selectedPlayer && (
                 <PlayerDetailModal
@@ -715,7 +764,7 @@ function Players({ players }) {
     );
 }
 
-function PlayerCard({ player, rank, onClick }) {
+function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace }) {
     const raceImage = raceImages[player.race];
 
     // Debug logging
@@ -724,25 +773,75 @@ function PlayerCard({ player, rank, onClick }) {
             race: player.race,
             raceName: raceNames[player.race],
             raceImage: raceImage,
-            hasImage: !!raceImage
+            hasImage: !!raceImage,
+            hasMultipleRaces
         });
-    }, [player.race]);
+    }, [player.race, hasMultipleRaces]);
 
     const hasQualified = (player.points || 0) >= 500;
 
+    const handleCardClick = (e) => {
+        // Don't trigger onClick if clicking the race switcher
+        if (!e.target.closest('.race-switcher')) {
+            onClick(e);
+        }
+    };
+
     return (
-        <div className="player-card" onClick={onClick} style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
+        <div className="player-card" onClick={handleCardClick} style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
             <div className="player-card-inner">
                 <div className="player-header">
                     <div className="player-title">
-                        <div className="player-avatar">
-                            {raceImage ? (
-                                <img src={raceImage} alt={raceNames[player.race] || 'Race'} onError={(e) => {
-                                    console.error(`Failed to load image for ${player.name}:`, raceImage);
-                                    e.target.style.display = 'none';
-                                }} />
-                            ) : (
-                                <span>{raceIcons[player.race] || '🎲'}</span>
+                        <div style={{ position: 'relative' }}>
+                            <div className="player-avatar">
+                                {raceImage ? (
+                                    <img src={raceImage} alt={raceNames[player.race] || 'Race'} onError={(e) => {
+                                        console.error(`Failed to load image for ${player.name}:`, raceImage);
+                                        e.target.style.display = 'none';
+                                    }} />
+                                ) : (
+                                    <span>{raceIcons[player.race] || '🎲'}</span>
+                                )}
+                            </div>
+                            {hasMultipleRaces && (
+                                <button
+                                    className="race-switcher"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleRace();
+                                    }}
+                                    style={{
+                                        position: 'absolute',
+                                        bottom: '-5px',
+                                        right: '-5px',
+                                        width: '24px',
+                                        height: '24px',
+                                        borderRadius: '50%',
+                                        background: 'linear-gradient(135deg, #c9a961 0%, #8b7355 100%)',
+                                        border: '2px solid #1a1a1a',
+                                        color: '#000',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '12px',
+                                        fontWeight: '800',
+                                        boxShadow: '0 2px 8px rgba(201, 169, 97, 0.6)',
+                                        transition: 'all 0.2s',
+                                        zIndex: 10
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = 'scale(1.15)';
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(201, 169, 97, 0.8)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = 'scale(1)';
+                                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(201, 169, 97, 0.6)';
+                                    }}
+                                    title="Переключить расу"
+                                >
+                                    ⇄
+                                </button>
                             )}
                         </div>
                         <div className="player-info">
@@ -810,7 +909,8 @@ function PlayerCard({ player, rank, onClick }) {
                     <div className="match-graph">
                         {player.matchHistory.slice(0, 20).map((match, idx) => {
                             const result = typeof match === 'string' ? match : match.result;
-                            const height = 20 + Math.random() * 60;
+                            // Fixed height based on result: wins are taller
+                            const height = result === 'win' ? 70 : 40;
                             return <div key={idx} className={`match-bar ${result}`} style={{ height: `${height}px` }} />;
                         })}
                     </div>
