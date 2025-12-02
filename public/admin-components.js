@@ -228,43 +228,43 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
                 ))}
             </div>
 
-            <div>
+            {/* Анонс - Upcoming Matches */}
+            <div style={{ marginBottom: '40px' }}>
                 <h3 style={{ fontSize: '1.5em', marginBottom: '20px', color: '#c9a961' }}>
-                    📜 История матчей
+                    📅 Анонс
                 </h3>
-                {teamMatches.length === 0 && (
+                {teamMatches.filter(m => m.status === 'upcoming').length === 0 && (
                     <div style={{
                         padding: '40px', textAlign: 'center', color: '#888',
                         background: '#1a1a1a', borderRadius: '15px'
                     }}>
-                        Матчей пока нет. Админ может создать матчи через админ панель.
+                        Предстоящих матчей пока нет.
                     </div>
                 )}
-                {teamMatches.slice().reverse().map(match => {
+                {teamMatches.filter(m => m.status === 'upcoming').slice().reverse().map(match => {
                     const team1 = teams.find(t => t.id === match.team1Id);
                     const team2 = teams.find(t => t.id === match.team2Id);
-                    const isTeam1Winner = match.winnerId === match.team1Id;
-                    
+
                     return (
                         <div key={match.id} style={{
                             background: '#1a1a1a', padding: '20px', borderRadius: '15px',
-                            marginBottom: '15px', border: '1px solid #333'
+                            marginBottom: '15px', border: '2px solid #2196f3'
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                                 <div>
                                     <div style={{
                                         display: 'inline-block',
                                         padding: '4px 12px',
-                                        background: match.status === 'upcoming' ? '#2196f3' : '#4caf50',
+                                        background: '#2196f3',
                                         color: '#fff',
                                         borderRadius: '15px',
                                         fontSize: '0.85em',
                                         fontWeight: '600',
                                         marginBottom: '5px'
                                     }}>
-                                        {match.status === 'upcoming' ? '🕐 Предстоящий' : '✅ Завершён'}
+                                        🕐 Предстоящий
                                     </div>
-                                    {match.status === 'upcoming' && match.scheduledDate && (
+                                    {match.scheduledDate && (
                                         <div style={{ color: '#c9a961', fontSize: '0.9em', marginTop: '5px' }}>
                                             📅 {new Date(match.scheduledDate).toLocaleString('ru-RU', {
                                                 day: '2-digit',
@@ -275,20 +275,136 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
                                             })}
                                         </div>
                                     )}
-                                    {match.status === 'completed' && (
-                                        <div style={{ color: '#888', fontSize: '0.9em', marginTop: '5px' }}>
-                                            {new Date(match.createdAt).toLocaleDateString('ru-RU')}
-                                        </div>
-                                    )}
                                 </div>
-                                {match.status === 'completed' && (
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ flex: 1, textAlign: 'center' }}>
+                                    {team1?.logo ? (
+                                        <img
+                                            src={team1.logo}
+                                            alt={team1.name}
+                                            style={{
+                                                width: '60px',
+                                                height: '60px',
+                                                borderRadius: '10px',
+                                                objectFit: 'cover',
+                                                margin: '0 auto 5px'
+                                            }}
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextElementSibling.style.display = 'block';
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div style={{ fontSize: '1.5em', marginBottom: '5px', display: team1?.logo ? 'none' : 'block' }}>{team1?.emoji}</div>
                                     <div style={{
-                                        padding: '5px 15px', background: '#c9a961',
-                                        color: '#000', borderRadius: '20px', fontWeight: '600'
+                                        fontWeight: '700',
+                                        color: '#fff',
+                                        marginBottom: '5px'
                                     }}>
-                                        +{match.points} pts
+                                        {team1?.name || 'Unknown'}
                                     </div>
-                                )}
+                                    <div style={{ color: '#c9a961', fontSize: '0.9em' }}>
+                                        {getPlayerName(match.player1Id)}
+                                    </div>
+                                </div>
+                                <div style={{
+                                    fontSize: '2em', fontWeight: '800', color: '#c9a961',
+                                    padding: '0 30px'
+                                }}>
+                                    VS
+                                </div>
+                                <div style={{ flex: 1, textAlign: 'center' }}>
+                                    {team2?.logo ? (
+                                        <img
+                                            src={team2.logo}
+                                            alt={team2.name}
+                                            style={{
+                                                width: '60px',
+                                                height: '60px',
+                                                borderRadius: '10px',
+                                                objectFit: 'cover',
+                                                margin: '0 auto 5px'
+                                            }}
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextElementSibling.style.display = 'block';
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div style={{ fontSize: '1.5em', marginBottom: '5px', display: team2?.logo ? 'none' : 'block' }}>{team2?.emoji}</div>
+                                    <div style={{
+                                        fontWeight: '700',
+                                        color: '#fff',
+                                        marginBottom: '5px'
+                                    }}>
+                                        {team2?.name || 'Unknown'}
+                                    </div>
+                                    <div style={{ color: '#c9a961', fontSize: '0.9em' }}>
+                                        {getPlayerName(match.player2Id)}
+                                    </div>
+                                </div>
+                            </div>
+                            {match.notes && (
+                                <div style={{
+                                    marginTop: '15px', padding: '10px', background: '#2a2a2a',
+                                    borderRadius: '8px', color: '#888', fontSize: '0.9em'
+                                }}>
+                                    📝 {match.notes}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* История матчей - Completed Matches */}
+            <div>
+                <h3 style={{ fontSize: '1.5em', marginBottom: '20px', color: '#c9a961' }}>
+                    📜 История матчей
+                </h3>
+                {teamMatches.filter(m => m.status === 'completed').length === 0 && (
+                    <div style={{
+                        padding: '40px', textAlign: 'center', color: '#888',
+                        background: '#1a1a1a', borderRadius: '15px'
+                    }}>
+                        Завершенных матчей пока нет.
+                    </div>
+                )}
+                {teamMatches.filter(m => m.status === 'completed').slice().reverse().map(match => {
+                    const team1 = teams.find(t => t.id === match.team1Id);
+                    const team2 = teams.find(t => t.id === match.team2Id);
+                    const isTeam1Winner = match.winnerId === match.team1Id;
+
+                    return (
+                        <div key={match.id} style={{
+                            background: '#1a1a1a', padding: '20px', borderRadius: '15px',
+                            marginBottom: '15px', border: '2px solid #4caf50'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                <div>
+                                    <div style={{
+                                        display: 'inline-block',
+                                        padding: '4px 12px',
+                                        background: '#4caf50',
+                                        color: '#fff',
+                                        borderRadius: '15px',
+                                        fontSize: '0.85em',
+                                        fontWeight: '600',
+                                        marginBottom: '5px'
+                                    }}>
+                                        ✅ Завершён
+                                    </div>
+                                    <div style={{ color: '#888', fontSize: '0.9em', marginTop: '5px' }}>
+                                        {new Date(match.createdAt).toLocaleDateString('ru-RU')}
+                                    </div>
+                                </div>
+                                <div style={{
+                                    padding: '5px 15px', background: '#c9a961',
+                                    color: '#000', borderRadius: '20px', fontWeight: '600'
+                                }}>
+                                    +{match.points} pts
+                                </div>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ flex: 1, textAlign: 'center' }}>
