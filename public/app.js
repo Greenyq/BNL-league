@@ -515,7 +515,7 @@ function Header() {
                     style={{
                         width: '100%',
                         height: 'auto',
-                        maxHeight: '300px',
+                        maxHeight: '450px',
                         objectFit: 'cover',
                         display: 'block',
                         borderRadius: '15px',
