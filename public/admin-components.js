@@ -548,6 +548,17 @@ function AdminPanel({ teams, allPlayers, teamMatches, sessionId, onUpdate, onLog
                     >
                         🎮 Командные матчи
                     </button>
+                    <button
+                        onClick={() => setActiveSection('streamers')}
+                        style={{
+                            padding: '12px 24px', borderRadius: '8px',
+                            background: activeSection === 'streamers' ? '#c9a961' : '#2a2a2a',
+                            color: activeSection === 'streamers' ? '#000' : '#fff',
+                            border: 'none', cursor: 'pointer', fontWeight: '600'
+                        }}
+                    >
+                        📺 Стримеры
+                    </button>
                 </div>
             </div>
 
@@ -559,6 +570,9 @@ function AdminPanel({ teams, allPlayers, teamMatches, sessionId, onUpdate, onLog
             )}
             {activeSection === 'matches' && (
                 <AdminMatches teams={teams} allPlayers={allPlayers} teamMatches={teamMatches} sessionId={sessionId} onUpdate={onUpdate} />
+            )}
+            {activeSection === 'streamers' && (
+                <AdminStreamers sessionId={sessionId} onUpdate={onUpdate} />
             )}
         </div>
     );
@@ -2033,6 +2047,270 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                     );
                 })}
             </div>
+        </div>
+    );
+}
+
+// ==================== ADMIN STREAMERS ====================
+function AdminStreamers({ sessionId, onUpdate }) {
+    const [streamers, setStreamers] = React.useState([]);
+    const [showForm, setShowForm] = React.useState(false);
+    const [formData, setFormData] = React.useState({
+        name: '', twitchUsername: '', avatarUrl: ''
+    });
+    const [editingId, setEditingId] = React.useState(null);
+
+    React.useEffect(() => {
+        fetchStreamers();
+    }, []);
+
+    const fetchStreamers = async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/streamers`);
+            const data = await response.json();
+            setStreamers(data);
+        } catch (error) {
+            console.error('Error fetching streamers:', error);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        const url = editingId
+            ? `${API_BASE}/api/admin/streamers/${editingId}`
+            : `${API_BASE}/api/admin/streamers`;
+
+        const method = editingId ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-session-id': sessionId
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                setShowForm(false);
+                setFormData({ name: '', twitchUsername: '', avatarUrl: '' });
+                setEditingId(null);
+                fetchStreamers();
+            } else {
+                alert('Ошибка при сохранении стримера');
+            }
+        } catch (error) {
+            console.error('Error saving streamer:', error);
+            alert('Ошибка при сохранении стримера');
+        }
+    };
+
+    const handleEdit = (streamer) => {
+        setFormData({
+            name: streamer.name,
+            twitchUsername: streamer.twitchUsername,
+            avatarUrl: streamer.avatarUrl || ''
+        });
+        setEditingId(streamer.id);
+        setShowForm(true);
+    };
+
+    const handleDelete = async (id) => {
+        if (!confirm('Удалить стримера?')) return;
+
+        try {
+            const response = await fetch(`${API_BASE}/api/admin/streamers/${id}`, {
+                method: 'DELETE',
+                headers: { 'x-session-id': sessionId }
+            });
+
+            if (response.ok) {
+                fetchStreamers();
+            } else {
+                alert('Ошибка при удалении стримера');
+            }
+        } catch (error) {
+            console.error('Error deleting streamer:', error);
+            alert('Ошибка при удалении стримера');
+        }
+    };
+
+    const handleCancel = () => {
+        setShowForm(false);
+        setFormData({ name: '', twitchUsername: '', avatarUrl: '' });
+        setEditingId(null);
+    };
+
+    return (
+        <div>
+            <div style={{ marginBottom: '20px' }}>
+                <button
+                    onClick={() => setShowForm(!showForm)}
+                    style={{
+                        padding: '12px 24px', borderRadius: '8px',
+                        background: '#4caf50', color: '#fff',
+                        border: 'none', cursor: 'pointer', fontWeight: '600'
+                    }}
+                >
+                    {showForm ? '❌ Отмена' : '➕ Добавить стримера'}
+                </button>
+            </div>
+
+            {showForm && (
+                <div style={{
+                    background: '#1a1a1a', padding: '20px', borderRadius: '15px',
+                    marginBottom: '20px', border: '1px solid #c9a961'
+                }}>
+                    <h3 style={{ color: '#c9a961', marginBottom: '20px' }}>
+                        {editingId ? 'Редактировать стримера' : 'Добавить стримера'}
+                    </h3>
+                    <form onSubmit={handleSubmit}>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>
+                                Имя стримера
+                            </label>
+                            <input
+                                type="text"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                style={{
+                                    width: '100%', padding: '10px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                }}
+                                placeholder="Имя"
+                                required
+                            />
+                        </div>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>
+                                Twitch Username
+                            </label>
+                            <input
+                                type="text"
+                                value={formData.twitchUsername}
+                                onChange={(e) => setFormData({ ...formData, twitchUsername: e.target.value })}
+                                style={{
+                                    width: '100%', padding: '10px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                }}
+                                placeholder="twitchusername"
+                                required
+                            />
+                        </div>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>
+                                URL аватара (опционально)
+                            </label>
+                            <input
+                                type="text"
+                                value={formData.avatarUrl}
+                                onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
+                                style={{
+                                    width: '100%', padding: '10px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                }}
+                                placeholder="https://example.com/avatar.jpg"
+                            />
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button
+                                type="submit"
+                                style={{
+                                    padding: '12px 24px', borderRadius: '8px',
+                                    background: '#4caf50', color: '#fff',
+                                    border: 'none', cursor: 'pointer', fontWeight: '600'
+                                }}
+                            >
+                                {editingId ? '💾 Сохранить' : '➕ Добавить'}
+                            </button>
+                            {editingId && (
+                                <button
+                                    type="button"
+                                    onClick={handleCancel}
+                                    style={{
+                                        padding: '12px 24px', borderRadius: '8px',
+                                        background: '#666', color: '#fff',
+                                        border: 'none', cursor: 'pointer', fontWeight: '600'
+                                    }}
+                                >
+                                    ❌ Отмена
+                                </button>
+                            )}
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+                {streamers.map(streamer => (
+                    <div key={streamer.id} style={{
+                        background: '#1a1a1a', padding: '20px', borderRadius: '15px',
+                        border: '1px solid #444'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
+                            {streamer.avatarUrl ? (
+                                <img
+                                    src={streamer.avatarUrl}
+                                    alt={streamer.name}
+                                    style={{
+                                        width: '60px', height: '60px', borderRadius: '50%',
+                                        objectFit: 'cover', border: '2px solid #c9a961'
+                                    }}
+                                />
+                            ) : (
+                                <div style={{
+                                    width: '60px', height: '60px', borderRadius: '50%',
+                                    background: '#c9a961', display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', fontSize: '2em'
+                                }}>
+                                    📺
+                                </div>
+                            )}
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: '1.2em', fontWeight: '700', color: '#fff' }}>
+                                    {streamer.name}
+                                </div>
+                                <div style={{ color: '#9146FF', fontSize: '0.9em', marginTop: '5px' }}>
+                                    twitch.tv/{streamer.twitchUsername}
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button
+                                onClick={() => handleEdit(streamer)}
+                                style={{
+                                    flex: 1, padding: '8px 16px', borderRadius: '8px',
+                                    background: '#2196f3', color: '#fff',
+                                    border: 'none', cursor: 'pointer', fontWeight: '600'
+                                }}
+                            >
+                                ✏️ Изменить
+                            </button>
+                            <button
+                                onClick={() => handleDelete(streamer.id)}
+                                style={{
+                                    flex: 1, padding: '8px 16px', borderRadius: '8px',
+                                    background: '#f44336', color: '#fff',
+                                    border: 'none', cursor: 'pointer', fontWeight: '600'
+                                }}
+                            >
+                                🗑️ Удалить
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {streamers.length === 0 && !showForm && (
+                <div style={{
+                    textAlign: 'center', padding: '60px 20px',
+                    color: '#666', fontSize: '1.1em'
+                }}>
+                    Нет стримеров. Нажмите "➕ Добавить стримера" чтобы добавить.
+                </div>
+            )}
         </div>
     );
 }
