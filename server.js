@@ -5,7 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
 const multer = require('multer');
-const { Team, Player, TeamMatch, AdminSession } = require('./models');
+const { Team, Player, TeamMatch, Portrait, Streamer, AdminSession } = require('./models');
 const routes = require('./routes');
 
 const app = express();
