@@ -515,6 +515,8 @@ function Header() {
                     style={{
                         width: '100%',
                         height: 'auto',
+                        maxHeight: '250px',
+                        objectFit: 'cover',
                         display: 'block',
                         borderRadius: '15px',
                         boxShadow: '0 10px 40px rgba(201, 169, 97, 0.3)'
@@ -734,16 +736,16 @@ function PlayerCard({ player, rank, onClick }) {
                 <div
                     style={{
                         position: 'absolute',
-                        top: '15px',
+                        top: '55px',
                         right: '-35px',
-                        background: 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)',
-                        color: '#fff',
+                        background: 'linear-gradient(135deg, #f4e4b8 0%, #c9a961 100%)',
+                        color: '#1a1a1a',
                         padding: '5px 45px',
                         transform: 'rotate(45deg)',
                         fontSize: '0.75em',
                         fontWeight: '800',
                         zIndex: 10,
-                        boxShadow: '0 2px 10px rgba(76, 175, 80, 0.5)',
+                        boxShadow: '0 2px 10px rgba(201, 169, 97, 0.5)',
                         textTransform: 'uppercase',
                         letterSpacing: '1px'
                     }}
