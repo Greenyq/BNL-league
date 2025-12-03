@@ -50,7 +50,12 @@ function App() {
     const [isAdmin, setIsAdmin] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [sessionId, setSessionId] = useState(localStorage.getItem('adminSessionId'));
-    
+
+    // Player authentication states
+    const [playerSessionId, setPlayerSessionId] = useState(localStorage.getItem('playerSessionId'));
+    const [playerUser, setPlayerUser] = useState(null);
+    const [showPlayerAuthModal, setShowPlayerAuthModal] = useState(false);
+
     // Data from backend
     const [teams, setTeams] = useState([]);
     const [allPlayers, setAllPlayers] = useState([]);
@@ -68,6 +73,9 @@ function App() {
         loadTeamMatches();
         if (sessionId) {
             verifySession();
+        }
+        if (playerSessionId) {
+            verifyPlayerSession();
         }
 
         // Auto-refresh data every 5 minutes
@@ -97,6 +105,25 @@ function App() {
         } catch (error) {
             console.error('Session verification failed:', error);
             setIsAdmin(false);
+        }
+    };
+
+    const verifyPlayerSession = async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/players/auth/me`, {
+                headers: { 'x-player-session-id': playerSessionId }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setPlayerUser(data.user);
+            } else {
+                localStorage.removeItem('playerSessionId');
+                setPlayerSessionId(null);
+                setPlayerUser(null);
+            }
+        } catch (error) {
+            console.error('Player session verification failed:', error);
+            setPlayerUser(null);
         }
     };
 
@@ -469,6 +496,8 @@ function App() {
                 setActiveTab={setActiveTab}
                 isAdmin={isAdmin}
                 setShowLoginModal={setShowLoginModal}
+                playerUser={playerUser}
+                setShowPlayerAuthModal={setShowPlayerAuthModal}
             />
             <div className="app">
                 {activeTab === 'home' && <Rules />}
@@ -477,6 +506,19 @@ function App() {
                 {activeTab === 'schedule' && <Schedule schedule={schedule} teams={teams} allPlayers={allPlayers} teamMatches={teamMatches} />}
                 {activeTab === 'stats' && <StatsAndMatches players={players} teams={teams} teamMatches={teamMatches} allPlayers={allPlayers} />}
                 {activeTab === 'streamers' && <Streamers />}
+                {activeTab === 'profile' && playerUser && (
+                    <PlayerProfile
+                        playerUser={playerUser}
+                        playerSessionId={playerSessionId}
+                        onUpdate={verifyPlayerSession}
+                        onLogout={() => {
+                            localStorage.removeItem('playerSessionId');
+                            setPlayerSessionId(null);
+                            setPlayerUser(null);
+                            setActiveTab('home');
+                        }}
+                    />
+                )}
                 {activeTab === 'admin' && isAdmin && (
                     <AdminPanel
                         teams={teams}
@@ -492,24 +534,35 @@ function App() {
                             localStorage.removeItem('adminSessionId');
                             setSessionId(null);
                             setIsAdmin(false);
-                            setActiveTab('players');
+                            setActiveTab('home');
                         }}
                     />
                 )}
             </div>
             {showLoginModal && (
-                <LoginModal 
+                <LoginModal
                     onClose={() => {
-                        console.log('Closing login modal');
                         setShowLoginModal(false);
                     }}
                     onSuccess={(newSessionId) => {
-                        console.log('Login successful, sessionId:', newSessionId);
                         setSessionId(newSessionId);
                         setIsAdmin(true);
                         localStorage.setItem('adminSessionId', newSessionId);
                         setShowLoginModal(false);
                         setActiveTab('admin');
+                    }}
+                />
+            )}
+            {showPlayerAuthModal && (
+                <PlayerAuthModal
+                    onClose={() => {
+                        setShowPlayerAuthModal(false);
+                    }}
+                    onSuccess={(newSessionId, user) => {
+                        setPlayerSessionId(newSessionId);
+                        setPlayerUser(user);
+                        setShowPlayerAuthModal(false);
+                        setActiveTab('profile');
                     }}
                 />
             )}
@@ -553,7 +606,7 @@ function Header({ activeTab }) {
     );
 }
 
-function Nav({ activeTab, setActiveTab, isAdmin, setShowLoginModal }) {
+function Nav({ activeTab, setActiveTab, isAdmin, setShowLoginModal, playerUser, setShowPlayerAuthModal }) {
     return (
         <div className="nav">
             <div className="nav-container">
@@ -565,11 +618,10 @@ function Nav({ activeTab, setActiveTab, isAdmin, setShowLoginModal }) {
                 <button className={`nav-btn ${activeTab === 'streamers' ? 'active' : ''}`} onClick={() => setActiveTab('streamers')}>📺 Стримеры</button>
                 {isAdmin ? (
                     <button className={`nav-btn ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>⚙️ Админка</button>
+                ) : playerUser ? (
+                    <button className={`nav-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>👤 {playerUser.username}</button>
                 ) : (
-                    <button className="nav-btn" onClick={() => {
-                        console.log('Login button clicked, showLoginModal will be set to true');
-                        setShowLoginModal(true);
-                    }}>🔐 Вход</button>
+                    <button className="nav-btn" onClick={() => setShowPlayerAuthModal(true)}>🔐 Вход</button>
                 )}
             </div>
         </div>
@@ -1950,4 +2002,592 @@ function Streamers() {
     );
 }
 
+// ==================== LOGIN MODAL (ADMIN) ====================
+function LoginModal({ onClose, onSuccess }) {
+    const [password, setPassword] = React.useState('');
+    const [error, setError] = React.useState('');
+    const [loading, setLoading] = React.useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+
+        try {
+            const response = await fetch(`${API_BASE}/api/admin/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.sessionId) {
+                onSuccess(data.sessionId);
+            } else {
+                setError(data.error || 'Неверный пароль');
+            }
+        } catch (error) {
+            setError('Ошибка подключения к серверу');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.8)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+            <div style={{
+                background: '#1a1a1a', borderRadius: '15px',
+                padding: '30px', maxWidth: '400px', width: '90%',
+                border: '2px solid #c9a961'
+            }}>
+                <h2 style={{ color: '#c9a961', marginBottom: '20px', textAlign: 'center' }}>
+                    ⚙️ Вход в админку
+                </h2>
+                <form onSubmit={handleSubmit}>
+                    <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Пароль администратора"
+                        style={{
+                            width: '100%', padding: '12px', borderRadius: '8px',
+                            border: '1px solid #444', background: '#2a2a2a',
+                            color: '#fff', marginBottom: '15px'
+                        }}
+                        required
+                        autoFocus
+                    />
+                    {error && (
+                        <div style={{
+                            color: '#f44336', marginBottom: '15px',
+                            textAlign: 'center'
+                        }}>
+                            {error}
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            style={{
+                                flex: 1, padding: '12px', borderRadius: '8px',
+                                background: '#4caf50', color: '#fff',
+                                border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                                fontWeight: '600'
+                            }}
+                        >
+                            {loading ? 'Вход...' : 'Войти'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            style={{
+                                flex: 1, padding: '12px', borderRadius: '8px',
+                                background: '#666', color: '#fff',
+                                border: 'none', cursor: 'pointer', fontWeight: '600'
+                            }}
+                        >
+                            Отмена
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// ==================== PLAYER AUTH MODAL ====================
+function PlayerAuthModal({ onClose, onSuccess }) {
+    const [mode, setMode] = React.useState('login'); // 'login' or 'register'
+    const [username, setUsername] = React.useState('');
+    const [password, setPassword] = React.useState('');
+    const [error, setError] = React.useState('');
+    const [loading, setLoading] = React.useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+
+        const endpoint = mode === 'login'
+            ? '/api/players/auth/login'
+            : '/api/players/auth/register';
+
+        try {
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.sessionId) {
+                localStorage.setItem('playerSessionId', data.sessionId);
+                onSuccess(data.sessionId, data.user);
+            } else {
+                setError(data.error || 'Ошибка при входе');
+            }
+        } catch (error) {
+            setError('Ошибка подключения к серверу');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.8)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+            <div style={{
+                background: '#1a1a1a', borderRadius: '15px',
+                padding: '30px', maxWidth: '400px', width: '90%',
+                border: '2px solid #c9a961'
+            }}>
+                <h2 style={{ color: '#c9a961', marginBottom: '20px', textAlign: 'center' }}>
+                    {mode === 'login' ? '🔐 Вход' : '📝 Регистрация'}
+                </h2>
+
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                    <button
+                        onClick={() => {
+                            setMode('login');
+                            setError('');
+                        }}
+                        style={{
+                            flex: 1, padding: '10px', borderRadius: '8px',
+                            background: mode === 'login' ? '#c9a961' : '#2a2a2a',
+                            color: mode === 'login' ? '#000' : '#fff',
+                            border: 'none', cursor: 'pointer', fontWeight: '600'
+                        }}
+                    >
+                        Вход
+                    </button>
+                    <button
+                        onClick={() => {
+                            setMode('register');
+                            setError('');
+                        }}
+                        style={{
+                            flex: 1, padding: '10px', borderRadius: '8px',
+                            background: mode === 'register' ? '#c9a961' : '#2a2a2a',
+                            color: mode === 'register' ? '#000' : '#fff',
+                            border: 'none', cursor: 'pointer', fontWeight: '600'
+                        }}
+                    >
+                        Регистрация
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit}>
+                    <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="Имя пользователя"
+                        style={{
+                            width: '100%', padding: '12px', borderRadius: '8px',
+                            border: '1px solid #444', background: '#2a2a2a',
+                            color: '#fff', marginBottom: '15px'
+                        }}
+                        required
+                        autoFocus
+                    />
+                    <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Пароль"
+                        style={{
+                            width: '100%', padding: '12px', borderRadius: '8px',
+                            border: '1px solid #444', background: '#2a2a2a',
+                            color: '#fff', marginBottom: '15px'
+                        }}
+                        required
+                    />
+                    {error && (
+                        <div style={{
+                            color: '#f44336', marginBottom: '15px',
+                            textAlign: 'center', fontSize: '0.9em'
+                        }}>
+                            {error}
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            style={{
+                                flex: 1, padding: '12px', borderRadius: '8px',
+                                background: '#4caf50', color: '#fff',
+                                border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                                fontWeight: '600'
+                            }}
+                        >
+                            {loading ? '...' : (mode === 'login' ? 'Войти' : 'Зарегистрироваться')}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            style={{
+                                flex: 1, padding: '12px', borderRadius: '8px',
+                                background: '#666', color: '#fff',
+                                border: 'none', cursor: 'pointer', fontWeight: '600'
+                            }}
+                        >
+                            Отмена
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 ReactDOM.render(<App />, document.getElementById('root'));
+
+// ==================== PLAYER PROFILE ====================
+function PlayerProfile({ playerUser, playerSessionId, onUpdate, onLogout }) {
+    const [battleTag, setBattleTag] = React.useState('');
+    const [linkError, setLinkError] = React.useState('');
+    const [linkSuccess, setLinkSuccess] = React.useState('');
+    const [linkLoading, setLinkLoading] = React.useState(false);
+    
+    const [playerData, setPlayerData] = React.useState(null);
+    const [portraits, setPortraits] = React.useState([]);
+    const [selectedPortrait, setSelectedPortrait] = React.useState(null);
+    
+    React.useEffect(() => {
+        fetchPlayerData();
+        fetchPortraits();
+    }, [playerUser]);
+
+    const fetchPlayerData = async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/players/auth/me`, {
+                headers: { 'x-player-session-id': playerSessionId }
+            });
+            const data = await response.json();
+            setPlayerData(data.playerData);
+        } catch (error) {
+            console.error('Error fetching player data:', error);
+        }
+    };
+
+    const fetchPortraits = async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/portraits`);
+            const data = await response.json();
+            setPortraits(data);
+        } catch (error) {
+            console.error('Error fetching portraits:', error);
+        }
+    };
+
+    const handleLinkBattleTag = async (e) => {
+        e.preventDefault();
+        setLinkLoading(true);
+        setLinkError('');
+        setLinkSuccess('');
+
+        try {
+            const response = await fetch(`${API_BASE}/api/players/auth/link-battletag`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-player-session-id': playerSessionId
+                },
+                body: JSON.stringify({ battleTag })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setLinkSuccess('BattleTag успешно привязан!');
+                setBattleTag('');
+                onUpdate();
+                fetchPlayerData();
+            } else {
+                setLinkError(data.error || 'Ошибка привязки BattleTag');
+            }
+        } catch (error) {
+            setLinkError('Ошибка подключения к серверу');
+        } finally {
+            setLinkLoading(false);
+        }
+    };
+
+    const handleSelectPortrait = async (portraitId) => {
+        try {
+            const response = await fetch(`${API_BASE}/api/players/auth/select-portrait`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-player-session-id': playerSessionId
+                },
+                body: JSON.stringify({ portraitId })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setSelectedPortrait(portraitId);
+                fetchPlayerData();
+                alert('Портрет успешно выбран!');
+            } else {
+                alert(data.error || 'Ошибка выбора портрета');
+            }
+        } catch (error) {
+            alert('Ошибка подключения к серверу');
+        }
+    };
+
+    const raceNames = {
+        0: '🎲 Рандом',
+        1: '👑 Хумы',
+        2: '⚔️ Орки',
+        4: '🌙 Эльфы',
+        8: '💀 Андеды'
+    };
+
+    const getAvailablePortraits = () => {
+        if (!playerData) return [];
+        
+        const playerPoints = playerData.points || 0;
+        const playerRace = playerData.race;
+
+        return portraits.filter(portrait => {
+            // Check points requirement
+            if (playerPoints < portrait.pointsRequired) return false;
+            
+            // Check race (0 = Random, available for all)
+            if (portrait.race !== 0 && portrait.race !== playerRace) return false;
+            
+            return true;
+        }).sort((a, b) => a.pointsRequired - b.pointsRequired);
+    };
+
+    return (
+        <div>
+            <h2 style={{ fontSize: '2.5em', marginBottom: '30px', color: '#c9a961', textAlign: 'center' }}>
+                👤 Профиль игрока
+            </h2>
+
+            <div style={{
+                maxWidth: '800px', margin: '0 auto',
+                background: '#1a1a1a', padding: '30px', borderRadius: '15px',
+                border: '2px solid #c9a961', marginBottom: '30px'
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                    <div>
+                        <div style={{ fontSize: '1.8em', fontWeight: '700', color: '#c9a961', marginBottom: '10px' }}>
+                            {playerUser.username}
+                        </div>
+                        {playerUser.linkedBattleTag && (
+                            <div style={{ color: '#4caf50', fontSize: '1.1em' }}>
+                                ✓ Привязан к {playerUser.linkedBattleTag}
+                            </div>
+                        )}
+                    </div>
+                    <button
+                        onClick={onLogout}
+                        style={{
+                            padding: '12px 24px', borderRadius: '8px',
+                            background: '#f44336', color: '#fff',
+                            border: 'none', cursor: 'pointer', fontWeight: '600'
+                        }}
+                    >
+                        🚪 Выход
+                    </button>
+                </div>
+
+                {!playerUser.linkedBattleTag ? (
+                    <div style={{
+                        background: '#2a2a2a', padding: '25px', borderRadius: '12px',
+                        border: '1px solid #c9a961'
+                    }}>
+                        <h3 style={{ color: '#c9a961', marginBottom: '15px' }}>
+                            Привяжите свой BattleTag
+                        </h3>
+                        <p style={{ color: '#e0e0e0', marginBottom: '20px' }}>
+                            Введите ваш BattleTag (например: PlayerName#1234), чтобы связать ваш профиль с вашим игроком в лиге.
+                        </p>
+                        <form onSubmit={handleLinkBattleTag}>
+                            <input
+                                type="text"
+                                value={battleTag}
+                                onChange={(e) => setBattleTag(e.target.value)}
+                                placeholder="PlayerName#1234"
+                                style={{
+                                    width: '100%', padding: '12px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#1a1a1a',
+                                    color: '#fff', marginBottom: '15px'
+                                }}
+                                required
+                            />
+                            {linkError && (
+                                <div style={{ color: '#f44336', marginBottom: '15px' }}>
+                                    {linkError}
+                                </div>
+                            )}
+                            {linkSuccess && (
+                                <div style={{ color: '#4caf50', marginBottom: '15px' }}>
+                                    {linkSuccess}
+                                </div>
+                            )}
+                            <button
+                                type="submit"
+                                disabled={linkLoading}
+                                style={{
+                                    width: '100%', padding: '12px', borderRadius: '8px',
+                                    background: '#4caf50', color: '#fff',
+                                    border: 'none', cursor: linkLoading ? 'not-allowed' : 'pointer',
+                                    fontWeight: '600'
+                                }}
+                            >
+                                {linkLoading ? 'Привязка...' : '🔗 Привязать BattleTag'}
+                            </button>
+                        </form>
+                    </div>
+                ) : playerData ? (
+                    <div>
+                        <div style={{
+                            background: '#2a2a2a', padding: '20px', borderRadius: '12px',
+                            marginBottom: '30px'
+                        }}>
+                            <h3 style={{ color: '#c9a961', marginBottom: '15px' }}>Статистика</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px' }}>
+                                <div>
+                                    <div style={{ color: '#888', fontSize: '0.9em' }}>Раса</div>
+                                    <div style={{ color: '#fff', fontSize: '1.3em', fontWeight: '700' }}>
+                                        {raceNames[playerData.race] || 'Неизвестно'}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style={{ color: '#888', fontSize: '0.9em' }}>Очки</div>
+                                    <div style={{ color: '#c9a961', fontSize: '1.3em', fontWeight: '700' }}>
+                                        {playerData.points || 0}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style={{ color: '#888', fontSize: '0.9em' }}>MMR</div>
+                                    <div style={{ color: '#fff', fontSize: '1.3em', fontWeight: '700' }}>
+                                        {playerData.currentMmr || 'N/A'}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style={{ color: '#888', fontSize: '0.9em' }}>Побед/Поражений</div>
+                                    <div style={{ color: '#fff', fontSize: '1.3em', fontWeight: '700' }}>
+                                        {playerData.wins || 0}/{playerData.losses || 0}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 style={{ color: '#c9a961', marginBottom: '20px', fontSize: '1.5em' }}>
+                                🖼️ Выбор портрета
+                            </h3>
+                            {getAvailablePortraits().length === 0 ? (
+                                <div style={{
+                                    background: '#2a2a2a', padding: '30px', borderRadius: '12px',
+                                    textAlign: 'center', color: '#888'
+                                }}>
+                                    Нет доступных портретов. Зарабатывайте очки, чтобы разблокировать портреты!
+                                </div>
+                            ) : (
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                                    gap: '15px'
+                                }}>
+                                    {getAvailablePortraits().map(portrait => (
+                                        <div
+                                            key={portrait.id}
+                                            onClick={() => handleSelectPortrait(portrait.id)}
+                                            style={{
+                                                background: '#2a2a2a',
+                                                padding: '15px',
+                                                borderRadius: '12px',
+                                                cursor: 'pointer',
+                                                border: playerData.selectedPortraitId === portrait.id
+                                                    ? '3px solid #4caf50'
+                                                    : '2px solid #444',
+                                                transition: 'transform 0.2s, border-color 0.2s'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (playerData.selectedPortraitId !== portrait.id) {
+                                                    e.currentTarget.style.borderColor = '#c9a961';
+                                                }
+                                                e.currentTarget.style.transform = 'scale(1.05)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (playerData.selectedPortraitId !== portrait.id) {
+                                                    e.currentTarget.style.borderColor = '#444';
+                                                }
+                                                e.currentTarget.style.transform = 'scale(1)';
+                                            }}
+                                        >
+                                            <img
+                                                src={portrait.imageUrl}
+                                                alt={portrait.name}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100px',
+                                                    objectFit: 'cover',
+                                                    borderRadius: '8px',
+                                                    marginBottom: '10px'
+                                                }}
+                                            />
+                                            <div style={{
+                                                color: '#fff',
+                                                fontSize: '0.85em',
+                                                fontWeight: '600',
+                                                textAlign: 'center',
+                                                marginBottom: '5px'
+                                            }}>
+                                                {portrait.name}
+                                            </div>
+                                            <div style={{
+                                                color: '#c9a961',
+                                                fontSize: '0.75em',
+                                                textAlign: 'center'
+                                            }}>
+                                                {portrait.pointsRequired} очков
+                                            </div>
+                                            {playerData.selectedPortraitId === portrait.id && (
+                                                <div style={{
+                                                    color: '#4caf50',
+                                                    fontSize: '0.75em',
+                                                    textAlign: 'center',
+                                                    marginTop: '5px',
+                                                    fontWeight: '700'
+                                                }}>
+                                                    ✓ Выбран
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{
+                        background: '#2a2a2a', padding: '30px', borderRadius: '12px',
+                        textAlign: 'center', color: '#888'
+                    }}>
+                        Загрузка данных игрока...
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
