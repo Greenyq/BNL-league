@@ -206,13 +206,17 @@ function App() {
                             // Use MMR from profile or DB
                             mmr: profile.mmr || player.currentMmr || 0,
                             teamId: player.teamId || null,
+                            // Include portrait and discord from database
+                            selectedPortraitId: player.selectedPortraitId || null,
+                            discordTag: player.discordTag || null,
                         };
 
                         console.log(`Final player card for ${tag} - ${raceNames[profile.race]}:`, {
                             race: finalPlayer.race,
                             mmr: finalPlayer.mmr,
                             wins: finalPlayer.wins,
-                            points: finalPlayer.points
+                            points: finalPlayer.points,
+                            selectedPortraitId: finalPlayer.selectedPortraitId
                         });
 
                         loadedPlayers.push(finalPlayer);
@@ -233,6 +237,9 @@ function App() {
                         teamId: player.teamId || null,
                         matchHistory: [],
                         activityData: generateActivityData(),
+                        // Include portrait and discord from database
+                        selectedPortraitId: player.selectedPortraitId || null,
+                        discordTag: player.discordTag || null,
                         error: true
                     };
 
@@ -531,7 +538,8 @@ function App() {
                         allPlayers={players}
                         onUpdate={async () => {
                             await verifyPlayerSession();
-                            await loadPlayers(); // Reload players to get fresh data
+                            await loadAllPlayers(); // Reload database players
+                            await loadPlayers(); // Reload players to get fresh data with portraits
                         }}
                         onLogout={() => {
                             localStorage.removeItem('playerSessionId');
@@ -781,6 +789,21 @@ function Rules() {
 function Players({ players }) {
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const [selectedRaces, setSelectedRaces] = useState({});
+    const [portraits, setPortraits] = useState([]);
+
+    // Load portraits
+    React.useEffect(() => {
+        const fetchPortraits = async () => {
+            try {
+                const response = await fetch(`${API_BASE}/api/portraits`);
+                const data = await response.json();
+                setPortraits(data);
+            } catch (error) {
+                console.error('Error fetching portraits:', error);
+            }
+        };
+        fetchPortraits();
+    }, []);
 
     // Group players by battleTag and find best race for each
     const groupedPlayers = React.useMemo(() => {
@@ -834,6 +857,7 @@ function Players({ players }) {
                             player={displayedProfile}
                             rank={index + 1}
                             hasMultipleRaces={hasMultipleRaces}
+                            portraits={portraits}
                             onToggleRace={() => toggleRace(group.battleTag)}
                             onClick={() => setSelectedPlayer(displayedProfile)}
                         />
@@ -850,19 +874,28 @@ function Players({ players }) {
     );
 }
 
-function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace }) {
+function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, portraits = [] }) {
     const raceImage = raceImages[player.race];
+
+    // Find selected portrait if player has one
+    const selectedPortrait = player.selectedPortraitId
+        ? portraits.find(p => p.id === player.selectedPortraitId)
+        : null;
+
+    // Use portrait image if available, otherwise use race image
+    const avatarImage = selectedPortrait ? selectedPortrait.imageUrl : raceImage;
 
     // Debug logging
     React.useEffect(() => {
         console.log(`PlayerCard for ${player.name}:`, {
             race: player.race,
             raceName: raceNames[player.race],
-            raceImage: raceImage,
-            hasImage: !!raceImage,
+            selectedPortraitId: player.selectedPortraitId,
+            hasPortrait: !!selectedPortrait,
+            avatarImage: avatarImage,
             hasMultipleRaces
         });
-    }, [player.race, hasMultipleRaces]);
+    }, [player.race, player.selectedPortraitId, hasMultipleRaces]);
 
     const hasQualified = (player.points || 0) >= 500;
 
@@ -880,9 +913,9 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace }) {
                     <div className="player-title">
                         <div style={{ position: 'relative' }}>
                             <div className="player-avatar">
-                                {raceImage ? (
-                                    <img src={raceImage} alt={raceNames[player.race] || 'Race'} onError={(e) => {
-                                        console.error(`Failed to load image for ${player.name}:`, raceImage);
+                                {avatarImage ? (
+                                    <img src={avatarImage} alt={selectedPortrait ? selectedPortrait.name : (raceNames[player.race] || 'Race')} onError={(e) => {
+                                        console.error(`Failed to load image for ${player.name}:`, avatarImage);
                                         e.target.style.display = 'none';
                                     }} />
                                 ) : (
@@ -2125,35 +2158,85 @@ function LoginModal({ onClose, onSuccess }) {
 
 // ==================== PLAYER AUTH MODAL ====================
 function PlayerAuthModal({ onClose, onSuccess }) {
-    const [mode, setMode] = React.useState('login'); // 'login' or 'register'
+    const [mode, setMode] = React.useState('login'); // 'login', 'register', 'reset', 'reset-confirm'
     const [username, setUsername] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
+    const [success, setSuccess] = React.useState('');
     const [loading, setLoading] = React.useState(false);
+
+    // Reset password fields
+    const [resetCode, setResetCode] = React.useState('');
+    const [newPassword, setNewPassword] = React.useState('');
+    const [generatedCode, setGeneratedCode] = React.useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
-
-        const endpoint = mode === 'login'
-            ? '/api/players/auth/login'
-            : '/api/players/auth/register';
+        setSuccess('');
 
         try {
-            const response = await fetch(`${API_BASE}${endpoint}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
+            if (mode === 'reset') {
+                // Request reset code
+                const response = await fetch(`${API_BASE}/api/players/auth/request-reset`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username })
+                });
 
-            const data = await response.json();
+                const data = await response.json();
 
-            if (response.ok && data.sessionId) {
-                localStorage.setItem('playerSessionId', data.sessionId);
-                onSuccess(data.sessionId, data.user);
+                if (response.ok) {
+                    setGeneratedCode(data.resetCode); // For dev/testing only
+                    setMode('reset-confirm');
+                    setSuccess('Код сброса: ' + data.resetCode + ' (действителен 15 минут)');
+                } else {
+                    setError(data.error || 'Ошибка при запросе сброса');
+                }
+            } else if (mode === 'reset-confirm') {
+                // Reset password with code
+                const response = await fetch(`${API_BASE}/api/players/auth/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, resetCode, newPassword })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    setSuccess('Пароль успешно изменен! Войдите с новым паролем.');
+                    setTimeout(() => {
+                        setMode('login');
+                        setPassword('');
+                        setResetCode('');
+                        setNewPassword('');
+                        setGeneratedCode('');
+                        setSuccess('');
+                    }, 2000);
+                } else {
+                    setError(data.error || 'Ошибка при сбросе пароля');
+                }
             } else {
-                setError(data.error || 'Ошибка при входе');
+                // Login or Register
+                const endpoint = mode === 'login'
+                    ? '/api/players/auth/login'
+                    : '/api/players/auth/register';
+
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.sessionId) {
+                    localStorage.setItem('playerSessionId', data.sessionId);
+                    onSuccess(data.sessionId, data.user);
+                } else {
+                    setError(data.error || 'Ошибка при входе');
+                }
             }
         } catch (error) {
             setError('Ошибка подключения к серверу');
@@ -2174,39 +2257,70 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                 border: '2px solid #c9a961'
             }}>
                 <h2 style={{ color: '#c9a961', marginBottom: '20px', textAlign: 'center' }}>
-                    {mode === 'login' ? '🔐 Вход' : '📝 Регистрация'}
+                    {mode === 'login' ? '🔐 Вход' :
+                     mode === 'register' ? '📝 Регистрация' :
+                     mode === 'reset' ? '🔑 Сброс пароля' :
+                     '🔑 Подтверждение сброса'}
                 </h2>
 
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                    <button
-                        onClick={() => {
-                            setMode('login');
-                            setError('');
-                        }}
-                        style={{
-                            flex: 1, padding: '10px', borderRadius: '8px',
-                            background: mode === 'login' ? '#c9a961' : '#2a2a2a',
-                            color: mode === 'login' ? '#000' : '#fff',
-                            border: 'none', cursor: 'pointer', fontWeight: '600'
-                        }}
-                    >
-                        Вход
-                    </button>
-                    <button
-                        onClick={() => {
-                            setMode('register');
-                            setError('');
-                        }}
-                        style={{
-                            flex: 1, padding: '10px', borderRadius: '8px',
-                            background: mode === 'register' ? '#c9a961' : '#2a2a2a',
-                            color: mode === 'register' ? '#000' : '#fff',
-                            border: 'none', cursor: 'pointer', fontWeight: '600'
-                        }}
-                    >
-                        Регистрация
-                    </button>
-                </div>
+                {(mode === 'login' || mode === 'register') && (
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                        <button
+                            onClick={() => {
+                                setMode('login');
+                                setError('');
+                                setSuccess('');
+                            }}
+                            style={{
+                                flex: 1, padding: '10px', borderRadius: '8px',
+                                background: mode === 'login' ? '#c9a961' : '#2a2a2a',
+                                color: mode === 'login' ? '#000' : '#fff',
+                                border: 'none', cursor: 'pointer', fontWeight: '600'
+                            }}
+                        >
+                            Вход
+                        </button>
+                        <button
+                            onClick={() => {
+                                setMode('register');
+                                setError('');
+                                setSuccess('');
+                            }}
+                            style={{
+                                flex: 1, padding: '10px', borderRadius: '8px',
+                                background: mode === 'register' ? '#c9a961' : '#2a2a2a',
+                                color: mode === 'register' ? '#000' : '#fff',
+                                border: 'none', cursor: 'pointer', fontWeight: '600'
+                            }}
+                        >
+                            Регистрация
+                        </button>
+                    </div>
+                )}
+
+                {(mode === 'reset' || mode === 'reset-confirm') && (
+                    <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+                        <button
+                            onClick={() => {
+                                setMode('login');
+                                setError('');
+                                setSuccess('');
+                                setResetCode('');
+                                setNewPassword('');
+                                setGeneratedCode('');
+                            }}
+                            style={{
+                                background: 'transparent',
+                                color: '#c9a961',
+                                border: 'none',
+                                cursor: 'pointer',
+                                textDecoration: 'underline'
+                            }}
+                        >
+                            ← Вернуться к входу
+                        </button>
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit}>
                     <input
@@ -2222,18 +2336,52 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                         required
                         autoFocus
                     />
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Пароль"
-                        style={{
-                            width: '100%', padding: '12px', borderRadius: '8px',
-                            border: '1px solid #444', background: '#2a2a2a',
-                            color: '#fff', marginBottom: '15px'
-                        }}
-                        required
-                    />
+
+                    {(mode === 'login' || mode === 'register') && (
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Пароль"
+                            style={{
+                                width: '100%', padding: '12px', borderRadius: '8px',
+                                border: '1px solid #444', background: '#2a2a2a',
+                                color: '#fff', marginBottom: '15px'
+                            }}
+                            required
+                        />
+                    )}
+
+                    {mode === 'reset-confirm' && (
+                        <>
+                            <input
+                                type="text"
+                                value={resetCode}
+                                onChange={(e) => setResetCode(e.target.value)}
+                                placeholder="Код сброса (6 цифр)"
+                                style={{
+                                    width: '100%', padding: '12px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#2a2a2a',
+                                    color: '#fff', marginBottom: '15px'
+                                }}
+                                required
+                                maxLength={6}
+                            />
+                            <input
+                                type="password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                placeholder="Новый пароль"
+                                style={{
+                                    width: '100%', padding: '12px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#2a2a2a',
+                                    color: '#fff', marginBottom: '15px'
+                                }}
+                                required
+                            />
+                        </>
+                    )}
+
                     {error && (
                         <div style={{
                             color: '#f44336', marginBottom: '15px',
@@ -2242,6 +2390,42 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                             {error}
                         </div>
                     )}
+
+                    {success && (
+                        <div style={{
+                            color: '#4caf50', marginBottom: '15px',
+                            textAlign: 'center', fontSize: '0.9em',
+                            padding: '10px',
+                            background: 'rgba(76, 175, 80, 0.1)',
+                            borderRadius: '8px'
+                        }}>
+                            {success}
+                        </div>
+                    )}
+
+                    {mode === 'login' && (
+                        <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setMode('reset');
+                                    setError('');
+                                    setSuccess('');
+                                }}
+                                style={{
+                                    background: 'transparent',
+                                    color: '#c9a961',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline',
+                                    fontSize: '0.9em'
+                                }}
+                            >
+                                Забыли пароль?
+                            </button>
+                        </div>
+                    )}
+
                     <div style={{ display: 'flex', gap: '10px' }}>
                         <button
                             type="submit"
@@ -2253,7 +2437,11 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                                 fontWeight: '600'
                             }}
                         >
-                            {loading ? '...' : (mode === 'login' ? 'Войти' : 'Зарегистрироваться')}
+                            {loading ? '...' :
+                             mode === 'login' ? 'Войти' :
+                             mode === 'register' ? 'Зарегистрироваться' :
+                             mode === 'reset' ? 'Получить код' :
+                             'Сбросить пароль'}
                         </button>
                         <button
                             type="button"
@@ -2369,6 +2557,8 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
 
             if (response.ok) {
                 setSelectedPortrait(portraitId);
+                // Refresh player data in main app so portrait shows in Players tab
+                onUpdate();
                 fetchPlayerData();
                 alert('Портрет успешно выбран!');
             } else {
