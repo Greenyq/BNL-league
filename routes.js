@@ -495,7 +495,7 @@ router.put('/players/auth/select-portrait', async (req, res) => {
             return res.status(400).json({ error: 'Must link BattleTag first' });
         }
 
-        // Get player data to check points and race
+        // Get player data to check race (not points, as they come from API)
         const player = await Player.findOne({ battleTag: playerUser.linkedBattleTag });
         if (!player) {
             return res.status(404).json({ error: 'Player data not found' });
@@ -507,15 +507,8 @@ router.put('/players/auth/select-portrait', async (req, res) => {
             return res.status(404).json({ error: 'Portrait not found' });
         }
 
-        // Check if player has enough points
-        const playerPoints = player.points || 0;
-        if (playerPoints < portrait.pointsRequired) {
-            return res.status(400).json({
-                error: `Not enough points. Required: ${portrait.pointsRequired}, You have: ${playerPoints}`
-            });
-        }
-
-        // Check if portrait race matches player race
+        // Only check if portrait race matches player race (portrait.race = 0 means available for all)
+        // Points are checked on frontend with live data from W3Champions API
         if (portrait.race !== 0 && portrait.race !== player.race) {
             return res.status(400).json({ error: 'Portrait race does not match your player race' });
         }
