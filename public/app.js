@@ -1028,7 +1028,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
 
                 {player.matchHistory && player.matchHistory.length > 0 && (
                     <div className="match-graph">
-                        {player.matchHistory.slice(0, 20).map((match, idx) => {
+                        {player.matchHistory.slice(0, 20).reverse().map((match, idx) => {
                             const result = typeof match === 'string' ? match : match.result;
                             // Fixed height based on result: wins are taller
                             const height = result === 'win' ? 70 : 40;

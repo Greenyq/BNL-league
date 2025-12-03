@@ -39,8 +39,8 @@ const connectDB = async () => {
 connectDB();
 
 // Admin credentials
-const ADMIN_LOGIN = 'admin777';
-const ADMIN_PASSWORD = '@dmin1122!';
+const ADMIN_LOGIN = 'admin2024';
+const ADMIN_PASSWORD = 'BNL@dmin2024!Secure';
 
 // Multer configuration for file uploads (storing in memory for MongoDB)
 const storage = multer.memoryStorage();
