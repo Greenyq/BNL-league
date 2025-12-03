@@ -2568,6 +2568,39 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
         }
     };
 
+    const handleUnlinkBattleTag = async () => {
+        if (!confirm('Вы уверены, что хотите отвязать свой BattleTag? Вы потеряете доступ к своей статистике.')) {
+            return;
+        }
+
+        setLinkLoading(true);
+        setLinkError('');
+        setLinkSuccess('');
+
+        try {
+            const response = await fetch(`${API_BASE}/api/players/auth/unlink-battletag`, {
+                method: 'DELETE',
+                headers: {
+                    'x-player-session-id': playerSessionId
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setLinkSuccess('BattleTag успешно отвязан!');
+                setPlayerData(null);
+                onUpdate();
+            } else {
+                setLinkError(data.error || 'Ошибка отвязки BattleTag');
+            }
+        } catch (error) {
+            setLinkError('Ошибка подключения к серверу');
+        } finally {
+            setLinkLoading(false);
+        }
+    };
+
     const handleSelectPortrait = async (portraitId) => {
         try {
             const response = await fetch(`${API_BASE}/api/players/auth/select-portrait`, {
@@ -2637,8 +2670,25 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                             {playerUser.username}
                         </div>
                         {playerUser.linkedBattleTag && (
-                            <div style={{ color: '#4caf50', fontSize: '1.1em' }}>
-                                ✓ Привязан к {playerUser.linkedBattleTag}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                <div style={{ color: '#4caf50', fontSize: '1.1em' }}>
+                                    ✓ Привязан к {playerUser.linkedBattleTag}
+                                </div>
+                                <button
+                                    onClick={handleUnlinkBattleTag}
+                                    disabled={linkLoading}
+                                    style={{
+                                        padding: '6px 12px', borderRadius: '6px',
+                                        background: '#ff9800', color: '#fff',
+                                        border: 'none', cursor: linkLoading ? 'not-allowed' : 'pointer',
+                                        fontWeight: '600', fontSize: '0.85em',
+                                        transition: 'all 0.3s ease'
+                                    }}
+                                    onMouseOver={(e) => e.target.style.background = '#f57c00'}
+                                    onMouseOut={(e) => e.target.style.background = '#ff9800'}
+                                >
+                                    {linkLoading ? '⏳' : '🔓 Отвязать'}
+                                </button>
                             </div>
                         )}
                     </div>
@@ -2653,6 +2703,17 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                         🚪 Выход
                     </button>
                 </div>
+
+                {linkError && (
+                    <div style={{ color: '#f44336', marginBottom: '15px', padding: '12px', background: '#2a2a2a', borderRadius: '8px' }}>
+                        {linkError}
+                    </div>
+                )}
+                {linkSuccess && (
+                    <div style={{ color: '#4caf50', marginBottom: '15px', padding: '12px', background: '#2a2a2a', borderRadius: '8px' }}>
+                        {linkSuccess}
+                    </div>
+                )}
 
                 {!playerUser.linkedBattleTag ? (
                     <div style={{

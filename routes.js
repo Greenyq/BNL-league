@@ -483,6 +483,56 @@ router.put('/players/auth/link-battletag', async (req, res) => {
     }
 });
 
+// Unlink BattleTag from player account
+router.delete('/players/auth/unlink-battletag', async (req, res) => {
+    try {
+        const sessionId = req.headers['x-player-session-id'];
+
+        if (!sessionId) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+
+        const session = await PlayerSession.findOne({ sessionId });
+        if (!session) {
+            return res.status(401).json({ error: 'Invalid session' });
+        }
+
+        const playerUser = await PlayerUser.findById(session.playerUserId);
+        if (!playerUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (!playerUser.linkedBattleTag) {
+            return res.status(400).json({ error: 'No BattleTag linked to this account' });
+        }
+
+        const previousBattleTag = playerUser.linkedBattleTag;
+
+        // Remove the linked battleTag
+        const updatedUser = await PlayerUser.findByIdAndUpdate(
+            session.playerUserId,
+            { linkedBattleTag: null, updatedAt: Date.now() },
+            { new: true }
+        );
+
+        // Also remove selected portrait since it's tied to the player
+        await Player.findOneAndUpdate(
+            { battleTag: previousBattleTag },
+            { selectedPortraitId: null, updatedAt: Date.now() }
+        );
+
+        res.json({
+            success: true,
+            message: 'BattleTag unlinked successfully',
+            user: updatedUser,
+            previousBattleTag
+        });
+    } catch (error) {
+        console.error('Unlink BattleTag error:', error);
+        res.status(500).json({ error: 'Failed to unlink BattleTag' });
+    }
+});
+
 // Select portrait
 router.put('/players/auth/select-portrait', async (req, res) => {
     try {
