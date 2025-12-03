@@ -275,6 +275,9 @@ function App() {
             return matchDate >= cutoffDate;
         });
 
+        // Sort matches by start time (oldest first) to ensure correct chronological order
+        recentMatches.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
         // Group matches by race
         const matchesByRace = {};
         const mmrByRace = {};
@@ -525,7 +528,11 @@ function App() {
                     <PlayerProfile
                         playerUser={playerUser}
                         playerSessionId={playerSessionId}
-                        onUpdate={verifyPlayerSession}
+                        allPlayers={players}
+                        onUpdate={async () => {
+                            await verifyPlayerSession();
+                            await loadPlayers(); // Reload players to get fresh data
+                        }}
                         onLogout={() => {
                             localStorage.removeItem('playerSessionId');
                             setPlayerSessionId(null);
@@ -2269,30 +2276,38 @@ function PlayerAuthModal({ onClose, onSuccess }) {
 ReactDOM.render(<App />, document.getElementById('root'));
 
 // ==================== PLAYER PROFILE ====================
-function PlayerProfile({ playerUser, playerSessionId, onUpdate, onLogout }) {
+function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLogout }) {
     const [battleTag, setBattleTag] = React.useState('');
     const [linkError, setLinkError] = React.useState('');
     const [linkSuccess, setLinkSuccess] = React.useState('');
     const [linkLoading, setLinkLoading] = React.useState(false);
-    
+
     const [playerData, setPlayerData] = React.useState(null);
     const [portraits, setPortraits] = React.useState([]);
     const [selectedPortrait, setSelectedPortrait] = React.useState(null);
-    
+
     React.useEffect(() => {
         fetchPlayerData();
         fetchPortraits();
-    }, [playerUser]);
+    }, [playerUser, allPlayers]);
 
-    const fetchPlayerData = async () => {
-        try {
-            const response = await fetch(`${API_BASE}/api/players/auth/me`, {
-                headers: { 'x-player-session-id': playerSessionId }
-            });
-            const data = await response.json();
-            setPlayerData(data.playerData);
-        } catch (error) {
-            console.error('Error fetching player data:', error);
+    const fetchPlayerData = () => {
+        // Find player data from loaded players instead of API
+        if (playerUser.linkedBattleTag && allPlayers) {
+            // Find the player with matching battleTag (may have multiple race profiles)
+            const playerProfiles = allPlayers.filter(p => p.battleTag === playerUser.linkedBattleTag);
+
+            if (playerProfiles.length > 0) {
+                // Use the profile with highest points (best race)
+                const bestProfile = playerProfiles.reduce((best, current) =>
+                    (current.points || 0) > (best.points || 0) ? current : best
+                );
+                setPlayerData(bestProfile);
+                console.log('Player data found:', bestProfile);
+            } else {
+                console.log('No player data found for battleTag:', playerUser.linkedBattleTag);
+                setPlayerData(null);
+            }
         }
     };
 
