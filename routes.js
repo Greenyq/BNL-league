@@ -1,6 +1,8 @@
 const express = require('express');
 const axios = require('axios');
-const { Team, Player, TeamMatch, Portrait, Streamer } = require('./models');
+const crypto = require('crypto');
+const bcrypt = require('bcrypt');
+const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession } = require('./models');
 
 const router = express.Router();
 
@@ -294,6 +296,259 @@ router.post('/twitch/check-live', async (req, res) => {
         res.json(liveData);
     } catch (error) {
         res.status(500).json({ error: 'Failed to check Twitch status' });
+    }
+});
+
+// ==================== PLAYER AUTHENTICATION ENDPOINTS ====================
+
+// Player registration
+router.post('/players/auth/register', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password are required' });
+        }
+
+        // Check if username already exists
+        const existingUser = await PlayerUser.findOne({ username });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Username already exists' });
+        }
+
+        // Hash password
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        // Create user
+        const playerUser = await PlayerUser.create({
+            username,
+            passwordHash
+        });
+
+        // Create session
+        const sessionId = crypto.randomBytes(32).toString('hex');
+        await PlayerSession.create({
+            sessionId,
+            playerUserId: playerUser.id
+        });
+
+        res.json({
+            success: true,
+            sessionId,
+            user: playerUser
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ error: 'Failed to register' });
+    }
+});
+
+// Player login
+router.post('/players/auth/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password are required' });
+        }
+
+        // Find user
+        const playerUser = await PlayerUser.findOne({ username });
+        if (!playerUser) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+
+        // Verify password
+        const isValidPassword = await bcrypt.compare(password, playerUser.passwordHash);
+        if (!isValidPassword) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+
+        // Create or update session
+        let session = await PlayerSession.findOne({ playerUserId: playerUser.id });
+        if (session) {
+            session.timestamp = Date.now();
+            await session.save();
+        } else {
+            const sessionId = crypto.randomBytes(32).toString('hex');
+            session = await PlayerSession.create({
+                sessionId,
+                playerUserId: playerUser.id
+            });
+        }
+
+        res.json({
+            success: true,
+            sessionId: session.sessionId,
+            user: playerUser
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Failed to login' });
+    }
+});
+
+// Get current player user
+router.get('/players/auth/me', async (req, res) => {
+    try {
+        const sessionId = req.headers['x-player-session-id'];
+
+        if (!sessionId) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+
+        const session = await PlayerSession.findOne({ sessionId });
+        if (!session) {
+            return res.status(401).json({ error: 'Invalid session' });
+        }
+
+        const playerUser = await PlayerUser.findById(session.playerUserId);
+        if (!playerUser) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+
+        // If user has linked battleTag, get player data
+        let playerData = null;
+        if (playerUser.linkedBattleTag) {
+            playerData = await Player.findOne({ battleTag: playerUser.linkedBattleTag });
+        }
+
+        res.json({
+            user: playerUser,
+            playerData
+        });
+    } catch (error) {
+        console.error('Get user error:', error);
+        res.status(500).json({ error: 'Failed to get user' });
+    }
+});
+
+// Link BattleTag to player account
+router.put('/players/auth/link-battletag', async (req, res) => {
+    try {
+        const sessionId = req.headers['x-player-session-id'];
+        const { battleTag } = req.body;
+
+        if (!sessionId) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+
+        if (!battleTag) {
+            return res.status(400).json({ error: 'BattleTag is required' });
+        }
+
+        const session = await PlayerSession.findOne({ sessionId });
+        if (!session) {
+            return res.status(401).json({ error: 'Invalid session' });
+        }
+
+        // Check if battleTag exists in players
+        const player = await Player.findOne({ battleTag });
+        if (!player) {
+            return res.status(404).json({ error: 'BattleTag not found in league' });
+        }
+
+        // Check if battleTag is already linked to another account
+        const existingLink = await PlayerUser.findOne({ linkedBattleTag: battleTag });
+        if (existingLink && existingLink.id !== session.playerUserId) {
+            return res.status(400).json({ error: 'BattleTag already linked to another account' });
+        }
+
+        // Update user
+        const playerUser = await PlayerUser.findByIdAndUpdate(
+            session.playerUserId,
+            { linkedBattleTag: battleTag, updatedAt: Date.now() },
+            { new: true }
+        );
+
+        res.json({
+            success: true,
+            user: playerUser
+        });
+    } catch (error) {
+        console.error('Link BattleTag error:', error);
+        res.status(500).json({ error: 'Failed to link BattleTag' });
+    }
+});
+
+// Select portrait
+router.put('/players/auth/select-portrait', async (req, res) => {
+    try {
+        const sessionId = req.headers['x-player-session-id'];
+        const { portraitId } = req.body;
+
+        if (!sessionId) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+
+        if (!portraitId) {
+            return res.status(400).json({ error: 'Portrait ID is required' });
+        }
+
+        const session = await PlayerSession.findOne({ sessionId });
+        if (!session) {
+            return res.status(401).json({ error: 'Invalid session' });
+        }
+
+        const playerUser = await PlayerUser.findById(session.playerUserId);
+        if (!playerUser || !playerUser.linkedBattleTag) {
+            return res.status(400).json({ error: 'Must link BattleTag first' });
+        }
+
+        // Get player data to check points and race
+        const player = await Player.findOne({ battleTag: playerUser.linkedBattleTag });
+        if (!player) {
+            return res.status(404).json({ error: 'Player data not found' });
+        }
+
+        // Get portrait to check requirements
+        const portrait = await Portrait.findById(portraitId);
+        if (!portrait) {
+            return res.status(404).json({ error: 'Portrait not found' });
+        }
+
+        // Check if player has enough points
+        const playerPoints = player.points || 0;
+        if (playerPoints < portrait.pointsRequired) {
+            return res.status(400).json({
+                error: `Not enough points. Required: ${portrait.pointsRequired}, You have: ${playerPoints}`
+            });
+        }
+
+        // Check if portrait race matches player race
+        if (portrait.race !== 0 && portrait.race !== player.race) {
+            return res.status(400).json({ error: 'Portrait race does not match your player race' });
+        }
+
+        // Update player's selected portrait
+        await Player.findOneAndUpdate(
+            { battleTag: playerUser.linkedBattleTag },
+            { selectedPortraitId: portraitId, updatedAt: Date.now() }
+        );
+
+        res.json({
+            success: true,
+            message: 'Portrait selected successfully'
+        });
+    } catch (error) {
+        console.error('Select portrait error:', error);
+        res.status(500).json({ error: 'Failed to select portrait' });
+    }
+});
+
+// Logout
+router.post('/players/auth/logout', async (req, res) => {
+    try {
+        const sessionId = req.headers['x-player-session-id'];
+
+        if (sessionId) {
+            await PlayerSession.deleteOne({ sessionId });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({ error: 'Failed to logout' });
     }
 });
 
