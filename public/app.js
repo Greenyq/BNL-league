@@ -2509,7 +2509,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                 <div>
                                     <div style={{ color: '#888', fontSize: '0.9em' }}>MMR</div>
                                     <div style={{ color: '#fff', fontSize: '1.3em', fontWeight: '700' }}>
-                                        {playerData.currentMmr || 'N/A'}
+                                        {playerData.mmr || playerData.currentMmr || 'N/A'}
                                     </div>
                                 </div>
                                 <div>
