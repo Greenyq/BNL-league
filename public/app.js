@@ -2085,6 +2085,7 @@ function Streamers() {
 
 // ==================== LOGIN MODAL (ADMIN) ====================
 function LoginModal({ onClose, onSuccess }) {
+    const [login, setLogin] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
     const [loading, setLoading] = React.useState(false);
@@ -2098,7 +2099,7 @@ function LoginModal({ onClose, onSuccess }) {
             const response = await fetch(`${API_BASE}/api/admin/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password })
+                body: JSON.stringify({ login, password })
             });
 
             const data = await response.json();
@@ -2131,6 +2132,19 @@ function LoginModal({ onClose, onSuccess }) {
                 </h2>
                 <form onSubmit={handleSubmit}>
                     <input
+                        type="text"
+                        value={login}
+                        onChange={(e) => setLogin(e.target.value)}
+                        placeholder="Логин администратора"
+                        style={{
+                            width: '100%', padding: '12px', borderRadius: '8px',
+                            border: '1px solid #444', background: '#2a2a2a',
+                            color: '#fff', marginBottom: '15px'
+                        }}
+                        required
+                        autoFocus
+                    />
+                    <input
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -2141,7 +2155,6 @@ function LoginModal({ onClose, onSuccess }) {
                             color: '#fff', marginBottom: '15px'
                         }}
                         required
-                        autoFocus
                     />
                     {error && (
                         <div style={{
