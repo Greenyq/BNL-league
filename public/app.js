@@ -356,17 +356,32 @@ function App() {
                     wins++;
                     matchHistory.push({ result: 'win', mmrDiff, playerMMR, opponentMMR });
 
+                    // Victory points based on opponent MMR
                     if (mmrDiff >= 20) {
-                        matchPoints = 40 + Math.floor(mmrDiff / 10);
-                    } else if (mmrDiff <= -20) {
-                        matchPoints = 10 + Math.floor(Math.abs(mmrDiff) / 20);
+                        // Win against stronger opponent: +70 points
+                        matchPoints = 70;
+                    } else if (mmrDiff >= -19) {
+                        // Win against equal opponent: +50 points
+                        matchPoints = 50;
                     } else {
-                        matchPoints = 25;
+                        // Win against weaker opponent: less points
+                        matchPoints = 30;
                     }
                 } else {
                     losses++;
                     matchHistory.push({ result: 'loss', mmrDiff, playerMMR, opponentMMR });
-                    matchPoints = 0;
+
+                    // Loss points (negative) based on opponent MMR
+                    if (mmrDiff <= -20) {
+                        // Loss to weaker opponent: -70 points
+                        matchPoints = -70;
+                    } else if (mmrDiff >= -19 && mmrDiff <= 19) {
+                        // Loss to equal opponent: -50 points
+                        matchPoints = -50;
+                    } else {
+                        // Loss to stronger opponent: less penalty
+                        matchPoints = -30;
+                    }
                 }
 
                 totalPoints += matchPoints;
@@ -394,7 +409,7 @@ function App() {
                 losses: losses,
                 points: totalPoints,
                 achievements: achs,
-                matchHistory: matchHistory.slice(0, 100).reverse(),
+                matchHistory: matchHistory.reverse().slice(0, 20), // Last 20 matches, most recent first
                 activityData: generateActivityData()
             });
         }
