@@ -116,11 +116,40 @@ const adminSessionSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
+// Player User Schema (for authentication and profile management)
+const playerUserSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    passwordHash: { type: String, required: true },
+    linkedBattleTag: { type: String }, // Links to Player.battleTag
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+// Transform _id to id for JSON responses
+playerUserSchema.set('toJSON', {
+    virtuals: true,
+    versionKey: false,
+    transform: function (doc, ret) {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.passwordHash; // Never send password hash to client
+    }
+});
+
+// Player Session Schema (similar to AdminSession)
+const playerSessionSchema = new mongoose.Schema({
+    sessionId: { type: String, unique: true },
+    playerUserId: { type: String, required: true },
+    timestamp: { type: Date, default: Date.now }
+});
+
 module.exports = {
     Team: mongoose.model('Team', teamSchema),
     Player: mongoose.model('Player', playerSchema),
     TeamMatch: mongoose.model('TeamMatch', teamMatchSchema),
     Portrait: mongoose.model('Portrait', portraitSchema),
     Streamer: mongoose.model('Streamer', streamerSchema),
-    AdminSession: mongoose.model('AdminSession', adminSessionSchema)
+    AdminSession: mongoose.model('AdminSession', adminSessionSchema),
+    PlayerUser: mongoose.model('PlayerUser', playerUserSchema),
+    PlayerSession: mongoose.model('PlayerSession', playerSessionSchema)
 };
