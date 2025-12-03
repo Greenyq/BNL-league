@@ -2,7 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
-const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession } = require('./models');
+const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession, PasswordReset } = require('./models');
 
 const router = express.Router();
 
@@ -542,6 +542,97 @@ router.post('/players/auth/logout', async (req, res) => {
     } catch (error) {
         console.error('Logout error:', error);
         res.status(500).json({ error: 'Failed to logout' });
+    }
+});
+
+// Request password reset
+router.post('/players/auth/request-reset', async (req, res) => {
+    try {
+        const { username } = req.body;
+
+        if (!username) {
+            return res.status(400).json({ error: 'Username is required' });
+        }
+
+        // Check if user exists
+        const user = await PlayerUser.findOne({ username });
+        if (!user) {
+            // Don't reveal if user exists or not for security
+            return res.json({ success: true, message: 'If account exists, reset code has been generated' });
+        }
+
+        // Generate 6-digit reset code
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Delete any existing reset requests for this user
+        await PasswordReset.deleteMany({ username });
+
+        // Create new reset request (expires in 15 minutes)
+        await PasswordReset.create({
+            username,
+            resetCode,
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000)
+        });
+
+        // In production, send code via email. For now, return it in response
+        res.json({
+            success: true,
+            resetCode: resetCode, // TODO: Remove in production, send via email instead
+            message: 'Reset code generated'
+        });
+    } catch (error) {
+        console.error('Request reset error:', error);
+        res.status(500).json({ error: 'Failed to process reset request' });
+    }
+});
+
+// Reset password with code
+router.post('/players/auth/reset-password', async (req, res) => {
+    try {
+        const { username, resetCode, newPassword } = req.body;
+
+        if (!username || !resetCode || !newPassword) {
+            return res.status(400).json({ error: 'Username, reset code, and new password are required' });
+        }
+
+        // Find valid reset request
+        const resetRequest = await PasswordReset.findOne({
+            username,
+            resetCode,
+            expiresAt: { $gt: new Date() }
+        });
+
+        if (!resetRequest) {
+            return res.status(400).json({ error: 'Invalid or expired reset code' });
+        }
+
+        // Find user
+        const user = await PlayerUser.findOne({ username });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Hash new password
+        const passwordHash = await bcrypt.hash(newPassword, 10);
+
+        // Update password
+        user.passwordHash = passwordHash;
+        user.updatedAt = Date.now();
+        await user.save();
+
+        // Delete reset request
+        await PasswordReset.deleteOne({ _id: resetRequest._id });
+
+        // Delete all sessions for this user (force re-login)
+        await PlayerSession.deleteMany({ playerUserId: user.id });
+
+        res.json({
+            success: true,
+            message: 'Password reset successfully'
+        });
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({ error: 'Failed to reset password' });
     }
 });
 

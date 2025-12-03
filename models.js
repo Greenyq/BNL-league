@@ -143,6 +143,14 @@ const playerSessionSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
+// Password Reset Schema
+const passwordResetSchema = new mongoose.Schema({
+    username: { type: String, required: true },
+    resetCode: { type: String, required: true },
+    expiresAt: { type: Date, required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+
 module.exports = {
     Team: mongoose.model('Team', teamSchema),
     Player: mongoose.model('Player', playerSchema),
@@ -151,5 +159,6 @@ module.exports = {
     Streamer: mongoose.model('Streamer', streamerSchema),
     AdminSession: mongoose.model('AdminSession', adminSessionSchema),
     PlayerUser: mongoose.model('PlayerUser', playerUserSchema),
-    PlayerSession: mongoose.model('PlayerSession', playerSessionSchema)
+    PlayerSession: mongoose.model('PlayerSession', playerSessionSchema),
+    PasswordReset: mongoose.model('PasswordReset', passwordResetSchema)
 };
