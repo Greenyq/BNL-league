@@ -308,10 +308,11 @@ function App() {
             // Initialize race data if not exists
             if (!matchesByRace[race]) {
                 matchesByRace[race] = [];
-                mmrByRace[race] = player.currentMmr || 0;
             }
 
             matchesByRace[race].push(match);
+            // Update MMR to latest match value (since matches are sorted chronologically)
+            mmrByRace[race] = player.currentMmr || mmrByRace[race] || 0;
         });
 
         // If no races found, return empty profile
@@ -867,6 +868,7 @@ function Players({ players }) {
             {selectedPlayer && (
                 <PlayerDetailModal
                     player={selectedPlayer}
+                    portraits={portraits}
                     onClose={() => setSelectedPlayer(null)}
                 />
             )}
@@ -1139,6 +1141,21 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
 function Teams({ teams, players, allPlayers }) {
     const [expandedTeam, setExpandedTeam] = useState(null);
     const [selectedPlayer, setSelectedPlayer] = useState(null);
+    const [portraits, setPortraits] = useState([]);
+
+    // Load portraits
+    React.useEffect(() => {
+        const fetchPortraits = async () => {
+            try {
+                const response = await fetch(`${API_BASE}/api/portraits`);
+                const data = await response.json();
+                setPortraits(data);
+            } catch (error) {
+                console.error('Error fetching portraits:', error);
+            }
+        };
+        fetchPortraits();
+    }, []);
 
     const getTeamPlayers = (teamId) => players.filter(p => p.teamId === teamId);
     const getTeamLeader = (teamId) => {
@@ -1273,6 +1290,7 @@ function Teams({ teams, players, allPlayers }) {
             {selectedPlayer && (
                 <PlayerDetailModal
                     player={selectedPlayer}
+                    portraits={portraits}
                     onClose={() => setSelectedPlayer(null)}
                 />
             )}
@@ -1619,9 +1637,17 @@ function Stats({ players, teams }) {
 }
 
 // Player Detail Modal
-function PlayerDetailModal({ player, onClose }) {
+function PlayerDetailModal({ player, portraits = [], onClose }) {
     const totalGames = (player.wins || 0) + (player.losses || 0);
     const winRate = totalGames > 0 ? ((player.wins || 0) / totalGames * 100).toFixed(1) : 0;
+
+    // Find selected portrait if player has one
+    const selectedPortrait = player.selectedPortraitId
+        ? portraits.find(p => p.id === player.selectedPortraitId)
+        : null;
+
+    // Use portrait image if available, otherwise use race image
+    const avatarImage = selectedPortrait ? selectedPortrait.imageUrl : raceImages[player.race];
 
     return (
         <div
@@ -1682,10 +1708,10 @@ function PlayerDetailModal({ player, onClose }) {
                         ×
                     </button>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        {raceImages[player.race] && (
+                        {avatarImage && (
                             <img
-                                src={raceImages[player.race]}
-                                alt={raceNames[player.race]}
+                                src={avatarImage}
+                                alt={selectedPortrait ? selectedPortrait.name : raceNames[player.race]}
                                 style={{
                                     width: '80px',
                                     height: '80px',
