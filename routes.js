@@ -427,7 +427,7 @@ router.get('/players/auth/me', async (req, res) => {
 router.put('/players/auth/link-battletag', async (req, res) => {
     try {
         const sessionId = req.headers['x-player-session-id'];
-        const { battleTag } = req.body;
+        let { battleTag } = req.body;
 
         if (!sessionId) {
             return res.status(401).json({ error: 'Not authenticated' });
@@ -437,37 +437,99 @@ router.put('/players/auth/link-battletag', async (req, res) => {
             return res.status(400).json({ error: 'BattleTag is required' });
         }
 
+        // Normalize battleTag: trim whitespace
+        battleTag = battleTag.trim();
+
         const session = await PlayerSession.findOne({ sessionId });
         if (!session) {
             return res.status(401).json({ error: 'Invalid session' });
         }
 
-        // Check if battleTag exists in players
-        const player = await Player.findOne({ battleTag });
+        // Check if battleTag exists in players (case-insensitive search)
+        const player = await Player.findOne({
+            battleTag: { $regex: new RegExp(`^${battleTag}$`, 'i') }
+        });
+
         if (!player) {
-            return res.status(404).json({ error: 'BattleTag not found in league' });
+            return res.status(404).json({
+                error: 'BattleTag not found in league. Please contact an admin to add your BattleTag first.'
+            });
         }
 
+        // Use the exact battleTag from the database for linking
+        const exactBattleTag = player.battleTag;
+
         // Check if battleTag is already linked to another account
-        const existingLink = await PlayerUser.findOne({ linkedBattleTag: battleTag });
+        const existingLink = await PlayerUser.findOne({ linkedBattleTag: exactBattleTag });
         if (existingLink && existingLink.id !== session.playerUserId) {
             return res.status(400).json({ error: 'BattleTag already linked to another account' });
         }
 
-        // Update user
+        // Update user with the exact battleTag from database
         const playerUser = await PlayerUser.findByIdAndUpdate(
             session.playerUserId,
-            { linkedBattleTag: battleTag, updatedAt: Date.now() },
+            { linkedBattleTag: exactBattleTag, updatedAt: Date.now() },
             { new: true }
         );
 
         res.json({
             success: true,
-            user: playerUser
+            user: playerUser,
+            linkedPlayer: player
         });
     } catch (error) {
         console.error('Link BattleTag error:', error);
         res.status(500).json({ error: 'Failed to link BattleTag' });
+    }
+});
+
+// Unlink BattleTag from player account
+router.delete('/players/auth/unlink-battletag', async (req, res) => {
+    try {
+        const sessionId = req.headers['x-player-session-id'];
+
+        if (!sessionId) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+
+        const session = await PlayerSession.findOne({ sessionId });
+        if (!session) {
+            return res.status(401).json({ error: 'Invalid session' });
+        }
+
+        const playerUser = await PlayerUser.findById(session.playerUserId);
+        if (!playerUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (!playerUser.linkedBattleTag) {
+            return res.status(400).json({ error: 'No BattleTag linked to this account' });
+        }
+
+        const previousBattleTag = playerUser.linkedBattleTag;
+
+        // Remove the linked battleTag
+        const updatedUser = await PlayerUser.findByIdAndUpdate(
+            session.playerUserId,
+            { linkedBattleTag: null, updatedAt: Date.now() },
+            { new: true }
+        );
+
+        // Also remove selected portrait since it's tied to the player
+        await Player.findOneAndUpdate(
+            { battleTag: previousBattleTag },
+            { selectedPortraitId: null, updatedAt: Date.now() }
+        );
+
+        res.json({
+            success: true,
+            message: 'BattleTag unlinked successfully',
+            user: updatedUser,
+            previousBattleTag
+        });
+    } catch (error) {
+        console.error('Unlink BattleTag error:', error);
+        res.status(500).json({ error: 'Failed to unlink BattleTag' });
     }
 });
 
