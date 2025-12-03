@@ -2197,7 +2197,7 @@ function LoginModal({ onClose, onSuccess }) {
 
 // ==================== PLAYER AUTH MODAL ====================
 function PlayerAuthModal({ onClose, onSuccess }) {
-    const [mode, setMode] = React.useState('login'); // 'login', 'register', 'reset', 'reset-confirm'
+    const [mode, setMode] = React.useState('login'); // 'login', 'register', 'reset', 'reset-confirm', 'admin'
     const [username, setUsername] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
@@ -2209,6 +2209,10 @@ function PlayerAuthModal({ onClose, onSuccess }) {
     const [newPassword, setNewPassword] = React.useState('');
     const [generatedCode, setGeneratedCode] = React.useState('');
 
+    // Admin login fields
+    const [adminLogin, setAdminLogin] = React.useState('');
+    const [adminPassword, setAdminPassword] = React.useState('');
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -2216,7 +2220,23 @@ function PlayerAuthModal({ onClose, onSuccess }) {
         setSuccess('');
 
         try {
-            if (mode === 'reset') {
+            if (mode === 'admin') {
+                // Admin login
+                const response = await fetch(`${API_BASE}/api/admin/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ login: adminLogin, password: adminPassword })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.sessionId) {
+                    localStorage.setItem('adminSessionId', data.sessionId);
+                    window.location.reload(); // Reload to apply admin session
+                } else {
+                    setError(data.error || 'Неверные учетные данные');
+                }
+            } else if (mode === 'reset') {
                 // Request reset code
                 const response = await fetch(`${API_BASE}/api/players/auth/request-reset`, {
                     method: 'POST',
@@ -2298,11 +2318,12 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                 <h2 style={{ color: '#c9a961', marginBottom: '20px', textAlign: 'center' }}>
                     {mode === 'login' ? '🔐 Вход' :
                      mode === 'register' ? '📝 Регистрация' :
+                     mode === 'admin' ? '⚙️ Админ' :
                      mode === 'reset' ? '🔑 Сброс пароля' :
                      '🔑 Подтверждение сброса'}
                 </h2>
 
-                {(mode === 'login' || mode === 'register') && (
+                {(mode === 'login' || mode === 'register' || mode === 'admin') && (
                     <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
                         <button
                             onClick={() => {
@@ -2334,6 +2355,21 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                         >
                             Регистрация
                         </button>
+                        <button
+                            onClick={() => {
+                                setMode('admin');
+                                setError('');
+                                setSuccess('');
+                            }}
+                            style={{
+                                flex: 1, padding: '10px', borderRadius: '8px',
+                                background: mode === 'admin' ? '#c9a961' : '#2a2a2a',
+                                color: mode === 'admin' ? '#000' : '#fff',
+                                border: 'none', cursor: 'pointer', fontWeight: '600'
+                            }}
+                        >
+                            ⚙️ Админ
+                        </button>
                     </div>
                 )}
 
@@ -2362,33 +2398,65 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                 )}
 
                 <form onSubmit={handleSubmit}>
-                    <input
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="Имя пользователя"
-                        style={{
-                            width: '100%', padding: '12px', borderRadius: '8px',
-                            border: '1px solid #444', background: '#2a2a2a',
-                            color: '#fff', marginBottom: '15px'
-                        }}
-                        required
-                        autoFocus
-                    />
+                    {mode === 'admin' ? (
+                        <>
+                            <input
+                                type="text"
+                                value={adminLogin}
+                                onChange={(e) => setAdminLogin(e.target.value)}
+                                placeholder="Логин администратора"
+                                style={{
+                                    width: '100%', padding: '12px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#2a2a2a',
+                                    color: '#fff', marginBottom: '15px'
+                                }}
+                                required
+                                autoFocus
+                            />
+                            <input
+                                type="password"
+                                value={adminPassword}
+                                onChange={(e) => setAdminPassword(e.target.value)}
+                                placeholder="Пароль администратора"
+                                style={{
+                                    width: '100%', padding: '12px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#2a2a2a',
+                                    color: '#fff', marginBottom: '15px'
+                                }}
+                                required
+                            />
+                        </>
+                    ) : (
+                        <>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder="Имя пользователя"
+                                style={{
+                                    width: '100%', padding: '12px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#2a2a2a',
+                                    color: '#fff', marginBottom: '15px'
+                                }}
+                                required
+                                autoFocus
+                            />
 
-                    {(mode === 'login' || mode === 'register') && (
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Пароль"
-                            style={{
-                                width: '100%', padding: '12px', borderRadius: '8px',
-                                border: '1px solid #444', background: '#2a2a2a',
-                                color: '#fff', marginBottom: '15px'
-                            }}
-                            required
-                        />
+                            {(mode === 'login' || mode === 'register') && (
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="Пароль"
+                                    style={{
+                                        width: '100%', padding: '12px', borderRadius: '8px',
+                                        border: '1px solid #444', background: '#2a2a2a',
+                                        color: '#fff', marginBottom: '15px'
+                                    }}
+                                    required
+                                />
+                            )}
+                        </>
                     )}
 
                     {mode === 'reset-confirm' && (
@@ -2479,6 +2547,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                             {loading ? '...' :
                              mode === 'login' ? 'Войти' :
                              mode === 'register' ? 'Зарегистрироваться' :
+                             mode === 'admin' ? '⚙️ Войти как Админ' :
                              mode === 'reset' ? 'Получить код' :
                              'Сбросить пароль'}
                         </button>
