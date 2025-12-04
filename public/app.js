@@ -1828,7 +1828,12 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                                 </button>
                             </div>
 
-                            {liveMatches.map((match, idx) => (
+                            {liveMatches.map((match, idx) => {
+                                // Find our player's battleTag for the link
+                                const ourPlayer = match.teams.flatMap(t => t.players).find(p => p.isOurPlayer);
+                                const ourPlayerBattleTag = ourPlayer?.battleTag || '';
+
+                                return (
                                 <div key={match.id || idx} style={{
                                     background: '#1a1a1a',
                                     padding: '25px',
@@ -1837,6 +1842,19 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                                     border: '2px solid #667eea',
                                     boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)'
                                 }}>
+                                    {/* Match info header */}
+                                    <div style={{
+                                        textAlign: 'center',
+                                        marginBottom: '15px',
+                                        padding: '10px',
+                                        background: 'rgba(102, 126, 234, 0.1)',
+                                        borderRadius: '8px'
+                                    }}>
+                                        <div style={{ color: '#667eea', fontSize: '0.9em', fontWeight: '600' }}>
+                                            🗺️ {match.map || 'Unknown Map'} • {match.gameMode === 1 ? '1v1' : match.gameMode === 2 ? '2v2' : match.gameMode === 4 ? '4v4' : 'FFA'}
+                                        </div>
+                                    </div>
+
                                     <div style={{
                                         display: 'flex',
                                         justifyContent: 'space-between',
@@ -1863,8 +1881,13 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                                                             {player.playerName}
                                                         </div>
                                                         <div style={{ color: '#888', fontSize: '0.85em' }}>
-                                                            MMR: {player.currentMmr || 'N/A'}
+                                                            {player.currentMmr ? `MMR: ${player.currentMmr}` : 'MMR: Loading...'}
                                                         </div>
+                                                        {player.race && (
+                                                            <div style={{ color: '#c9a961', fontSize: '0.8em', marginTop: '3px' }}>
+                                                                {player.race === 1 ? '🏰 Human' : player.race === 2 ? '⚔️ Orc' : player.race === 4 ? '🌙 Night Elf' : player.race === 8 ? '💀 Undead' : '❓ Random'}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -1877,65 +1900,41 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                                         justifyContent: 'center',
                                         marginTop: '20px'
                                     }}>
-                                        <a
-                                            href={`https://www.w3champions.com/MatchHistory?matchId=${match.id}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            style={{
-                                                padding: '12px 24px',
-                                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                                color: '#fff',
-                                                borderRadius: '10px',
-                                                textDecoration: 'none',
-                                                fontSize: '1em',
-                                                fontWeight: '700',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '10px',
-                                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                                boxShadow: '0 4px 20px rgba(102, 126, 234, 0.5)'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.target.style.transform = 'translateY(-3px)';
-                                                e.target.style.boxShadow = '0 8px 30px rgba(102, 126, 234, 0.7)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.target.style.transform = 'translateY(0)';
-                                                e.target.style.boxShadow = '0 4px 20px rgba(102, 126, 234, 0.5)';
-                                            }}
-                                        >
-                                            📺 Смотреть LIVE в браузере
-                                        </a>
-                                        <a
-                                            href={`flowtv://match?matchId=${match.id}`}
-                                            style={{
-                                                padding: '12px 24px',
-                                                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                                                color: '#fff',
-                                                borderRadius: '10px',
-                                                textDecoration: 'none',
-                                                fontSize: '1em',
-                                                fontWeight: '700',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '10px',
-                                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                                boxShadow: '0 4px 20px rgba(240, 147, 251, 0.5)'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.target.style.transform = 'translateY(-3px)';
-                                                e.target.style.boxShadow = '0 8px 30px rgba(240, 147, 251, 0.7)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.target.style.transform = 'translateY(0)';
-                                                e.target.style.boxShadow = '0 4px 20px rgba(240, 147, 251, 0.5)';
-                                            }}
-                                        >
-                                            🎮 Открыть в FlowTV
-                                        </a>
+                                        {ourPlayerBattleTag && (
+                                            <a
+                                                href={`https://www.w3champions.com/player/${encodeURIComponent(ourPlayerBattleTag)}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{
+                                                    padding: '12px 24px',
+                                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                                    color: '#fff',
+                                                    borderRadius: '10px',
+                                                    textDecoration: 'none',
+                                                    fontSize: '1em',
+                                                    fontWeight: '700',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '10px',
+                                                    transition: 'transform 0.2s, box-shadow 0.2s',
+                                                    boxShadow: '0 4px 20px rgba(102, 126, 234, 0.5)'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.target.style.transform = 'translateY(-3px)';
+                                                    e.target.style.boxShadow = '0 8px 30px rgba(102, 126, 234, 0.7)';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.target.style.transform = 'translateY(0)';
+                                                    e.target.style.boxShadow = '0 4px 20px rgba(102, 126, 234, 0.5)';
+                                                }}
+                                            >
+                                                📺 Смотреть профиль игрока
+                                            </a>
+                                        )}
                                     </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>

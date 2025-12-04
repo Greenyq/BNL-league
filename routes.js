@@ -841,16 +841,24 @@ router.get('/live-matches', async (req, res) => {
                 players: team.players.map(player => {
                     const ourPlayer = players.find(p => p.battleTag === player.battleTag);
                     return {
-                        ...player,
+                        battleTag: player.battleTag,
+                        name: player.name,
+                        race: player.race,
+                        currentMmr: player.currentMmr || player.mmr || null,
+                        oldMmr: player.oldMmr || null,
                         isOurPlayer: !!ourPlayer,
-                        playerName: ourPlayer?.name || player.battleTag.split('#')[0],
+                        playerName: ourPlayer?.name || player.name || player.battleTag.split('#')[0],
                         teamId: ourPlayer?.teamId || null
                     };
                 })
             }));
 
             return {
-                ...match,
+                id: match.id,
+                map: match.map,
+                gameMode: match.gameMode,
+                gateway: match.gateway,
+                startTime: match.startTime,
                 teams: enrichedTeams
             };
         });
