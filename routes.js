@@ -806,4 +806,63 @@ router.post('/players/auth/reset-password', async (req, res) => {
     }
 });
 
+// ==================== LIVE MATCHES ====================
+// Get live matches for our players from W3Champions
+router.get('/live-matches', async (req, res) => {
+    try {
+        const players = await Player.find();
+        const battleTags = players.map(p => p.battleTag);
+
+        // Fetch ongoing matches from W3Champions
+        const apiUrl = 'https://website-backend.w3champions.com/api/matches/ongoing?offset=0&pageSize=100';
+        const response = await axios.get(apiUrl, {
+            headers: {
+                'User-Agent': 'BNL-League-App',
+                'Accept': 'application/json'
+            },
+            timeout: 10000
+        });
+
+        const allMatches = response.data.matches || [];
+
+        // Filter matches that include our players
+        const ourMatches = allMatches.filter(match => {
+            return match.teams.some(team =>
+                team.players.some(player =>
+                    battleTags.includes(player.battleTag)
+                )
+            );
+        });
+
+        // Enrich with player names from our database
+        const enrichedMatches = ourMatches.map(match => {
+            const enrichedTeams = match.teams.map(team => ({
+                ...team,
+                players: team.players.map(player => {
+                    const ourPlayer = players.find(p => p.battleTag === player.battleTag);
+                    return {
+                        ...player,
+                        isOurPlayer: !!ourPlayer,
+                        playerName: ourPlayer?.name || player.battleTag.split('#')[0],
+                        teamId: ourPlayer?.teamId || null
+                    };
+                })
+            }));
+
+            return {
+                ...match,
+                teams: enrichedTeams
+            };
+        });
+
+        res.json({
+            count: enrichedMatches.length,
+            matches: enrichedMatches
+        });
+    } catch (error) {
+        console.error('Error fetching live matches:', error.message);
+        res.status(500).json({ error: 'Failed to fetch live matches', matches: [] });
+    }
+});
+
 module.exports = router;
