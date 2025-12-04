@@ -443,7 +443,7 @@ function App() {
         return profiles;
     };
 
-    const determineAchievements = (wins, losses, points, totalGames, matchHistory = []) => {
+    const determineAchievements = (wins, losses, points, totalGames, matchHistory = [], previousAchievements = []) => {
         const achs = [];
 
         // Basic achievements
@@ -452,9 +452,9 @@ function App() {
         if (totalGames >= 500) achs.push('veteran');
         if (points >= 1000) achs.push('goldRush');
 
-        // Analyze streaks (check LAST 10 matches, most recent first)
+        // Analyze streaks (check LAST 20 matches, most recent first)
         // matchHistory is in chronological order (oldest first), so we need to reverse it
-        const recentMatches = [...matchHistory].reverse().slice(0, 10);
+        const recentMatches = [...matchHistory].reverse().slice(0, 20);
 
         // Check for 3+ win streak
         let currentWinStreak = 0;
@@ -504,13 +504,16 @@ function App() {
             }
         }
 
+        // Merge with previously earned achievements (once earned, never lost)
+        const allAchievements = new Set([...achs, ...previousAchievements]);
+
         // Debug logging for achievements
-        console.log(`🏆 Achievement check: wins=${wins}, losses=${losses}, points=${points}, totalGames=${totalGames}, maxWinStreak=${maxWinStreak}, achievements=${achs.join(', ') || 'none'}`);
+        console.log(`🏆 Achievement check: wins=${wins}, losses=${losses}, points=${points}, totalGames=${totalGames}, maxWinStreak=${maxWinStreak}, achievements=${Array.from(allAchievements).join(', ') || 'none'}`);
         if (recentMatches.length > 0) {
-            console.log(`   📊 Recent match sequence (newest → oldest):`, recentMatches.map(m => m.result).join(' → '));
+            console.log(`   📊 Recent match sequence (newest → oldest, last 20):`, recentMatches.map(m => m.result).join(' → '));
         }
 
-        return achs;
+        return Array.from(allAchievements);
     };
 
     const generateActivityData = () => {
@@ -1126,16 +1129,16 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                     </div>
                 </div>
 
-                {/* Always render achievements container to maintain consistent layout */}
+                {/* Always render achievements container with fixed min-height */}
                 <div className="achievement-icons" style={{
                     display: 'flex',
                     gap: '8px',
-                    padding: player.achievements && player.achievements.length > 0 ? '10px 15px' : '0',
+                    padding: player.achievements && player.achievements.length > 0 ? '10px 15px' : '10px 15px',
                     flexWrap: 'wrap',
-                    borderTop: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : 'none',
-                    borderBottom: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : 'none',
+                    borderTop: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : '1px solid transparent',
+                    borderBottom: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : '1px solid transparent',
                     margin: '10px 0',
-                    minHeight: player.achievements && player.achievements.length > 0 ? 'auto' : '0'
+                    minHeight: '50px'
                 }}>
                     {player.achievements && player.achievements.map(achKey => {
                         const ach = achievements[achKey];
@@ -1152,16 +1155,20 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                     })}
                 </div>
 
-                {player.matchHistory && player.matchHistory.length > 0 && (
-                    <div className="match-graph">
-                        {player.matchHistory.slice(0, 20).reverse().map((match, idx) => {
-                            const result = typeof match === 'string' ? match : match.result;
-                            // Fixed height based on result: wins are taller
-                            const height = result === 'win' ? 70 : 40;
-                            return <div key={idx} className={`match-bar ${result}`} style={{ height: `${height}px` }} />;
-                        })}
-                    </div>
-                )}
+                {/* Always render match-graph container with fixed height */}
+                <div className="match-graph" style={{
+                    minHeight: '80px',
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    justifyContent: 'center'
+                }}>
+                    {player.matchHistory && player.matchHistory.length > 0 && player.matchHistory.slice(0, 20).reverse().map((match, idx) => {
+                        const result = typeof match === 'string' ? match : match.result;
+                        // Fixed height based on result: wins are taller
+                        const height = result === 'win' ? 70 : 40;
+                        return <div key={idx} className={`match-bar ${result}`} style={{ height: `${height}px` }} />;
+                    })}
+                </div>
 
                 <div className="points-section">
                     <div className="points-value">{player.points || 0}</div>
@@ -1311,8 +1318,8 @@ function Teams({ teams, players, allPlayers }) {
                                         alt={team.name}
                                         className="team-emoji"
                                         style={{
-                                            width: '60px',
-                                            height: '60px',
+                                            width: '102px',
+                                            height: '102px',
                                             borderRadius: '10px',
                                             objectFit: 'cover'
                                         }}
