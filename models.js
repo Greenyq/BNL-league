@@ -155,7 +155,6 @@ const passwordResetSchema = new mongoose.Schema({
 const playerCacheSchema = new mongoose.Schema({
     battleTag: { type: String, required: true, unique: true },
     matchData: { type: Array, default: [] }, // Raw match data from W3Champions
-    profiles: { type: Array, default: [] }, // Processed profiles by race
     lastUpdated: { type: Date, default: Date.now },
     expiresAt: { type: Date, required: true } // Cache expiration (e.g., 10 minutes)
 });
