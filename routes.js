@@ -148,6 +148,38 @@ router.get('/players/with-cache', async (req, res) => {
     }
 });
 
+// Clear cache for specific player (admin only)
+router.delete('/admin/players/cache/:battleTag', async (req, res) => {
+    try {
+        const { battleTag } = req.params;
+        const result = await PlayerCache.deleteOne({ battleTag });
+
+        if (result.deletedCount > 0) {
+            res.json({ success: true, message: `Cache cleared for ${battleTag}` });
+        } else {
+            res.json({ success: true, message: `No cache found for ${battleTag}` });
+        }
+    } catch (error) {
+        console.error('Error clearing cache:', error);
+        res.status(500).json({ error: 'Failed to clear cache' });
+    }
+});
+
+// Clear all player cache (admin only)
+router.delete('/admin/players/cache', async (req, res) => {
+    try {
+        const result = await PlayerCache.deleteMany({});
+        res.json({
+            success: true,
+            message: `Cleared cache for ${result.deletedCount} players`,
+            count: result.deletedCount
+        });
+    } catch (error) {
+        console.error('Error clearing all cache:', error);
+        res.status(500).json({ error: 'Failed to clear all cache' });
+    }
+});
+
 router.post('/admin/players/search', async (req, res) => {
     try {
         const { battleTag } = req.body;

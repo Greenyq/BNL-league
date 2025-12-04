@@ -570,6 +570,17 @@ function AdminPanel({ teams, allPlayers, teamMatches, sessionId, onUpdate, onLog
                     >
                         🖼️ Портреты
                     </button>
+                    <button
+                        onClick={() => setActiveSection('cache')}
+                        style={{
+                            padding: '12px 24px', borderRadius: '8px',
+                            background: activeSection === 'cache' ? '#c9a961' : '#2a2a2a',
+                            color: activeSection === 'cache' ? '#000' : '#fff',
+                            border: 'none', cursor: 'pointer', fontWeight: '600'
+                        }}
+                    >
+                        🔄 Кэш
+                    </button>
                 </div>
             </div>
 
@@ -587,6 +598,9 @@ function AdminPanel({ teams, allPlayers, teamMatches, sessionId, onUpdate, onLog
             )}
             {activeSection === 'portraits' && (
                 <AdminPortraits sessionId={sessionId} onUpdate={onUpdate} />
+            )}
+            {activeSection === 'cache' && (
+                <AdminCache sessionId={sessionId} onUpdate={onUpdate} />
             )}
         </div>
     );

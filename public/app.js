@@ -159,47 +159,33 @@ function App() {
 
     const loadPlayers = async () => {
         try {
-            // Загружаем игроков из API (добавленных через админку)
-            const playersResponse = await fetch(`${API_BASE}/api/players`);
-            const apiPlayers = await playersResponse.json();
-            
+            console.log('🔄 Loading players with cache...');
+
+            // Use cached endpoint - much faster!
+            const response = await fetch(`${API_BASE}/api/players/with-cache`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const cachedPlayers = await response.json();
+            console.log(`✅ Loaded ${cachedPlayers.length} player profiles from cache`);
+
             const loadedPlayers = [];
 
-            // Если игроков нет в админке, используем дефолтных
-            const playersToLoad = apiPlayers.length > 0 ? apiPlayers : [
-                { battleTag: "ZugZugMaster#1399", name: "ZugZugMaster", teamId: null },
-                { battleTag: "ЖИВОТНОЕ#21901", name: "ЖИВОТНОЕ", teamId: null },
-                { battleTag: "jabker#2902", name: "jabker", teamId: null }
-            ];
+            // Process each cached player
+            cachedPlayers.forEach((player, i) => {
+                // If player has matchData, process it
+                if (player.matchData && player.matchData.length > 0) {
+                    console.log(`Processing ${player.battleTag} with ${player.matchData.length} matches`);
 
-            for (let i = 0; i < playersToLoad.length; i++) {
-                const player = playersToLoad[i];
-                const tag = player.battleTag;
-
-                console.log(`Loading player ${i+1}/${playersToLoad.length}:`, {
-                    battleTag: tag,
-                    dbRace: player.race,
-                    dbMmr: player.currentMmr,
-                    teamId: player.teamId
-                });
-
-                try {
-                    const response = await fetch(`${API_BASE}/api/matches/${encodeURIComponent(tag)}?gateway=20&season=23&pageSize=100`);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                    const matchesData = await response.json();
-                    console.log(`✅ Matches loaded for ${tag}: ${matchesData.count} matches`);
-
-                    // processMatches now returns array of profiles (one per race)
-                    const playerProfiles = processMatches(tag, matchesData.matches || []);
-                    console.log(`Profiles created for ${tag}:`, playerProfiles.length);
+                    // processMatches returns array of profiles (one per race)
+                    const playerProfiles = processMatches(player.battleTag, player.matchData);
+                    console.log(`Profiles created for ${player.battleTag}:`, playerProfiles.length);
 
                     // Create a card for each race profile
-                    playerProfiles.forEach((profile, profileIndex) => {
+                    playerProfiles.forEach((profile) => {
                         const finalPlayer = {
-                            id: `${player.id || (i + 1)}_${profile.race}`,
-                            name: player.name || tag.split('#')[0],
-                            battleTag: tag,
+                            id: `${player.id}_${profile.race}`,
+                            name: player.name || player.battleTag.split('#')[0],
+                            battleTag: player.battleTag,
                             ...profile,
                             // Use race from profile
                             race: profile.race || player.race || 0,
@@ -211,23 +197,15 @@ function App() {
                             discordTag: player.discordTag || null,
                         };
 
-                        console.log(`Final player card for ${tag} - ${raceNames[profile.race]}:`, {
-                            race: finalPlayer.race,
-                            mmr: finalPlayer.mmr,
-                            wins: finalPlayer.wins,
-                            points: finalPlayer.points,
-                            selectedPortraitId: finalPlayer.selectedPortraitId
-                        });
-
                         loadedPlayers.push(finalPlayer);
                     });
-                } catch (error) {
-                    console.error(`❌ Error loading ${tag}:`, error);
-                    // Use data from database when API fails
+                } else {
+                    // No match data - use database info as fallback
+                    console.log(`No match data for ${player.battleTag}, using DB data`);
                     const fallbackPlayer = {
-                        id: player.id || (i + 1),
-                        name: player.name || tag.split('#')[0],
-                        battleTag: tag,
+                        id: player.id,
+                        name: player.name || player.battleTag.split('#')[0],
+                        battleTag: player.battleTag,
                         race: player.race || 0,
                         mmr: player.currentMmr || 0,
                         wins: 0,
@@ -243,17 +221,20 @@ function App() {
                         error: true
                     };
 
-                    console.log(`Using fallback data for ${tag}:`, {
+                    console.log(`Using fallback data for ${player.battleTag}:`, {
                         race: fallbackPlayer.race,
                         mmr: fallbackPlayer.mmr
                     });
 
                     loadedPlayers.push(fallbackPlayer);
                 }
-            }
+            });
+
+            console.log(`✅ Total player cards created: ${loadedPlayers.length}`);
             setPlayers(loadedPlayers);
         } catch (error) {
-            console.error('Error loading players:', error);
+            console.error('❌ Error loading players:', error);
+            setError('Не удалось загрузить данные игроков');
         } finally {
             setLoading(false);
         }
