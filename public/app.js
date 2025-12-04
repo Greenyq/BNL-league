@@ -1592,6 +1592,66 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                                         📅 {new Date(match.scheduledDate).toLocaleString('ru-RU')}
                                     </div>
                                 )}
+                                {match.status === 'completed' && match.w3championsMatchId && (
+                                    <div style={{ marginTop: '15px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                        <a
+                                            href={`https://w3champions.com/match/${match.w3championsMatchId}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                padding: '8px 16px',
+                                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                                color: '#fff',
+                                                borderRadius: '8px',
+                                                textDecoration: 'none',
+                                                fontSize: '0.9em',
+                                                fontWeight: '600',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.target.style.transform = 'translateY(-2px)';
+                                                e.target.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.target.style.transform = 'translateY(0)';
+                                                e.target.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
+                                            }}
+                                        >
+                                            📺 Смотреть в W3Champions
+                                        </a>
+                                        <a
+                                            href={`w3champions://match/${match.w3championsMatchId}`}
+                                            style={{
+                                                padding: '8px 16px',
+                                                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                                                color: '#fff',
+                                                borderRadius: '8px',
+                                                textDecoration: 'none',
+                                                fontSize: '0.9em',
+                                                fontWeight: '600',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                                boxShadow: '0 4px 15px rgba(240, 147, 251, 0.4)'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.target.style.transform = 'translateY(-2px)';
+                                                e.target.style.boxShadow = '0 6px 20px rgba(240, 147, 251, 0.6)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.target.style.transform = 'translateY(0)';
+                                                e.target.style.boxShadow = '0 4px 15px rgba(240, 147, 251, 0.4)';
+                                            }}
+                                        >
+                                            🎮 Открыть в клиенте
+                                        </a>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>

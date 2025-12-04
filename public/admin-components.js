@@ -1676,7 +1676,8 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
         team1Id: null, team2Id: null,
         player1Id: null, player2Id: null,
         winnerId: null, points: 50, notes: '',
-        status: 'upcoming', scheduledDate: ''
+        status: 'upcoming', scheduledDate: '',
+        w3championsMatchId: ''
     });
 
     const handleSubmit = async (e) => {
@@ -1711,7 +1712,8 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                     team1Id: null, team2Id: null,
                     player1Id: null, player2Id: null,
                     winnerId: null, points: 50, notes: '',
-                    status: 'upcoming', scheduledDate: ''
+                    status: 'upcoming', scheduledDate: '',
+                    w3championsMatchId: ''
                 });
                 onUpdate();
             }
@@ -1904,6 +1906,24 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                         min="1"
                                         required
                                     />
+                                </div>
+                                <div style={{ marginBottom: '15px' }}>
+                                    <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>
+                                        📺 W3Champions Match ID (для FlowTV, опционально)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.w3championsMatchId}
+                                        onChange={(e) => setFormData({...formData, w3championsMatchId: e.target.value})}
+                                        style={{
+                                            width: '100%', padding: '10px', borderRadius: '8px',
+                                            border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                        }}
+                                        placeholder="Например: 5f9a8b7c6d5e4f3a2b1c0d9e"
+                                    />
+                                    <div style={{ fontSize: '0.85em', color: '#888', marginTop: '5px' }}>
+                                        💡 Найдите матч на w3champions.com и скопируйте ID из URL
+                                    </div>
                                 </div>
                             </>
                         )}
