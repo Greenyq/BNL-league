@@ -384,7 +384,11 @@ function App() {
 
             // Add achievement bonuses
             achs.forEach(achKey => {
-                totalPoints += achievements[achKey].points;
+                if (achievements[achKey]) {
+                    totalPoints += achievements[achKey].points;
+                } else {
+                    console.error(`❌ Achievement '${achKey}' not found in achievements object`);
+                }
             });
 
             console.log(`Profile for ${battleTag} - ${raceNames[raceInt]}:`, {
@@ -468,6 +472,9 @@ function App() {
                 break;
             }
         }
+
+        // Debug logging for achievements
+        console.log(`🏆 Achievement check: wins=${wins}, losses=${losses}, points=${points}, totalGames=${totalGames}, maxWinStreak=${maxWinStreak}, achievements=${achs.join(', ') || 'none'}`);
 
         return achs;
     };
@@ -1871,7 +1878,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                                         marginTop: '20px'
                                     }}>
                                         <a
-                                            href={`https://w3champions.com/match/${match.id}`}
+                                            href={`https://www.w3champions.com/MatchHistory?matchId=${match.id}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             style={{
@@ -1900,7 +1907,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                                             📺 Смотреть LIVE в браузере
                                         </a>
                                         <a
-                                            href={`w3champions://match/${match.id}`}
+                                            href={`flowtv://match?matchId=${match.id}`}
                                             style={{
                                                 padding: '12px 24px',
                                                 background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -1924,7 +1931,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                                                 e.target.style.boxShadow = '0 4px 20px rgba(240, 147, 251, 0.5)';
                                             }}
                                         >
-                                            🎮 Открыть в клиенте
+                                            🎮 Открыть в FlowTV
                                         </a>
                                     </div>
                                 </div>
