@@ -751,6 +751,39 @@ function Rules() {
                                 💡 Ачивки могут быть выполнены несколько раз, каждый раз давая бонусные очки!
                             </p>
                         </div>
+
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '10px',
+                            marginTop: '20px',
+                            border: '2px solid #c9a961'
+                        }}>
+                            <h4 style={{ fontSize: '1.3em', color: '#c9a961', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span>🖼️</span> Портреты — награды за очки
+                            </h4>
+                            <p style={{ color: '#e0e0e0', lineHeight: '1.6', marginBottom: '15px' }}>
+                                По мере накопления очков вы разблокируете уникальные портреты для своей расы!
+                                Каждый портрет требует определенное количество очков для разблокировки:
+                            </p>
+                            <ul style={{ marginLeft: '20px', marginBottom: '15px', color: '#e0e0e0' }}>
+                                <li style={{ marginBottom: '10px' }}>
+                                    Портреты доступны только для вашей расы (Human, Orc, Night Elf, Undead, Random)
+                                </li>
+                                <li style={{ marginBottom: '10px' }}>
+                                    Каждый портрет требует определенное количество очков (от 0 до 1000+)
+                                </li>
+                                <li style={{ marginBottom: '10px' }}>
+                                    Выберите портрет в своем профиле после привязки BattleTag
+                                </li>
+                                <li style={{ marginBottom: '10px' }}>
+                                    Портрет отображается на вашей карточке игрока
+                                </li>
+                            </ul>
+                            <p style={{ fontSize: '0.9em', color: '#c9a961', fontStyle: 'italic', marginTop: '15px' }}>
+                                🎨 Собирайте очки, чтобы открыть все портреты вашей расы!
+                            </p>
+                        </div>
                         <div style={{
                             background: '#2a2a2a',
                             padding: '20px',
@@ -2736,6 +2769,20 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
     };
 
     const handleSelectPortrait = async (portraitId) => {
+        // Find the portrait to check points requirement
+        const portrait = portraits.find(p => p.id === portraitId);
+        if (!portrait) {
+            alert('Портрет не найден');
+            return;
+        }
+
+        // Check if player has enough points
+        const playerPoints = playerData?.points || 0;
+        if (playerPoints < portrait.pointsRequired) {
+            alert(`❌ Недостаточно очков!\n\nДля этого портрета требуется: ${portrait.pointsRequired} очков\nУ вас сейчас: ${playerPoints} очков\n\nЗаработайте еще ${portrait.pointsRequired - playerPoints} очков, чтобы разблокировать этот портрет!`);
+            return;
+        }
+
         try {
             const response = await fetch(`${API_BASE}/api/players/auth/select-portrait`, {
                 method: 'PUT',
@@ -2753,7 +2800,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                 // Refresh player data in main app so portrait shows in Players tab
                 onUpdate();
                 fetchPlayerData();
-                alert('Портрет успешно выбран!');
+                alert('✅ Портрет успешно выбран!');
             } else {
                 alert(data.error || 'Ошибка выбора портрета');
             }
@@ -2773,19 +2820,22 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
     const getAvailablePortraits = () => {
         if (!playerData) return [];
 
-        const playerPoints = playerData.points || 0;
         const playerRace = playerData.race;
 
+        // Show ALL portraits for player's race (not just unlocked ones)
         return portraits.filter(portrait => {
-            // Check points requirement
-            if (playerPoints < portrait.pointsRequired) return false;
-
             // Check race - each portrait is only available for its specific race
             // Race 0 (Random) portraits are only for Random players
             if (portrait.race !== playerRace) return false;
 
             return true;
         }).sort((a, b) => a.pointsRequired - b.pointsRequired);
+    };
+
+    const isPortraitUnlocked = (portrait) => {
+        if (!playerData) return false;
+        const playerPoints = playerData.points || 0;
+        return playerPoints >= portrait.pointsRequired;
     };
 
     return (
@@ -2950,53 +3000,78 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                     gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
                                     gap: '15px'
                                 }}>
-                                    {getAvailablePortraits().map(portrait => (
-                                        <div
-                                            key={portrait.id}
-                                            onClick={() => handleSelectPortrait(portrait.id)}
-                                            style={{
-                                                background: '#2a2a2a',
-                                                padding: '15px',
-                                                borderRadius: '12px',
-                                                cursor: 'pointer',
-                                                border: playerData.selectedPortraitId === portrait.id
-                                                    ? '3px solid #4caf50'
-                                                    : '2px solid #444',
-                                                transition: 'transform 0.2s, border-color 0.2s'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (playerData.selectedPortraitId !== portrait.id) {
-                                                    e.currentTarget.style.borderColor = '#c9a961';
-                                                }
-                                                e.currentTarget.style.transform = 'scale(1.05)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (playerData.selectedPortraitId !== portrait.id) {
-                                                    e.currentTarget.style.borderColor = '#444';
-                                                }
-                                                e.currentTarget.style.transform = 'scale(1)';
-                                            }}
-                                        >
-                                            <img
-                                                src={portrait.imageUrl}
-                                                alt={portrait.name}
+                                    {getAvailablePortraits().map(portrait => {
+                                        const unlocked = isPortraitUnlocked(portrait);
+                                        const isSelected = playerData.selectedPortraitId === portrait.id;
+
+                                        return (
+                                            <div
+                                                key={portrait.id}
+                                                onClick={() => handleSelectPortrait(portrait.id)}
                                                 style={{
-                                                    width: '100%',
-                                                    height: '100px',
-                                                    objectFit: 'cover',
-                                                    borderRadius: '8px',
-                                                    marginBottom: '10px'
+                                                    background: '#2a2a2a',
+                                                    padding: '15px',
+                                                    borderRadius: '12px',
+                                                    cursor: 'pointer',
+                                                    border: isSelected
+                                                        ? '3px solid #4caf50'
+                                                        : unlocked
+                                                        ? '2px solid #444'
+                                                        : '2px solid #ff9800',
+                                                    transition: 'transform 0.2s, border-color 0.2s',
+                                                    opacity: unlocked ? 1 : 0.6,
+                                                    position: 'relative'
                                                 }}
-                                            />
-                                            <div style={{
-                                                color: '#fff',
-                                                fontSize: '0.85em',
-                                                fontWeight: '600',
-                                                textAlign: 'center',
-                                                marginBottom: '5px'
-                                            }}>
-                                                {portrait.name}
-                                            </div>
+                                                onMouseEnter={(e) => {
+                                                    if (!isSelected) {
+                                                        e.currentTarget.style.borderColor = unlocked ? '#c9a961' : '#ff9800';
+                                                    }
+                                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (!isSelected) {
+                                                        e.currentTarget.style.borderColor = unlocked ? '#444' : '#ff9800';
+                                                    }
+                                                    e.currentTarget.style.transform = 'scale(1)';
+                                                }}
+                                            >
+                                                {!unlocked && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        top: '10px',
+                                                        right: '10px',
+                                                        background: 'rgba(255, 152, 0, 0.9)',
+                                                        color: '#fff',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '6px',
+                                                        fontSize: '0.75em',
+                                                        fontWeight: '700',
+                                                        zIndex: 1
+                                                    }}>
+                                                        🔒 {portrait.pointsRequired}
+                                                    </div>
+                                                )}
+                                                <img
+                                                    src={portrait.imageUrl}
+                                                    alt={portrait.name}
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '100px',
+                                                        objectFit: 'cover',
+                                                        borderRadius: '8px',
+                                                        marginBottom: '10px',
+                                                        filter: unlocked ? 'none' : 'brightness(0.5) grayscale(0.5)'
+                                                    }}
+                                                />
+                                                <div style={{
+                                                    color: '#fff',
+                                                    fontSize: '0.85em',
+                                                    fontWeight: '600',
+                                                    textAlign: 'center',
+                                                    marginBottom: '5px'
+                                                }}>
+                                                    {portrait.name}
+                                                </div>
                                             <div style={{
                                                 color: '#c9a961',
                                                 fontSize: '0.75em',
@@ -3004,7 +3079,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                             }}>
                                                 {portrait.pointsRequired} очков
                                             </div>
-                                            {playerData.selectedPortraitId === portrait.id && (
+                                            {isSelected && (
                                                 <div style={{
                                                     color: '#4caf50',
                                                     fontSize: '0.75em',
@@ -3016,7 +3091,8 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                                 </div>
                                             )}
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
