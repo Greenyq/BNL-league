@@ -266,6 +266,35 @@ function App() {
         // Sort matches by start time (oldest first) to ensure correct chronological order
         recentMatches.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
+        // Build complete match history for ALL races (for streak achievements)
+        const allMatchHistory = [];
+        recentMatches.forEach(match => {
+            const playerTeam = match.teams.find(team =>
+                team.players.some(p => p.battleTag === battleTag)
+            );
+            if (!playerTeam) return;
+
+            const player = playerTeam.players.find(p => p.battleTag === battleTag);
+            if (!player) return;
+
+            const opponentTeam = match.teams.find(team => team !== playerTeam);
+            if (!opponentTeam) return;
+
+            const opponent = opponentTeam.players[0];
+            const won = playerTeam.won;
+            const playerMMR = player.oldMmr || player.currentMmr || 1500;
+            const opponentMMR = opponent.oldMmr || opponent.currentMmr || 1500;
+            const mmrDiff = opponentMMR - playerMMR;
+
+            allMatchHistory.push({
+                result: won ? 'win' : 'loss',
+                mmrDiff,
+                playerMMR,
+                opponentMMR,
+                race: player.race
+            });
+        });
+
         // Group matches by race
         const matchesByRace = {};
         const mmrByRace = {};
@@ -380,7 +409,9 @@ function App() {
             });
 
             // Determine achievements for this race
-            const achs = determineAchievements(wins, losses, totalPoints, raceMatches.length, matchHistory);
+            // Use allMatchHistory for streak achievements (across all races)
+            const allMatchHistoryReversed = [...allMatchHistory].reverse(); // Most recent first
+            const achs = determineAchievements(wins, losses, totalPoints, raceMatches.length, matchHistory, allMatchHistoryReversed);
 
             // Add achievement bonuses
             achs.forEach(achKey => {
@@ -413,17 +444,17 @@ function App() {
         return profiles;
     };
 
-    const determineAchievements = (wins, losses, points, totalGames, matchHistory = []) => {
+    const determineAchievements = (wins, losses, points, totalGames, matchHistory = [], allMatchHistory = []) => {
         const achs = [];
 
-        // Basic achievements
+        // Basic achievements (based on current race stats)
         if (wins >= 100) achs.push('centurion');
         if (wins >= 10) achs.push('gladiator');
         if (totalGames >= 500) achs.push('veteran');
         if (points >= 1000) achs.push('goldRush');
 
-        // Analyze streaks (check last 10 matches)
-        const recentMatches = matchHistory.slice(0, 10);
+        // Analyze streaks (check last 10 matches ACROSS ALL RACES)
+        const recentMatches = (allMatchHistory.length > 0 ? allMatchHistory : matchHistory).slice(0, 10);
 
         // Check for 3+ win streak
         let currentWinStreak = 0;
@@ -474,7 +505,10 @@ function App() {
         }
 
         // Debug logging for achievements
-        console.log(`🏆 Achievement check: wins=${wins}, losses=${losses}, points=${points}, totalGames=${totalGames}, maxWinStreak=${maxWinStreak}, achievements=${achs.join(', ') || 'none'}`);
+        console.log(`🏆 Achievement check: wins=${wins}, losses=${losses}, points=${points}, totalGames=${totalGames}, maxWinStreak=${maxWinStreak}, recentMatches=${recentMatches.length}, achievements=${achs.join(', ') || 'none'}`);
+        if (allMatchHistory.length > 0) {
+            console.log(`   📊 Recent match sequence (${recentMatches.length} matches):`, recentMatches.slice(0, 10).map(m => m.result).join(' → '));
+        }
 
         return achs;
     };
