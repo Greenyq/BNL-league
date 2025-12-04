@@ -41,10 +41,40 @@ const achievements = {
 const API_BASE = '';
 
 function App() {
-    const [activeTab, setActiveTab] = useState('home');
+    // Initialize activeTab from URL
+    const getTabFromPath = () => {
+        const path = window.location.pathname;
+        const validTabs = ['home', 'players', 'teams', 'schedule', 'stats', 'streamers', 'profile', 'admin'];
+        const tabFromPath = path.substring(1) || 'home'; // Remove leading slash
+        return validTabs.includes(tabFromPath) ? tabFromPath : 'home';
+    };
+
+    const [activeTab, setActiveTab] = useState(getTabFromPath());
     const [players, setPlayers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // Navigate to tab and update URL
+    const navigateTo = (tab) => {
+        setActiveTab(tab);
+        const path = tab === 'home' ? '/' : `/${tab}`;
+        window.history.pushState({ tab }, '', path);
+    };
+
+    // Handle browser back/forward buttons
+    React.useEffect(() => {
+        const handlePopState = (event) => {
+            const tab = event.state?.tab || getTabFromPath();
+            setActiveTab(tab);
+        };
+
+        window.addEventListener('popstate', handlePopState);
+
+        // Set initial state
+        window.history.replaceState({ tab: activeTab }, '', activeTab === 'home' ? '/' : `/${activeTab}`);
+
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
     
     // Admin states
     const [isAdmin, setIsAdmin] = useState(false);
@@ -495,7 +525,7 @@ function App() {
                 <Header activeTab={activeTab} />
                 <Nav
                     activeTab={activeTab}
-                    setActiveTab={setActiveTab}
+                    setActiveTab={navigateTo}
                     isAdmin={isAdmin}
                     setShowLoginModal={setShowLoginModal}
                 />
@@ -511,7 +541,7 @@ function App() {
             <Header activeTab={activeTab} />
             <Nav
                 activeTab={activeTab}
-                setActiveTab={setActiveTab}
+                setActiveTab={navigateTo}
                 isAdmin={isAdmin}
                 setShowLoginModal={setShowLoginModal}
                 playerUser={playerUser}
@@ -538,7 +568,7 @@ function App() {
                             localStorage.removeItem('playerSessionId');
                             setPlayerSessionId(null);
                             setPlayerUser(null);
-                            setActiveTab('home');
+                            navigateTo('home');
                         }}
                     />
                 )}
@@ -557,7 +587,7 @@ function App() {
                             localStorage.removeItem('adminSessionId');
                             setSessionId(null);
                             setIsAdmin(false);
-                            setActiveTab('home');
+                            navigateTo('home');
                         }}
                     />
                 )}
@@ -572,7 +602,7 @@ function App() {
                         setIsAdmin(true);
                         localStorage.setItem('adminSessionId', newSessionId);
                         setShowLoginModal(false);
-                        setActiveTab('admin');
+                        navigateTo('admin');
                     }}
                 />
             )}
@@ -585,7 +615,7 @@ function App() {
                         setPlayerSessionId(newSessionId);
                         setPlayerUser(user);
                         setShowPlayerAuthModal(false);
-                        setActiveTab('profile');
+                        navigateTo('profile');
                     }}
                 />
             )}
@@ -1096,31 +1126,31 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                     </div>
                 </div>
 
-                {player.achievements && player.achievements.length > 0 && (
-                    <div className="achievement-icons" style={{
-                        display: 'flex',
-                        gap: '8px',
-                        padding: '10px 15px',
-                        flexWrap: 'wrap',
-                        borderTop: '1px solid rgba(201, 169, 97, 0.2)',
-                        borderBottom: '1px solid rgba(201, 169, 97, 0.2)',
-                        margin: '10px 0'
-                    }}>
-                        {player.achievements.map(achKey => {
-                            const ach = achievements[achKey];
-                            return (
-                                <div key={achKey} className="achievement-icon">
-                                    {ach.icon}
-                                    <div className="achievement-tooltip">
-                                        <div style={{ fontWeight: '700' }}>{ach.name}</div>
-                                        <div style={{ color: '#888', fontSize: '0.9em', marginTop: '3px' }}>{ach.desc}</div>
-                                        <div style={{ color: '#4caf50', marginTop: '5px' }}>+{ach.points} pts</div>
-                                    </div>
+                {/* Always render achievements container to maintain consistent layout */}
+                <div className="achievement-icons" style={{
+                    display: 'flex',
+                    gap: '8px',
+                    padding: player.achievements && player.achievements.length > 0 ? '10px 15px' : '0',
+                    flexWrap: 'wrap',
+                    borderTop: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : 'none',
+                    borderBottom: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : 'none',
+                    margin: '10px 0',
+                    minHeight: player.achievements && player.achievements.length > 0 ? 'auto' : '0'
+                }}>
+                    {player.achievements && player.achievements.map(achKey => {
+                        const ach = achievements[achKey];
+                        return (
+                            <div key={achKey} className="achievement-icon">
+                                {ach.icon}
+                                <div className="achievement-tooltip">
+                                    <div style={{ fontWeight: '700' }}>{ach.name}</div>
+                                    <div style={{ color: '#888', fontSize: '0.9em', marginTop: '3px' }}>{ach.desc}</div>
+                                    <div style={{ color: '#4caf50', marginTop: '5px' }}>+{ach.points} pts</div>
                                 </div>
-                            );
-                        })}
-                    </div>
-                )}
+                            </div>
+                        );
+                    })}
+                </div>
 
                 {player.matchHistory && player.matchHistory.length > 0 && (
                     <div className="match-graph">
