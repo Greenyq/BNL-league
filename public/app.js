@@ -159,47 +159,33 @@ function App() {
 
     const loadPlayers = async () => {
         try {
-            // Загружаем игроков из API (добавленных через админку)
-            const playersResponse = await fetch(`${API_BASE}/api/players`);
-            const apiPlayers = await playersResponse.json();
-            
+            console.log('🔄 Loading players with cache...');
+
+            // Use cached endpoint - much faster!
+            const response = await fetch(`${API_BASE}/api/players/with-cache`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const cachedPlayers = await response.json();
+            console.log(`✅ Loaded ${cachedPlayers.length} player profiles from cache`);
+
             const loadedPlayers = [];
 
-            // Если игроков нет в админке, используем дефолтных
-            const playersToLoad = apiPlayers.length > 0 ? apiPlayers : [
-                { battleTag: "ZugZugMaster#1399", name: "ZugZugMaster", teamId: null },
-                { battleTag: "ЖИВОТНОЕ#21901", name: "ЖИВОТНОЕ", teamId: null },
-                { battleTag: "jabker#2902", name: "jabker", teamId: null }
-            ];
+            // Process each cached player
+            cachedPlayers.forEach((player, i) => {
+                // If player has matchData, process it
+                if (player.matchData && player.matchData.length > 0) {
+                    console.log(`Processing ${player.battleTag} with ${player.matchData.length} matches`);
 
-            for (let i = 0; i < playersToLoad.length; i++) {
-                const player = playersToLoad[i];
-                const tag = player.battleTag;
-
-                console.log(`Loading player ${i+1}/${playersToLoad.length}:`, {
-                    battleTag: tag,
-                    dbRace: player.race,
-                    dbMmr: player.currentMmr,
-                    teamId: player.teamId
-                });
-
-                try {
-                    const response = await fetch(`${API_BASE}/api/matches/${encodeURIComponent(tag)}?gateway=20&season=23&pageSize=100`);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                    const matchesData = await response.json();
-                    console.log(`✅ Matches loaded for ${tag}: ${matchesData.count} matches`);
-
-                    // processMatches now returns array of profiles (one per race)
-                    const playerProfiles = processMatches(tag, matchesData.matches || []);
-                    console.log(`Profiles created for ${tag}:`, playerProfiles.length);
+                    // processMatches returns array of profiles (one per race)
+                    const playerProfiles = processMatches(player.battleTag, player.matchData);
+                    console.log(`Profiles created for ${player.battleTag}:`, playerProfiles.length);
 
                     // Create a card for each race profile
-                    playerProfiles.forEach((profile, profileIndex) => {
+                    playerProfiles.forEach((profile) => {
                         const finalPlayer = {
-                            id: `${player.id || (i + 1)}_${profile.race}`,
-                            name: player.name || tag.split('#')[0],
-                            battleTag: tag,
+                            id: `${player.id}_${profile.race}`,
+                            name: player.name || player.battleTag.split('#')[0],
+                            battleTag: player.battleTag,
                             ...profile,
                             // Use race from profile
                             race: profile.race || player.race || 0,
@@ -211,23 +197,15 @@ function App() {
                             discordTag: player.discordTag || null,
                         };
 
-                        console.log(`Final player card for ${tag} - ${raceNames[profile.race]}:`, {
-                            race: finalPlayer.race,
-                            mmr: finalPlayer.mmr,
-                            wins: finalPlayer.wins,
-                            points: finalPlayer.points,
-                            selectedPortraitId: finalPlayer.selectedPortraitId
-                        });
-
                         loadedPlayers.push(finalPlayer);
                     });
-                } catch (error) {
-                    console.error(`❌ Error loading ${tag}:`, error);
-                    // Use data from database when API fails
+                } else {
+                    // No match data - use database info as fallback
+                    console.log(`No match data for ${player.battleTag}, using DB data`);
                     const fallbackPlayer = {
-                        id: player.id || (i + 1),
-                        name: player.name || tag.split('#')[0],
-                        battleTag: tag,
+                        id: player.id,
+                        name: player.name || player.battleTag.split('#')[0],
+                        battleTag: player.battleTag,
                         race: player.race || 0,
                         mmr: player.currentMmr || 0,
                         wins: 0,
@@ -243,17 +221,20 @@ function App() {
                         error: true
                     };
 
-                    console.log(`Using fallback data for ${tag}:`, {
+                    console.log(`Using fallback data for ${player.battleTag}:`, {
                         race: fallbackPlayer.race,
                         mmr: fallbackPlayer.mmr
                     });
 
                     loadedPlayers.push(fallbackPlayer);
                 }
-            }
+            });
+
+            console.log(`✅ Total player cards created: ${loadedPlayers.length}`);
             setPlayers(loadedPlayers);
         } catch (error) {
-            console.error('Error loading players:', error);
+            console.error('❌ Error loading players:', error);
+            setError('Не удалось загрузить данные игроков');
         } finally {
             setLoading(false);
         }
@@ -695,10 +676,81 @@ function Rules() {
                             <li style={{ marginBottom: '10px' }}>
                                 <strong style={{ color: '#f44336' }}>-70 очков</strong> — поражение от слабого соперника (разница MMR -20 и ниже)
                             </li>
-                            <li style={{ marginBottom: '10px' }}>
-                                <strong style={{ color: '#c9a961' }}>Бонус</strong> — дополнительные очки за каждую ачивку
-                            </li>
                         </ul>
+
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '10px',
+                            marginTop: '20px',
+                            marginBottom: '20px'
+                        }}>
+                            <h4 style={{ fontSize: '1.3em', color: '#c9a961', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span>🏅</span> Ачивки — дополнительные очки
+                            </h4>
+                            <p style={{ color: '#e0e0e0', marginBottom: '15px' }}>
+                                Выполняя особые достижения, вы получаете бонусные очки, которые добавляются к вашему счету:
+                            </p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        🔥 <strong>On Fire</strong> — <span style={{ color: '#4caf50' }}>+30 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>3 победы подряд</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        🔥🔥 <strong>Hot Streak</strong> — <span style={{ color: '#4caf50' }}>+50 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>5 побед подряд</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        ⚔️ <strong>И кто тут папа?</strong> — <span style={{ color: '#4caf50' }}>+25 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>Победа над игроком с +50 MMR</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        💪 <strong>Не расстраивайся</strong> — <span style={{ color: '#4caf50' }}>+10 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>3 поражения подряд (не сдавайся!)</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        💯 <strong>Centurion</strong> — <span style={{ color: '#4caf50' }}>+50 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>100 побед за все время</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        🏛️ <strong>Gladiator</strong> — <span style={{ color: '#4caf50' }}>+20 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>10+ побед на этой неделе</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        💰 <strong>Gold Rush</strong> — <span style={{ color: '#4caf50' }}>+30 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>Достигли 1000+ очков</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        ↩️ <strong>Comeback</strong> — <span style={{ color: '#4caf50' }}>+20 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>Победа после 3 поражений</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        🎖️ <strong>Veteran</strong> — <span style={{ color: '#4caf50' }}>+35 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>500+ игр за все время</div>
+                                </div>
+                            </div>
+                            <p style={{ fontSize: '0.9em', color: '#888', marginTop: '15px', fontStyle: 'italic' }}>
+                                💡 Ачивки могут быть выполнены несколько раз, каждый раз давая бонусные очки!
+                            </p>
+                        </div>
                         <div style={{
                             background: '#2a2a2a',
                             padding: '20px',
@@ -2720,17 +2772,18 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
 
     const getAvailablePortraits = () => {
         if (!playerData) return [];
-        
+
         const playerPoints = playerData.points || 0;
         const playerRace = playerData.race;
 
         return portraits.filter(portrait => {
             // Check points requirement
             if (playerPoints < portrait.pointsRequired) return false;
-            
-            // Check race (0 = Random, available for all)
-            if (portrait.race !== 0 && portrait.race !== playerRace) return false;
-            
+
+            // Check race - each portrait is only available for its specific race
+            // Race 0 (Random) portraits are only for Random players
+            if (portrait.race !== playerRace) return false;
+
             return true;
         }).sort((a, b) => a.pointsRequired - b.pointsRequired);
     };

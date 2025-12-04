@@ -151,6 +151,25 @@ const passwordResetSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+// Player Cache Schema - for caching W3Champions match data
+const playerCacheSchema = new mongoose.Schema({
+    battleTag: { type: String, required: true, unique: true },
+    matchData: { type: Array, default: [] }, // Raw match data from W3Champions
+    profiles: { type: Array, default: [] }, // Processed profiles by race
+    lastUpdated: { type: Date, default: Date.now },
+    expiresAt: { type: Date, required: true } // Cache expiration (e.g., 10 minutes)
+});
+
+// Transform _id to id for JSON responses
+playerCacheSchema.set('toJSON', {
+    virtuals: true,
+    versionKey: false,
+    transform: function (doc, ret) {
+        ret.id = ret._id.toString();
+        delete ret._id;
+    }
+});
+
 module.exports = {
     Team: mongoose.model('Team', teamSchema),
     Player: mongoose.model('Player', playerSchema),
@@ -160,5 +179,6 @@ module.exports = {
     AdminSession: mongoose.model('AdminSession', adminSessionSchema),
     PlayerUser: mongoose.model('PlayerUser', playerUserSchema),
     PlayerSession: mongoose.model('PlayerSession', playerSessionSchema),
-    PasswordReset: mongoose.model('PasswordReset', passwordResetSchema)
+    PasswordReset: mongoose.model('PasswordReset', passwordResetSchema),
+    PlayerCache: mongoose.model('PlayerCache', playerCacheSchema)
 };
