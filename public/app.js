@@ -2791,17 +2791,18 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
 
     const getAvailablePortraits = () => {
         if (!playerData) return [];
-        
+
         const playerPoints = playerData.points || 0;
         const playerRace = playerData.race;
 
         return portraits.filter(portrait => {
             // Check points requirement
             if (playerPoints < portrait.pointsRequired) return false;
-            
-            // Check race (0 = Random, available for all)
-            if (portrait.race !== 0 && portrait.race !== playerRace) return false;
-            
+
+            // Check race - each portrait is only available for its specific race
+            // Race 0 (Random) portraits are only for Random players
+            if (portrait.race !== playerRace) return false;
+
             return true;
         }).sort((a, b) => a.pointsRequired - b.pointsRequired);
     };
