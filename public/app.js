@@ -1384,6 +1384,34 @@ function Teams({ teams, players, allPlayers }) {
 }
 
 function Schedule({ schedule, teams, allPlayers, teamMatches }) {
+    const [subTab, setSubTab] = React.useState('schedule');
+    const [liveMatches, setLiveMatches] = React.useState([]);
+    const [loadingLive, setLoadingLive] = React.useState(false);
+
+    // Fetch live matches
+    const fetchLiveMatches = async () => {
+        setLoadingLive(true);
+        try {
+            const response = await fetch(`${API_BASE}/api/live-matches`);
+            const data = await response.json();
+            setLiveMatches(data.matches || []);
+        } catch (error) {
+            console.error('Error fetching live matches:', error);
+            setLiveMatches([]);
+        } finally {
+            setLoadingLive(false);
+        }
+    };
+
+    // Auto-refresh live matches every 30 seconds
+    React.useEffect(() => {
+        if (subTab === 'live') {
+            fetchLiveMatches();
+            const interval = setInterval(fetchLiveMatches, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [subTab]);
+
     // Generate unique color for each team based on ID
     const getTeamColor = (teamId) => {
         const colors = [
@@ -1444,9 +1472,71 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
     
     return (
         <div>
-            <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>Расписание матчей</h2>
-            
-            {Object.values(matchesByTeams).map((matchup, idx) => {
+            <h2 style={{ fontSize: '2em', marginBottom: '20px', color: '#c9a961' }}>Расписание матчей</h2>
+
+            {/* Sub-tabs */}
+            <div style={{
+                display: 'flex',
+                gap: '15px',
+                marginBottom: '30px',
+                borderBottom: '2px solid #333',
+                paddingBottom: '10px'
+            }}>
+                <button
+                    onClick={() => setSubTab('schedule')}
+                    style={{
+                        padding: '12px 24px',
+                        borderRadius: '8px 8px 0 0',
+                        background: subTab === 'schedule' ? '#c9a961' : '#2a2a2a',
+                        color: subTab === 'schedule' ? '#000' : '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '1em',
+                        transition: 'all 0.3s ease'
+                    }}
+                >
+                    📅 Расписание
+                </button>
+                <button
+                    onClick={() => setSubTab('live')}
+                    style={{
+                        padding: '12px 24px',
+                        borderRadius: '8px 8px 0 0',
+                        background: subTab === 'live' ? '#c9a961' : '#2a2a2a',
+                        color: subTab === 'live' ? '#000' : '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '1em',
+                        transition: 'all 0.3s ease',
+                        position: 'relative'
+                    }}
+                >
+                    🔴 Live Games
+                    {subTab === 'live' && liveMatches.length > 0 && (
+                        <span style={{
+                            position: 'absolute',
+                            top: '-5px',
+                            right: '-5px',
+                            background: '#f44336',
+                            color: '#fff',
+                            borderRadius: '50%',
+                            width: '24px',
+                            height: '24px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.75em',
+                            fontWeight: '700'
+                        }}>
+                            {liveMatches.length}
+                        </span>
+                    )}
+                </button>
+            </div>
+
+            {subTab === 'schedule' && Object.values(matchesByTeams).map((matchup, idx) => {
                 const totalPoints = matchup.team1Points + matchup.team2Points;
                 const team1Percent = totalPoints > 0 ? (matchup.team1Points / totalPoints) * 100 : 50;
                 const team2Percent = totalPoints > 0 ? (matchup.team2Points / totalPoints) * 100 : 50;
@@ -1592,11 +1682,257 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                                         📅 {new Date(match.scheduledDate).toLocaleString('ru-RU')}
                                     </div>
                                 )}
+                                {match.status === 'completed' && match.w3championsMatchId && (
+                                    <div style={{ marginTop: '15px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                        <a
+                                            href={`https://w3champions.com/match/${match.w3championsMatchId}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                padding: '8px 16px',
+                                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                                color: '#fff',
+                                                borderRadius: '8px',
+                                                textDecoration: 'none',
+                                                fontSize: '0.9em',
+                                                fontWeight: '600',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.target.style.transform = 'translateY(-2px)';
+                                                e.target.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.target.style.transform = 'translateY(0)';
+                                                e.target.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
+                                            }}
+                                        >
+                                            📺 Смотреть в W3Champions
+                                        </a>
+                                        <a
+                                            href={`w3champions://match/${match.w3championsMatchId}`}
+                                            style={{
+                                                padding: '8px 16px',
+                                                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                                                color: '#fff',
+                                                borderRadius: '8px',
+                                                textDecoration: 'none',
+                                                fontSize: '0.9em',
+                                                fontWeight: '600',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                                boxShadow: '0 4px 15px rgba(240, 147, 251, 0.4)'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.target.style.transform = 'translateY(-2px)';
+                                                e.target.style.boxShadow = '0 6px 20px rgba(240, 147, 251, 0.6)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.target.style.transform = 'translateY(0)';
+                                                e.target.style.boxShadow = '0 4px 15px rgba(240, 147, 251, 0.4)';
+                                            }}
+                                        >
+                                            🎮 Открыть в клиенте
+                                        </a>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
                 );
             })}
+
+            {subTab === 'live' && (
+                <div>
+                    {loadingLive ? (
+                        <div style={{
+                            padding: '60px',
+                            textAlign: 'center',
+                            background: '#1a1a1a',
+                            borderRadius: '15px',
+                            border: '2px solid #c9a961'
+                        }}>
+                            <div style={{ fontSize: '3em', marginBottom: '20px' }}>⏳</div>
+                            <div style={{ color: '#c9a961', fontSize: '1.2em' }}>Загрузка live матчей...</div>
+                        </div>
+                    ) : liveMatches.length === 0 ? (
+                        <div style={{
+                            padding: '60px',
+                            textAlign: 'center',
+                            background: '#1a1a1a',
+                            borderRadius: '15px',
+                            border: '2px solid #333'
+                        }}>
+                            <div style={{ fontSize: '3em', marginBottom: '20px' }}>😴</div>
+                            <div style={{ color: '#888', fontSize: '1.2em', marginBottom: '10px' }}>
+                                Сейчас никто из ваших игроков не играет
+                            </div>
+                            <div style={{ color: '#666', fontSize: '0.9em' }}>
+                                Обновление каждые 30 секунд
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
+                            <div style={{
+                                marginBottom: '20px',
+                                padding: '15px',
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                borderRadius: '12px',
+                                color: '#fff',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}>
+                                <div>
+                                    <div style={{ fontSize: '1.2em', fontWeight: '700' }}>
+                                        🔴 {liveMatches.length} {liveMatches.length === 1 ? 'матч' : 'матчей'} в эфире
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', opacity: 0.9 }}>
+                                        Обновляется автоматически каждые 30 секунд
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={fetchLiveMatches}
+                                    style={{
+                                        padding: '10px 20px',
+                                        background: 'rgba(255,255,255,0.2)',
+                                        color: '#fff',
+                                        border: '2px solid rgba(255,255,255,0.4)',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        fontWeight: '600',
+                                        fontSize: '0.9em',
+                                        transition: 'all 0.3s ease'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.target.style.background = 'rgba(255,255,255,0.3)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.target.style.background = 'rgba(255,255,255,0.2)';
+                                    }}
+                                >
+                                    🔄 Обновить
+                                </button>
+                            </div>
+
+                            {liveMatches.map((match, idx) => (
+                                <div key={match.id || idx} style={{
+                                    background: '#1a1a1a',
+                                    padding: '25px',
+                                    borderRadius: '15px',
+                                    marginBottom: '20px',
+                                    border: '2px solid #667eea',
+                                    boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)'
+                                }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        marginBottom: '20px'
+                                    }}>
+                                        {match.teams.map((team, teamIdx) => (
+                                            <div key={teamIdx} style={{ flex: 1, textAlign: teamIdx === 0 ? 'left' : 'right' }}>
+                                                {team.players.map((player, playerIdx) => (
+                                                    <div key={playerIdx} style={{
+                                                        marginBottom: '10px',
+                                                        padding: '10px',
+                                                        background: player.isOurPlayer ? 'rgba(76, 175, 80, 0.15)' : 'transparent',
+                                                        borderRadius: '8px',
+                                                        border: player.isOurPlayer ? '2px solid #4caf50' : 'none'
+                                                    }}>
+                                                        <div style={{
+                                                            color: player.isOurPlayer ? '#4caf50' : '#fff',
+                                                            fontWeight: player.isOurPlayer ? '700' : '400',
+                                                            fontSize: '1.1em',
+                                                            marginBottom: '5px'
+                                                        }}>
+                                                            {player.isOurPlayer && '⭐ '}
+                                                            {player.playerName}
+                                                        </div>
+                                                        <div style={{ color: '#888', fontSize: '0.85em' }}>
+                                                            MMR: {player.currentMmr || 'N/A'}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div style={{
+                                        display: 'flex',
+                                        gap: '10px',
+                                        justifyContent: 'center',
+                                        marginTop: '20px'
+                                    }}>
+                                        <a
+                                            href={`https://w3champions.com/match/${match.id}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                padding: '12px 24px',
+                                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                                color: '#fff',
+                                                borderRadius: '10px',
+                                                textDecoration: 'none',
+                                                fontSize: '1em',
+                                                fontWeight: '700',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '10px',
+                                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                                boxShadow: '0 4px 20px rgba(102, 126, 234, 0.5)'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.target.style.transform = 'translateY(-3px)';
+                                                e.target.style.boxShadow = '0 8px 30px rgba(102, 126, 234, 0.7)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.target.style.transform = 'translateY(0)';
+                                                e.target.style.boxShadow = '0 4px 20px rgba(102, 126, 234, 0.5)';
+                                            }}
+                                        >
+                                            📺 Смотреть LIVE в браузере
+                                        </a>
+                                        <a
+                                            href={`w3champions://match/${match.id}`}
+                                            style={{
+                                                padding: '12px 24px',
+                                                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                                                color: '#fff',
+                                                borderRadius: '10px',
+                                                textDecoration: 'none',
+                                                fontSize: '1em',
+                                                fontWeight: '700',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '10px',
+                                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                                boxShadow: '0 4px 20px rgba(240, 147, 251, 0.5)'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.target.style.transform = 'translateY(-3px)';
+                                                e.target.style.boxShadow = '0 8px 30px rgba(240, 147, 251, 0.7)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.target.style.transform = 'translateY(0)';
+                                                e.target.style.boxShadow = '0 4px 20px rgba(240, 147, 251, 0.5)';
+                                            }}
+                                        >
+                                            🎮 Открыть в клиенте
+                                        </a>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
