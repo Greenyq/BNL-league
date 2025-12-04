@@ -695,10 +695,81 @@ function Rules() {
                             <li style={{ marginBottom: '10px' }}>
                                 <strong style={{ color: '#f44336' }}>-70 очков</strong> — поражение от слабого соперника (разница MMR -20 и ниже)
                             </li>
-                            <li style={{ marginBottom: '10px' }}>
-                                <strong style={{ color: '#c9a961' }}>Бонус</strong> — дополнительные очки за каждую ачивку
-                            </li>
                         </ul>
+
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '10px',
+                            marginTop: '20px',
+                            marginBottom: '20px'
+                        }}>
+                            <h4 style={{ fontSize: '1.3em', color: '#c9a961', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span>🏅</span> Ачивки — дополнительные очки
+                            </h4>
+                            <p style={{ color: '#e0e0e0', marginBottom: '15px' }}>
+                                Выполняя особые достижения, вы получаете бонусные очки, которые добавляются к вашему счету:
+                            </p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        🔥 <strong>On Fire</strong> — <span style={{ color: '#4caf50' }}>+30 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>3 победы подряд</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        🔥🔥 <strong>Hot Streak</strong> — <span style={{ color: '#4caf50' }}>+50 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>5 побед подряд</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        ⚔️ <strong>И кто тут папа?</strong> — <span style={{ color: '#4caf50' }}>+25 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>Победа над игроком с +50 MMR</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        💪 <strong>Не расстраивайся</strong> — <span style={{ color: '#4caf50' }}>+10 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>3 поражения подряд (не сдавайся!)</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        💯 <strong>Centurion</strong> — <span style={{ color: '#4caf50' }}>+50 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>100 побед за все время</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        🏛️ <strong>Gladiator</strong> — <span style={{ color: '#4caf50' }}>+20 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>10+ побед на этой неделе</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        💰 <strong>Gold Rush</strong> — <span style={{ color: '#4caf50' }}>+30 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>Достигли 1000+ очков</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        ↩️ <strong>Comeback</strong> — <span style={{ color: '#4caf50' }}>+20 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>Победа после 3 поражений</div>
+                                </div>
+                                <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
+                                        🎖️ <strong>Veteran</strong> — <span style={{ color: '#4caf50' }}>+35 очков</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>500+ игр за все время</div>
+                                </div>
+                            </div>
+                            <p style={{ fontSize: '0.9em', color: '#888', marginTop: '15px', fontStyle: 'italic' }}>
+                                💡 Ачивки могут быть выполнены несколько раз, каждый раз давая бонусные очки!
+                            </p>
+                        </div>
                         <div style={{
                             background: '#2a2a2a',
                             padding: '20px',

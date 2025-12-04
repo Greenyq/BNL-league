@@ -2,7 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
-const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession, PasswordReset } = require('./models');
+const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession, PasswordReset, PlayerCache } = require('./models');
 
 const router = express.Router();
 
@@ -59,6 +59,92 @@ router.get('/players', async (req, res) => {
         res.json(players);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch players' });
+    }
+});
+
+// Get all players with cached match data
+router.get('/players/with-cache', async (req, res) => {
+    try {
+        const players = await Player.find();
+        const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
+        const now = Date.now();
+
+        const result = [];
+
+        for (const player of players) {
+            // Check cache first
+            let cache = await PlayerCache.findOne({ battleTag: player.battleTag });
+
+            // If cache exists and not expired, use it
+            if (cache && new Date(cache.expiresAt) > now) {
+                // Return profiles with player data merged
+                const profiles = cache.profiles.map(profile => ({
+                    ...profile,
+                    id: `${player.id}_${profile.race}`,
+                    name: player.name,
+                    battleTag: player.battleTag,
+                    teamId: player.teamId,
+                    selectedPortraitId: player.selectedPortraitId,
+                    discordTag: player.discordTag
+                }));
+                result.push(...profiles);
+                continue;
+            }
+
+            // Cache miss or expired - fetch from W3Champions
+            try {
+                const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=20&season=23&pageSize=100`;
+                const response = await axios.get(apiUrl, {
+                    headers: {
+                        'User-Agent': 'BNL-League-App',
+                        'Accept': 'application/json'
+                    },
+                    timeout: 10000
+                });
+
+                const matchData = response.data.matches || [];
+
+                // Note: processMatches function should be moved to a shared utility
+                // For now, we'll store raw data and process on frontend
+                const profiles = []; // Will be processed on frontend
+
+                // Save to cache
+                const expiresAt = new Date(now + CACHE_DURATION_MS);
+                if (cache) {
+                    cache.matchData = matchData;
+                    cache.profiles = profiles;
+                    cache.lastUpdated = new Date(now);
+                    cache.expiresAt = expiresAt;
+                    await cache.save();
+                } else {
+                    await PlayerCache.create({
+                        battleTag: player.battleTag,
+                        matchData,
+                        profiles,
+                        lastUpdated: new Date(now),
+                        expiresAt
+                    });
+                }
+
+                // Return raw player data for frontend processing
+                result.push({
+                    ...player.toJSON(),
+                    matchData
+                });
+            } catch (error) {
+                console.error(`Error fetching matches for ${player.battleTag}:`, error.message);
+                // Return player without match data
+                result.push({
+                    ...player.toJSON(),
+                    matchData: []
+                });
+            }
+        }
+
+        res.json(result);
+    } catch (error) {
+        console.error('Error in /players/with-cache:', error);
+        res.status(500).json({ error: 'Failed to fetch players with cache' });
     }
 });
 
