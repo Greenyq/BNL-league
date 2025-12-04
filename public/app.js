@@ -422,8 +422,9 @@ function App() {
         if (totalGames >= 500) achs.push('veteran');
         if (points >= 1000) achs.push('goldRush');
 
-        // Analyze streaks (check last 10 matches)
-        const recentMatches = matchHistory.slice(0, 10);
+        // Analyze streaks (check LAST 10 matches, most recent first)
+        // matchHistory is in chronological order (oldest first), so we need to reverse it
+        const recentMatches = [...matchHistory].reverse().slice(0, 10);
 
         // Check for 3+ win streak
         let currentWinStreak = 0;
@@ -475,6 +476,9 @@ function App() {
 
         // Debug logging for achievements
         console.log(`🏆 Achievement check: wins=${wins}, losses=${losses}, points=${points}, totalGames=${totalGames}, maxWinStreak=${maxWinStreak}, achievements=${achs.join(', ') || 'none'}`);
+        if (recentMatches.length > 0) {
+            console.log(`   📊 Recent match sequence (newest → oldest):`, recentMatches.map(m => m.result).join(' → '));
+        }
 
         return achs;
     };
