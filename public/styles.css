@@ -1058,9 +1058,53 @@ input[type="datetime-local"] {
     font-size: 1.5em;
 }
 
-@media (max-width: 768px) {
+/* Mobile & Responsive Design Optimizations */
+
+/* Tablet and smaller desktops */
+@media (max-width: 1024px) {
+    .app {
+        padding: var(--spacing-xl) var(--spacing-lg);
+    }
+
+    .players-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: var(--spacing-lg);
+    }
+
     .league-title {
-        font-size: 2em;
+        font-size: 3em;
+    }
+
+    .nav-btn {
+        padding: 12px 24px;
+        font-size: 0.9em;
+    }
+}
+
+/* Tablets */
+@media (max-width: 768px) {
+    :root {
+        --spacing-xxl: 30px;
+        --spacing-xl: 25px;
+    }
+
+    .league-title {
+        font-size: 2.5em;
+    }
+
+    .nav {
+        padding: var(--spacing-sm) 0;
+    }
+
+    .nav-container {
+        gap: 3px;
+        padding: 0 var(--spacing-md);
+    }
+
+    .nav-btn {
+        padding: 10px 16px;
+        font-size: 0.8em;
+        letter-spacing: 0;
     }
 
     .player-header {
@@ -1073,10 +1117,163 @@ input[type="datetime-local"] {
     }
 
     .points-value {
-        font-size: 4em;
+        font-size: 3em;
     }
 
     .activity-grid {
         grid-template-columns: repeat(3, 1fr);
+    }
+
+    .players-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: var(--spacing-md);
+    }
+
+    .player-card {
+        border-radius: var(--radius-md);
+    }
+
+    .section-header {
+        font-size: 2em;
+    }
+
+    .team-name {
+        font-size: 1.5em;
+    }
+
+    h1 {
+        font-size: var(--font-size-2xl);
+    }
+
+    h2 {
+        font-size: var(--font-size-xl);
+    }
+}
+
+/* Mobile phones */
+@media (max-width: 480px) {
+    :root {
+        --spacing-xxl: 20px;
+        --spacing-xl: 15px;
+        --spacing-lg: 15px;
+        --spacing-md: 10px;
+    }
+
+    body {
+        font-size: 14px;
+    }
+
+    .header {
+        padding: var(--spacing-lg) var(--spacing-md);
+    }
+
+    .league-title {
+        font-size: 1.8em;
+        letter-spacing: 1px;
+    }
+
+    .nav {
+        padding: var(--spacing-xs) 0;
+    }
+
+    .nav-container {
+        flex-direction: column;
+        gap: 0;
+        padding: 0;
+    }
+
+    .nav-btn {
+        width: 100%;
+        padding: 12px 8px;
+        font-size: 0.75em;
+        border-radius: 0;
+        margin: 2px 0;
+    }
+
+    .app {
+        padding: var(--spacing-lg) var(--spacing-md);
+    }
+
+    .players-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+
+    .player-card {
+        margin-bottom: var(--spacing-md);
+    }
+
+    .player-header {
+        gap: var(--spacing-md);
+    }
+
+    .player-avatar {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5em;
+    }
+
+    .player-name {
+        font-size: 1.3em;
+    }
+
+    .points-value {
+        font-size: 2.5em;
+    }
+
+    .activity-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--spacing-sm);
+    }
+
+    .activity-dot {
+        width: 8px;
+        height: 8px;
+    }
+
+    .match-teams {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+
+    .team-bar {
+        height: 50px;
+        padding: 0 var(--spacing-md);
+        font-size: 0.9em;
+    }
+
+    .team-points-display {
+        font-size: 1.5em;
+    }
+
+    .btn {
+        width: 100%;
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    textarea {
+        width: 100%;
+        padding: var(--spacing-md);
+    }
+
+    .match-item {
+        padding: var(--spacing-md);
+        border-radius: var(--radius-sm);
+    }
+
+    .section-header {
+        font-size: 1.5em;
+    }
+
+    h1 {
+        font-size: var(--font-size-xl);
+    }
+
+    h2 {
+        font-size: var(--font-size-lg);
     }
 }
