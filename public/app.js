@@ -301,6 +301,11 @@ function App() {
         const mmrByRace = {};
 
         recentMatches.forEach(match => {
+            // Filter only 1v1 games (gameMode === 1)
+            if (match.gameMode !== 1) {
+                return;
+            }
+
             // Find player's team
             const playerTeam = match.teams.find(team =>
                 team.players.some(p => p.battleTag === battleTag)
@@ -1162,7 +1167,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                     alignItems: 'flex-end',
                     justifyContent: 'center'
                 }}>
-                    {player.matchHistory && player.matchHistory.length > 0 && player.matchHistory.slice(0, 20).reverse().map((match, idx) => {
+                    {player.matchHistory && player.matchHistory.length > 0 && player.matchHistory.slice(0, 20).map((match, idx) => {
                         const result = typeof match === 'string' ? match : match.result;
                         // Fixed height based on result: wins are taller
                         const height = result === 'win' ? 70 : 40;
