@@ -179,7 +179,7 @@ app.get('*', (req, res) => {
 // Start server only after DB connection
 mongoose.connection.once('open', () => {
     app.listen(PORT, () => {
-        console.log(`🚀 BNL (Battle Newbie League) server running on http://localhost:${PORT}`);
+        console.log(`🚀 BNL (Breaking New Limits) server running on http://localhost:${PORT}`);
         console.log(`📊 Using W3Champions matches API`);
         console.log(`💾 MongoDB Ready`);
     });
