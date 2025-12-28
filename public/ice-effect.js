@@ -30,8 +30,8 @@ class IceEffect {
     }
 
     addFrostParticles(element) {
-        // Create 5-8 random frost particles
-        const particleCount = Math.floor(Math.random() * 4) + 5;
+        // Create 8-15 random frost particles for more dramatic effect
+        const particleCount = Math.floor(Math.random() * 8) + 8;
 
         for (let i = 0; i < particleCount; i++) {
             const particle = document.createElement('div');
@@ -41,8 +41,9 @@ class IceEffect {
             particle.style.left = `${Math.random() * 100}%`;
             particle.style.top = `${Math.random() * 100}%`;
 
-            // Random animation delay
+            // Random animation delay and duration for variety
             particle.style.animationDelay = `${Math.random() * 4}s`;
+            particle.style.animationDuration = `${3 + Math.random() * 2}s`;
 
             element.appendChild(particle);
         }
@@ -84,42 +85,43 @@ class IceEffect {
         const crackContainer = button.querySelector('.ice-crack-container');
         if (!crackContainer) return;
 
-        // Create 8-12 cracks radiating from click point
-        const crackCount = Math.floor(Math.random() * 5) + 8;
+        // Create 12-18 cracks radiating from click point for more dramatic effect
+        const crackCount = Math.floor(Math.random() * 7) + 12;
 
         for (let i = 0; i < crackCount; i++) {
             const crack = document.createElement('div');
             crack.className = 'ice-crack';
 
-            // Random angle
-            const angle = (360 / crackCount) * i + (Math.random() - 0.5) * 30;
+            // Random angle with more variation
+            const angle = (360 / crackCount) * i + (Math.random() - 0.5) * 40;
 
             // Position at click point
             crack.style.left = `${clickX}px`;
             crack.style.top = `${clickY}px`;
-            crack.style.height = `${Math.random() * 2 + 1}px`;
+            crack.style.height = `${Math.random() * 3 + 2}px`; // Thicker cracks
+
             crack.style.transform = `rotate(${angle}deg)`;
 
             // Random animation delay for cascading effect
-            crack.style.animationDelay = `${Math.random() * 0.1}s`;
+            crack.style.animationDelay = `${Math.random() * 0.15}s`;
 
             crackContainer.appendChild(crack);
 
             // Remove after animation
-            setTimeout(() => crack.remove(), 500);
+            setTimeout(() => crack.remove(), 600);
         }
     }
 
     createIceShards(button, clickX, clickY) {
-        // Create 15-25 ice shards flying outward
-        const shardCount = Math.floor(Math.random() * 11) + 15;
+        // Create 25-40 ice shards flying outward for more dramatic effect
+        const shardCount = Math.floor(Math.random() * 16) + 25;
 
         for (let i = 0; i < shardCount; i++) {
             const shard = document.createElement('div');
             shard.className = 'ice-shard';
 
-            // Random size variation
-            const size = Math.random() * 6 + 4;
+            // Random size variation - larger shards
+            const size = Math.random() * 10 + 6;
             shard.style.width = `${size}px`;
             shard.style.height = `${size}px`;
 
@@ -127,25 +129,25 @@ class IceEffect {
             shard.style.left = `${clickX}px`;
             shard.style.top = `${clickY}px`;
 
-            // Random direction and distance
+            // Random direction and distance - more spread
             const angle = Math.random() * Math.PI * 2;
-            const distance = Math.random() * 100 + 50;
+            const distance = Math.random() * 120 + 60;
             const tx = Math.cos(angle) * distance;
             const ty = Math.sin(angle) * distance;
-            const rotation = Math.random() * 720 - 360;
+            const rotation = Math.random() * 1080 - 540; // More rotation
 
             // Set CSS custom properties for animation
             shard.style.setProperty('--tx', `${tx}px`);
             shard.style.setProperty('--ty', `${ty}px`);
             shard.style.setProperty('--rot', `${rotation}deg`);
 
-            // Random animation delay
-            shard.style.animationDelay = `${Math.random() * 0.1}s`;
+            // Random animation delay for staggered effect
+            shard.style.animationDelay = `${Math.random() * 0.15}s`;
 
             button.appendChild(shard);
 
             // Remove after animation
-            setTimeout(() => shard.remove(), 900);
+            setTimeout(() => shard.remove(), 1000);
         }
     }
 
