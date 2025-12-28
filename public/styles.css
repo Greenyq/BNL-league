@@ -1286,6 +1286,7 @@ input[type="datetime-local"] {
     overflow: hidden;
 }
 
+/* Main ice overlay with stronger blue tint */
 .ice-frozen::before {
     content: '';
     position: absolute;
@@ -1293,12 +1294,13 @@ input[type="datetime-local"] {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg,
-        rgba(173, 216, 230, 0.3) 0%,
-        rgba(135, 206, 235, 0.2) 25%,
-        rgba(176, 224, 230, 0.3) 50%,
-        rgba(135, 206, 235, 0.2) 75%,
-        rgba(173, 216, 230, 0.3) 100%);
+    background:
+        linear-gradient(135deg,
+            rgba(100, 180, 255, 0.5) 0%,
+            rgba(150, 200, 255, 0.35) 25%,
+            rgba(180, 220, 255, 0.5) 50%,
+            rgba(150, 200, 255, 0.35) 75%,
+            rgba(100, 180, 255, 0.5) 100%);
     background-size: 200% 200%;
     animation: iceShimmer 3s ease-in-out infinite;
     pointer-events: none;
@@ -1306,6 +1308,7 @@ input[type="datetime-local"] {
     border-radius: inherit;
 }
 
+/* Ice crystal texture and border glow */
 .ice-frozen::after {
     content: '';
     position: absolute;
@@ -1314,17 +1317,24 @@ input[type="datetime-local"] {
     right: 0;
     bottom: 0;
     background:
-        linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.15) 50%, transparent 70%),
-        linear-gradient(-45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
-    background-size: 20px 20px;
-    opacity: 0.6;
+        /* Ice crystal patterns */
+        linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%),
+        linear-gradient(-45deg, transparent 30%, rgba(255, 255, 255, 0.25) 50%, transparent 70%),
+        linear-gradient(90deg, transparent 40%, rgba(200, 230, 255, 0.2) 50%, transparent 60%);
+    background-size: 15px 15px, 15px 15px, 30px 30px;
+    opacity: 0.8;
     pointer-events: none;
     z-index: 11;
     border-radius: inherit;
     box-shadow:
-        inset 0 0 20px rgba(173, 216, 230, 0.4),
-        inset 0 0 40px rgba(135, 206, 235, 0.2),
-        0 0 30px rgba(173, 216, 230, 0.3);
+        /* Inner ice glow */
+        inset 0 0 30px rgba(100, 180, 255, 0.6),
+        inset 0 0 50px rgba(150, 200, 255, 0.4),
+        /* Outer frost glow */
+        0 0 20px rgba(100, 180, 255, 0.8),
+        0 0 40px rgba(150, 200, 255, 0.5),
+        /* Ice border */
+        inset 0 0 0 2px rgba(180, 220, 255, 0.4);
 }
 
 /* Ice shimmer animation */
@@ -1339,27 +1349,33 @@ input[type="datetime-local"] {
     }
 }
 
-/* Frost particles */
+/* Frost particles - larger ice crystals */
 .ice-frozen .frost-particle {
     position: absolute;
-    width: 3px;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.8);
+    width: 6px;
+    height: 6px;
+    background: radial-gradient(circle,
+        rgba(255, 255, 255, 0.9) 0%,
+        rgba(180, 220, 255, 0.7) 50%,
+        rgba(100, 180, 255, 0.4) 100%);
     border-radius: 50%;
     pointer-events: none;
     z-index: 12;
     animation: floatFrost 4s ease-in-out infinite;
-    box-shadow: 0 0 5px rgba(173, 216, 230, 0.8);
+    box-shadow:
+        0 0 8px rgba(100, 180, 255, 0.9),
+        0 0 15px rgba(150, 200, 255, 0.6),
+        inset 0 0 3px rgba(255, 255, 255, 0.8);
 }
 
 @keyframes floatFrost {
     0%, 100% {
-        transform: translateY(0) translateX(0);
-        opacity: 0.3;
+        transform: translateY(0) translateX(0) scale(1);
+        opacity: 0.5;
     }
     50% {
-        transform: translateY(-10px) translateX(5px);
-        opacity: 0.7;
+        transform: translateY(-15px) translateX(8px) scale(1.2);
+        opacity: 0.9;
     }
 }
 
@@ -1376,58 +1392,77 @@ input[type="datetime-local"] {
     overflow: hidden;
 }
 
-/* Individual ice crack */
+/* Individual ice crack - more visible and dramatic */
 .ice-crack {
     position: absolute;
     background: linear-gradient(90deg,
         transparent 0%,
-        rgba(255, 255, 255, 0.8) 50%,
+        rgba(255, 255, 255, 0.95) 30%,
+        rgba(180, 220, 255, 0.9) 50%,
+        rgba(255, 255, 255, 0.95) 70%,
         transparent 100%);
     transform-origin: left center;
     opacity: 0;
-    animation: crackExpand 0.4s ease-out forwards;
+    animation: crackExpand 0.5s ease-out forwards;
+    box-shadow: 0 0 5px rgba(100, 180, 255, 0.8);
 }
 
 @keyframes crackExpand {
     0% {
         width: 0;
         opacity: 0;
+        filter: blur(0px);
     }
-    50% {
+    30% {
         opacity: 1;
+        filter: blur(0px);
+    }
+    70% {
+        opacity: 0.8;
+        filter: blur(1px);
     }
     100% {
-        width: 200px;
+        width: 250px;
         opacity: 0;
+        filter: blur(2px);
     }
 }
 
-/* Ice shard particles */
+/* Ice shard particles - larger and more dramatic */
 .ice-shard {
     position: absolute;
-    width: 8px;
-    height: 8px;
+    width: 12px;
+    height: 12px;
     background: linear-gradient(135deg,
-        rgba(173, 216, 230, 0.9) 0%,
-        rgba(255, 255, 255, 0.7) 50%,
-        rgba(135, 206, 235, 0.9) 100%);
+        rgba(100, 180, 255, 0.95) 0%,
+        rgba(255, 255, 255, 0.9) 40%,
+        rgba(180, 220, 255, 0.85) 60%,
+        rgba(150, 200, 255, 0.95) 100%);
     pointer-events: none;
     z-index: 20;
-    border-radius: 2px;
+    border-radius: 3px;
     box-shadow:
-        0 0 10px rgba(173, 216, 230, 0.8),
-        inset 0 0 5px rgba(255, 255, 255, 0.5);
-    animation: shardFly 0.8s ease-out forwards;
+        0 0 15px rgba(100, 180, 255, 1),
+        0 0 25px rgba(150, 200, 255, 0.7),
+        inset 0 0 8px rgba(255, 255, 255, 0.8),
+        inset 1px 1px 2px rgba(255, 255, 255, 0.9);
+    animation: shardFly 0.9s ease-out forwards;
 }
 
 @keyframes shardFly {
     0% {
         opacity: 1;
         transform: translate(0, 0) rotate(0deg) scale(1);
+        filter: blur(0px);
+    }
+    50% {
+        opacity: 0.9;
+        filter: blur(0.5px);
     }
     100% {
         opacity: 0;
-        transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0.3);
+        transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0.2);
+        filter: blur(2px);
     }
 }
 
@@ -1457,16 +1492,18 @@ input[type="datetime-local"] {
     overflow: hidden;
 }
 
-/* Glow pulse for frozen state */
+/* Glow pulse for frozen state - more intense */
 .ice-frozen {
-    animation: iceGlow 2s ease-in-out infinite;
+    animation: iceGlow 2.5s ease-in-out infinite;
 }
 
 @keyframes iceGlow {
     0%, 100% {
-        filter: drop-shadow(0 0 5px rgba(173, 216, 230, 0.3));
+        filter: drop-shadow(0 0 8px rgba(100, 180, 255, 0.6))
+                drop-shadow(0 0 15px rgba(150, 200, 255, 0.4));
     }
     50% {
-        filter: drop-shadow(0 0 15px rgba(173, 216, 230, 0.6));
+        filter: drop-shadow(0 0 18px rgba(100, 180, 255, 0.9))
+                drop-shadow(0 0 30px rgba(150, 200, 255, 0.6));
     }
 }
