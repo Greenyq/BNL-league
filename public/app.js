@@ -659,8 +659,30 @@ function Header({ activeTab }) {
                     }}
                 />
                 <div style={{ display: 'none' }}>
-                    <h1 className="league-title">CURRENT BNL</h1>
-                    <div style={{ color: '#888', marginTop: '10px' }}>📅 Season 23 • Starting Nov 27, 2025</div>
+                    <div style={{
+                        background: 'linear-gradient(135deg, #1a3a52 0%, #0f2333 100%)',
+                        padding: '60px 40px',
+                        borderRadius: '15px',
+                        textAlign: 'center'
+                    }}>
+                        <h1 style={{
+                            fontSize: '3.5em',
+                            fontWeight: '900',
+                            color: '#00e5ff',
+                            textShadow: '0 0 20px rgba(0, 229, 255, 0.8)',
+                            marginBottom: '15px',
+                            letterSpacing: '2px'
+                        }}>WELCOME TO BNL</h1>
+                        <h2 style={{
+                            fontSize: '2.2em',
+                            fontWeight: '700',
+                            background: 'linear-gradient(135deg, #c9a961 0%, #f4e4b8 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            marginTop: '10px'
+                        }}>Warcraft Breaking New Limits</h2>
+                        <div style={{ color: '#888', marginTop: '20px', fontSize: '1.2em' }}>📅 Season 23 • Starting Nov 27, 2025</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -925,6 +947,7 @@ function Players({ players }) {
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const [selectedRaces, setSelectedRaces] = useState({});
     const [portraits, setPortraits] = useState([]);
+    const [selectedLeague, setSelectedLeague] = useState('premier'); // 'premier' or 'league1'
 
     // Load portraits
     React.useEffect(() => {
@@ -981,55 +1004,117 @@ function Players({ players }) {
         });
     };
 
-    const renderLeagueSection = (leagueTitle, leaguePlayers) => {
-        return (
-            <div style={{ marginBottom: '60px' }}>
-                <h2 style={{
-                    fontSize: '2.2em',
-                    marginBottom: '30px',
-                    color: '#c9a961',
-                    textAlign: 'center',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '15px'
-                }}>
-                    {leagueTitle === 'Премьер Лига' ? '👑' : '⚔️'} {leagueTitle}
-                </h2>
-                {leaguePlayers.length > 0 ? (
-                    <div className="players-grid">
-                        {leaguePlayers.map((group, index) => {
-                            const selectedIndex = selectedRaces[group.battleTag] || 0;
-                            const displayedProfile = group.profiles[selectedIndex];
-                            const hasMultipleRaces = group.profiles.length > 1;
+    const renderPlayers = (leaguePlayers) => {
+        if (leaguePlayers.length === 0) {
+            return (
+                <div style={{ textAlign: 'center', color: '#888', fontSize: '1.1em', padding: '40px' }}>
+                    Нет игроков в этой лиге
+                </div>
+            );
+        }
 
-                            return (
-                                <PlayerCard
-                                    key={group.battleTag}
-                                    player={displayedProfile}
-                                    rank={index + 1}
-                                    hasMultipleRaces={hasMultipleRaces}
-                                    portraits={portraits}
-                                    onToggleRace={() => toggleRace(group.battleTag)}
-                                    onClick={() => setSelectedPlayer(displayedProfile)}
-                                />
-                            );
-                        })}
-                    </div>
-                ) : (
-                    <div style={{ textAlign: 'center', color: '#888', fontSize: '1.1em', padding: '40px' }}>
-                        Нет игроков в этой лиге
-                    </div>
-                )}
+        return (
+            <div className="players-grid">
+                {leaguePlayers.map((group, index) => {
+                    const selectedIndex = selectedRaces[group.battleTag] || 0;
+                    const displayedProfile = group.profiles[selectedIndex];
+                    const hasMultipleRaces = group.profiles.length > 1;
+
+                    return (
+                        <PlayerCard
+                            key={group.battleTag}
+                            player={displayedProfile}
+                            rank={index + 1}
+                            hasMultipleRaces={hasMultipleRaces}
+                            portraits={portraits}
+                            onToggleRace={() => toggleRace(group.battleTag)}
+                            onClick={() => setSelectedPlayer(displayedProfile)}
+                        />
+                    );
+                })}
             </div>
         );
     };
 
     return (
         <div>
-            <h2 style={{ fontSize: '2em', marginBottom: '40px', color: '#c9a961', textAlign: 'center' }}>Профили игроков</h2>
-            {renderLeagueSection('Премьер Лига', premierLeague)}
-            {renderLeagueSection('Лига 1', league1)}
+            <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961', textAlign: 'center' }}>Профили игроков</h2>
+
+            {/* League Toggle Tabs */}
+            <div style={{
+                display: 'flex',
+                gap: '10px',
+                justifyContent: 'center',
+                marginBottom: '40px',
+                flexWrap: 'wrap'
+            }}>
+                <button
+                    onClick={() => setSelectedLeague('premier')}
+                    style={{
+                        padding: '12px 30px',
+                        fontSize: '1.1em',
+                        fontWeight: '600',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        background: selectedLeague === 'premier'
+                            ? 'linear-gradient(135deg, #c9a961 0%, #8b7355 100%)'
+                            : 'rgba(201, 169, 97, 0.2)',
+                        color: selectedLeague === 'premier' ? '#000' : '#c9a961',
+                        transition: 'all 0.3s ease',
+                        boxShadow: selectedLeague === 'premier'
+                            ? '0 4px 12px rgba(201, 169, 97, 0.4)'
+                            : 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                        if (selectedLeague !== 'premier') {
+                            e.target.style.background = 'rgba(201, 169, 97, 0.3)';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (selectedLeague !== 'premier') {
+                            e.target.style.background = 'rgba(201, 169, 97, 0.2)';
+                        }
+                    }}
+                >
+                    👑 Премьер Лига
+                </button>
+                <button
+                    onClick={() => setSelectedLeague('league1')}
+                    style={{
+                        padding: '12px 30px',
+                        fontSize: '1.1em',
+                        fontWeight: '600',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        background: selectedLeague === 'league1'
+                            ? 'linear-gradient(135deg, #c9a961 0%, #8b7355 100%)'
+                            : 'rgba(201, 169, 97, 0.2)',
+                        color: selectedLeague === 'league1' ? '#000' : '#c9a961',
+                        transition: 'all 0.3s ease',
+                        boxShadow: selectedLeague === 'league1'
+                            ? '0 4px 12px rgba(201, 169, 97, 0.4)'
+                            : 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                        if (selectedLeague !== 'league1') {
+                            e.target.style.background = 'rgba(201, 169, 97, 0.3)';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (selectedLeague !== 'league1') {
+                            e.target.style.background = 'rgba(201, 169, 97, 0.2)';
+                        }
+                    }}
+                >
+                    ⚔️ Лига 1
+                </button>
+            </div>
+
+            {/* Render selected league */}
+            {selectedLeague === 'premier' ? renderPlayers(premierLeague) : renderPlayers(league1)}
+
             {selectedPlayer && (
                 <PlayerDetailModal
                     player={selectedPlayer}
