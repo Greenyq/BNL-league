@@ -1277,3 +1277,196 @@ input[type="datetime-local"] {
         font-size: var(--font-size-lg);
     }
 }
+
+/* ==================== WARCRAFT 3 FROZEN THRONE ICE EFFECT ==================== */
+
+/* Ice overlay effect for frozen buttons */
+.ice-frozen {
+    position: relative;
+    overflow: hidden;
+}
+
+.ice-frozen::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg,
+        rgba(173, 216, 230, 0.3) 0%,
+        rgba(135, 206, 235, 0.2) 25%,
+        rgba(176, 224, 230, 0.3) 50%,
+        rgba(135, 206, 235, 0.2) 75%,
+        rgba(173, 216, 230, 0.3) 100%);
+    background-size: 200% 200%;
+    animation: iceShimmer 3s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 10;
+    border-radius: inherit;
+}
+
+.ice-frozen::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.15) 50%, transparent 70%),
+        linear-gradient(-45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+    background-size: 20px 20px;
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: 11;
+    border-radius: inherit;
+    box-shadow:
+        inset 0 0 20px rgba(173, 216, 230, 0.4),
+        inset 0 0 40px rgba(135, 206, 235, 0.2),
+        0 0 30px rgba(173, 216, 230, 0.3);
+}
+
+/* Ice shimmer animation */
+@keyframes iceShimmer {
+    0%, 100% {
+        background-position: 0% 50%;
+        opacity: 0.6;
+    }
+    50% {
+        background-position: 100% 50%;
+        opacity: 0.8;
+    }
+}
+
+/* Frost particles */
+.ice-frozen .frost-particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 12;
+    animation: floatFrost 4s ease-in-out infinite;
+    box-shadow: 0 0 5px rgba(173, 216, 230, 0.8);
+}
+
+@keyframes floatFrost {
+    0%, 100% {
+        transform: translateY(0) translateX(0);
+        opacity: 0.3;
+    }
+    50% {
+        transform: translateY(-10px) translateX(5px);
+        opacity: 0.7;
+    }
+}
+
+/* Ice crack effect container */
+.ice-crack-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 15;
+    border-radius: inherit;
+    overflow: hidden;
+}
+
+/* Individual ice crack */
+.ice-crack {
+    position: absolute;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.8) 50%,
+        transparent 100%);
+    transform-origin: left center;
+    opacity: 0;
+    animation: crackExpand 0.4s ease-out forwards;
+}
+
+@keyframes crackExpand {
+    0% {
+        width: 0;
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        width: 200px;
+        opacity: 0;
+    }
+}
+
+/* Ice shard particles */
+.ice-shard {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: linear-gradient(135deg,
+        rgba(173, 216, 230, 0.9) 0%,
+        rgba(255, 255, 255, 0.7) 50%,
+        rgba(135, 206, 235, 0.9) 100%);
+    pointer-events: none;
+    z-index: 20;
+    border-radius: 2px;
+    box-shadow:
+        0 0 10px rgba(173, 216, 230, 0.8),
+        inset 0 0 5px rgba(255, 255, 255, 0.5);
+    animation: shardFly 0.8s ease-out forwards;
+}
+
+@keyframes shardFly {
+    0% {
+        opacity: 1;
+        transform: translate(0, 0) rotate(0deg) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0.3);
+    }
+}
+
+/* Shattering effect - whole ice layer breaking */
+.ice-shattering::before,
+.ice-shattering::after {
+    animation: shatter 0.6s ease-out forwards;
+}
+
+@keyframes shatter {
+    0% {
+        opacity: 0.6;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.3;
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.2);
+    }
+}
+
+/* Apply ice effect to navigation buttons by default */
+.nav-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Glow pulse for frozen state */
+.ice-frozen {
+    animation: iceGlow 2s ease-in-out infinite;
+}
+
+@keyframes iceGlow {
+    0%, 100% {
+        filter: drop-shadow(0 0 5px rgba(173, 216, 230, 0.3));
+    }
+    50% {
+        filter: drop-shadow(0 0 15px rgba(173, 216, 230, 0.6));
+    }
+}
