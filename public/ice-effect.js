@@ -5,16 +5,7 @@
 
 class IceEffect {
     constructor() {
-        this.init();
-    }
-
-    init() {
-        // Wait for DOM to be ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.applyIceEffect());
-        } else {
-            this.applyIceEffect();
-        }
+        // Don't auto-init, wait for React to call applyIceEffect
     }
 
     applyIceEffect() {

@@ -690,6 +690,13 @@ function Header({ activeTab }) {
 }
 
 function Nav({ activeTab, setActiveTab, isAdmin, setShowLoginModal, playerUser, setShowPlayerAuthModal }) {
+    React.useEffect(() => {
+        // Apply ice effect to all navigation buttons after render
+        if (window.iceEffect) {
+            window.iceEffect.applyIceEffect();
+        }
+    }, []);
+
     return (
         <div className="nav">
             <div className="nav-container">
