@@ -642,7 +642,7 @@ function Header({ activeTab }) {
             <div className="header-content">
                 <img
                     src="/images/banner.png"
-                    alt="Welcome to BNL - Warcraft Battle Newbie League"
+                    alt="Welcome to BNL - Warcraft Breaking New Limits"
                     style={{
                         width: '100%',
                         height: 'auto',
@@ -693,7 +693,7 @@ function Rules() {
     return (
         <div>
             <h2 style={{ fontSize: '2.5em', marginBottom: '30px', color: '#c9a961', textAlign: 'center' }}>
-                📜 Правила Battle Newbie League
+                📜 Правила Breaking New Limits
             </h2>
 
             <div style={{
@@ -968,6 +968,10 @@ function Players({ players }) {
         (b.bestProfile.points || 0) - (a.bestProfile.points || 0)
     );
 
+    // Split players into two leagues based on MMR
+    const premierLeague = sortedPlayers.filter(group => (group.bestProfile.mmr || 0) >= 1700);
+    const league1 = sortedPlayers.filter(group => (group.bestProfile.mmr || 0) < 1700);
+
     const toggleRace = (battleTag) => {
         setSelectedRaces(prev => {
             const currentIndex = prev[battleTag] || 0;
@@ -977,28 +981,55 @@ function Players({ players }) {
         });
     };
 
+    const renderLeagueSection = (leagueTitle, leaguePlayers) => {
+        return (
+            <div style={{ marginBottom: '60px' }}>
+                <h2 style={{
+                    fontSize: '2.2em',
+                    marginBottom: '30px',
+                    color: '#c9a961',
+                    textAlign: 'center',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '15px'
+                }}>
+                    {leagueTitle === 'Премьер Лига' ? '👑' : '⚔️'} {leagueTitle}
+                </h2>
+                {leaguePlayers.length > 0 ? (
+                    <div className="players-grid">
+                        {leaguePlayers.map((group, index) => {
+                            const selectedIndex = selectedRaces[group.battleTag] || 0;
+                            const displayedProfile = group.profiles[selectedIndex];
+                            const hasMultipleRaces = group.profiles.length > 1;
+
+                            return (
+                                <PlayerCard
+                                    key={group.battleTag}
+                                    player={displayedProfile}
+                                    rank={index + 1}
+                                    hasMultipleRaces={hasMultipleRaces}
+                                    portraits={portraits}
+                                    onToggleRace={() => toggleRace(group.battleTag)}
+                                    onClick={() => setSelectedPlayer(displayedProfile)}
+                                />
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div style={{ textAlign: 'center', color: '#888', fontSize: '1.1em', padding: '40px' }}>
+                        Нет игроков в этой лиге
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div>
-            <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>Профили игроков</h2>
-            <div className="players-grid">
-                {sortedPlayers.map((group, index) => {
-                    const selectedIndex = selectedRaces[group.battleTag] || 0;
-                    const displayedProfile = group.profiles[selectedIndex];
-                    const hasMultipleRaces = group.profiles.length > 1;
-
-                    return (
-                        <PlayerCard
-                            key={group.battleTag}
-                            player={displayedProfile}
-                            rank={index + 1}
-                            hasMultipleRaces={hasMultipleRaces}
-                            portraits={portraits}
-                            onToggleRace={() => toggleRace(group.battleTag)}
-                            onClick={() => setSelectedPlayer(displayedProfile)}
-                        />
-                    );
-                })}
-            </div>
+            <h2 style={{ fontSize: '2em', marginBottom: '40px', color: '#c9a961', textAlign: 'center' }}>Профили игроков</h2>
+            {renderLeagueSection('Премьер Лига', premierLeague)}
+            {renderLeagueSection('Лига 1', league1)}
             {selectedPlayer && (
                 <PlayerDetailModal
                     player={selectedPlayer}
