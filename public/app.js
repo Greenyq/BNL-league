@@ -445,6 +445,9 @@ function App() {
             });
         }
 
+        // Sort profiles by race ID to ensure consistent ordering (0, 1, 2, 4, 8)
+        profiles.sort((a, b) => a.race - b.race);
+
         return profiles;
     };
 
@@ -645,8 +648,10 @@ function Header({ activeTab }) {
                     alt="Welcome to BNL - Warcraft Breaking New Limits"
                     style={{
                         width: '100%',
+                        maxWidth: '1400px',
                         height: 'auto',
                         display: 'block',
+                        margin: '0 auto',
                         borderRadius: '15px',
                         boxShadow: '0 10px 40px rgba(201, 169, 97, 0.3)'
                     }}
