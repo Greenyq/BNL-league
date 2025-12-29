@@ -177,39 +177,68 @@ router.post('/admin/players/search', async (req, res) => {
         // Normalize battleTag: trim whitespace
         battleTag = battleTag.trim();
 
-        const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(battleTag)}&gateway=20&season=23&pageSize=10`;
-
-        const response = await axios.get(apiUrl, {
-            headers: {
-                'User-Agent': 'BNL-League-App',
-                'Accept': 'application/json'
+        // Helper function to capitalize first letter
+        const capitalizeFirst = (str) => {
+            if (!str) return str;
+            const parts = str.split('#');
+            if (parts.length === 2) {
+                return parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase() + '#' + parts[1];
             }
-        });
+            return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+        };
 
-        if (response.data.matches && response.data.matches.length > 0) {
-            const firstMatch = response.data.matches[0];
-            // Case-insensitive comparison
-            const battleTagLower = battleTag.toLowerCase();
-            const playerTeam = firstMatch.teams.find(team =>
-                team.players.some(p => p.battleTag.toLowerCase() === battleTagLower)
-            );
+        // Try different case variations of the battleTag
+        const battleTagVariations = [
+            battleTag,                    // As entered
+            capitalizeFirst(battleTag),   // First letter capitalized
+            battleTag.toLowerCase(),      // All lowercase
+            battleTag.toUpperCase()       // All uppercase
+        ];
 
-            if (playerTeam) {
-                const player = playerTeam.players.find(p => p.battleTag.toLowerCase() === battleTagLower);
-                res.json({
-                    found: true,
-                    battleTag: player.battleTag,
-                    name: player.name,
-                    race: player.race,
-                    currentMmr: player.currentMmr,
-                    matchCount: response.data.count
+        // Remove duplicates
+        const uniqueVariations = [...new Set(battleTagVariations)];
+
+        // Try each variation until we find matches
+        for (const variation of uniqueVariations) {
+            try {
+                const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(variation)}&gateway=20&season=23&pageSize=10`;
+
+                const response = await axios.get(apiUrl, {
+                    headers: {
+                        'User-Agent': 'BNL-League-App',
+                        'Accept': 'application/json'
+                    },
+                    timeout: 5000
                 });
-            } else {
-                res.json({ found: false, message: 'Player not found in matches' });
+
+                if (response.data.matches && response.data.matches.length > 0) {
+                    const firstMatch = response.data.matches[0];
+                    // Find player in the match (case-insensitive)
+                    const battleTagLower = battleTag.toLowerCase();
+                    const playerTeam = firstMatch.teams.find(team =>
+                        team.players.some(p => p.battleTag.toLowerCase() === battleTagLower)
+                    );
+
+                    if (playerTeam) {
+                        const player = playerTeam.players.find(p => p.battleTag.toLowerCase() === battleTagLower);
+                        return res.json({
+                            found: true,
+                            battleTag: player.battleTag, // Return actual battleTag from W3Champions
+                            name: player.name,
+                            race: player.race,
+                            currentMmr: player.currentMmr,
+                            matchCount: response.data.count
+                        });
+                    }
+                }
+            } catch (err) {
+                // Continue to next variation if this one fails
+                continue;
             }
-        } else {
-            res.json({ found: false, message: 'No matches found for this player' });
         }
+
+        // No matches found with any variation
+        res.json({ found: false, message: 'No matches found for this player' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to search player', details: error.message });
     }
