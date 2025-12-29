@@ -170,6 +170,71 @@ router.delete('/admin/players/cache', async (req, res) => {
     }
 });
 
+// Helper function to search player in W3Champions with case variations
+async function searchW3ChampionsPlayer(battleTag) {
+    // Helper function to capitalize first letter
+    const capitalizeFirst = (str) => {
+        if (!str) return str;
+        const parts = str.split('#');
+        if (parts.length === 2) {
+            return parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase() + '#' + parts[1];
+        }
+        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    };
+
+    // Try different case variations of the battleTag
+    const battleTagVariations = [
+        battleTag,                    // As entered
+        capitalizeFirst(battleTag),   // First letter capitalized
+        battleTag.toLowerCase(),      // All lowercase
+        battleTag.toUpperCase()       // All uppercase
+    ];
+
+    // Remove duplicates
+    const uniqueVariations = [...new Set(battleTagVariations)];
+
+    // Try each variation until we find matches
+    for (const variation of uniqueVariations) {
+        try {
+            const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(variation)}&gateway=20&season=23&pageSize=10`;
+
+            const response = await axios.get(apiUrl, {
+                headers: {
+                    'User-Agent': 'BNL-League-App',
+                    'Accept': 'application/json'
+                },
+                timeout: 5000
+            });
+
+            if (response.data.matches && response.data.matches.length > 0) {
+                const firstMatch = response.data.matches[0];
+                // Find player in the match (case-insensitive)
+                const battleTagLower = battleTag.toLowerCase();
+                const playerTeam = firstMatch.teams.find(team =>
+                    team.players.some(p => p.battleTag.toLowerCase() === battleTagLower)
+                );
+
+                if (playerTeam) {
+                    const player = playerTeam.players.find(p => p.battleTag.toLowerCase() === battleTagLower);
+                    return {
+                        found: true,
+                        battleTag: player.battleTag,
+                        name: player.name,
+                        race: player.race,
+                        currentMmr: player.currentMmr,
+                        matchCount: response.data.count
+                    };
+                }
+            }
+        } catch (err) {
+            // Continue to next variation if this one fails
+            continue;
+        }
+    }
+
+    return { found: false };
+}
+
 router.post('/admin/players/search', async (req, res) => {
     try {
         let { battleTag } = req.body;
@@ -177,68 +242,13 @@ router.post('/admin/players/search', async (req, res) => {
         // Normalize battleTag: trim whitespace
         battleTag = battleTag.trim();
 
-        // Helper function to capitalize first letter
-        const capitalizeFirst = (str) => {
-            if (!str) return str;
-            const parts = str.split('#');
-            if (parts.length === 2) {
-                return parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase() + '#' + parts[1];
-            }
-            return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-        };
+        const result = await searchW3ChampionsPlayer(battleTag);
 
-        // Try different case variations of the battleTag
-        const battleTagVariations = [
-            battleTag,                    // As entered
-            capitalizeFirst(battleTag),   // First letter capitalized
-            battleTag.toLowerCase(),      // All lowercase
-            battleTag.toUpperCase()       // All uppercase
-        ];
-
-        // Remove duplicates
-        const uniqueVariations = [...new Set(battleTagVariations)];
-
-        // Try each variation until we find matches
-        for (const variation of uniqueVariations) {
-            try {
-                const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(variation)}&gateway=20&season=23&pageSize=10`;
-
-                const response = await axios.get(apiUrl, {
-                    headers: {
-                        'User-Agent': 'BNL-League-App',
-                        'Accept': 'application/json'
-                    },
-                    timeout: 5000
-                });
-
-                if (response.data.matches && response.data.matches.length > 0) {
-                    const firstMatch = response.data.matches[0];
-                    // Find player in the match (case-insensitive)
-                    const battleTagLower = battleTag.toLowerCase();
-                    const playerTeam = firstMatch.teams.find(team =>
-                        team.players.some(p => p.battleTag.toLowerCase() === battleTagLower)
-                    );
-
-                    if (playerTeam) {
-                        const player = playerTeam.players.find(p => p.battleTag.toLowerCase() === battleTagLower);
-                        return res.json({
-                            found: true,
-                            battleTag: player.battleTag, // Return actual battleTag from W3Champions
-                            name: player.name,
-                            race: player.race,
-                            currentMmr: player.currentMmr,
-                            matchCount: response.data.count
-                        });
-                    }
-                }
-            } catch (err) {
-                // Continue to next variation if this one fails
-                continue;
-            }
+        if (result.found) {
+            res.json(result);
+        } else {
+            res.json({ found: false, message: 'No matches found for this player' });
         }
-
-        // No matches found with any variation
-        res.json({ found: false, message: 'No matches found for this player' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to search player', details: error.message });
     }
@@ -591,13 +601,28 @@ router.put('/players/auth/link-battletag', async (req, res) => {
         }
 
         // Check if battleTag exists in players (case-insensitive search)
-        const player = await Player.findOne({
+        let player = await Player.findOne({
             battleTag: { $regex: new RegExp(`^${battleTag}$`, 'i') }
         });
 
+        // If player doesn't exist in our database, try to find in W3Champions and auto-create
         if (!player) {
-            return res.status(404).json({
-                error: 'BattleTag not found in league. Please contact an admin to add your BattleTag first.'
+            console.log(`Player ${battleTag} not found in DB, searching W3Champions...`);
+            const w3cResult = await searchW3ChampionsPlayer(battleTag);
+
+            if (!w3cResult.found) {
+                return res.status(404).json({
+                    error: 'BattleTag not found in W3Champions. Please check the spelling and try again.'
+                });
+            }
+
+            // Create player automatically from W3Champions data
+            console.log(`Creating player ${w3cResult.battleTag} automatically from W3Champions data`);
+            player = await Player.create({
+                battleTag: w3cResult.battleTag,
+                name: w3cResult.name || w3cResult.battleTag.split('#')[0],
+                race: w3cResult.race,
+                currentMmr: w3cResult.currentMmr
             });
         }
 
