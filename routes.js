@@ -172,24 +172,30 @@ router.delete('/admin/players/cache', async (req, res) => {
 
 router.post('/admin/players/search', async (req, res) => {
     try {
-        const { battleTag } = req.body;
+        let { battleTag } = req.body;
+
+        // Normalize battleTag: trim whitespace
+        battleTag = battleTag.trim();
+
         const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(battleTag)}&gateway=20&season=23&pageSize=10`;
-        
+
         const response = await axios.get(apiUrl, {
             headers: {
                 'User-Agent': 'BNL-League-App',
                 'Accept': 'application/json'
             }
         });
-        
+
         if (response.data.matches && response.data.matches.length > 0) {
             const firstMatch = response.data.matches[0];
+            // Case-insensitive comparison
+            const battleTagLower = battleTag.toLowerCase();
             const playerTeam = firstMatch.teams.find(team =>
-                team.players.some(p => p.battleTag === battleTag)
+                team.players.some(p => p.battleTag.toLowerCase() === battleTagLower)
             );
-            
+
             if (playerTeam) {
-                const player = playerTeam.players.find(p => p.battleTag === battleTag);
+                const player = playerTeam.players.find(p => p.battleTag.toLowerCase() === battleTagLower);
                 res.json({
                     found: true,
                     battleTag: player.battleTag,
@@ -211,12 +217,14 @@ router.post('/admin/players/search', async (req, res) => {
 
 router.post('/admin/players', async (req, res) => {
     try {
-        // Check if player already exists
-        const existing = await Player.findOne({ battleTag: req.body.battleTag });
+        // Check if player already exists (case-insensitive)
+        const existing = await Player.findOne({
+            battleTag: { $regex: new RegExp(`^${req.body.battleTag}$`, 'i') }
+        });
         if (existing) {
             return res.status(400).json({ error: 'Player already exists' });
         }
-        
+
         const newPlayer = await Player.create(req.body);
         res.json(newPlayer);
     } catch (error) {
@@ -825,11 +833,17 @@ router.get('/live-matches', async (req, res) => {
 
         const allMatches = response.data.matches || [];
 
-        // Filter matches that include our players
+        // Create lowercase map for case-insensitive comparison
+        const battleTagsLowerMap = new Map();
+        players.forEach(p => {
+            battleTagsLowerMap.set(p.battleTag.toLowerCase(), p);
+        });
+
+        // Filter matches that include our players (case-insensitive)
         const ourMatches = allMatches.filter(match => {
             return match.teams.some(team =>
                 team.players.some(player =>
-                    battleTags.includes(player.battleTag)
+                    battleTagsLowerMap.has(player.battleTag.toLowerCase())
                 )
             );
         });
@@ -839,7 +853,7 @@ router.get('/live-matches', async (req, res) => {
             const enrichedTeams = match.teams.map(team => ({
                 ...team,
                 players: team.players.map(player => {
-                    const ourPlayer = players.find(p => p.battleTag === player.battleTag);
+                    const ourPlayer = battleTagsLowerMap.get(player.battleTag.toLowerCase());
                     return {
                         battleTag: player.battleTag,
                         name: player.name,
