@@ -207,21 +207,44 @@ async function searchW3ChampionsPlayer(battleTag) {
             });
 
             if (response.data.matches && response.data.matches.length > 0) {
-                const firstMatch = response.data.matches[0];
-                // Find player in the match (case-insensitive)
                 const battleTagLower = battleTag.toLowerCase();
-                const playerTeam = firstMatch.teams.find(team =>
-                    team.players.some(p => p.battleTag.toLowerCase() === battleTagLower)
-                );
 
-                if (playerTeam) {
-                    const player = playerTeam.players.find(p => p.battleTag.toLowerCase() === battleTagLower);
+                // Find player's most frequent race from all matches
+                const raceCounts = {};
+                let mostFrequentRace = null;
+                let playerData = null;
+
+                for (const match of response.data.matches) {
+                    const playerTeam = match.teams.find(team =>
+                        team.players.some(p => p.battleTag.toLowerCase() === battleTagLower)
+                    );
+
+                    if (playerTeam) {
+                        const player = playerTeam.players.find(p => p.battleTag.toLowerCase() === battleTagLower);
+                        if (player) {
+                            if (!playerData) {
+                                playerData = player;
+                            }
+
+                            // Count race frequency
+                            const race = player.race;
+                            raceCounts[race] = (raceCounts[race] || 0) + 1;
+
+                            // Track most frequent race
+                            if (!mostFrequentRace || raceCounts[race] > raceCounts[mostFrequentRace]) {
+                                mostFrequentRace = race;
+                            }
+                        }
+                    }
+                }
+
+                if (playerData) {
                     return {
                         found: true,
-                        battleTag: player.battleTag,
-                        name: player.name,
-                        race: player.race,
-                        currentMmr: player.currentMmr,
+                        battleTag: playerData.battleTag,
+                        name: playerData.name,
+                        race: mostFrequentRace || playerData.race,
+                        currentMmr: playerData.currentMmr,
                         matchCount: response.data.count
                     };
                 }

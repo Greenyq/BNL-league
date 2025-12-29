@@ -445,6 +445,9 @@ function App() {
             });
         }
 
+        // Sort profiles by race ID to ensure consistent ordering (0, 1, 2, 4, 8)
+        profiles.sort((a, b) => a.race - b.race);
+
         return profiles;
     };
 
