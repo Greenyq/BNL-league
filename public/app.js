@@ -646,8 +646,6 @@ function Header({ activeTab }) {
                     style={{
                         width: '100%',
                         height: 'auto',
-                        maxHeight: '450px',
-                        objectFit: 'cover',
                         display: 'block',
                         borderRadius: '15px',
                         boxShadow: '0 10px 40px rgba(201, 169, 97, 0.3)'
