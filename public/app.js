@@ -25,52 +25,52 @@ const raceImages = {
     8: '/images/undead.jpg', // Death Knight skulls and weapons
 };
 
-// Achievements
+// Achievements (Достижения)
 const achievements = {
-    // Win Streaks
-    winStreak3: { icon: "🔥", name: "On Fire", desc: "3 wins in a row", points: 30 },
-    winStreak5: { icon: "🔥🔥", name: "Hot Streak", desc: "5 wins in a row", points: 50 },
-    winStreak10: { icon: "🔥🔥🔥", name: "Dominator", desc: "10 wins in a row", points: 100 },
-    winStreak15: { icon: "👑", name: "Unstoppable", desc: "15 wins in a row", points: 150 },
+    // Win Streaks (Серии побед)
+    winStreak3: { icon: "🔥", name: "В огне", desc: "3 победы подряд", points: 30 },
+    winStreak5: { icon: "🔥🔥", name: "Огненная серия", desc: "5 побед подряд", points: 50 },
+    winStreak10: { icon: "🔥🔥🔥", name: "Доминатор", desc: "10 побед подряд", points: 100 },
+    winStreak15: { icon: "👑", name: "Неудержимый", desc: "15 побед подряд", points: 150 },
 
-    // Loss Streaks
-    loseStreak3: { icon: "💪", name: "Не расстраивайся дави на газ", desc: "3 losses in a row", points: 10 },
-    loseStreak10: { icon: "🛡️", name: "Survivor", desc: "Keep playing after 10 losses in a row", points: 25 },
+    // Loss Streaks (Серии поражений)
+    loseStreak3: { icon: "💪", name: "Не расстраивайся дави на газ", desc: "3 поражения подряд", points: 10 },
+    loseStreak10: { icon: "🛡️", name: "Выживший", desc: "Продолжать играть после 10 поражений подряд", points: 25 },
 
-    // MMR Challenges
-    giantSlayer: { icon: "⚔️", name: "И кто тут папа?", desc: "Beat opponent with +50 MMR", points: 25 },
-    titanSlayer: { icon: "⚡", name: "Titan Slayer", desc: "Beat opponent with +100 MMR", points: 50 },
-    davidVsGoliath: { icon: "🏹", name: "David vs Goliath", desc: "Beat opponent with +200 MMR", points: 100 },
+    // MMR Challenges (MMR челленджи)
+    giantSlayer: { icon: "⚔️", name: "И кто тут папа?", desc: "Победа над соперником с +50 MMR", points: 25 },
+    titanSlayer: { icon: "⚡", name: "Убийца титанов", desc: "Победа над соперником с +100 MMR", points: 50 },
+    davidVsGoliath: { icon: "🏹", name: "Давид против Голиафа", desc: "Победа над соперником с +200 MMR", points: 100 },
 
-    // Total Wins
-    warrior: { icon: "⚔️", name: "Warrior", desc: "50 total wins", points: 30 },
-    centurion: { icon: "💯", name: "Centurion", desc: "100 total wins", points: 50 },
-    centurionSupreme: { icon: "👑💯", name: "Centurion Supreme", desc: "200 total wins", points: 80 },
-    noMercy: { icon: "😈", name: "No Mercy", desc: "50+ wins this season", points: 40 },
+    // Total Wins (Всего побед)
+    warrior: { icon: "⚔️", name: "Воин", desc: "50 побед всего", points: 30 },
+    centurion: { icon: "💯", name: "Центурион", desc: "100 побед всего", points: 50 },
+    centurionSupreme: { icon: "👑💯", name: "Верховный центурион", desc: "200 побед всего", points: 80 },
+    noMercy: { icon: "😈", name: "Без пощады", desc: "50+ побед в этом сезоне", points: 40 },
 
-    // Weekly/Activity
-    gladiator: { icon: "🏛️", name: "Gladiator", desc: "10+ wins this week", points: 20 },
-    perfectWeek: { icon: "✨", name: "Perfect Week", desc: "20+ wins this week", points: 50 },
+    // Weekly/Activity (Недельная активность)
+    gladiator: { icon: "🏛️", name: "Гладиатор", desc: "10+ побед на этой неделе", points: 20 },
+    perfectWeek: { icon: "✨", name: "Идеальная неделя", desc: "20+ побед на этой неделе", points: 50 },
 
-    // Points
-    goldRush: { icon: "💰", name: "Gold Rush", desc: "1000+ points", points: 30 },
-    platinumRush: { icon: "💎", name: "Platinum Rush", desc: "2000+ points", points: 60 },
+    // Points (Очки)
+    goldRush: { icon: "💰", name: "Золотая лихорадка", desc: "1000+ очков", points: 30 },
+    platinumRush: { icon: "💎", name: "Платиновая лихорадка", desc: "2000+ очков", points: 60 },
 
-    // Special
-    comeback: { icon: "↩️", name: "Comeback", desc: "Win after 3 losses", points: 20 },
-    persistent: { icon: "🔄", name: "Persistent", desc: "5 wins after 5 losses streak", points: 40 },
-    veteran: { icon: "🎖️", name: "Veteran", desc: "500+ total games", points: 35 },
-    marathonRunner: { icon: "🏃", name: "Marathon Runner", desc: "100+ games this season", points: 30 },
+    // Special (Специальные)
+    comeback: { icon: "↩️", name: "Возвращение", desc: "Победа после 3 поражений", points: 20 },
+    persistent: { icon: "🔄", name: "Упорный", desc: "5 побед после серии из 5 поражений", points: 40 },
+    veteran: { icon: "🎖️", name: "Ветеран", desc: "500+ игр всего", points: 35 },
+    marathonRunner: { icon: "🏃", name: "Марафонец", desc: "100+ игр в этом сезоне", points: 30 },
 
-    // MMR Milestones
-    mmrMillionaire: { icon: "💵", name: "MMR Millionaire", desc: "Reach 2000+ MMR", points: 50 },
-    eliteWarrior: { icon: "👑", name: "Elite Warrior", desc: "Reach 2200+ MMR", points: 100 },
+    // MMR Milestones (MMR достижения)
+    mmrMillionaire: { icon: "💵", name: "MMR Миллионер", desc: "Достигнуть 2000+ MMR", points: 50 },
+    eliteWarrior: { icon: "👑", name: "Элитный воин", desc: "Достигнуть 2200+ MMR", points: 100 },
 
-    // BNL Specific Achievements
-    bnlRobber: { icon: "🏴‍☠️", name: "Обокрал ПТС БНЛ", desc: "Win against BNL player", points: 30 },
-    bnlVictim: { icon: "😢", name: "Отдал ПТС БНЛ", desc: "Lost to BNL player", points: -10 },
-    bnlRivalry: { icon: "⚔️🎯", name: "BNL Rivalry", desc: "Play 5+ matches vs BNL players", points: 25 },
-    bnlDominator: { icon: "👑🏴‍☠️", name: "BNL Dominator", desc: "Win 10+ matches vs BNL players", points: 60 },
+    // BNL Specific Achievements (Достижения БНЛ)
+    bnlRobber: { icon: "🏴‍☠️", name: "Обокрал ПТС БНЛ", desc: "Победа над игроком БНЛ", points: 30 },
+    bnlVictim: { icon: "😢", name: "Отдал ПТС БНЛ", desc: "Поражение от игрока БНЛ", points: -10 },
+    bnlRivalry: { icon: "⚔️🎯", name: "Соперничество БНЛ", desc: "Сыграть 5+ матчей против игроков БНЛ", points: 25 },
+    bnlDominator: { icon: "👑🏴‍☠️", name: "Доминатор БНЛ", desc: "Выиграть 10+ матчей против игроков БНЛ", points: 60 },
 };
 
 const API_BASE = '';
