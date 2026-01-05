@@ -240,6 +240,9 @@ function App() {
 
             // Process each cached player
             cachedPlayers.forEach((player, i) => {
+                // Check if the API fetch failed
+                const fetchFailed = player.fetchError === true;
+
                 // If player has matchData, process it
                 if (player.matchData && player.matchData.length > 0) {
                     // Performance: Skip verbose per-player logging (too slow with 50+ players)
@@ -268,9 +271,9 @@ function App() {
 
                         loadedPlayers.push(finalPlayer);
                     });
-                } else {
-                    // No match data - use database info as fallback
-                    console.log(`No match data for ${player.battleTag}, using DB data`);
+                } else if (fetchFailed) {
+                    // API fetch failed - show error
+                    console.error(`Failed to fetch data for ${player.battleTag}`);
                     const fallbackPlayer = {
                         id: player.id,
                         name: player.name || player.battleTag.split('#')[0],
@@ -287,13 +290,31 @@ function App() {
                         // Include portrait and discord from database
                         selectedPortraitId: player.selectedPortraitId || null,
                         discordTag: player.discordTag || null,
-                        error: true
+                        error: true // Show error indicator
                     };
 
-                    console.log(`Using fallback data for ${player.battleTag}:`, {
-                        race: fallbackPlayer.race,
-                        mmr: fallbackPlayer.mmr
-                    });
+                    loadedPlayers.push(fallbackPlayer);
+                } else {
+                    // No match data but fetch succeeded - player just has no matches
+                    console.log(`No matches found for ${player.battleTag}`);
+                    const fallbackPlayer = {
+                        id: player.id,
+                        name: player.name || player.battleTag.split('#')[0],
+                        battleTag: player.battleTag,
+                        race: player.race || 0,
+                        mmr: player.currentMmr || 0,
+                        wins: 0,
+                        losses: 0,
+                        points: 0,
+                        achievements: [],
+                        teamId: player.teamId || null,
+                        matchHistory: [],
+                        activityData: generateActivityData(player.battleTag),
+                        // Include portrait and discord from database
+                        selectedPortraitId: player.selectedPortraitId || null,
+                        discordTag: player.discordTag || null,
+                        error: false // No error - just no matches
+                    };
 
                     loadedPlayers.push(fallbackPlayer);
                 }
