@@ -60,7 +60,7 @@ const upload = multer({
 // Enable CORS
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, '../../public')));
 
 // Middleware to check admin authentication
 const checkAuth = async (req, res, next) => {
