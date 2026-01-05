@@ -146,7 +146,8 @@ router.get('/players/with-cache', async (req, res) => {
             console.error(`❌ ${player.battleTag}: Failed after ${maxRetries + 1} attempts. ${lastError?.message || 'Unknown error'}`);
             return {
                 ...player.toJSON(),
-                matchData: []
+                matchData: [],
+                fetchError: true // Flag to indicate API fetch failed
             };
         }
 
