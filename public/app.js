@@ -242,11 +242,12 @@ function App() {
             cachedPlayers.forEach((player, i) => {
                 // If player has matchData, process it
                 if (player.matchData && player.matchData.length > 0) {
-                    console.log(`Processing ${player.battleTag} with ${player.matchData.length} matches`);
+                    // Performance: Skip verbose per-player logging (too slow with 50+ players)
+                    // console.log(`Processing ${player.battleTag} with ${player.matchData.length} matches`);
 
                     // processMatches returns array of profiles (one per race)
                     const playerProfiles = processMatches(player.battleTag, player.matchData, allBnlBattleTags);
-                    console.log(`Profiles created for ${player.battleTag}:`, playerProfiles.length);
+                    // console.log(`Profiles created for ${player.battleTag}:`, playerProfiles.length);
 
                     // Create a card for each race profile
                     playerProfiles.forEach((profile) => {
@@ -282,7 +283,7 @@ function App() {
                         achievements: [],
                         teamId: player.teamId || null,
                         matchHistory: [],
-                        activityData: generateActivityData(),
+                        activityData: generateActivityData(player.battleTag),
                         // Include portrait and discord from database
                         selectedPortraitId: player.selectedPortraitId || null,
                         discordTag: player.discordTag || null,
@@ -321,47 +322,69 @@ function App() {
                 points: 0,
                 achievements: [],
                 matchHistory: [],
-                activityData: generateActivityData()
+                activityData: generateActivityData(battleTag)
             }];
         }
 
-        // Filter matches from November 27, 2025
+        // Performance: Backend now filters matches before sending, so minimal filtering needed here
+        // But keep as fallback in case old cached data exists
+        let recentMatches = matches;
         const cutoffDate = new Date('2025-11-27T00:00:00Z');
-        const recentMatches = matches.filter(match => {
-            const matchDate = new Date(match.startTime);
-            return matchDate >= cutoffDate;
-        });
 
-        // Sort matches by start time (oldest first) to ensure correct chronological order
-        recentMatches.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+        // Only filter if we have old data (backend now does this)
+        if (matches.length > 50) {
+            recentMatches = matches.filter(match => {
+                const matchDate = new Date(match.startTime);
+                return matchDate >= cutoffDate;
+            });
+        }
+
+        // Performance: Skip sorting if already sorted (backend should send sorted)
+        // Only sort if first/last items suggest unsorted data
+        if (recentMatches.length > 1) {
+            const firstTime = new Date(recentMatches[0].startTime).getTime();
+            const lastTime = new Date(recentMatches[recentMatches.length - 1].startTime).getTime();
+            if (firstTime > lastTime) {
+                // Only sort if not in order
+                recentMatches.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+            }
+        }
 
         // Group matches by race
         const matchesByRace = {};
         const mmrByRace = {};
 
-        recentMatches.forEach(match => {
+        // Performance: Use for loop instead of forEach (faster)
+        // Also eliminate redundant find() calls
+        for (let i = 0; i < recentMatches.length; i++) {
+            const match = recentMatches[i];
+
             // Filter only 1v1 games (gameMode === 1)
-            if (match.gameMode !== 1) {
-                return;
-            }
+            if (match.gameMode !== 1) continue;
 
             // Validate match structure
-            if (!match.teams || !Array.isArray(match.teams) || match.teams.length < 2) {
-                return;
+            if (!match.teams || !Array.isArray(match.teams) || match.teams.length < 2) continue;
+
+            // Find player's team - do this once
+            let playerTeam = null;
+            let player = null;
+
+            for (let j = 0; j < match.teams.length; j++) {
+                const team = match.teams[j];
+                if (!team || !team.players || !Array.isArray(team.players)) continue;
+
+                for (let k = 0; k < team.players.length; k++) {
+                    const p = team.players[k];
+                    if (p && p.battleTag === battleTag) {
+                        playerTeam = team;
+                        player = p;
+                        break;
+                    }
+                }
+                if (playerTeam) break;
             }
 
-            // Find player's team
-            const playerTeam = match.teams.find(team =>
-                team && team.players && Array.isArray(team.players) && team.players.some(p => p && p.battleTag === battleTag)
-            );
-
-            if (!playerTeam) {
-                console.log(`Player ${battleTag} not found in match`);
-                return;
-            }
-
-            const player = playerTeam.players.find(p => p && p.battleTag === battleTag);
-            if (!player || !player.race) return;
+            if (!playerTeam || !player || !player.race) continue;
 
             const race = player.race;
 
@@ -373,7 +396,7 @@ function App() {
             matchesByRace[race].push(match);
             // Update MMR to latest match value (since matches are sorted chronologically)
             mmrByRace[race] = player.currentMmr || mmrByRace[race] || 0;
-        });
+        }
 
         // If no races found, return empty profile
         if (Object.keys(matchesByRace).length === 0) {
@@ -385,7 +408,7 @@ function App() {
                 points: 0,
                 achievements: [],
                 matchHistory: [],
-                activityData: generateActivityData()
+                activityData: generateActivityData(battleTag)
             }];
         }
 
@@ -473,12 +496,8 @@ function App() {
                 }
             });
 
-            console.log(`Profile for ${battleTag} - ${raceNames[raceInt]}:`, {
-                wins,
-                losses,
-                points: totalPoints,
-                mmr: mmrByRace[race]
-            });
+            // Performance: Skip verbose logging for each race profile (too slow with 50+ players)
+            // console.log(`Profile for ${battleTag} - ${raceNames[raceInt]}:`, { wins, losses, points: totalPoints, mmr: mmrByRace[race] });
 
             profiles.push({
                 race: raceInt,
@@ -488,7 +507,7 @@ function App() {
                 points: totalPoints,
                 achievements: achs,
                 matchHistory: matchHistory.reverse().slice(0, 20), // Last 20 matches, most recent first
-                activityData: generateActivityData()
+                activityData: generateActivityData(battleTag)
             });
         }
 
@@ -627,19 +646,24 @@ function App() {
             return true;
         });
 
-        // Debug logging for achievements
-        console.log(`🏆 Achievement check: wins=${validWins}, losses=${validLosses}, points=${validPoints}, totalGames=${validTotalGames}, MMR=${validCurrentMmr}, maxWinStreak=${maxWinStreak}, maxLossStreak=${maxLossStreak}, BNL matches=${bnlMatches.length} (W:${bnlWins}/L:${bnlLosses}), achievements=${validatedAchievements.join(', ') || 'none'}`);
-        if (recentMatches.length > 0) {
-            console.log(`   📊 Recent match sequence (newest → oldest, last 20):`, recentMatches.map(m => m && m.result).join(' → '));
-        }
+        // Performance: Skip verbose achievement logging (too slow with 50+ achievements)
+        // console.log(`🏆 Achievement check: wins=${validWins}, losses=${validLosses}, points=${validPoints}, totalGames=${validTotalGames}, MMR=${validCurrentMmr}, achievements=${validatedAchievements.join(', ') || 'none'}`);
 
         return validatedAchievements;
     };
 
-    const generateActivityData = () => {
-        return Array(7).fill(0).map(() =>
+    // Performance: Cache activity data instead of generating random each time
+    const activityDataCache = {};
+    const generateActivityData = (battleTag) => {
+        if (activityDataCache[battleTag]) {
+            return activityDataCache[battleTag];
+        }
+        // Generate once and cache it
+        const data = Array(7).fill(0).map(() =>
             Array(20).fill(0).map(() => Math.random() > 0.4)
         );
+        activityDataCache[battleTag] = data;
+        return data;
     };
 
     if (loading) {
@@ -1470,7 +1494,11 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                         justifyContent: 'center',
                         zIndex: 1000
                     }}
-                    onClick={() => setShowAchievementsModal(false)}>
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) {
+                            setShowAchievementsModal(false);
+                        }
+                    }}>
                         <div style={{
                             background: '#1a1a1a',
                             border: '2px solid #c9a961',
@@ -1492,17 +1520,32 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                                 alignItems: 'center'
                             }}>
                                 🏆 {player.name} — Все достижения
-                                <span onClick={() => setShowAchievementsModal(false)}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowAchievementsModal(false);
+                                    }}
                                     style={{
                                         cursor: 'pointer',
                                         fontSize: '1.2em',
                                         color: '#888',
-                                        transition: 'all 0.2s'
+                                        transition: 'all 0.2s',
+                                        background: 'none',
+                                        border: 'none',
+                                        padding: '5px 10px',
+                                        borderRadius: '4px'
                                     }}
-                                    onMouseEnter={(e) => e.target.style.color = '#c9a961'}
-                                    onMouseLeave={(e) => e.target.style.color = '#888'}>
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.color = '#c9a961';
+                                        e.currentTarget.style.background = 'rgba(201, 169, 97, 0.1)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.color = '#888';
+                                        e.currentTarget.style.background = 'none';
+                                    }}
+                                    title="Закрыть (Esc или клик за пределы)">
                                     ✕
-                                </span>
+                                </button>
                             </div>
                             <div style={{
                                 display: 'grid',
