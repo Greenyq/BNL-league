@@ -194,9 +194,9 @@ app.get('/api/matches/:battleTag', async (req, res) => {
     }
 });
 
-// Serve index.html for all other routes
+// Serve index.html for all other routes (SPA routing)
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(staticPath, 'index.html'));
 });
 
 // Start server only after DB connection

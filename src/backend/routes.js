@@ -92,54 +92,80 @@ router.get('/players/with-cache', async (req, res) => {
 
         console.log(`📊 Cache status: ${cachedPlayers.length} cached, ${playersToFetch.length} to fetch`);
 
-        // Second pass: fetch data in PARALLEL for all players (not sequential!)
-        const fetchPromises = playersToFetch.map(async ({ player, cache }) => {
-            try {
-                const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=20&season=23&pageSize=100`;
-                const response = await axios.get(apiUrl, {
-                    headers: {
-                        'User-Agent': 'BNL-League-App',
-                        'Accept': 'application/json'
-                    },
-                    timeout: 10000
-                });
+        // Helper function: Fetch with retry logic
+        async function fetchPlayerWithRetry(player, cache, maxRetries = 2) {
+            let lastError;
 
-                let matchData = response.data.matches || [];
-
-                // Filter matches to only include recent ones (since 27.11.2025) to reduce data size
-                matchData = matchData.filter(m => new Date(m.startTime) >= cutoffDate);
-
-                // Save to cache
-                const expiresAt = new Date(now + CACHE_DURATION_MS);
-                if (cache) {
-                    cache.matchData = matchData;
-                    cache.lastUpdated = new Date(now);
-                    cache.expiresAt = expiresAt;
-                    await cache.save();
-                } else {
-                    await PlayerCache.create({
-                        battleTag: player.battleTag,
-                        matchData,
-                        lastUpdated: new Date(now),
-                        expiresAt
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=20&season=23&pageSize=100`;
+                    const response = await axios.get(apiUrl, {
+                        headers: {
+                            'User-Agent': 'BNL-League-App',
+                            'Accept': 'application/json'
+                        },
+                        timeout: 8000 // Reduced from 10s to 8s for faster failure detection
                     });
+
+                    let matchData = response.data.matches || [];
+                    matchData = matchData.filter(m => new Date(m.startTime) >= cutoffDate);
+
+                    // Save to cache
+                    const expiresAt = new Date(now + CACHE_DURATION_MS);
+                    if (cache) {
+                        cache.matchData = matchData;
+                        cache.lastUpdated = new Date(now);
+                        cache.expiresAt = expiresAt;
+                        await cache.save();
+                    } else {
+                        await PlayerCache.create({
+                            battleTag: player.battleTag,
+                            matchData,
+                            lastUpdated: new Date(now),
+                            expiresAt
+                        });
+                    }
+
+                    console.log(`✅ ${player.battleTag}: Loaded ${matchData.length} matches`);
+
+                    return {
+                        ...player.toJSON(),
+                        matchData
+                    };
+                } catch (error) {
+                    lastError = error;
+                    if (attempt < maxRetries) {
+                        const delay = Math.pow(2, attempt) * 500; // Exponential backoff: 500ms, 1s, 2s
+                        console.warn(`⚠️ ${player.battleTag} (attempt ${attempt + 1}/${maxRetries + 1}): ${error.message}. Retrying in ${delay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
                 }
-
-                return {
-                    ...player.toJSON(),
-                    matchData
-                };
-            } catch (error) {
-                // Return player without match data on error
-                return {
-                    ...player.toJSON(),
-                    matchData: []
-                };
             }
-        });
 
-        // Wait for ALL parallel requests to complete
-        const fetchedPlayers = await Promise.all(fetchPromises);
+            // All retries failed
+            console.error(`❌ ${player.battleTag}: Failed after ${maxRetries + 1} attempts. ${lastError?.message || 'Unknown error'}`);
+            return {
+                ...player.toJSON(),
+                matchData: []
+            };
+        }
+
+        // Batch parallel requests: fetch in groups of 3 to avoid overwhelming API
+        const BATCH_SIZE = 3;
+        const fetchedPlayers = [];
+
+        for (let i = 0; i < playersToFetch.length; i += BATCH_SIZE) {
+            const batch = playersToFetch.slice(i, i + BATCH_SIZE);
+            const batchResults = await Promise.all(
+                batch.map(({ player, cache }) => fetchPlayerWithRetry(player, cache))
+            );
+            fetchedPlayers.push(...batchResults);
+
+            // Small delay between batches to avoid overwhelming API
+            if (i + BATCH_SIZE < playersToFetch.length) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
         const result = [...cachedPlayers, ...fetchedPlayers];
 
         const totalTime = Date.now() - startTime;
