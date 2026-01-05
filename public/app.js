@@ -501,31 +501,40 @@ function App() {
     const determineAchievements = (wins, losses, points, totalGames, matchHistory = [], previousAchievements = [], currentMmr = 0) => {
         const achs = [];
 
+        // Validate inputs
+        const validWins = Math.max(0, parseInt(wins) || 0);
+        const validLosses = Math.max(0, parseInt(losses) || 0);
+        const validPoints = parseInt(points) || 0;
+        const validTotalGames = Math.max(0, parseInt(totalGames) || 0);
+        const validCurrentMmr = Math.max(0, parseInt(currentMmr) || 0);
+        const validMatchHistory = Array.isArray(matchHistory) ? matchHistory : [];
+        const validPreviousAchievements = Array.isArray(previousAchievements) ? previousAchievements : [];
+
         // Win milestones
-        if (wins >= 200) achs.push('centurionSupreme');
-        else if (wins >= 100) achs.push('centurion');
-        else if (wins >= 50) achs.push('warrior');
+        if (validWins >= 200) achs.push('centurionSupreme');
+        else if (validWins >= 100) achs.push('centurion');
+        else if (validWins >= 50) achs.push('warrior');
 
         // Weekly/Season wins
-        if (wins >= 20) achs.push('perfectWeek');
-        else if (wins >= 10) achs.push('gladiator');
-        if (wins >= 50) achs.push('noMercy');
+        if (validWins >= 20) achs.push('perfectWeek');
+        else if (validWins >= 10) achs.push('gladiator');
+        if (validWins >= 50) achs.push('noMercy');
 
         // Games played
-        if (totalGames >= 500) achs.push('veteran');
-        if (totalGames >= 100) achs.push('marathonRunner');
+        if (validTotalGames >= 500) achs.push('veteran');
+        if (validTotalGames >= 100) achs.push('marathonRunner');
 
         // Points milestones
-        if (points >= 2000) achs.push('platinumRush');
-        else if (points >= 1000) achs.push('goldRush');
+        if (validPoints >= 2000) achs.push('platinumRush');
+        else if (validPoints >= 1000) achs.push('goldRush');
 
         // MMR milestones
-        if (currentMmr >= 2200) achs.push('eliteWarrior');
-        else if (currentMmr >= 2000) achs.push('mmrMillionaire');
+        if (validCurrentMmr >= 2200) achs.push('eliteWarrior');
+        else if (validCurrentMmr >= 2000) achs.push('mmrMillionaire');
 
         // Analyze streaks (check LAST 20 matches, most recent first)
         // matchHistory is in chronological order (oldest first), so we need to reverse it
-        const recentMatches = [...matchHistory].reverse().slice(0, 20);
+        const recentMatches = [...validMatchHistory].reverse().slice(0, 20);
 
         // Check for win streaks
         let currentWinStreak = 0;
@@ -597,9 +606,9 @@ function App() {
         }
 
         // BNL specific achievements
-        const bnlMatches = matchHistory.filter(m => m.isBnlMatch);
-        const bnlWins = bnlMatches.filter(m => m.result === 'win').length;
-        const bnlLosses = bnlMatches.filter(m => m.result === 'loss').length;
+        const bnlMatches = validMatchHistory.filter(m => m && m.isBnlMatch);
+        const bnlWins = bnlMatches.filter(m => m && m.result === 'win').length;
+        const bnlLosses = bnlMatches.filter(m => m && m.result === 'loss').length;
 
         if (bnlWins >= 10) achs.push('bnlDominator');
         if (bnlMatches.length >= 5) achs.push('bnlRivalry');
@@ -607,15 +616,24 @@ function App() {
         if (bnlLosses > 0) achs.push('bnlVictim');
 
         // Merge with previously earned achievements (once earned, never lost)
-        const allAchievements = new Set([...achs, ...previousAchievements]);
+        const allAchievements = new Set([...achs, ...validPreviousAchievements]);
+
+        // Validate all achievements exist before returning
+        const validatedAchievements = Array.from(allAchievements).filter(achKey => {
+            if (!achievements[achKey]) {
+                console.warn(`⚠️ Achievement '${achKey}' not found in achievements object`);
+                return false;
+            }
+            return true;
+        });
 
         // Debug logging for achievements
-        console.log(`🏆 Achievement check: wins=${wins}, losses=${losses}, points=${points}, totalGames=${totalGames}, MMR=${currentMmr}, maxWinStreak=${maxWinStreak}, maxLossStreak=${maxLossStreak}, BNL matches=${bnlMatches.length} (W:${bnlWins}/L:${bnlLosses}), achievements=${Array.from(allAchievements).join(', ') || 'none'}`);
+        console.log(`🏆 Achievement check: wins=${validWins}, losses=${validLosses}, points=${validPoints}, totalGames=${validTotalGames}, MMR=${validCurrentMmr}, maxWinStreak=${maxWinStreak}, maxLossStreak=${maxLossStreak}, BNL matches=${bnlMatches.length} (W:${bnlWins}/L:${bnlLosses}), achievements=${validatedAchievements.join(', ') || 'none'}`);
         if (recentMatches.length > 0) {
-            console.log(`   📊 Recent match sequence (newest → oldest, last 20):`, recentMatches.map(m => m.result).join(' → '));
+            console.log(`   📊 Recent match sequence (newest → oldest, last 20):`, recentMatches.map(m => m && m.result).join(' → '));
         }
 
-        return Array.from(allAchievements);
+        return validatedAchievements;
     };
 
     const generateActivityData = () => {
@@ -1231,6 +1249,8 @@ function Players({ players }) {
 }
 
 function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, portraits = [] }) {
+    const [showAchievementsModal, setShowAchievementsModal] = React.useState(false);
+
     const raceImage = raceImages[player.race];
 
     // Find selected portrait if player has one
@@ -1363,10 +1383,36 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                     borderTop: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : '1px solid transparent',
                     borderBottom: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : '1px solid transparent',
                     margin: '10px 0',
-                    minHeight: '50px'
+                    minHeight: '50px',
+                    position: 'relative'
                 }}>
-                    {player.achievements && player.achievements.map(achKey => {
+                    {player.achievements && player.achievements.length > 0 && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '5px',
+                            right: '10px',
+                            fontSize: '0.8em',
+                            color: '#c9a961',
+                            background: 'rgba(0,0,0,0.5)',
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            zIndex: 5
+                        }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowAchievementsModal(true);
+                        }}
+                        title="Нажмите, чтобы увидеть все достижения">
+                            {player.achievements.length} 🏆
+                        </div>
+                    )}
+                    {player.achievements && player.achievements.slice(0, 6).map(achKey => {
                         const ach = achievements[achKey];
+                        if (!ach) {
+                            console.warn(`Achievement ${achKey} not found`);
+                            return null;
+                        }
                         return (
                             <div key={achKey} className="achievement-icon">
                                 {ach.icon}
@@ -1378,7 +1424,113 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                             </div>
                         );
                     })}
+                    {player.achievements && player.achievements.length > 6 && (
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '35px',
+                            height: '35px',
+                            background: 'rgba(201, 169, 97, 0.2)',
+                            border: '2px dashed #c9a961',
+                            borderRadius: '50%',
+                            fontSize: '0.9em',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowAchievementsModal(true);
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(201, 169, 97, 0.4)';
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(201, 169, 97, 0.2)';
+                            e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                        title="Еще достижения">
+                            +{player.achievements.length - 6}
+                        </div>
+                    )}
                 </div>
+
+                {/* Achievements Modal */}
+                {showAchievementsModal && (
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0,0,0,0.7)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1000
+                    }}
+                    onClick={() => setShowAchievementsModal(false)}>
+                        <div style={{
+                            background: '#1a1a1a',
+                            border: '2px solid #c9a961',
+                            borderRadius: '15px',
+                            padding: '30px',
+                            maxWidth: '500px',
+                            maxHeight: '80vh',
+                            overflowY: 'auto',
+                            zIndex: 1001
+                        }}
+                        onClick={(e) => e.stopPropagation()}>
+                            <div style={{
+                                fontSize: '1.5em',
+                                fontWeight: 'bold',
+                                color: '#c9a961',
+                                marginBottom: '20px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}>
+                                🏆 {player.name} — Все достижения
+                                <span onClick={() => setShowAchievementsModal(false)}
+                                    style={{
+                                        cursor: 'pointer',
+                                        fontSize: '1.2em',
+                                        color: '#888',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => e.target.style.color = '#c9a961'}
+                                    onMouseLeave={(e) => e.target.style.color = '#888'}>
+                                    ✕
+                                </span>
+                            </div>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr',
+                                gap: '15px'
+                            }}>
+                                {player.achievements && player.achievements.map(achKey => {
+                                    const ach = achievements[achKey];
+                                    if (!ach) return null;
+                                    return (
+                                        <div key={achKey} style={{
+                                            background: 'rgba(201, 169, 97, 0.1)',
+                                            border: '1px solid #c9a961',
+                                            borderRadius: '8px',
+                                            padding: '12px',
+                                            textAlign: 'center'
+                                        }}>
+                                            <div style={{ fontSize: '1.8em', marginBottom: '8px' }}>{ach.icon}</div>
+                                            <div style={{ fontWeight: 'bold', color: '#c9a961', marginBottom: '5px', fontSize: '0.9em' }}>{ach.name}</div>
+                                            <div style={{ color: '#888', fontSize: '0.85em', marginBottom: '8px' }}>{ach.desc}</div>
+                                            <div style={{ color: '#4caf50', fontWeight: 'bold' }}>+{ach.points} pts</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Always render match-graph container with fixed height */}
                 <div className="match-graph" style={{
