@@ -283,7 +283,7 @@ function App() {
                         achievements: [],
                         teamId: player.teamId || null,
                         matchHistory: [],
-                        activityData: generateActivityData(),
+                        activityData: generateActivityData(player.battleTag),
                         // Include portrait and discord from database
                         selectedPortraitId: player.selectedPortraitId || null,
                         discordTag: player.discordTag || null,
@@ -322,47 +322,69 @@ function App() {
                 points: 0,
                 achievements: [],
                 matchHistory: [],
-                activityData: generateActivityData()
+                activityData: generateActivityData(battleTag)
             }];
         }
 
-        // Filter matches from November 27, 2025
+        // Performance: Backend now filters matches before sending, so minimal filtering needed here
+        // But keep as fallback in case old cached data exists
+        let recentMatches = matches;
         const cutoffDate = new Date('2025-11-27T00:00:00Z');
-        const recentMatches = matches.filter(match => {
-            const matchDate = new Date(match.startTime);
-            return matchDate >= cutoffDate;
-        });
 
-        // Sort matches by start time (oldest first) to ensure correct chronological order
-        recentMatches.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+        // Only filter if we have old data (backend now does this)
+        if (matches.length > 50) {
+            recentMatches = matches.filter(match => {
+                const matchDate = new Date(match.startTime);
+                return matchDate >= cutoffDate;
+            });
+        }
+
+        // Performance: Skip sorting if already sorted (backend should send sorted)
+        // Only sort if first/last items suggest unsorted data
+        if (recentMatches.length > 1) {
+            const firstTime = new Date(recentMatches[0].startTime).getTime();
+            const lastTime = new Date(recentMatches[recentMatches.length - 1].startTime).getTime();
+            if (firstTime > lastTime) {
+                // Only sort if not in order
+                recentMatches.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+            }
+        }
 
         // Group matches by race
         const matchesByRace = {};
         const mmrByRace = {};
 
-        recentMatches.forEach(match => {
+        // Performance: Use for loop instead of forEach (faster)
+        // Also eliminate redundant find() calls
+        for (let i = 0; i < recentMatches.length; i++) {
+            const match = recentMatches[i];
+
             // Filter only 1v1 games (gameMode === 1)
-            if (match.gameMode !== 1) {
-                return;
-            }
+            if (match.gameMode !== 1) continue;
 
             // Validate match structure
-            if (!match.teams || !Array.isArray(match.teams) || match.teams.length < 2) {
-                return;
+            if (!match.teams || !Array.isArray(match.teams) || match.teams.length < 2) continue;
+
+            // Find player's team - do this once
+            let playerTeam = null;
+            let player = null;
+
+            for (let j = 0; j < match.teams.length; j++) {
+                const team = match.teams[j];
+                if (!team || !team.players || !Array.isArray(team.players)) continue;
+
+                for (let k = 0; k < team.players.length; k++) {
+                    const p = team.players[k];
+                    if (p && p.battleTag === battleTag) {
+                        playerTeam = team;
+                        player = p;
+                        break;
+                    }
+                }
+                if (playerTeam) break;
             }
 
-            // Find player's team
-            const playerTeam = match.teams.find(team =>
-                team && team.players && Array.isArray(team.players) && team.players.some(p => p && p.battleTag === battleTag)
-            );
-
-            if (!playerTeam) {
-                // Performance: Skip match-not-found logging (happens for each match)
-                return;
-            }
-
-            const player = playerTeam.players.find(p => p && p.battleTag === battleTag);
-            if (!player || !player.race) return;
+            if (!playerTeam || !player || !player.race) continue;
 
             const race = player.race;
 
@@ -374,7 +396,7 @@ function App() {
             matchesByRace[race].push(match);
             // Update MMR to latest match value (since matches are sorted chronologically)
             mmrByRace[race] = player.currentMmr || mmrByRace[race] || 0;
-        });
+        }
 
         // If no races found, return empty profile
         if (Object.keys(matchesByRace).length === 0) {
@@ -386,7 +408,7 @@ function App() {
                 points: 0,
                 achievements: [],
                 matchHistory: [],
-                activityData: generateActivityData()
+                activityData: generateActivityData(battleTag)
             }];
         }
 
@@ -485,7 +507,7 @@ function App() {
                 points: totalPoints,
                 achievements: achs,
                 matchHistory: matchHistory.reverse().slice(0, 20), // Last 20 matches, most recent first
-                activityData: generateActivityData()
+                activityData: generateActivityData(battleTag)
             });
         }
 
@@ -630,10 +652,18 @@ function App() {
         return validatedAchievements;
     };
 
-    const generateActivityData = () => {
-        return Array(7).fill(0).map(() =>
+    // Performance: Cache activity data instead of generating random each time
+    const activityDataCache = {};
+    const generateActivityData = (battleTag) => {
+        if (activityDataCache[battleTag]) {
+            return activityDataCache[battleTag];
+        }
+        // Generate once and cache it
+        const data = Array(7).fill(0).map(() =>
             Array(20).fill(0).map(() => Math.random() > 0.4)
         );
+        activityDataCache[battleTag] = data;
+        return data;
     };
 
     if (loading) {

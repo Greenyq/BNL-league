@@ -65,32 +65,33 @@ router.get('/players', async (req, res) => {
 // Get all players with cached match data
 router.get('/players/with-cache', async (req, res) => {
     try {
+        const startTime = Date.now();
         const players = await Player.find();
         const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
         const now = Date.now();
+        const cutoffDate = new Date('2025-11-27T00:00:00Z'); // Only fetch recent matches
 
-        const result = [];
-        let cacheHits = 0;
-        let cacheMisses = 0;
+        // First pass: check all caches and separate into hits vs misses
+        const cachedPlayers = [];
+        const playersToFetch = [];
 
         for (const player of players) {
-            // Check cache first
             let cache = await PlayerCache.findOne({ battleTag: player.battleTag });
 
-            // If cache exists and not expired, use it
             if (cache && new Date(cache.expiresAt) > now) {
-                cacheHits++;
-                // Return player data with cached matchData for frontend processing
-                result.push({
+                // Use cached data
+                cachedPlayers.push({
                     ...player.toJSON(),
                     matchData: cache.matchData || []
                 });
-                continue;
+            } else {
+                // Need to fetch fresh data
+                playersToFetch.push({ player, cache });
             }
+        }
 
-            // Cache miss or expired - fetch from W3Champions
-            cacheMisses++;
-            console.log(`🔄 Fetching fresh data for ${player.battleTag} from W3Champions...`);
+        // Second pass: fetch data in PARALLEL for all players (not sequential!)
+        const fetchPromises = playersToFetch.map(async ({ player, cache }) => {
             try {
                 const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=20&season=23&pageSize=100`;
                 const response = await axios.get(apiUrl, {
@@ -101,7 +102,10 @@ router.get('/players/with-cache', async (req, res) => {
                     timeout: 10000
                 });
 
-                const matchData = response.data.matches || [];
+                let matchData = response.data.matches || [];
+
+                // Filter matches to only include recent ones (since 27.11.2025) to reduce data size
+                matchData = matchData.filter(m => new Date(m.startTime) >= cutoffDate);
 
                 // Save to cache
                 const expiresAt = new Date(now + CACHE_DURATION_MS);
@@ -119,22 +123,25 @@ router.get('/players/with-cache', async (req, res) => {
                     });
                 }
 
-                // Return player data with matchData for frontend processing
-                result.push({
+                return {
                     ...player.toJSON(),
                     matchData
-                });
+                };
             } catch (error) {
-                console.error(`❌ Error fetching matches for ${player.battleTag}:`, error.message);
-                // Return player without match data
-                result.push({
+                // Return player without match data on error
+                return {
                     ...player.toJSON(),
                     matchData: []
-                });
+                };
             }
-        }
+        });
 
-        console.log(`📊 Cache stats - Hits: ${cacheHits}, Misses: ${cacheMisses}, Total: ${result.length} players loaded`);
+        // Wait for ALL parallel requests to complete
+        const fetchedPlayers = await Promise.all(fetchPromises);
+        const result = [...cachedPlayers, ...fetchedPlayers];
+
+        const totalTime = Date.now() - startTime;
+        console.log(`✅ Loaded ${result.length} players in ${totalTime}ms (${cachedPlayers.length} cached, ${fetchedPlayers.length} fresh)`);
         res.json(result);
     } catch (error) {
         console.error('Error in /players/with-cache:', error);
