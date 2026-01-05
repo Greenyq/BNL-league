@@ -60,7 +60,11 @@ const upload = multer({
 // Enable CORS
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../../public')));
+
+// Serve static files - handle both local and production paths correctly
+const publicPath = path.resolve(__dirname, '../../public');
+console.log('📁 Serving static files from:', publicPath);
+app.use(express.static(publicPath));
 
 // Middleware to check admin authentication
 const checkAuth = async (req, res, next) => {

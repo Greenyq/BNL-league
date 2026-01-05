@@ -70,6 +70,8 @@ router.get('/players/with-cache', async (req, res) => {
         const now = Date.now();
 
         const result = [];
+        let cacheHits = 0;
+        let cacheMisses = 0;
 
         for (const player of players) {
             // Check cache first
@@ -77,7 +79,7 @@ router.get('/players/with-cache', async (req, res) => {
 
             // If cache exists and not expired, use it
             if (cache && new Date(cache.expiresAt) > now) {
-                console.log(`✅ Cache hit for ${player.battleTag}`);
+                cacheHits++;
                 // Return player data with cached matchData for frontend processing
                 result.push({
                     ...player.toJSON(),
@@ -87,7 +89,8 @@ router.get('/players/with-cache', async (req, res) => {
             }
 
             // Cache miss or expired - fetch from W3Champions
-            console.log(`🔄 Cache miss for ${player.battleTag}, fetching from W3Champions...`);
+            cacheMisses++;
+            console.log(`🔄 Fetching fresh data for ${player.battleTag} from W3Champions...`);
             try {
                 const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=20&season=23&pageSize=100`;
                 const response = await axios.get(apiUrl, {
@@ -131,6 +134,7 @@ router.get('/players/with-cache', async (req, res) => {
             }
         }
 
+        console.log(`📊 Cache stats - Hits: ${cacheHits}, Misses: ${cacheMisses}, Total: ${result.length} players loaded`);
         res.json(result);
     } catch (error) {
         console.error('Error in /players/with-cache:', error);

@@ -242,11 +242,12 @@ function App() {
             cachedPlayers.forEach((player, i) => {
                 // If player has matchData, process it
                 if (player.matchData && player.matchData.length > 0) {
-                    console.log(`Processing ${player.battleTag} with ${player.matchData.length} matches`);
+                    // Performance: Skip verbose per-player logging (too slow with 50+ players)
+                    // console.log(`Processing ${player.battleTag} with ${player.matchData.length} matches`);
 
                     // processMatches returns array of profiles (one per race)
                     const playerProfiles = processMatches(player.battleTag, player.matchData, allBnlBattleTags);
-                    console.log(`Profiles created for ${player.battleTag}:`, playerProfiles.length);
+                    // console.log(`Profiles created for ${player.battleTag}:`, playerProfiles.length);
 
                     // Create a card for each race profile
                     playerProfiles.forEach((profile) => {
@@ -356,7 +357,7 @@ function App() {
             );
 
             if (!playerTeam) {
-                console.log(`Player ${battleTag} not found in match`);
+                // Performance: Skip match-not-found logging (happens for each match)
                 return;
             }
 
@@ -473,12 +474,8 @@ function App() {
                 }
             });
 
-            console.log(`Profile for ${battleTag} - ${raceNames[raceInt]}:`, {
-                wins,
-                losses,
-                points: totalPoints,
-                mmr: mmrByRace[race]
-            });
+            // Performance: Skip verbose logging for each race profile (too slow with 50+ players)
+            // console.log(`Profile for ${battleTag} - ${raceNames[raceInt]}:`, { wins, losses, points: totalPoints, mmr: mmrByRace[race] });
 
             profiles.push({
                 race: raceInt,
@@ -627,11 +624,8 @@ function App() {
             return true;
         });
 
-        // Debug logging for achievements
-        console.log(`🏆 Achievement check: wins=${validWins}, losses=${validLosses}, points=${validPoints}, totalGames=${validTotalGames}, MMR=${validCurrentMmr}, maxWinStreak=${maxWinStreak}, maxLossStreak=${maxLossStreak}, BNL matches=${bnlMatches.length} (W:${bnlWins}/L:${bnlLosses}), achievements=${validatedAchievements.join(', ') || 'none'}`);
-        if (recentMatches.length > 0) {
-            console.log(`   📊 Recent match sequence (newest → oldest, last 20):`, recentMatches.map(m => m && m.result).join(' → '));
-        }
+        // Performance: Skip verbose achievement logging (too slow with 50+ achievements)
+        // console.log(`🏆 Achievement check: wins=${validWins}, losses=${validLosses}, points=${validPoints}, totalGames=${validTotalGames}, MMR=${validCurrentMmr}, achievements=${validatedAchievements.join(', ') || 'none'}`);
 
         return validatedAchievements;
     };
@@ -1470,7 +1464,11 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                         justifyContent: 'center',
                         zIndex: 1000
                     }}
-                    onClick={() => setShowAchievementsModal(false)}>
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) {
+                            setShowAchievementsModal(false);
+                        }
+                    }}>
                         <div style={{
                             background: '#1a1a1a',
                             border: '2px solid #c9a961',
@@ -1492,17 +1490,32 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                                 alignItems: 'center'
                             }}>
                                 🏆 {player.name} — Все достижения
-                                <span onClick={() => setShowAchievementsModal(false)}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowAchievementsModal(false);
+                                    }}
                                     style={{
                                         cursor: 'pointer',
                                         fontSize: '1.2em',
                                         color: '#888',
-                                        transition: 'all 0.2s'
+                                        transition: 'all 0.2s',
+                                        background: 'none',
+                                        border: 'none',
+                                        padding: '5px 10px',
+                                        borderRadius: '4px'
                                     }}
-                                    onMouseEnter={(e) => e.target.style.color = '#c9a961'}
-                                    onMouseLeave={(e) => e.target.style.color = '#888'}>
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.color = '#c9a961';
+                                        e.currentTarget.style.background = 'rgba(201, 169, 97, 0.1)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.color = '#888';
+                                        e.currentTarget.style.background = 'none';
+                                    }}
+                                    title="Закрыть (Esc или клик за пределы)">
                                     ✕
-                                </span>
+                                </button>
                             </div>
                             <div style={{
                                 display: 'grid',
