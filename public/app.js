@@ -1519,23 +1519,30 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                                 borderBottom: '3px solid rgba(201, 169, 97, 0.5)',
                                 position: 'relative',
                                 zIndex: 10,
-                                flexShrink: 0
+                                flexShrink: 0,
+                                gap: '30px'
                             }}>
-                                <div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
                                     <h1 style={{
                                         fontSize: '3.5em',
                                         fontWeight: '900',
                                         color: '#000',
                                         margin: 0,
                                         marginBottom: '10px',
-                                        textShadow: '3px 3px 6px rgba(0,0,0,0.3)'
+                                        textShadow: '3px 3px 6px rgba(0,0,0,0.3)',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
                                     }}>
                                         🏆 {player.name}
                                     </h1>
                                     <div style={{
                                         fontSize: '1.3em',
                                         color: 'rgba(0,0,0,0.7)',
-                                        fontWeight: '600'
+                                        fontWeight: '600',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
                                     }}>
                                         {player.achievements.length} достижений • {player.achievements.reduce((sum, achKey) => sum + (achievements[achKey]?.points || 0), 0)} очков
                                     </div>
