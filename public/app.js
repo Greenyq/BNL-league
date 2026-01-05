@@ -1492,7 +1492,9 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        zIndex: 1000
+                        zIndex: 1000,
+                        overflowY: 'auto',
+                        padding: '20px'
                     }}
                     onClick={(e) => {
                         if (e.target === e.currentTarget) {
@@ -1503,23 +1505,33 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                             background: '#1a1a1a',
                             border: '2px solid #c9a961',
                             borderRadius: '15px',
-                            padding: '30px',
                             maxWidth: '500px',
-                            maxHeight: '80vh',
-                            overflowY: 'auto',
+                            maxHeight: '90vh',
+                            display: 'flex',
+                            flexDirection: 'column',
                             zIndex: 1001
                         }}
                         onClick={(e) => e.stopPropagation()}>
+                            {/* Sticky Header with Close Button */}
                             <div style={{
-                                fontSize: '1.5em',
-                                fontWeight: 'bold',
-                                color: '#c9a961',
-                                marginBottom: '20px',
+                                position: 'sticky',
+                                top: 0,
+                                background: '#1a1a1a',
+                                borderBottom: '1px solid rgba(201, 169, 97, 0.3)',
+                                padding: '20px 30px',
                                 display: 'flex',
                                 justifyContent: 'space-between',
-                                alignItems: 'center'
+                                alignItems: 'center',
+                                zIndex: 10,
+                                borderRadius: '15px 15px 0 0'
                             }}>
-                                🏆 {player.name} — Все достижения
+                                <div style={{
+                                    fontSize: '1.5em',
+                                    fontWeight: 'bold',
+                                    color: '#c9a961'
+                                }}>
+                                    🏆 {player.name}
+                                </div>
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -1527,49 +1539,63 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                                     }}
                                     style={{
                                         cursor: 'pointer',
-                                        fontSize: '1.2em',
-                                        color: '#888',
+                                        fontSize: '1.5em',
+                                        color: '#c9a961',
                                         transition: 'all 0.2s',
-                                        background: 'none',
-                                        border: 'none',
-                                        padding: '5px 10px',
-                                        borderRadius: '4px'
+                                        background: 'rgba(201, 169, 97, 0.1)',
+                                        border: '1px solid #c9a961',
+                                        padding: '5px 12px',
+                                        borderRadius: '6px',
+                                        width: '40px',
+                                        height: '40px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexShrink: 0
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.color = '#c9a961';
-                                        e.currentTarget.style.background = 'rgba(201, 169, 97, 0.1)';
+                                        e.currentTarget.style.color = '#1a1a1a';
+                                        e.currentTarget.style.background = '#c9a961';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.color = '#888';
-                                        e.currentTarget.style.background = 'none';
+                                        e.currentTarget.style.color = '#c9a961';
+                                        e.currentTarget.style.background = 'rgba(201, 169, 97, 0.1)';
                                     }}
                                     title="Закрыть (Esc или клик за пределы)">
                                     ✕
                                 </button>
                             </div>
+
+                            {/* Scrollable Content */}
                             <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: '1fr 1fr',
-                                gap: '15px'
+                                overflowY: 'auto',
+                                padding: '30px',
+                                flex: 1
                             }}>
-                                {player.achievements && player.achievements.map(achKey => {
-                                    const ach = achievements[achKey];
-                                    if (!ach) return null;
-                                    return (
-                                        <div key={achKey} style={{
-                                            background: 'rgba(201, 169, 97, 0.1)',
-                                            border: '1px solid #c9a961',
-                                            borderRadius: '8px',
-                                            padding: '12px',
-                                            textAlign: 'center'
-                                        }}>
-                                            <div style={{ fontSize: '1.8em', marginBottom: '8px' }}>{ach.icon}</div>
-                                            <div style={{ fontWeight: 'bold', color: '#c9a961', marginBottom: '5px', fontSize: '0.9em' }}>{ach.name}</div>
-                                            <div style={{ color: '#888', fontSize: '0.85em', marginBottom: '8px' }}>{ach.desc}</div>
-                                            <div style={{ color: '#4caf50', fontWeight: 'bold' }}>+{ach.points} pts</div>
-                                        </div>
-                                    );
-                                })}
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '1fr 1fr',
+                                    gap: '15px'
+                                }}>
+                                    {player.achievements && player.achievements.map(achKey => {
+                                        const ach = achievements[achKey];
+                                        if (!ach) return null;
+                                        return (
+                                            <div key={achKey} style={{
+                                                background: 'rgba(201, 169, 97, 0.1)',
+                                                border: '1px solid #c9a961',
+                                                borderRadius: '8px',
+                                                padding: '12px',
+                                                textAlign: 'center'
+                                            }}>
+                                                <div style={{ fontSize: '1.8em', marginBottom: '8px' }}>{ach.icon}</div>
+                                                <div style={{ fontWeight: 'bold', color: '#c9a961', marginBottom: '5px', fontSize: '0.9em' }}>{ach.name}</div>
+                                                <div style={{ color: '#888', fontSize: '0.85em', marginBottom: '8px' }}>{ach.desc}</div>
+                                                <div style={{ color: '#4caf50', fontWeight: 'bold' }}>+{ach.points} pts</div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     </div>
