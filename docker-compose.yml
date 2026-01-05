@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: gnl_league
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Node.js backend API
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      MONGO_URL: mongodb://mongodb:27017/gnl_league
+      GO_WORKER_URL: http://stats-processor:3001
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./public:/app/public
+      - ./data:/app/data
+    restart: unless-stopped
+
+  # Go stats processor
+  stats-processor:
+    build:
+      context: .
+      dockerfile: Dockerfile.go
+    ports:
+      - "3001:3001"
+    environment:
+      MONGO_URL: mongodb://mongodb:27017/gnl_league
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:

@@ -90,6 +90,8 @@ router.get('/players/with-cache', async (req, res) => {
             }
         }
 
+        console.log(`📊 Cache status: ${cachedPlayers.length} cached, ${playersToFetch.length} to fetch`);
+
         // Second pass: fetch data in PARALLEL for all players (not sequential!)
         const fetchPromises = playersToFetch.map(async ({ player, cache }) => {
             try {
@@ -141,13 +143,46 @@ router.get('/players/with-cache', async (req, res) => {
         const result = [...cachedPlayers, ...fetchedPlayers];
 
         const totalTime = Date.now() - startTime;
-        console.log(`✅ Loaded ${result.length} players in ${totalTime}ms (${cachedPlayers.length} cached, ${fetchedPlayers.length} fresh)`);
+        console.log(`✅ Loaded ${result.length} players in ${totalTime}ms`);
+
+        // If cache was old, trigger Go stats computation in background (async, don't wait)
+        if (playersToFetch.length > 0) {
+            triggerGoStatsComputation(result).catch(err => {
+                console.warn('⚠️ Background Go computation failed:', err.message);
+                // Don't fail the request if background job fails
+            });
+        }
+
         res.json(result);
     } catch (error) {
         console.error('Error in /players/with-cache:', error);
         res.status(500).json({ error: 'Failed to fetch players with cache' });
     }
 });
+
+// Helper function to trigger Go stats computation in background
+async function triggerGoStatsComputation(players) {
+    const GO_WORKER_URL = process.env.GO_WORKER_URL || 'http://localhost:3001';
+
+    // Don't wait for this - fire and forget
+    setTimeout(async () => {
+        try {
+            console.log(`🔵 Triggering Go stats computation for ${players.length} players...`);
+
+            const response = await axios.post(`${GO_WORKER_URL}/compute-stats`, {
+                players: players
+            }, {
+                timeout: 300000 // 5 minute timeout for Go worker
+            });
+
+            const { time, results } = response.data;
+            console.log(`✅ Go stats computed in ${time}ms for ${results.length} players`);
+        } catch (error) {
+            console.error(`❌ Go worker error: ${error.message}`);
+            // Don't fail - this is background work
+        }
+    }, 100); // Small delay to avoid blocking response
+}
 
 // Clear cache for specific player (admin only)
 router.delete('/admin/players/cache/:battleTag', async (req, res) => {
