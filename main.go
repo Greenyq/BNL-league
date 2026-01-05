@@ -130,10 +130,31 @@ func computeStatsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	startTime := time.Now()
+	w.Header().Set("Content-Type", "application/json")
 
 	var req ComputeStatsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid request: %v", err), http.StatusBadRequest)
+		log.Printf("❌ JSON decode error: %v", err)
+		response := ComputeStatsResponse{
+			Success: false,
+			Message: fmt.Sprintf("Invalid JSON: %v", err),
+			Results: []StatResult{},
+			Time:    time.Since(startTime).Milliseconds(),
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	if len(req.Players) == 0 {
+		log.Printf("⚠️ No players to process")
+		response := ComputeStatsResponse{
+			Success: true,
+			Message: "No players provided",
+			Results: []StatResult{},
+			Time:    0,
+		}
+		json.NewEncoder(w).Encode(response)
 		return
 	}
 
@@ -142,9 +163,12 @@ func computeStatsHandler(w http.ResponseWriter, r *http.Request) {
 	// Process players in parallel using goroutines
 	results := processPlayersParallel(req.Players)
 
-	// Save results to MongoDB
+	// Save results to MongoDB with timeout
 	cacheDuration := 10 * time.Minute
-	if err := cacheResults(results, cacheDuration); err != nil {
+	cacheCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := cacheResultsWithContext(cacheCtx, results, cacheDuration); err != nil {
 		log.Printf("⚠️ Warning: Failed to cache results: %v", err)
 		// Don't fail the request if caching fails
 	}
@@ -158,9 +182,7 @@ func computeStatsHandler(w http.ResponseWriter, r *http.Request) {
 		Time:    processingTime,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
-
 	log.Printf("✅ Processed %d players in %dms", len(results), processingTime)
 }
 
@@ -372,34 +394,74 @@ func calculateRaceStats(battleTag string, matches []MatchData) (wins, losses, po
 	return
 }
 
-// Cache results in MongoDB
-func cacheResults(results []StatResult, duration time.Duration) error {
+// Cache results in MongoDB with context
+func cacheResultsWithContext(ctx context.Context, results []StatResult, duration time.Duration) error {
 	collection := db.Collection("playerstats_cache")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+
+	if len(results) == 0 {
+		return nil
+	}
+
+	// Create a channel for results
+	errChan := make(chan error, len(results))
+	var wg sync.WaitGroup
 
 	for _, result := range results {
-		filter := bson.M{"battleTag": result.BattleTag}
-		update := bson.M{
-			"$set": bson.M{
-				"battleTag":    result.BattleTag,
-				"wins":         result.Wins,
-				"losses":       result.Losses,
-				"points":       result.Points,
-				"mmr":          result.MMR,
-				"achievements": result.Achievements,
-				"raceProfiles": result.RaceProfiles,
-				"lastUpdated":  result.LastUpdated,
-				"expiresAt":    time.Now().Add(duration),
-			},
-		}
+		wg.Add(1)
+		go func(r StatResult) {
+			defer wg.Done()
 
-		opts := options.Update().SetUpsert(true)
-		_, err := collection.UpdateOne(ctx, filter, update, opts)
+			filter := bson.M{"battleTag": r.BattleTag}
+			update := bson.M{
+				"$set": bson.M{
+					"battleTag":    r.BattleTag,
+					"wins":         r.Wins,
+					"losses":       r.Losses,
+					"points":       r.Points,
+					"mmr":          r.MMR,
+					"achievements": r.Achievements,
+					"raceProfiles": r.RaceProfiles,
+					"lastUpdated":  r.LastUpdated,
+					"expiresAt":    time.Now().Add(duration),
+				},
+			}
+
+			opts := options.Update().SetUpsert(true)
+			_, err := collection.UpdateOne(ctx, filter, update, opts)
+			if err != nil {
+				errChan <- fmt.Errorf("failed to cache %s: %w", r.BattleTag, err)
+				log.Printf("⚠️ Cache error for %s: %v", r.BattleTag, err)
+			}
+		}(result)
+	}
+
+	// Wait for all goroutines to complete
+	go func() {
+		wg.Wait()
+		close(errChan)
+	}()
+
+	// Collect any errors (but don't fail on them)
+	errorCount := 0
+	for err := range errChan {
 		if err != nil {
-			return fmt.Errorf("failed to cache %s: %w", result.BattleTag, err)
+			errorCount++
 		}
 	}
 
+	if errorCount > 0 {
+		log.Printf("⚠️ %d cache errors occurred (out of %d players)", errorCount, len(results))
+		// Don't return error - cache failures shouldn't block response
+	} else {
+		log.Printf("✅ Cached %d player stats successfully", len(results))
+	}
+
 	return nil
+}
+
+// Cache results in MongoDB (deprecated - use cacheResultsWithContext)
+func cacheResults(results []StatResult, duration time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return cacheResultsWithContext(ctx, results, duration)
 }

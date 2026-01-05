@@ -1488,223 +1488,220 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        background: 'rgba(0,0,0,0.85)',
+                        background: 'rgba(0,0,0,0.92)',
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        alignItems: 'stretch',
+                        justifyContent: 'stretch',
                         zIndex: 2000,
-                        padding: '20px'
+                        padding: 0,
+                        overflow: 'hidden'
                     }}
                     onClick={() => setShowAchievementsModal(false)}>
                         <div style={{
                             background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
-                            border: '3px solid #c9a961',
-                            borderRadius: '25px',
+                            border: 0,
+                            borderRadius: 0,
                             width: '100%',
-                            maxWidth: '1000px',
-                            maxHeight: '85vh',
+                            height: '100%',
                             display: 'flex',
                             flexDirection: 'column',
                             overflow: 'hidden',
                             zIndex: 2001
                         }}
                         onClick={(e) => e.stopPropagation()}>
-                            {/* Header */}
+                            {/* Header - Sticky */}
                             <div style={{
                                 background: 'linear-gradient(135deg, #c9a961 0%, #8b7355 100%)',
-                                padding: '30px 40px',
+                                padding: '40px 60px',
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
-                                borderBottom: '2px solid rgba(201, 169, 97, 0.3)'
+                                borderBottom: '3px solid rgba(201, 169, 97, 0.5)',
+                                position: 'relative',
+                                zIndex: 10,
+                                flexShrink: 0
                             }}>
                                 <div>
                                     <h1 style={{
-                                        fontSize: '2.5em',
+                                        fontSize: '3.5em',
                                         fontWeight: '900',
                                         color: '#000',
                                         margin: 0,
-                                        marginBottom: '5px'
+                                        marginBottom: '10px',
+                                        textShadow: '3px 3px 6px rgba(0,0,0,0.3)'
                                     }}>
-                                        🏆 Достижения {player.name}
+                                        🏆 {player.name}
                                     </h1>
                                     <div style={{
-                                        fontSize: '1.1em',
+                                        fontSize: '1.3em',
                                         color: 'rgba(0,0,0,0.7)',
-                                        fontWeight: '500'
+                                        fontWeight: '600'
                                     }}>
-                                        Всего: {player.achievements.length} достижений
+                                        {player.achievements.length} достижений • {player.achievements.reduce((sum, achKey) => sum + (achievements[achKey]?.points || 0), 0)} очков
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setShowAchievementsModal(false)}
                                     style={{
                                         cursor: 'pointer',
-                                        fontSize: '2em',
+                                        fontSize: '3em',
                                         color: '#000',
                                         background: 'rgba(0,0,0,0.2)',
                                         border: 'none',
-                                        width: '50px',
-                                        height: '50px',
+                                        width: '80px',
+                                        height: '80px',
                                         borderRadius: '50%',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         fontWeight: 'bold',
                                         transition: 'all 0.2s',
-                                        flexShrink: 0
+                                        flexShrink: 0,
+                                        padding: 0,
+                                        lineHeight: '1'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = 'rgba(0,0,0,0.5)';
-                                        e.currentTarget.style.transform = 'scale(1.1)';
+                                        e.currentTarget.style.background = 'rgba(0,0,0,0.6)';
+                                        e.currentTarget.style.transform = 'scale(1.15)';
                                     }}
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.background = 'rgba(0,0,0,0.2)';
                                         e.currentTarget.style.transform = 'scale(1)';
-                                    }}>
+                                    }}
+                                    title="Закрыть (Esc)">
                                     ✕
                                 </button>
                             </div>
 
-                            {/* Content - Scrollable */}
+                            {/* Content - Full scrollable */}
                             <div style={{
                                 overflowY: 'auto',
-                                padding: '40px',
-                                flex: 1
+                                padding: '60px',
+                                flex: 1,
+                                display: 'flex',
+                                flexDirection: 'column'
                             }}>
                                 <div style={{
                                     display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                                    gap: '25px'
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                                    gap: '35px',
+                                    width: '100%'
                                 }}>
-                                    {player.achievements && player.achievements.map(achKey => {
-                                        const ach = achievements[achKey];
-                                        if (!ach) return null;
-                                        return (
-                                            <div key={achKey} style={{
-                                                background: '#2a2a2a',
-                                                border: '2px solid #c9a961',
-                                                borderRadius: '15px',
-                                                padding: '25px',
-                                                textAlign: 'center',
-                                                transition: 'all 0.3s',
-                                                cursor: 'pointer',
-                                                position: 'relative',
-                                                overflow: 'hidden'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.transform = 'translateY(-5px)';
-                                                e.currentTarget.style.boxShadow = '0 15px 40px rgba(201, 169, 97, 0.3)';
-                                                e.currentTarget.style.borderColor = '#ffd700';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.transform = 'translateY(0)';
-                                                e.currentTarget.style.boxShadow = 'none';
-                                                e.currentTarget.style.borderColor = '#c9a961';
-                                            }}>
-                                                {/* Background decoration */}
-                                                <div style={{
-                                                    position: 'absolute',
-                                                    top: 0,
-                                                    right: 0,
-                                                    width: '100px',
-                                                    height: '100px',
-                                                    background: 'rgba(201, 169, 97, 0.1)',
-                                                    borderRadius: '50%',
-                                                    transform: 'translate(30%, -30%)'
-                                                }}></div>
-
-                                                {/* Icon */}
-                                                <div style={{
-                                                    fontSize: '4em',
-                                                    marginBottom: '15px',
-                                                    position: 'relative',
-                                                    zIndex: 1
-                                                }}>
-                                                    {ach.icon}
-                                                </div>
-
-                                                {/* Name */}
-                                                <h3 style={{
-                                                    fontSize: '1.3em',
-                                                    fontWeight: '800',
-                                                    color: '#c9a961',
-                                                    margin: '0 0 12px 0',
-                                                    position: 'relative',
-                                                    zIndex: 1
-                                                }}>
-                                                    {ach.name}
-                                                </h3>
-
-                                                {/* Description */}
-                                                <p style={{
-                                                    color: '#aaa',
-                                                    fontSize: '1em',
-                                                    margin: '0 0 15px 0',
-                                                    lineHeight: '1.5',
-                                                    position: 'relative',
-                                                    zIndex: 1,
-                                                    minHeight: '40px'
-                                                }}>
-                                                    {ach.desc}
-                                                </p>
-
-                                                {/* Points Badge */}
-                                                <div style={{
-                                                    background: 'linear-gradient(135deg, #c9a961 0%, #8b7355 100%)',
-                                                    color: '#000',
-                                                    padding: '10px 20px',
-                                                    borderRadius: '20px',
-                                                    fontWeight: '800',
-                                                    fontSize: '1.1em',
-                                                    display: 'inline-block',
-                                                    position: 'relative',
-                                                    zIndex: 1
-                                                }}>
-                                                    +{ach.points} очков
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Footer Stats */}
-                            <div style={{
-                                background: '#1a1a1a',
-                                borderTop: '2px solid rgba(201, 169, 97, 0.3)',
-                                padding: '20px 40px',
-                                display: 'flex',
-                                justifyContent: 'space-around',
-                                alignItems: 'center'
-                            }}>
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '5px' }}>Всего очков</div>
-                                    <div style={{
-                                        fontSize: '2em',
-                                        fontWeight: '800',
-                                        color: '#4caf50'
-                                    }}>
-                                        {player.achievements.reduce((sum, achKey) => {
+                                    {player.achievements && player.achievements.length > 0 ? (
+                                        player.achievements.map(achKey => {
                                             const ach = achievements[achKey];
-                                            return sum + (ach ? ach.points : 0);
-                                        }, 0)}
-                                    </div>
-                                </div>
-                                <div style={{
-                                    width: '2px',
-                                    height: '40px',
-                                    background: 'rgba(201, 169, 97, 0.3)'
-                                }}></div>
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '5px' }}>Достижений</div>
-                                    <div style={{
-                                        fontSize: '2em',
-                                        fontWeight: '800',
-                                        color: '#c9a961'
-                                    }}>
-                                        {player.achievements.length}
-                                    </div>
+                                            if (!ach) return null;
+                                            return (
+                                                <div key={achKey} style={{
+                                                    background: '#2a2a2a',
+                                                    border: '3px solid #c9a961',
+                                                    borderRadius: '18px',
+                                                    padding: '35px 25px',
+                                                    textAlign: 'center',
+                                                    transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                                    cursor: 'default',
+                                                    position: 'relative',
+                                                    overflow: 'hidden',
+                                                    minHeight: '340px',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    justifyContent: 'space-between'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.transform = 'translateY(-12px) scale(1.05)';
+                                                    e.currentTarget.style.boxShadow = '0 30px 60px rgba(201, 169, 97, 0.5)';
+                                                    e.currentTarget.style.borderColor = '#ffd700';
+                                                    e.currentTarget.style.background = '#333';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                                                    e.currentTarget.style.boxShadow = 'none';
+                                                    e.currentTarget.style.borderColor = '#c9a961';
+                                                    e.currentTarget.style.background = '#2a2a2a';
+                                                }}>
+                                                    {/* Background decoration */}
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        top: '-40px',
+                                                        right: '-40px',
+                                                        width: '150px',
+                                                        height: '150px',
+                                                        background: 'rgba(201, 169, 97, 0.2)',
+                                                        borderRadius: '50%'
+                                                    }}></div>
+
+                                                    {/* Icon */}
+                                                    <div style={{
+                                                        fontSize: '5.5em',
+                                                        marginBottom: '15px',
+                                                        position: 'relative',
+                                                        zIndex: 1,
+                                                        filter: 'drop-shadow(0 5px 10px rgba(201, 169, 97, 0.4))',
+                                                        lineHeight: '1'
+                                                    }}>
+                                                        {ach.icon}
+                                                    </div>
+
+                                                    {/* Name */}
+                                                    <h3 style={{
+                                                        fontSize: '1.25em',
+                                                        fontWeight: '800',
+                                                        color: '#c9a961',
+                                                        margin: '0 0 12px 0',
+                                                        position: 'relative',
+                                                        zIndex: 1
+                                                    }}>
+                                                        {ach.name}
+                                                    </h3>
+
+                                                    {/* Description */}
+                                                    <p style={{
+                                                        color: '#bbb',
+                                                        fontSize: '1em',
+                                                        margin: '0 0 18px 0',
+                                                        lineHeight: '1.6',
+                                                        position: 'relative',
+                                                        zIndex: 1,
+                                                        flex: 1,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}>
+                                                        {ach.desc}
+                                                    </p>
+
+                                                    {/* Points Badge */}
+                                                    <div style={{
+                                                        background: 'linear-gradient(135deg, #c9a961 0%, #8b7355 100%)',
+                                                        color: '#000',
+                                                        padding: '14px 28px',
+                                                        borderRadius: '30px',
+                                                        fontWeight: '800',
+                                                        fontSize: '1.15em',
+                                                        display: 'inline-block',
+                                                        position: 'relative',
+                                                        zIndex: 1,
+                                                        margin: '0 auto',
+                                                        boxShadow: '0 5px 18px rgba(201, 169, 97, 0.4)',
+                                                        letterSpacing: '0.5px'
+                                                    }}>
+                                                        +{ach.points} очков
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <div style={{
+                                            gridColumn: '1 / -1',
+                                            textAlign: 'center',
+                                            padding: '120px 40px',
+                                            color: '#888'
+                                        }}>
+                                            <div style={{ fontSize: '5em', marginBottom: '30px' }}>🏆</div>
+                                            <div style={{ fontSize: '1.8em', fontWeight: '600', marginBottom: '15px' }}>Нет достижений</div>
+                                            <div style={{ fontSize: '1.1em' }}>Начните играть, чтобы получить первое достижение!</div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
