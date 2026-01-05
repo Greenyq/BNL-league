@@ -235,8 +235,8 @@ function App() {
 
             const loadedPlayers = [];
 
-            // Extract all BNL BattleTags for BNL match detection
-            const allBnlBattleTags = cachedPlayers.map(p => p.battleTag);
+            // Extract all BNL BattleTags for BNL match detection (use Set for O(1) lookup instead of Array includes)
+            const allBnlBattleTags = new Set(cachedPlayers.map(p => p.battleTag));
 
             // Process each cached player
             cachedPlayers.forEach((player, i) => {
@@ -310,7 +310,8 @@ function App() {
 
     // Process matches from API and calculate points
     // Returns array of profiles - one per race played
-    const processMatches = (battleTag, matches, allBnlBattleTags = []) => {
+    // allBnlBattleTags is a Set for O(1) lookup performance
+    const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
         if (!matches || matches.length === 0) {
             return [{
                 race: 0,
@@ -344,9 +345,14 @@ function App() {
                 return;
             }
 
+            // Validate match structure
+            if (!match.teams || !Array.isArray(match.teams) || match.teams.length < 2) {
+                return;
+            }
+
             // Find player's team
             const playerTeam = match.teams.find(team =>
-                team.players.some(p => p.battleTag === battleTag)
+                team && team.players && Array.isArray(team.players) && team.players.some(p => p && p.battleTag === battleTag)
             );
 
             if (!playerTeam) {
@@ -354,7 +360,7 @@ function App() {
                 return;
             }
 
-            const player = playerTeam.players.find(p => p.battleTag === battleTag);
+            const player = playerTeam.players.find(p => p && p.battleTag === battleTag);
             if (!player || !player.race) return;
 
             const race = player.race;
@@ -404,7 +410,7 @@ function App() {
                 const player = playerTeam.players.find(p => p.battleTag === battleTag);
                 const opponentTeam = match.teams.find(team => team !== playerTeam);
 
-                if (!player || !opponentTeam) return;
+                if (!player || !opponentTeam || !opponentTeam.players || opponentTeam.players.length === 0) return;
 
                 const opponent = opponentTeam.players[0];
                 const won = playerTeam.won;
@@ -414,8 +420,8 @@ function App() {
                 const opponentMMR = opponent.oldMmr || opponent.currentMmr || 1500;
                 const mmrDiff = opponentMMR - playerMMR;
 
-                // Check if opponent is a BNL player
-                const isBnlMatch = allBnlBattleTags.includes(opponent.battleTag);
+                // Check if opponent is a BNL player (using Set.has() for O(1) performance)
+                const isBnlMatch = opponent.battleTag ? allBnlBattleTags.has(opponent.battleTag) : false;
 
                 // Points calculation based on MMR difference
                 let matchPoints = 0;
