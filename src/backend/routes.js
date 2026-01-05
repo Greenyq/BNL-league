@@ -134,16 +134,27 @@ router.get('/players/with-cache', async (req, res) => {
                     };
                 } catch (error) {
                     lastError = error;
+                    const statusCode = error.response?.status || 'N/A';
+                    const statusText = error.response?.statusText || '';
+                    const errorMsg = error.message || 'Unknown error';
+
                     if (attempt < maxRetries) {
                         const delay = Math.pow(2, attempt) * 500; // Exponential backoff: 500ms, 1s, 2s
-                        console.warn(`⚠️ ${player.battleTag} (attempt ${attempt + 1}/${maxRetries + 1}): ${error.message}. Retrying in ${delay}ms...`);
+                        console.warn(`⚠️ ${player.battleTag} (attempt ${attempt + 1}/${maxRetries + 1}): HTTP ${statusCode} ${statusText} - ${errorMsg}. Retrying in ${delay}ms...`);
                         await new Promise(resolve => setTimeout(resolve, delay));
                     }
                 }
             }
 
             // All retries failed
-            console.error(`❌ ${player.battleTag}: Failed after ${maxRetries + 1} attempts. ${lastError?.message || 'Unknown error'}`);
+            const statusCode = lastError?.response?.status || 'N/A';
+            const statusText = lastError?.response?.statusText || '';
+            const errorMsg = lastError?.message || 'Unknown error';
+            console.error(`❌ ${player.battleTag}: API request failed after ${maxRetries + 1} attempts`);
+            console.error(`   Status: HTTP ${statusCode} ${statusText}`);
+            console.error(`   Error: ${errorMsg}`);
+            console.error(`   URL: https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=20&season=23&pageSize=100`);
+
             return {
                 ...player.toJSON(),
                 matchData: [],
