@@ -27,15 +27,50 @@ const raceImages = {
 
 // Achievements
 const achievements = {
+    // Win Streaks
     winStreak3: { icon: "🔥", name: "On Fire", desc: "3 wins in a row", points: 30 },
     winStreak5: { icon: "🔥🔥", name: "Hot Streak", desc: "5 wins in a row", points: 50 },
+    winStreak10: { icon: "🔥🔥🔥", name: "Dominator", desc: "10 wins in a row", points: 100 },
+    winStreak15: { icon: "👑", name: "Unstoppable", desc: "15 wins in a row", points: 150 },
+
+    // Loss Streaks
     loseStreak3: { icon: "💪", name: "Не расстраивайся дави на газ", desc: "3 losses in a row", points: 10 },
+    loseStreak10: { icon: "🛡️", name: "Survivor", desc: "Keep playing after 10 losses in a row", points: 25 },
+
+    // MMR Challenges
     giantSlayer: { icon: "⚔️", name: "И кто тут папа?", desc: "Beat opponent with +50 MMR", points: 25 },
+    titanSlayer: { icon: "⚡", name: "Titan Slayer", desc: "Beat opponent with +100 MMR", points: 50 },
+    davidVsGoliath: { icon: "🏹", name: "David vs Goliath", desc: "Beat opponent with +200 MMR", points: 100 },
+
+    // Total Wins
+    warrior: { icon: "⚔️", name: "Warrior", desc: "50 total wins", points: 30 },
     centurion: { icon: "💯", name: "Centurion", desc: "100 total wins", points: 50 },
+    centurionSupreme: { icon: "👑💯", name: "Centurion Supreme", desc: "200 total wins", points: 80 },
+    noMercy: { icon: "😈", name: "No Mercy", desc: "50+ wins this season", points: 40 },
+
+    // Weekly/Activity
     gladiator: { icon: "🏛️", name: "Gladiator", desc: "10+ wins this week", points: 20 },
+    perfectWeek: { icon: "✨", name: "Perfect Week", desc: "20+ wins this week", points: 50 },
+
+    // Points
     goldRush: { icon: "💰", name: "Gold Rush", desc: "1000+ points", points: 30 },
+    platinumRush: { icon: "💎", name: "Platinum Rush", desc: "2000+ points", points: 60 },
+
+    // Special
     comeback: { icon: "↩️", name: "Comeback", desc: "Win after 3 losses", points: 20 },
+    persistent: { icon: "🔄", name: "Persistent", desc: "5 wins after 5 losses streak", points: 40 },
     veteran: { icon: "🎖️", name: "Veteran", desc: "500+ total games", points: 35 },
+    marathonRunner: { icon: "🏃", name: "Marathon Runner", desc: "100+ games this season", points: 30 },
+
+    // MMR Milestones
+    mmrMillionaire: { icon: "💵", name: "MMR Millionaire", desc: "Reach 2000+ MMR", points: 50 },
+    eliteWarrior: { icon: "👑", name: "Elite Warrior", desc: "Reach 2200+ MMR", points: 100 },
+
+    // BNL Specific Achievements
+    bnlRobber: { icon: "🏴‍☠️", name: "Обокрал ПТС БНЛ", desc: "Win against BNL player", points: 30 },
+    bnlVictim: { icon: "😢", name: "Отдал ПТС БНЛ", desc: "Lost to BNL player", points: -10 },
+    bnlRivalry: { icon: "⚔️🎯", name: "BNL Rivalry", desc: "Play 5+ matches vs BNL players", points: 25 },
+    bnlDominator: { icon: "👑🏴‍☠️", name: "BNL Dominator", desc: "Win 10+ matches vs BNL players", points: 60 },
 };
 
 const API_BASE = '';
@@ -200,6 +235,9 @@ function App() {
 
             const loadedPlayers = [];
 
+            // Extract all BNL BattleTags for BNL match detection
+            const allBnlBattleTags = cachedPlayers.map(p => p.battleTag);
+
             // Process each cached player
             cachedPlayers.forEach((player, i) => {
                 // If player has matchData, process it
@@ -207,7 +245,7 @@ function App() {
                     console.log(`Processing ${player.battleTag} with ${player.matchData.length} matches`);
 
                     // processMatches returns array of profiles (one per race)
-                    const playerProfiles = processMatches(player.battleTag, player.matchData);
+                    const playerProfiles = processMatches(player.battleTag, player.matchData, allBnlBattleTags);
                     console.log(`Profiles created for ${player.battleTag}:`, playerProfiles.length);
 
                     // Create a card for each race profile
@@ -272,7 +310,7 @@ function App() {
 
     // Process matches from API and calculate points
     // Returns array of profiles - one per race played
-    const processMatches = (battleTag, matches) => {
+    const processMatches = (battleTag, matches, allBnlBattleTags = []) => {
         if (!matches || matches.length === 0) {
             return [{
                 race: 0,
@@ -376,12 +414,15 @@ function App() {
                 const opponentMMR = opponent.oldMmr || opponent.currentMmr || 1500;
                 const mmrDiff = opponentMMR - playerMMR;
 
+                // Check if opponent is a BNL player
+                const isBnlMatch = allBnlBattleTags.includes(opponent.battleTag);
+
                 // Points calculation based on MMR difference
                 let matchPoints = 0;
 
                 if (won) {
                     wins++;
-                    matchHistory.push({ result: 'win', mmrDiff, playerMMR, opponentMMR });
+                    matchHistory.push({ result: 'win', mmrDiff, playerMMR, opponentMMR, isBnlMatch, opponentTag: opponent.battleTag });
 
                     // Victory points based on opponent MMR
                     if (mmrDiff >= 20) {
@@ -396,7 +437,7 @@ function App() {
                     }
                 } else {
                     losses++;
-                    matchHistory.push({ result: 'loss', mmrDiff, playerMMR, opponentMMR });
+                    matchHistory.push({ result: 'loss', mmrDiff, playerMMR, opponentMMR, isBnlMatch, opponentTag: opponent.battleTag });
 
                     // Loss points (negative) based on opponent MMR
                     if (mmrDiff <= -20) {
@@ -415,7 +456,7 @@ function App() {
             });
 
             // Determine achievements for this race
-            const achs = determineAchievements(wins, losses, totalPoints, raceMatches.length, matchHistory);
+            const achs = determineAchievements(wins, losses, totalPoints, raceMatches.length, matchHistory, [], mmrByRace[race]);
 
             // Add achievement bonuses
             achs.forEach(achKey => {
@@ -451,20 +492,36 @@ function App() {
         return profiles;
     };
 
-    const determineAchievements = (wins, losses, points, totalGames, matchHistory = [], previousAchievements = []) => {
+    const determineAchievements = (wins, losses, points, totalGames, matchHistory = [], previousAchievements = [], currentMmr = 0) => {
         const achs = [];
 
-        // Basic achievements
-        if (wins >= 100) achs.push('centurion');
-        if (wins >= 10) achs.push('gladiator');
+        // Win milestones
+        if (wins >= 200) achs.push('centurionSupreme');
+        else if (wins >= 100) achs.push('centurion');
+        else if (wins >= 50) achs.push('warrior');
+
+        // Weekly/Season wins
+        if (wins >= 20) achs.push('perfectWeek');
+        else if (wins >= 10) achs.push('gladiator');
+        if (wins >= 50) achs.push('noMercy');
+
+        // Games played
         if (totalGames >= 500) achs.push('veteran');
-        if (points >= 1000) achs.push('goldRush');
+        if (totalGames >= 100) achs.push('marathonRunner');
+
+        // Points milestones
+        if (points >= 2000) achs.push('platinumRush');
+        else if (points >= 1000) achs.push('goldRush');
+
+        // MMR milestones
+        if (currentMmr >= 2200) achs.push('eliteWarrior');
+        else if (currentMmr >= 2000) achs.push('mmrMillionaire');
 
         // Analyze streaks (check LAST 20 matches, most recent first)
         // matchHistory is in chronological order (oldest first), so we need to reverse it
         const recentMatches = [...matchHistory].reverse().slice(0, 20);
 
-        // Check for 3+ win streak
+        // Check for win streaks
         let currentWinStreak = 0;
         let maxWinStreak = 0;
         for (const match of recentMatches) {
@@ -476,30 +533,40 @@ function App() {
             }
         }
 
-        if (maxWinStreak >= 5) achs.push('winStreak5');
+        if (maxWinStreak >= 15) achs.push('winStreak15');
+        else if (maxWinStreak >= 10) achs.push('winStreak10');
+        else if (maxWinStreak >= 5) achs.push('winStreak5');
         else if (maxWinStreak >= 3) achs.push('winStreak3');
 
-        // Check for 3+ loss streak
+        // Check for loss streaks
         let currentLossStreak = 0;
+        let maxLossStreak = 0;
         for (const match of recentMatches) {
             if (match.result === 'loss') {
                 currentLossStreak++;
-                if (currentLossStreak >= 3) {
-                    achs.push('loseStreak3');
-                    break;
-                }
+                maxLossStreak = Math.max(maxLossStreak, currentLossStreak);
             } else {
                 currentLossStreak = 0;
             }
         }
 
-        // Check for giant slayer (win against +50 MMR opponent)
+        if (maxLossStreak >= 10) achs.push('loseStreak10');
+        else if (maxLossStreak >= 3) achs.push('loseStreak3');
+
+        // Check MMR difference challenges
+        let hasGiantSlayer = false;
+        let hasTitanSlayer = false;
+        let hasDavidVsGoliath = false;
         for (const match of recentMatches) {
-            if (match.result === 'win' && match.mmrDiff >= 50) {
-                achs.push('giantSlayer');
-                break;
+            if (match.result === 'win') {
+                if (match.mmrDiff >= 200) hasDavidVsGoliath = true;
+                if (match.mmrDiff >= 100) hasTitanSlayer = true;
+                if (match.mmrDiff >= 50) hasGiantSlayer = true;
             }
         }
+        if (hasDavidVsGoliath) achs.push('davidVsGoliath');
+        if (hasTitanSlayer) achs.push('titanSlayer');
+        if (hasGiantSlayer) achs.push('giantSlayer');
 
         // Check for comeback (win after 3 losses)
         for (let i = 0; i < recentMatches.length - 3; i++) {
@@ -512,11 +579,32 @@ function App() {
             }
         }
 
+        // Check for persistent (5 wins after 5 loss streak)
+        for (let i = 0; i < recentMatches.length - 9; i++) {
+            // Check if we have 5 wins followed by 5 losses
+            const fiveWins = recentMatches.slice(i, i + 5).every(m => m.result === 'win');
+            const fiveLosses = recentMatches.slice(i + 5, i + 10).every(m => m.result === 'loss');
+            if (fiveWins && fiveLosses) {
+                achs.push('persistent');
+                break;
+            }
+        }
+
+        // BNL specific achievements
+        const bnlMatches = matchHistory.filter(m => m.isBnlMatch);
+        const bnlWins = bnlMatches.filter(m => m.result === 'win').length;
+        const bnlLosses = bnlMatches.filter(m => m.result === 'loss').length;
+
+        if (bnlWins >= 10) achs.push('bnlDominator');
+        if (bnlMatches.length >= 5) achs.push('bnlRivalry');
+        if (bnlWins > 0) achs.push('bnlRobber');
+        if (bnlLosses > 0) achs.push('bnlVictim');
+
         // Merge with previously earned achievements (once earned, never lost)
         const allAchievements = new Set([...achs, ...previousAchievements]);
 
         // Debug logging for achievements
-        console.log(`🏆 Achievement check: wins=${wins}, losses=${losses}, points=${points}, totalGames=${totalGames}, maxWinStreak=${maxWinStreak}, achievements=${Array.from(allAchievements).join(', ') || 'none'}`);
+        console.log(`🏆 Achievement check: wins=${wins}, losses=${losses}, points=${points}, totalGames=${totalGames}, MMR=${currentMmr}, maxWinStreak=${maxWinStreak}, maxLossStreak=${maxLossStreak}, BNL matches=${bnlMatches.length} (W:${bnlWins}/L:${bnlLosses}), achievements=${Array.from(allAchievements).join(', ') || 'none'}`);
         if (recentMatches.length > 0) {
             console.log(`   📊 Recent match sequence (newest → oldest, last 20):`, recentMatches.map(m => m.result).join(' → '));
         }
@@ -635,6 +723,8 @@ function App() {
 }
 
 function Header({ activeTab }) {
+    const [bannerLoaded, setBannerLoaded] = React.useState(false);
+
     // Only show banner on home page
     if (activeTab !== 'home') {
         return null;
@@ -643,21 +733,27 @@ function Header({ activeTab }) {
     return (
         <div className="header">
             <div className="header-content">
+                {!bannerLoaded && (
+                    <div className="skeleton skeleton-banner" style={{ marginBottom: 0 }}></div>
+                )}
                 <img
                     src="/images/banner.png"
                     alt="Welcome to BNL - Warcraft Breaking New Limits"
                     style={{
                         width: '100%',
                         height: '400px',
-                        display: 'block',
+                        display: bannerLoaded ? 'block' : 'none',
                         objectFit: 'cover',
                         borderRadius: '15px',
-                        boxShadow: '0 10px 40px rgba(201, 169, 97, 0.3)'
+                        boxShadow: '0 10px 40px rgba(201, 169, 97, 0.3)',
+                        animation: 'fadeIn 0.5s ease'
                     }}
+                    onLoad={() => setBannerLoaded(true)}
                     onError={(e) => {
                         // Fallback to text if image not found
                         e.target.style.display = 'none';
                         e.target.nextElementSibling.style.display = 'block';
+                        setBannerLoaded(true);
                     }}
                 />
                 <div style={{ display: 'none' }}>
