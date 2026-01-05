@@ -62,9 +62,28 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static files - handle both local and production paths correctly
+// __dirname = /path/to/src/backend
+// We need: /path/to/public
 const publicPath = path.resolve(__dirname, '../../public');
-console.log('📁 Serving static files from:', publicPath);
-app.use(express.static(publicPath));
+const fallbackPublicPath = path.resolve(__dirname, '../../../public'); // In case of deployment structure differences
+
+let staticPath = publicPath;
+try {
+    // Check if path exists
+    const fs = require('fs');
+    if (!fs.existsSync(publicPath)) {
+        console.warn(`⚠️ Primary path not found: ${publicPath}`);
+        if (fs.existsSync(fallbackPublicPath)) {
+            staticPath = fallbackPublicPath;
+            console.log(`✅ Using fallback path: ${staticPath}`);
+        }
+    }
+} catch (e) {
+    // If fs check fails, use primary
+}
+
+console.log(`📁 Serving static files from: ${staticPath}`);
+app.use(express.static(staticPath));
 
 // Middleware to check admin authentication
 const checkAuth = async (req, res, next) => {
