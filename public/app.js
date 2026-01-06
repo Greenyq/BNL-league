@@ -464,6 +464,16 @@ function App() {
 
             // Process each match for this race
             raceMatches.forEach(match => {
+                // Only count 1v1 matches (not 2v2 or other team formats)
+                // In 1v1, each team should have exactly 1 player
+                const team1Players = match.teams?.[0]?.players || [];
+                const team2Players = match.teams?.[1]?.players || [];
+
+                if (team1Players.length !== 1 || team2Players.length !== 1) {
+                    console.log(`Skipping non-1v1 match: ${team1Players.length}v${team2Players.length}`);
+                    return; // Skip non-1v1 matches
+                }
+
                 const playerTeam = match.teams.find(team =>
                     team.players.some(p => p.battleTag === battleTag)
                 );
@@ -3082,208 +3092,260 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                         overflowY: 'auto',
                         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
                     }}>
-                        <h3 style={{ color: '#c9a961', marginBottom: '20px', fontSize: '1.5em' }}>
-                            ⚙️ Настройка матча
-                        </h3>
+                        {selectedMatch.status === 'upcoming' ? (
+                            // BEFORE MATCH: Set date and time
+                            <>
+                                <h3 style={{ color: '#c9a961', marginBottom: '20px', fontSize: '1.5em' }}>
+                                    📅 Установить время матча
+                                </h3>
 
-                        {/* Match Info */}
-                        <div style={{ marginBottom: '20px', padding: '15px', background: '#2a2a2a', borderRadius: '10px' }}>
-                            <div style={{ color: '#888', fontSize: '0.9em' }}>
-                                {getPlayer(selectedMatch.player1Id)?.name} vs {getPlayer(selectedMatch.player2Id)?.name}
-                            </div>
-                        </div>
-
-                        {/* Date Input */}
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', color: '#c9a961', marginBottom: '8px', fontWeight: '600' }}>
-                                📅 Дата матча
-                            </label>
-                            <input
-                                type="date"
-                                value={matchDate}
-                                onChange={(e) => setMatchDate(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '12px',
-                                    borderRadius: '8px',
-                                    border: '1px solid #444',
-                                    background: '#2a2a2a',
-                                    color: '#fff',
-                                    fontSize: '1em',
-                                    boxSizing: 'border-box'
-                                }}
-                            />
-                        </div>
-
-                        {/* Time Input */}
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', color: '#c9a961', marginBottom: '8px', fontWeight: '600' }}>
-                                🕐 Время матча
-                            </label>
-                            <input
-                                type="time"
-                                value={matchTime}
-                                onChange={(e) => setMatchTime(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '12px',
-                                    borderRadius: '8px',
-                                    border: '1px solid #444',
-                                    background: '#2a2a2a',
-                                    color: '#fff',
-                                    fontSize: '1em',
-                                    boxSizing: 'border-box'
-                                }}
-                            />
-                        </div>
-
-                        {/* File Upload - Only available after match is completed */}
-                        {selectedMatch.status === 'completed' ? (
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', color: '#c9a961', marginBottom: '8px', fontWeight: '600' }}>
-                                📁 Файл игры (макс. 700 кб)
-                            </label>
-                            <input
-                                type="file"
-                                onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                        if (file.size > 700 * 1024) {
-                                            alert('❌ Файл больше 700 кб!');
-                                            return;
-                                        }
-                                        setMatchFile(file);
-                                    }
-                                }}
-                                style={{
-                                    width: '100%',
-                                    padding: '12px',
-                                    borderRadius: '8px',
-                                    border: '1px solid #444',
-                                    background: '#2a2a2a',
-                                    color: '#888',
-                                    fontSize: '0.9em',
-                                    boxSizing: 'border-box'
-                                }}
-                            />
-                            {matchFile && (
-                                <div style={{ marginTop: '10px', color: '#4caf50', fontSize: '0.9em' }}>
-                                    ✓ Выбран: {matchFile.name}
+                                {/* Match Info */}
+                                <div style={{ marginBottom: '20px', padding: '15px', background: '#2a2a2a', borderRadius: '10px' }}>
+                                    <div style={{ color: '#888', fontSize: '0.9em' }}>
+                                        {getPlayer(selectedMatch.player1Id)?.name} vs {getPlayer(selectedMatch.player2Id)?.name}
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                        ) : (
-                        <div style={{
-                            marginBottom: '20px',
-                            padding: '15px',
-                            background: 'rgba(255, 193, 7, 0.1)',
-                            border: '1px solid #ffc107',
-                            borderRadius: '8px',
-                            color: '#ffc107',
-                            textAlign: 'center',
-                            fontSize: '0.95em'
-                        }}>
-                            ⏳ Отметьте победителя чтобы загрузить файл
-                        </div>
-                        )}
 
-                        {/* Buttons */}
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '30px' }}>
-                            <button
-                                onClick={async () => {
-                                    if (!matchDate || !matchTime) {
-                                        alert('❌ Заполните дату и время!');
-                                        return;
-                                    }
+                                {/* Date Input */}
+                                <div style={{ marginBottom: '20px' }}>
+                                    <label style={{ display: 'block', color: '#c9a961', marginBottom: '8px', fontWeight: '600' }}>
+                                        📅 Дата матча
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={matchDate}
+                                        onChange={(e) => setMatchDate(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #444',
+                                            background: '#2a2a2a',
+                                            color: '#fff',
+                                            fontSize: '1em',
+                                            boxSizing: 'border-box'
+                                        }}
+                                    />
+                                </div>
 
-                                    setUploadingFile(true);
-                                    try {
-                                        const combinedDateTime = `${matchDate}T${matchTime}:00Z`;
-                                        const updateData = {
-                                            playerId: currentPlayerData.id,
-                                            scheduledDate: new Date(combinedDateTime),
-                                            scheduledTime: matchTime
-                                        };
+                                {/* Time Input */}
+                                <div style={{ marginBottom: '20px' }}>
+                                    <label style={{ display: 'block', color: '#c9a961', marginBottom: '8px', fontWeight: '600' }}>
+                                        🕐 Время матча
+                                    </label>
+                                    <input
+                                        type="time"
+                                        value={matchTime}
+                                        onChange={(e) => setMatchTime(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #444',
+                                            background: '#2a2a2a',
+                                            color: '#fff',
+                                            fontSize: '1em',
+                                            boxSizing: 'border-box'
+                                        }}
+                                    />
+                                </div>
 
-                                        // Step 1: Save date and time
-                                        const response = await fetch(`${API_BASE}/api/player-matches/${selectedMatch.id}/report`, {
-                                            method: 'PUT',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify(updateData)
-                                        });
-
-                                        const data = await response.json();
-                                        if (data.error) {
-                                            alert(`❌ Ошибка: ${data.error}`);
-                                            setUploadingFile(false);
-                                            return;
-                                        }
-
-                                        // Step 2: Upload file if selected
-                                        if (matchFile) {
-                                            const formData = new FormData();
-                                            formData.append('matchFile', matchFile);
-                                            formData.append('playerId', currentPlayerData.id);
-                                            formData.append('matchId', selectedMatch.id);
-
-                                            const fileResponse = await fetch(`${API_BASE}/api/player-matches/${selectedMatch.id}/upload-file`, {
-                                                method: 'POST',
-                                                body: formData
-                                            });
-
-                                            const fileData = await fileResponse.json();
-                                            if (fileData.error) {
-                                                alert(`⚠️ Дата установлена, но ошибка при загрузке файла: ${fileData.error}`);
-                                            } else {
-                                                alert(`✅ Дата, время и файл сохранены!`);
+                                {/* Buttons */}
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '30px' }}>
+                                    <button
+                                        onClick={async () => {
+                                            if (!matchDate || !matchTime) {
+                                                alert('❌ Заполните дату и время!');
+                                                return;
                                             }
-                                        } else {
-                                            alert('✅ Дата и время установлены!');
-                                        }
 
-                                        setShowMatchModal(false);
-                                        setMatchFile(null);
-                                        if (onUpdate) onUpdate();
-                                    } catch (error) {
-                                        alert('❌ Ошибка подключения');
-                                    } finally {
-                                        setUploadingFile(false);
-                                    }
-                                }}
-                                disabled={uploadingFile}
-                                style={{
-                                    flex: 1,
-                                    padding: '12px',
-                                    background: '#4caf50',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    cursor: uploadingFile ? 'not-allowed' : 'pointer',
-                                    fontWeight: '600',
-                                    opacity: uploadingFile ? 0.6 : 1
-                                }}
-                            >
-                                {uploadingFile ? '⏳ Сохранение...' : '✅ Сохранить'}
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowMatchModal(false);
-                                    setMatchFile(null);
-                                }}
-                                style={{
-                                    flex: 1,
-                                    padding: '12px',
-                                    background: '#444',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    fontWeight: '600'
-                                }}
-                            >
-                                ❌ Отмена
-                            </button>
-                        </div>
+                                            setUploadingFile(true);
+                                            try {
+                                                const combinedDateTime = `${matchDate}T${matchTime}:00Z`;
+                                                const updateData = {
+                                                    playerId: currentPlayerData.id,
+                                                    scheduledDate: new Date(combinedDateTime),
+                                                    scheduledTime: matchTime
+                                                };
+
+                                                const response = await fetch(`${API_BASE}/api/player-matches/${selectedMatch.id}/report`, {
+                                                    method: 'PUT',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify(updateData)
+                                                });
+
+                                                const data = await response.json();
+                                                if (data.error) {
+                                                    alert(`❌ Ошибка: ${data.error}`);
+                                                } else {
+                                                    alert(`✅ Дата и время установлены!`);
+                                                    setShowMatchModal(false);
+                                                    setMatchFile(null);
+                                                    if (onUpdate) onUpdate();
+                                                }
+                                            } catch (error) {
+                                                alert('Ошибка подключения к серверу');
+                                            } finally {
+                                                setUploadingFile(false);
+                                            }
+                                        }}
+                                        style={{
+                                            flex: 1,
+                                            padding: '12px',
+                                            background: '#4caf50',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            fontWeight: '600',
+                                            disabled: uploadingFile ? 'not-allowed' : 'pointer',
+                                            opacity: uploadingFile ? 0.6 : 1
+                                        }}
+                                        disabled={uploadingFile}
+                                    >
+                                        {uploadingFile ? '⏳ Сохранение...' : '✅ Установить время'}
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowMatchModal(false);
+                                            setMatchFile(null);
+                                        }}
+                                        style={{
+                                            flex: 1,
+                                            padding: '12px',
+                                            background: '#444',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            fontWeight: '600'
+                                        }}
+                                    >
+                                        ❌ Отмена
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            // AFTER MATCH: Upload file
+                            <>
+                                <h3 style={{ color: '#c9a961', marginBottom: '20px', fontSize: '1.5em' }}>
+                                    📁 Загрузить файл матча
+                                </h3>
+
+                                {/* Match Info */}
+                                <div style={{ marginBottom: '20px', padding: '15px', background: '#2a2a2a', borderRadius: '10px' }}>
+                                    <div style={{ color: '#888', fontSize: '0.9em' }}>
+                                        {getPlayer(selectedMatch.player1Id)?.name} vs {getPlayer(selectedMatch.player2Id)?.name}
+                                    </div>
+                                </div>
+
+                                {/* File Upload */}
+                                <div style={{ marginBottom: '20px' }}>
+                                    <label style={{ display: 'block', color: '#c9a961', marginBottom: '8px', fontWeight: '600' }}>
+                                        📁 Файл игры (макс. 700 кб)
+                                    </label>
+                                    <input
+                                        type="file"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                if (file.size > 700 * 1024) {
+                                                    alert('❌ Файл больше 700 кб!');
+                                                    return;
+                                                }
+                                                setMatchFile(file);
+                                            }
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #444',
+                                            background: '#2a2a2a',
+                                            color: '#888',
+                                            fontSize: '0.9em',
+                                            boxSizing: 'border-box'
+                                        }}
+                                    />
+                                    {matchFile && (
+                                        <div style={{ marginTop: '10px', color: '#4caf50', fontSize: '0.9em' }}>
+                                            ✓ Выбран: {matchFile.name}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Buttons */}
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '30px' }}>
+                                    <button
+                                        onClick={async () => {
+                                            setUploadingFile(true);
+                                            try {
+                                                if (matchFile) {
+                                                    const formData = new FormData();
+                                                    formData.append('matchFile', matchFile);
+                                                    formData.append('playerId', currentPlayerData.id);
+                                                    formData.append('matchId', selectedMatch.id);
+
+                                                    const fileResponse = await fetch(`${API_BASE}/api/player-matches/${selectedMatch.id}/upload-file`, {
+                                                        method: 'POST',
+                                                        body: formData
+                                                    });
+
+                                                    const fileData = await fileResponse.json();
+                                                    if (fileData.error) {
+                                                        alert(`❌ Ошибка загрузки: ${fileData.error}`);
+                                                    } else {
+                                                        alert(`✅ Файл загружен!`);
+                                                        setShowMatchModal(false);
+                                                        setMatchFile(null);
+                                                        if (onUpdate) onUpdate();
+                                                    }
+                                                } else {
+                                                    alert('⚠️ Выберите файл');
+                                                }
+                                            } catch (error) {
+                                                alert('Ошибка подключения к серверу');
+                                            } finally {
+                                                setUploadingFile(false);
+                                            }
+                                        }}
+                                        style={{
+                                            flex: 1,
+                                            padding: '12px',
+                                            background: '#4caf50',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            fontWeight: '600',
+                                            disabled: uploadingFile ? 'not-allowed' : 'pointer',
+                                            opacity: uploadingFile ? 0.6 : 1
+                                        }}
+                                        disabled={uploadingFile}
+                                    >
+                                        {uploadingFile ? '⏳ Загрузка...' : '✅ Загрузить файл'}
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowMatchModal(false);
+                                            setMatchFile(null);
+                                        }}
+                                        style={{
+                                            flex: 1,
+                                            padding: '12px',
+                                            background: '#444',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            fontWeight: '600'
+                                        }}
+                                    >
+                                        ❌ Отмена
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
@@ -4880,8 +4942,13 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
 
                                         const data = await response.json();
                                         if (response.ok) {
-                                            fetchPlayerData();
-                                            alert('✅ Меин раса выбрана!');
+                                            // Refresh all player data from server
+                                            if (onUpdate) onUpdate();
+                                            // Then refresh current player's profile with new main race
+                                            setTimeout(() => {
+                                                fetchPlayerData();
+                                                alert('✅ Меин раса выбрана! Статистика и портреты обновлены.');
+                                            }, 500);
                                         } else {
                                             alert(data.error || 'Ошибка выбора расы');
                                         }
