@@ -2086,10 +2086,15 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
         }
         matchesByTeams[key].matches.push(match);
         if (match.status === 'completed') {
+            // Add points to winner
             if (match.winnerId === match.team1Id) {
                 matchesByTeams[key].team1Points += match.points || 0;
+                // Subtract points from loser
+                matchesByTeams[key].team2Points -= match.loserPoints || 0;
             } else if (match.winnerId === match.team2Id) {
                 matchesByTeams[key].team2Points += match.points || 0;
+                // Subtract points from loser
+                matchesByTeams[key].team1Points -= match.loserPoints || 0;
             }
         }
     });
