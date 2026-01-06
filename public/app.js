@@ -3937,7 +3937,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
 ReactDOM.render(<App />, document.getElementById('root'));
 
 // ==================== PLAYER PROFILE ====================
-function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLogout }) {
+function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLogout, teams = [], teamMatches = [] }) {
     const [battleTag, setBattleTag] = React.useState('');
     const [linkError, setLinkError] = React.useState('');
     const [linkSuccess, setLinkSuccess] = React.useState('');
@@ -3946,11 +3946,23 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
     const [playerData, setPlayerData] = React.useState(null);
     const [portraits, setPortraits] = React.useState([]);
     const [selectedPortrait, setSelectedPortrait] = React.useState(null);
+    const [myMatches, setMyMatches] = React.useState([]);
 
     React.useEffect(() => {
         fetchPlayerData();
         fetchPortraits();
     }, [playerUser, allPlayers]);
+
+    // Load player's matches
+    React.useEffect(() => {
+        if (playerData?.id) {
+            // Filter team matches where this player participates
+            const matches = teamMatches.filter(m => 
+                m.player1Id === playerData.id || m.player2Id === playerData.id
+            );
+            setMyMatches(matches);
+        }
+    }, [playerData, teamMatches]);
 
     const fetchPlayerData = () => {
         // Find player data from loaded players instead of API
