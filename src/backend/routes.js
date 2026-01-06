@@ -1083,6 +1083,52 @@ router.put('/players/auth/select-portrait', async (req, res) => {
     }
 });
 
+// Select main race for stats filtering
+router.put('/players/auth/select-main-race', async (req, res) => {
+    try {
+        const sessionId = req.headers['x-player-session-id'];
+        const { mainRace } = req.body;
+
+        if (!sessionId) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+
+        if (mainRace === undefined || mainRace === null) {
+            return res.status(400).json({ error: 'Main race is required' });
+        }
+
+        // Validate race value (0=Random, 1=Human, 2=Orc, 4=NightElf, 8=Undead)
+        const validRaces = [0, 1, 2, 4, 8];
+        if (!validRaces.includes(mainRace)) {
+            return res.status(400).json({ error: 'Invalid race value' });
+        }
+
+        const session = await PlayerSession.findOne({ sessionId });
+        if (!session) {
+            return res.status(401).json({ error: 'Invalid session' });
+        }
+
+        const playerUser = await PlayerUser.findById(session.playerUserId);
+        if (!playerUser || !playerUser.linkedBattleTag) {
+            return res.status(400).json({ error: 'Must link BattleTag first' });
+        }
+
+        // Update player's main race
+        await Player.findOneAndUpdate(
+            { battleTag: playerUser.linkedBattleTag },
+            { mainRace: mainRace, updatedAt: Date.now() }
+        );
+
+        res.json({
+            success: true,
+            message: 'Main race selected successfully'
+        });
+    } catch (error) {
+        console.error('Select main race error:', error);
+        res.status(500).json({ error: 'Failed to select main race' });
+    }
+});
+
 // Logout
 router.post('/players/auth/logout', async (req, res) => {
     try {

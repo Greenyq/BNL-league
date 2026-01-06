@@ -26,6 +26,7 @@ const playerSchema = new mongoose.Schema({
     battleTag: { type: String, required: true, unique: true },
     name: { type: String, required: true },
     race: { type: Number },
+    mainRace: { type: Number }, // Main race for stats calculation (0=Random, 1=Human, 2=Orc, 4=NightElf, 8=Undead)
     currentMmr: { type: Number },
     teamId: { type: String },
     discordTag: { type: String }, // Discord tag, e.g., "username#1234"
