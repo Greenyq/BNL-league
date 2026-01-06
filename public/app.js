@@ -2393,84 +2393,145 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                 const team2Color = getTeamColor(matchup.team2?._id || matchup.team2?.id);
 
                 return (
-                    <div key={idx} style={{ marginBottom: '30px' }}>
-                        {/* Compact Team Header */}
+                    <div key={idx} style={{ marginBottom: '40px' }}>
+                        {/* Team Header with logos */}
                         <div style={{
-                            background: '#1a1a1a',
-                            padding: '15px',
-                            borderRadius: '12px',
-                            marginBottom: '10px',
-                            border: '2px solid #c9a961'
+                            background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+                            padding: '20px',
+                            borderRadius: '15px',
+                            marginBottom: '20px',
+                            border: '2px solid #c9a961',
+                            position: 'relative',
+                            overflow: 'hidden'
                         }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    {matchup.team1?.logo ? (
-                                        <img src={matchup.team1.logo} alt={matchup.team1.name} style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />
-                                    ) : (
-                                        <span style={{ fontSize: '1.5em' }}>{matchup.team1?.emoji}</span>
-                                    )}
+                            {/* Decorative line */}
+                            <div style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                height: '4px',
+                                background: 'linear-gradient(90deg, #c9a961, #8b7355, #c9a961)'
+                            }} />
+                            
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                {/* Team 1 */}
+                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                    <div style={{
+                                        width: '70px',
+                                        height: '70px',
+                                        borderRadius: '12px',
+                                        background: `linear-gradient(135deg, ${team1Color.primary}, ${team1Color.secondary})`,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        boxShadow: `0 4px 15px ${team1Color.primary}40`
+                                    }}>
+                                        {matchup.team1?.logo ? (
+                                            <img src={matchup.team1.logo} alt={matchup.team1.name} style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} />
+                                        ) : (
+                                            <span style={{ fontSize: '2em' }}>{matchup.team1?.emoji}</span>
+                                        )}
+                                    </div>
                                     <div>
-                                        <div style={{ fontWeight: '700', color: '#fff', fontSize: '1.1em' }}>{matchup.team1?.name}</div>
-                                        <div style={{ color: '#c9a961', fontWeight: '700' }}>{matchup.team1Points} pts</div>
+                                        <div style={{ fontWeight: '700', color: '#fff', fontSize: '1.3em' }}>{matchup.team1?.name}</div>
+                                        <div style={{ color: '#c9a961', fontWeight: '800', fontSize: '1.5em' }}>{matchup.team1Points}</div>
                                     </div>
                                 </div>
-                                <div style={{ fontSize: '1.3em', fontWeight: '800', color: '#c9a961' }}>VS</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'right' }}>
-                                    <div>
-                                        <div style={{ fontWeight: '700', color: '#fff', fontSize: '1.1em' }}>{matchup.team2?.name}</div>
-                                        <div style={{ color: '#c9a961', fontWeight: '700' }}>{matchup.team2Points} pts</div>
+                                
+                                {/* VS Badge */}
+                                <div style={{
+                                    padding: '15px 25px',
+                                    background: 'linear-gradient(135deg, #c9a961, #8b7355)',
+                                    borderRadius: '50px',
+                                    fontSize: '1.2em',
+                                    fontWeight: '800',
+                                    color: '#000',
+                                    boxShadow: '0 4px 15px rgba(201, 169, 97, 0.4)'
+                                }}>
+                                    VS
+                                </div>
+                                
+                                {/* Team 2 */}
+                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '15px', justifyContent: 'flex-end' }}>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontWeight: '700', color: '#fff', fontSize: '1.3em' }}>{matchup.team2?.name}</div>
+                                        <div style={{ color: '#c9a961', fontWeight: '800', fontSize: '1.5em' }}>{matchup.team2Points}</div>
                                     </div>
-                                    {matchup.team2?.logo ? (
-                                        <img src={matchup.team2.logo} alt={matchup.team2.name} style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />
-                                    ) : (
-                                        <span style={{ fontSize: '1.5em' }}>{matchup.team2?.emoji}</span>
-                                    )}
+                                    <div style={{
+                                        width: '70px',
+                                        height: '70px',
+                                        borderRadius: '12px',
+                                        background: `linear-gradient(135deg, ${team2Color.primary}, ${team2Color.secondary})`,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        boxShadow: `0 4px 15px ${team2Color.primary}40`
+                                    }}>
+                                        {matchup.team2?.logo ? (
+                                            <img src={matchup.team2.logo} alt={matchup.team2.name} style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} />
+                                        ) : (
+                                            <span style={{ fontSize: '2em' }}>{matchup.team2?.emoji}</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             
-                            {/* Compact Points Bar */}
-                            <div style={{ display: 'flex', height: '20px', borderRadius: '10px', overflow: 'hidden' }}>
+                            {/* Points Progress Bar */}
+                            <div style={{ 
+                                marginTop: '20px',
+                                display: 'flex', 
+                                height: '8px', 
+                                borderRadius: '4px', 
+                                overflow: 'hidden',
+                                background: '#333'
+                            }}>
                                 <div style={{
                                     width: `${team1Percent}%`,
                                     background: `linear-gradient(90deg, ${team1Color.primary}, ${team1Color.secondary})`,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: '#fff',
-                                    fontWeight: '600',
-                                    fontSize: '0.75em'
-                                }}>
-                                    {matchup.team1Points > 0 && `${matchup.team1Points}`}
-                                </div>
+                                    transition: 'width 0.5s ease'
+                                }} />
                                 <div style={{
                                     width: `${team2Percent}%`,
                                     background: `linear-gradient(90deg, ${team2Color.primary}, ${team2Color.secondary})`,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: '#fff',
-                                    fontWeight: '600',
-                                    fontSize: '0.75em'
-                                }}>
-                                    {matchup.team2Points > 0 && `${matchup.team2Points}`}
-                                </div>
+                                    transition: 'width 0.5s ease'
+                                }} />
                             </div>
                         </div>
                         
-                        {/* Tournament Grid */}
+                        {/* Match Brackets */}
                         <div style={{
-                            background: '#2a2a2a',
-                            padding: '15px',
-                            borderRadius: '12px',
+                            background: 'rgba(26, 26, 26, 0.5)',
+                            padding: '20px',
+                            borderRadius: '15px',
                             border: '1px solid #333'
                         }}>
-                            <div style={{ marginBottom: '10px', fontSize: '0.9em', color: '#888', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                <span>✅ Победа команды слева</span>
-                                <span>❌ Поражение команды слева</span>
-                                <span>🕐 Предстоит</span>
-                                <span>— Не назначен</span>
-                            </div>
-                            {renderTournamentGrid(matchup)}
+                            <h3 style={{ 
+                                color: '#c9a961', 
+                                marginBottom: '20px', 
+                                fontSize: '1.1em',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px'
+                            }}>
+                                🏆 Турнирная сетка матчей
+                            </h3>
+                            
+                            {matchup.matches.map(match => (
+                                <div key={match.id || match._id}>
+                                    {renderMatchBracket(match, matchup.team1, matchup.team2)}
+                                </div>
+                            ))}
+                            
+                            {matchup.matches.length === 0 && (
+                                <div style={{
+                                    textAlign: 'center',
+                                    padding: '40px',
+                                    color: '#666'
+                                }}>
+                                    Матчи ещё не назначены
+                                </div>
+                            )}
                         </div>
                     </div>
                 );
