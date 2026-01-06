@@ -2108,19 +2108,26 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
         return player ? player.name : 'Unknown';
     };
 
-    // Race icons mapping
-    const raceIcons = {
-        0: '🎲', // Random
-        1: '🏰', // Human  
-        2: '⚔️', // Orc
-        4: '🌙', // Night Elf
-        8: '💀'  // Undead
+    // Race images for fallback
+    const raceImages = {
+        0: 'https://w3champions.wc3.tools/prod/integration/icons/rndicon.png',
+        1: 'https://w3champions.wc3.tools/prod/integration/icons/huicon.png',
+        2: 'https://w3champions.wc3.tools/prod/integration/icons/orcicon.png',
+        4: 'https://w3champions.wc3.tools/prod/integration/icons/neicon.png',
+        8: 'https://w3champions.wc3.tools/prod/integration/icons/udicon.png'
     };
 
     // Render single player card in bracket style
-    const renderPlayerCard = (player, team, isWinner, isLeft, points = 0, loserPoints = 0) => {
+    const renderPlayerCard = (player, team, isWinner, isLeft, points = 0) => {
         const teamColor = getTeamColor(team?.id || team?._id);
-        const isLoser = !isWinner && loserPoints > 0;
+        
+        // Find selected portrait for player
+        const selectedPortrait = player?.selectedPortraitId
+            ? portraits.find(p => p.id === player.selectedPortraitId)
+            : null;
+        
+        // Use portrait image if available, otherwise use race image
+        const avatarImage = selectedPortrait ? selectedPortrait.imageUrl : raceImages[player?.race];
         
         return (
             <div style={{
@@ -2134,13 +2141,12 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                 <div style={{
                     width: '60px',
                     height: '70px',
-                    background: isWinner ? `linear-gradient(135deg, ${teamColor.primary}, ${teamColor.secondary})` : 
-                               isLoser ? 'linear-gradient(135deg, #3d1a1a, #5d2a2a)' : '#2a2a2a',
+                    background: isWinner ? `linear-gradient(135deg, ${teamColor.primary}, ${teamColor.secondary})` : '#2a2a2a',
                     clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    border: `2px solid ${isWinner ? '#c9a961' : isLoser ? '#f44336' : '#444'}`,
+                    border: `2px solid ${isWinner ? '#c9a961' : '#444'}`,
                     flexShrink: 0,
                     position: 'relative',
                     zIndex: 2
@@ -2153,18 +2159,34 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '1.8em'
+                        overflow: 'hidden'
                     }}>
-                        {raceIcons[player?.race] || '👤'}
+                        {avatarImage ? (
+                            <img 
+                                src={avatarImage} 
+                                alt={player?.name || 'Player'} 
+                                style={{ 
+                                    width: '100%', 
+                                    height: '100%', 
+                                    objectFit: 'cover'
+                                }}
+                                onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.parentNode.innerHTML = raceIcons[player?.race] || '👤';
+                                    e.target.parentNode.style.fontSize = '1.8em';
+                                }}
+                            />
+                        ) : (
+                            <span style={{ fontSize: '1.8em' }}>{raceIcons[player?.race] || '👤'}</span>
+                        )}
                     </div>
                 </div>
                 
                 {/* Player info card */}
                 <div style={{
                     flex: 1,
-                    background: isWinner ? `linear-gradient(${isLeft ? '90deg' : '270deg'}, rgba(201, 169, 97, 0.2), #1a1a1a)` : 
-                               isLoser ? `linear-gradient(${isLeft ? '90deg' : '270deg'}, rgba(244, 67, 54, 0.15), #1a1a1a)` : '#1a1a1a',
-                    border: `2px solid ${isWinner ? '#c9a961' : isLoser ? '#f44336' : '#333'}`,
+                    background: isWinner ? `linear-gradient(${isLeft ? '90deg' : '270deg'}, rgba(201, 169, 97, 0.2), #1a1a1a)` : '#1a1a1a',
+                    border: `2px solid ${isWinner ? '#c9a961' : '#333'}`,
                     borderRadius: isLeft ? '0 8px 8px 0' : '8px 0 0 8px',
                     marginLeft: isLeft ? '-10px' : '0',
                     marginRight: isLeft ? '0' : '-10px',
@@ -2176,7 +2198,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                     justifyContent: 'center',
                     position: 'relative'
                 }}>
-                    {/* Team name with logo */}
+                    {/* Team logo + name */}
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -2184,11 +2206,25 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                         marginBottom: '4px',
                         justifyContent: isLeft ? 'flex-start' : 'flex-end'
                     }}>
-                        {team?.logo ? (
-                            <img src={team.logo} alt="" style={{ width: '16px', height: '16px', borderRadius: '3px' }} />
-                        ) : (
-                            <span style={{ fontSize: '0.9em' }}>{team?.emoji}</span>
-                        )}
+                        {/* Team logo in small frame */}
+                        <div style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '4px',
+                            background: '#2a2a2a',
+                            border: `1px solid ${teamColor.primary}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden',
+                            flexShrink: 0
+                        }}>
+                            {team?.logo ? (
+                                <img src={team.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                                <span style={{ fontSize: '0.7em' }}>{team?.emoji}</span>
+                            )}
+                        </div>
                         <span style={{ 
                             fontSize: '0.75em', 
                             color: teamColor.primary,
@@ -2204,7 +2240,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                     <div style={{
                         fontSize: '1.1em',
                         fontWeight: '700',
-                        color: isWinner ? '#c9a961' : isLoser ? '#f44336' : '#fff',
+                        color: isWinner ? '#c9a961' : '#fff',
                         textAlign: isLeft ? 'left' : 'right'
                     }}>
                         {player?.name || 'Unknown'}
@@ -2219,18 +2255,6 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                             textAlign: isLeft ? 'left' : 'right'
                         }}>
                             +{points} pts
-                        </div>
-                    )}
-                    
-                    {/* Negative points for loser */}
-                    {isLoser && (
-                        <div style={{
-                            fontSize: '0.85em',
-                            color: '#f44336',
-                            fontWeight: '600',
-                            textAlign: isLeft ? 'left' : 'right'
-                        }}>
-                            -{loserPoints} pts
                         </div>
                     )}
                 </div>
