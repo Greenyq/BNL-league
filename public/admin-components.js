@@ -2286,6 +2286,65 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                     📝 {match.notes}
                                 </div>
                             )}
+                            {/* Home player indicator */}
+                            {match.homePlayerId && (
+                                <div style={{
+                                    marginTop: '10px', padding: '8px 12px', background: '#2a2a2a',
+                                    borderRadius: '8px', color: '#c9a961', fontSize: '0.85em',
+                                    display: 'inline-block'
+                                }}>
+                                    🏠 Домашний игрок: {allPlayers.find(p => p.id === match.homePlayerId)?.name || 'Не определён'}
+                                </div>
+                            )}
+                            {/* Edit buttons for upcoming matches */}
+                            {match.status === 'upcoming' && (
+                                <div style={{ marginTop: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                    <button
+                                        onClick={() => {
+                                            const date = prompt('Введите дату и время (ГГГГ-ММ-ДД ЧЧ:ММ):', 
+                                                match.scheduledDate ? new Date(match.scheduledDate).toISOString().slice(0, 16).replace('T', ' ') : '');
+                                            if (date) {
+                                                fetch(`${API_BASE}/api/admin/team-matches/${match.id}`, {
+                                                    method: 'PUT',
+                                                    headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId },
+                                                    body: JSON.stringify({ scheduledDate: new Date(date.replace(' ', 'T')) })
+                                                }).then(() => onUpdate());
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '8px 16px', borderRadius: '8px',
+                                            background: '#2196f3', color: '#fff',
+                                            border: 'none', cursor: 'pointer', fontSize: '0.9em'
+                                        }}
+                                    >
+                                        📅 Назначить время
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const winnerId = prompt(`Кто победил?\n1 - ${team1?.name} (${player1?.name})\n2 - ${team2?.name} (${player2?.name})\n\nВведите 1 или 2:`);
+                                            if (winnerId === '1' || winnerId === '2') {
+                                                const points = parseInt(prompt('Введите количество очков:', '50')) || 50;
+                                                fetch(`${API_BASE}/api/admin/team-matches/${match.id}`, {
+                                                    method: 'PUT',
+                                                    headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId },
+                                                    body: JSON.stringify({ 
+                                                        winnerId: winnerId === '1' ? match.team1Id : match.team2Id,
+                                                        points: points,
+                                                        status: 'completed'
+                                                    })
+                                                }).then(() => onUpdate());
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '8px 16px', borderRadius: '8px',
+                                            background: '#4caf50', color: '#fff',
+                                            border: 'none', cursor: 'pointer', fontSize: '0.9em'
+                                        }}
+                                    >
+                                        🏆 Указать победителя
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     );
                 })}
