@@ -4398,6 +4398,180 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                     </div>
                 )}
             </div>
+
+            {/* Upcoming matches section */}
+            {playerData && myMatches.length > 0 && (
+                <div style={{
+                    maxWidth: '800px', margin: '0 auto',
+                    background: '#1a1a1a', padding: '30px', borderRadius: '15px',
+                    border: '2px solid #c9a961'
+                }}>
+                    <h3 style={{ color: '#c9a961', marginBottom: '20px', fontSize: '1.5em' }}>
+                        ⚔️ Мои матчи
+                    </h3>
+                    
+                    {/* Upcoming matches where this player is home */}
+                    {myMatches.filter(m => m.status === 'upcoming' && m.homePlayerId === playerData.id).length > 0 && (
+                        <div style={{ marginBottom: '25px' }}>
+                            <h4 style={{ color: '#4caf50', marginBottom: '15px', fontSize: '1.1em' }}>
+                                🏠 Домашние матчи (вы организатор)
+                            </h4>
+                            {myMatches.filter(m => m.status === 'upcoming' && m.homePlayerId === playerData.id).map(match => {
+                                const isPlayer1 = match.player1Id === playerData.id;
+                                const opponent = allPlayers.find(p => p.id === (isPlayer1 ? match.player2Id : match.player1Id));
+                                const myTeam = teams.find(t => t.id === (isPlayer1 ? match.team1Id : match.team2Id));
+                                const opponentTeam = teams.find(t => t.id === (isPlayer1 ? match.team2Id : match.team1Id));
+                                
+                                return (
+                                    <div key={match.id} style={{
+                                        background: '#2a2a2a', padding: '15px', borderRadius: '10px',
+                                        marginBottom: '10px', border: '2px solid #4caf50'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                            <div>
+                                                <span style={{ color: '#c9a961', fontWeight: '600' }}>{playerData.name}</span>
+                                                <span style={{ color: '#888' }}> ({myTeam?.name}) </span>
+                                                <span style={{ color: '#c9a961', margin: '0 10px' }}>VS</span>
+                                                <span style={{ color: '#fff', fontWeight: '600' }}>{opponent?.name || 'Unknown'}</span>
+                                                <span style={{ color: '#888' }}> ({opponentTeam?.name})</span>
+                                            </div>
+                                            {match.scheduledDate && (
+                                                <div style={{ color: '#c9a961', fontSize: '0.9em' }}>
+                                                    📅 {new Date(match.scheduledDate).toLocaleString('ru-RU')}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                            <button
+                                                onClick={() => {
+                                                    const date = prompt('Введите дату и время (ГГГГ-ММ-ДД ЧЧ:ММ):',
+                                                        match.scheduledDate ? new Date(match.scheduledDate).toISOString().slice(0, 16).replace('T', ' ') : '');
+                                                    if (date) {
+                                                        fetch(`${API_BASE}/api/player-matches/${match.id}/report`, {
+                                                            method: 'PUT',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ playerId: playerData.id, scheduledDate: new Date(date.replace(' ', 'T')) })
+                                                        }).then(() => onUpdate());
+                                                    }
+                                                }}
+                                                style={{
+                                                    padding: '8px 16px', borderRadius: '8px',
+                                                    background: '#2196f3', color: '#fff',
+                                                    border: 'none', cursor: 'pointer', fontSize: '0.9em'
+                                                }}
+                                            >
+                                                📅 Назначить время
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    const winner = confirm(`Кто победил?\n\nОК - Я победил (${playerData.name})\nОтмена - Победил соперник (${opponent?.name})`);
+                                                    const winnerId = winner ? (isPlayer1 ? match.team1Id : match.team2Id) : (isPlayer1 ? match.team2Id : match.team1Id);
+                                                    
+                                                    fetch(`${API_BASE}/api/player-matches/${match.id}/report`, {
+                                                        method: 'PUT',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ playerId: playerData.id, winnerId })
+                                                    }).then(res => res.json()).then(data => {
+                                                        if (data.points) {
+                                                            alert(`✅ Результат записан!\n\nОчки за победу: ${data.points}`);
+                                                        }
+                                                        onUpdate();
+                                                    });
+                                                }}
+                                                style={{
+                                                    padding: '8px 16px', borderRadius: '8px',
+                                                    background: '#4caf50', color: '#fff',
+                                                    border: 'none', cursor: 'pointer', fontSize: '0.9em'
+                                                }}
+                                            >
+                                                🏆 Отметить победителя
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                    
+                    {/* Other upcoming matches */}
+                    {myMatches.filter(m => m.status === 'upcoming' && m.homePlayerId !== playerData.id).length > 0 && (
+                        <div style={{ marginBottom: '25px' }}>
+                            <h4 style={{ color: '#2196f3', marginBottom: '15px', fontSize: '1.1em' }}>
+                                🎮 Предстоящие гостевые матчи
+                            </h4>
+                            {myMatches.filter(m => m.status === 'upcoming' && m.homePlayerId !== playerData.id).map(match => {
+                                const isPlayer1 = match.player1Id === playerData.id;
+                                const opponent = allPlayers.find(p => p.id === (isPlayer1 ? match.player2Id : match.player1Id));
+                                const homePlayer = allPlayers.find(p => p.id === match.homePlayerId);
+                                const myTeam = teams.find(t => t.id === (isPlayer1 ? match.team1Id : match.team2Id));
+                                const opponentTeam = teams.find(t => t.id === (isPlayer1 ? match.team2Id : match.team1Id));
+                                
+                                return (
+                                    <div key={match.id} style={{
+                                        background: '#2a2a2a', padding: '15px', borderRadius: '10px',
+                                        marginBottom: '10px', border: '1px solid #444'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div>
+                                                <span style={{ color: '#c9a961', fontWeight: '600' }}>{playerData.name}</span>
+                                                <span style={{ color: '#888' }}> ({myTeam?.name}) </span>
+                                                <span style={{ color: '#c9a961', margin: '0 10px' }}>VS</span>
+                                                <span style={{ color: '#fff', fontWeight: '600' }}>{opponent?.name || 'Unknown'}</span>
+                                                <span style={{ color: '#888' }}> ({opponentTeam?.name})</span>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                {match.scheduledDate && (
+                                                    <div style={{ color: '#c9a961', fontSize: '0.9em' }}>
+                                                        📅 {new Date(match.scheduledDate).toLocaleString('ru-RU')}
+                                                    </div>
+                                                )}
+                                                <div style={{ color: '#888', fontSize: '0.8em', marginTop: '5px' }}>
+                                                    🏠 Организатор: {homePlayer?.name || 'Не определён'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                    
+                    {/* Completed matches */}
+                    {myMatches.filter(m => m.status === 'completed').length > 0 && (
+                        <div>
+                            <h4 style={{ color: '#888', marginBottom: '15px', fontSize: '1.1em' }}>
+                                ✅ Завершённые матчи
+                            </h4>
+                            {myMatches.filter(m => m.status === 'completed').slice(0, 5).map(match => {
+                                const isPlayer1 = match.player1Id === playerData.id;
+                                const opponent = allPlayers.find(p => p.id === (isPlayer1 ? match.player2Id : match.player1Id));
+                                const iWon = (isPlayer1 && match.winnerId === match.team1Id) || (!isPlayer1 && match.winnerId === match.team2Id);
+                                
+                                return (
+                                    <div key={match.id} style={{
+                                        background: '#2a2a2a', padding: '12px 15px', borderRadius: '8px',
+                                        marginBottom: '8px', display: 'flex', justifyContent: 'space-between',
+                                        alignItems: 'center', borderLeft: `3px solid ${iWon ? '#4caf50' : '#f44336'}`
+                                    }}>
+                                        <div>
+                                            <span style={{ color: iWon ? '#4caf50' : '#f44336', fontWeight: '600' }}>
+                                                {iWon ? '✅ Победа' : '❌ Поражение'}
+                                            </span>
+                                            <span style={{ color: '#888' }}> против </span>
+                                            <span style={{ color: '#fff' }}>{opponent?.name}</span>
+                                        </div>
+                                        {iWon && match.points > 0 && (
+                                            <div style={{ color: '#4caf50', fontWeight: '600' }}>
+                                                +{match.points} pts
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
