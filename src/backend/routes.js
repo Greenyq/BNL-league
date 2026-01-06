@@ -98,7 +98,7 @@ router.get('/players/with-cache', async (req, res) => {
     try {
         const startTime = Date.now();
         const players = await Player.find();
-        const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
+        const CACHE_DURATION_MS = 60 * 60 * 1000; // 60 minutes (increased from 10)
         const now = Date.now();
         const cutoffDate = new Date('2025-11-27T00:00:00Z'); // Only fetch recent matches
 
@@ -121,7 +121,7 @@ router.get('/players/with-cache', async (req, res) => {
             }
         }
 
-        console.log(`📊 Cache status: ${cachedPlayers.length} cached, ${playersToFetch.length} to fetch`);
+        console.log(`📊 Cache status: ${cachedPlayers.length} cached, ${playersToFetch.length} to fetch (60min TTL)`);
 
         // Helper function: Fetch with retry logic
         async function fetchPlayerWithRetry(player, cache, maxRetries = 2) {
@@ -135,7 +135,7 @@ router.get('/players/with-cache', async (req, res) => {
                             'User-Agent': 'BNL-League-App',
                             'Accept': 'application/json'
                         },
-                        timeout: 8000 // Reduced from 10s to 8s for faster failure detection
+                        timeout: 12000 // Increased to 12s for more reliable responses
                     });
 
                     let matchData = response.data.matches || [];
@@ -193,8 +193,8 @@ router.get('/players/with-cache', async (req, res) => {
             };
         }
 
-        // Batch parallel requests: fetch in groups of 3 to avoid overwhelming API
-        const BATCH_SIZE = 3;
+        // Batch parallel requests: fetch in groups of 6 to maximize parallelism
+        const BATCH_SIZE = 6; // Increased from 3 for faster loading
         const fetchedPlayers = [];
 
         for (let i = 0; i < playersToFetch.length; i += BATCH_SIZE) {
@@ -204,9 +204,9 @@ router.get('/players/with-cache', async (req, res) => {
             );
             fetchedPlayers.push(...batchResults);
 
-            // Small delay between batches to avoid overwhelming API
+            // Minimal delay between batches to avoid overwhelming API
             if (i + BATCH_SIZE < playersToFetch.length) {
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 50)); // Reduced from 100ms
             }
         }
         const result = [...cachedPlayers, ...fetchedPlayers];
