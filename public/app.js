@@ -125,6 +125,7 @@ function App() {
     const [teams, setTeams] = useState([]);
     const [allPlayers, setAllPlayers] = useState([]);
     const [teamMatches, setTeamMatches] = useState([]);
+    const [portraits, setPortraits] = useState([]);
 
     const [schedule] = useState([
         { id: 1, team1: "Chinese Panda", team2: "Elite Warriors", date: "2025-12-01 18:00", status: "upcoming" },
