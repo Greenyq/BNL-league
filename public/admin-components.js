@@ -1679,7 +1679,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
     const [formData, setFormData] = React.useState({
         team1Id: null, team2Id: null,
         player1Id: null, player2Id: null,
-        winnerId: null, points: 50, loserPoints: 0, notes: '',
+        winnerId: null, points: 50, notes: '',
         status: 'upcoming', scheduledDate: '',
         w3championsMatchId: ''
     });
