@@ -137,6 +137,7 @@ function App() {
         loadTeams();
         loadAllPlayers();
         loadTeamMatches();
+        loadPortraits();
         if (sessionId) {
             verifySession();
         }
@@ -151,6 +152,7 @@ function App() {
             loadTeams();
             loadAllPlayers();
             loadTeamMatches();
+            loadPortraits();
         }, 5 * 60 * 1000); // 5 minutes
 
         // Cleanup on unmount
