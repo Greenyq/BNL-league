@@ -2126,16 +2126,16 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
         8: '💀'  // Undead
     };
 
-    // Race images for fallback
+    // Race images from /images/ folder (same as in PlayerCard)
     const raceImages = {
-        0: 'https://w3champions.wc3.tools/prod/integration/icons/rndicon.png',
-        1: 'https://w3champions.wc3.tools/prod/integration/icons/huicon.png',
-        2: 'https://w3champions.wc3.tools/prod/integration/icons/orcicon.png',
-        4: 'https://w3champions.wc3.tools/prod/integration/icons/neicon.png',
-        8: 'https://w3champions.wc3.tools/prod/integration/icons/udicon.png'
+        0: null, // Random
+        1: '/images/human.jpg',
+        2: '/images/orc.jpg',
+        4: '/images/nightelf.jpg',
+        8: '/images/undead.jpg'
     };
 
-    // Render single player card in bracket style
+    // Render single player card in bracket style (enlarged x2)
     const renderPlayerCard = (player, team, isWinner, isLeft, points = 0) => {
         const teamColor = getTeamColor(team?.id || team?._id);
         
@@ -2144,7 +2144,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
             ? portraits.find(p => p.id === player.selectedPortraitId)
             : null;
         
-        // Use portrait image if available, otherwise use race image
+        // Use portrait image if available, otherwise use race image from /images/
         const avatarImage = selectedPortrait ? selectedPortrait.imageUrl : raceImages[player?.race];
         
         return (
@@ -2153,25 +2153,25 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                 flexDirection: isLeft ? 'row' : 'row-reverse',
                 alignItems: 'stretch',
                 width: '100%',
-                maxWidth: '280px'
+                maxWidth: '400px' // Increased from 280px
             }}>
-                {/* Player portrait hexagon */}
+                {/* Player portrait hexagon - enlarged */}
                 <div style={{
-                    width: '60px',
-                    height: '70px',
+                    width: '100px', // Increased from 60px
+                    height: '115px', // Increased from 70px
                     background: isWinner ? `linear-gradient(135deg, ${teamColor.primary}, ${teamColor.secondary})` : '#2a2a2a',
                     clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    border: `2px solid ${isWinner ? '#c9a961' : '#444'}`,
+                    border: `3px solid ${isWinner ? '#c9a961' : '#444'}`,
                     flexShrink: 0,
                     position: 'relative',
                     zIndex: 2
                 }}>
                     <div style={{
-                        width: '52px',
-                        height: '62px',
+                        width: '88px', // Increased from 52px
+                        height: '100px', // Increased from 62px
                         background: '#1a1a1a',
                         clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
                         display: 'flex',
@@ -2190,73 +2190,74 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                                 }}
                                 onError={(e) => {
                                     e.target.style.display = 'none';
-                                    e.target.parentNode.innerHTML = raceIcons[player?.race] || '👤';
-                                    e.target.parentNode.style.fontSize = '1.8em';
+                                    e.target.parentNode.innerHTML = `<span style="font-size: 2.5em">${raceIcons[player?.race] || '👤'}</span>`;
                                 }}
                             />
                         ) : (
-                            <span style={{ fontSize: '1.8em' }}>{raceIcons[player?.race] || '👤'}</span>
+                            <span style={{ fontSize: '2.5em' }}>{raceIcons[player?.race] || '👤'}</span>
                         )}
                     </div>
                 </div>
                 
-                {/* Player info card */}
+                {/* Player info card - enlarged */}
                 <div style={{
                     flex: 1,
                     background: isWinner ? `linear-gradient(${isLeft ? '90deg' : '270deg'}, rgba(201, 169, 97, 0.2), #1a1a1a)` : '#1a1a1a',
-                    border: `2px solid ${isWinner ? '#c9a961' : '#333'}`,
-                    borderRadius: isLeft ? '0 8px 8px 0' : '8px 0 0 8px',
-                    marginLeft: isLeft ? '-10px' : '0',
-                    marginRight: isLeft ? '0' : '-10px',
-                    padding: '8px 12px',
-                    paddingLeft: isLeft ? '18px' : '12px',
-                    paddingRight: isLeft ? '12px' : '18px',
+                    border: `3px solid ${isWinner ? '#c9a961' : '#333'}`,
+                    borderRadius: isLeft ? '0 12px 12px 0' : '12px 0 0 12px',
+                    marginLeft: isLeft ? '-15px' : '0',
+                    marginRight: isLeft ? '0' : '-15px',
+                    padding: '12px 16px',
+                    paddingLeft: isLeft ? '25px' : '16px',
+                    paddingRight: isLeft ? '16px' : '25px',
+                    paddingTop: '20px', // Extra top padding for team logo overlay
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
-                    position: 'relative'
+                    position: 'relative',
+                    minHeight: '90px'
                 }}>
-                    {/* Team logo + name */}
+                    {/* Team logo overlaying the top border */}
                     <div style={{
+                        position: 'absolute',
+                        top: '-18px', // Half outside the card
+                        left: isLeft ? '20px' : 'auto',
+                        right: isLeft ? 'auto' : '20px',
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '8px',
+                        background: '#1a1a1a',
+                        border: `2px solid ${isWinner ? '#c9a961' : teamColor.primary}`,
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '6px',
-                        marginBottom: '4px',
-                        justifyContent: isLeft ? 'flex-start' : 'flex-end'
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                        zIndex: 3,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.5)'
                     }}>
-                        {/* Team logo in small frame */}
-                        <div style={{
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '4px',
-                            background: '#2a2a2a',
-                            border: `1px solid ${teamColor.primary}`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            overflow: 'hidden',
-                            flexShrink: 0
-                        }}>
-                            {team?.logo ? (
-                                <img src={team.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                                <span style={{ fontSize: '0.7em' }}>{team?.emoji}</span>
-                            )}
-                        </div>
-                        <span style={{ 
-                            fontSize: '0.75em', 
-                            color: teamColor.primary,
-                            fontWeight: '600',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px'
-                        }}>
-                            {team?.name}
-                        </span>
+                        {team?.logo ? (
+                            <img src={team.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                            <span style={{ fontSize: '1.2em' }}>{team?.emoji}</span>
+                        )}
                     </div>
                     
-                    {/* Player name */}
+                    {/* Team name */}
                     <div style={{
-                        fontSize: '1.1em',
+                        fontSize: '0.85em', 
+                        color: teamColor.primary,
+                        fontWeight: '600',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        marginBottom: '6px',
+                        textAlign: isLeft ? 'left' : 'right'
+                    }}>
+                        {team?.name}
+                    </div>
+                    
+                    {/* Player name - enlarged */}
+                    <div style={{
+                        fontSize: '1.4em', // Increased from 1.1em
                         fontWeight: '700',
                         color: isWinner ? '#c9a961' : '#fff',
                         textAlign: isLeft ? 'left' : 'right'
@@ -2264,13 +2265,14 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                         {player?.name || 'Unknown'}
                     </div>
                     
-                    {/* Points for winner */}
+                    {/* Points for winner - enlarged */}
                     {isWinner && points > 0 && (
                         <div style={{
-                            fontSize: '0.85em',
+                            fontSize: '1em', // Increased from 0.85em
                             color: '#4caf50',
                             fontWeight: '600',
-                            textAlign: isLeft ? 'left' : 'right'
+                            textAlign: isLeft ? 'left' : 'right',
+                            marginTop: '4px'
                         }}>
                             +{points} pts
                         </div>
