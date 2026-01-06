@@ -732,7 +732,21 @@ function App() {
                 {activeTab === 'home' && <Rules />}
                 {activeTab === 'players' && <Players players={players} />}
                 {activeTab === 'teams' && <Teams teams={teams} players={players} allPlayers={allPlayers} />}
-                {activeTab === 'schedule' && <Schedule schedule={schedule} teams={teams} allPlayers={allPlayers} teamMatches={teamMatches} portraits={portraits} />}
+                {activeTab === 'schedule' && (
+                    <Schedule
+                        schedule={schedule}
+                        teams={teams}
+                        allPlayers={allPlayers}
+                        teamMatches={teamMatches}
+                        portraits={portraits}
+                        playerUser={playerUser}
+                        playerSessionId={playerSessionId}
+                        onUpdate={async () => {
+                            await loadAllPlayers();
+                            await loadTeamMatches();
+                        }}
+                    />
+                )}
                 {activeTab === 'stats' && <StatsAndMatches players={players} teams={teams} teamMatches={teamMatches} allPlayers={allPlayers} />}
                 {activeTab === 'streamers' && <Streamers />}
                 {activeTab === 'profile' && playerUser && (
@@ -2028,14 +2042,24 @@ function Teams({ teams, players, allPlayers }) {
     );
 }
 
-function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) {
+function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], playerUser = null, playerSessionId = null, onUpdate = null }) {
     const [subTab, setSubTab] = React.useState('schedule');
     const [liveMatches, setLiveMatches] = React.useState([]);
     const [loadingLive, setLoadingLive] = React.useState(false);
-    
+
     // Filters
     const [filterTeam, setFilterTeam] = React.useState('');
     const [filterPlayer, setFilterPlayer] = React.useState('');
+
+    // Get current player data
+    const currentPlayerData = React.useMemo(() => {
+        if (!playerUser?.linkedBattleTag || !allPlayers) return null;
+        const playerProfiles = allPlayers.filter(p => p.battleTag === playerUser.linkedBattleTag);
+        if (playerProfiles.length === 0) return null;
+        return playerProfiles.reduce((best, current) =>
+            (current.points || 0) > (best.points || 0) ? current : best
+        );
+    }, [playerUser, allPlayers]);
 
     // Fetch live matches
     const fetchLiveMatches = async () => {
@@ -2293,19 +2317,21 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
         const isCompleted = match.status === 'completed';
         const p1Won = isCompleted && match.winnerId === match.team1Id;
         const p2Won = isCompleted && match.winnerId === match.team2Id;
-        
+        const isHomePlayer = currentPlayerData && (match.player1Id === currentPlayerData.id || match.player2Id === currentPlayerData.id) && match.homePlayerId === currentPlayerData.id;
+
         return (
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '30px', // Increased from 20px
-                padding: '25px', // Increased from 15px
-                paddingTop: '35px', // Extra top padding for team logo overlay
-                background: isCompleted ? 'rgba(42, 42, 42, 0.5)' : 'rgba(201, 169, 97, 0.1)',
-                borderRadius: '16px', // Increased from 12px
-                border: `3px solid ${isCompleted ? '#333' : '#c9a961'}`,
-                marginBottom: '20px' // Increased from 15px
-            }}>
+            <div>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '30px', // Increased from 20px
+                    padding: '25px', // Increased from 15px
+                    paddingTop: '35px', // Extra top padding for team logo overlay
+                    background: isCompleted ? 'rgba(42, 42, 42, 0.5)' : 'rgba(201, 169, 97, 0.1)',
+                    borderRadius: '16px', // Increased from 12px
+                    border: `3px solid ${isCompleted ? '#333' : '#c9a961'}`,
+                    marginBottom: '20px' // Increased from 15px
+                }}>
                 {/* Left player (Team 1) */}
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
                     {renderPlayerCard(player1, team1, p1Won, true, p1Won ? match.points : 0)}
@@ -2382,6 +2408,74 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
                     {renderPlayerCard(player2, team2, p2Won, false, p2Won ? match.points : 0)}
                 </div>
+                </div>
+
+                {/* Action buttons for home player */}
+                {isHomePlayer && !isCompleted && (
+                    <div style={{
+                        display: 'flex',
+                        gap: '10px',
+                        justifyContent: 'center',
+                        marginTop: '15px',
+                        flexWrap: 'wrap'
+                    }}>
+                        <button
+                            onClick={() => {
+                                const date = prompt('Введите дату и время (ГГГГ-ММ-ДД ЧЧ:ММ):',
+                                    match.scheduledDate ? new Date(match.scheduledDate).toISOString().slice(0, 16).replace('T', ' ') : '');
+                                if (date) {
+                                    fetch(`${API_BASE}/api/player-matches/${match.id}/report`, {
+                                        method: 'PUT',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ playerId: currentPlayerData.id, scheduledDate: new Date(date.replace(' ', 'T')) })
+                                    }).then(res => res.json()).then(data => {
+                                        if (data.error) {
+                                            alert(`❌ Ошибка: ${data.error}`);
+                                        } else {
+                                            alert('✅ Дата и время установлены!');
+                                        }
+                                        if (onUpdate) onUpdate();
+                                    });
+                                }
+                            }}
+                            style={{
+                                padding: '8px 16px', borderRadius: '8px',
+                                background: '#2196f3', color: '#fff',
+                                border: 'none', cursor: 'pointer', fontSize: '0.9em', fontWeight: '600'
+                            }}
+                        >
+                            📅 Назначить время
+                        </button>
+                        <button
+                            onClick={() => {
+                                const isPlayer1 = match.player1Id === currentPlayerData.id;
+                                const opponent = isPlayer1 ? player2 : player1;
+                                const winner = confirm(`🏆 Отметить победителя\n\nОК - Я победил (${currentPlayerData.name})\nОтмена - Победил соперник (${opponent?.name})`);
+                                const winnerId = winner ? (isPlayer1 ? match.team1Id : match.team2Id) : (isPlayer1 ? match.team2Id : match.team1Id);
+
+                                fetch(`${API_BASE}/api/player-matches/${match.id}/report`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ playerId: currentPlayerData.id, winnerId })
+                                }).then(res => res.json()).then(data => {
+                                    if (data.error) {
+                                        alert(`❌ Ошибка: ${data.error}`);
+                                    } else if (data.points) {
+                                        alert(`✅ Результат записан!\n\nОчки за победу: ${data.points}`);
+                                    }
+                                    if (onUpdate) onUpdate();
+                                });
+                            }}
+                            style={{
+                                padding: '8px 16px', borderRadius: '8px',
+                                background: '#4caf50', color: '#fff',
+                                border: 'none', cursor: 'pointer', fontSize: '0.9em', fontWeight: '600'
+                            }}
+                        >
+                            🏆 Отметить победителя
+                        </button>
+                    </div>
+                )}
             </div>
         );
     };
