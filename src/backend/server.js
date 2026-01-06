@@ -155,6 +155,10 @@ app.get('/api/admin/verify', async (req, res) => {
 app.use('/api', routes);
 app.use('/api/admin', checkAuth, routes);
 
+// Serve uploaded match files
+const uploadsPath = path.resolve(__dirname, '../../uploads');
+app.use('/uploads', express.static(uploadsPath));
+
 // Upload endpoint with multer - saves as base64 in MongoDB
 app.post('/api/admin/teams/:id/upload-logo', checkAuth, upload.single('logo'), async (req, res) => {
     try {
