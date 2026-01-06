@@ -2094,132 +2094,225 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
         }
     });
     
+    const getPlayer = (playerId) => {
+        return allPlayers.find(p => (p._id || p.id) === playerId);
+    };
+    
     const getPlayerName = (playerId) => {
-        const player = allPlayers.find(p => (p._id || p.id) === playerId);
+        const player = getPlayer(playerId);
         return player ? player.name : 'Unknown';
     };
 
-    // Create tournament bracket grid for a team matchup
-    const renderTournamentGrid = (matchup) => {
-        const team1Players = allPlayers.filter(p => p.teamId === (matchup.team1?._id || matchup.team1?.id));
-        const team2Players = allPlayers.filter(p => p.teamId === (matchup.team2?._id || matchup.team2?.id));
+    // Race icons mapping
+    const raceIcons = {
+        0: '🎲', // Random
+        1: '🏰', // Human  
+        2: '⚔️', // Orc
+        4: '🌙', // Night Elf
+        8: '💀'  // Undead
+    };
 
-        // Create a map of matches for quick lookup
-        const matchMap = {};
-        matchup.matches.forEach(match => {
-            const key = `${match.player1Id}-${match.player2Id}`;
-            matchMap[key] = match;
-        });
-
+    // Render single player card in bracket style
+    const renderPlayerCard = (player, team, isWinner, isLeft, points = 0) => {
+        const teamColor = getTeamColor(team?.id || team?._id);
+        
         return (
-            <div style={{ overflowX: 'auto' }}>
-                <table style={{
-                    width: '100%',
-                    borderCollapse: 'collapse',
-                    fontSize: '0.85em',
-                    minWidth: team2Players.length > 3 ? `${(team2Players.length + 1) * 100}px` : 'auto'
+            <div style={{
+                display: 'flex',
+                flexDirection: isLeft ? 'row' : 'row-reverse',
+                alignItems: 'stretch',
+                width: '100%',
+                maxWidth: '280px'
+            }}>
+                {/* Player portrait hexagon */}
+                <div style={{
+                    width: '60px',
+                    height: '70px',
+                    background: isWinner ? `linear-gradient(135deg, ${teamColor.primary}, ${teamColor.secondary})` : '#2a2a2a',
+                    clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: `2px solid ${isWinner ? '#c9a961' : '#444'}`,
+                    flexShrink: 0,
+                    position: 'relative',
+                    zIndex: 2
                 }}>
-                    <thead>
-                        <tr>
-                            <th style={{
-                                padding: '8px',
-                                background: '#1a1a1a',
-                                color: '#c9a961',
-                                border: '1px solid #333',
-                                minWidth: '100px',
-                                position: 'sticky',
-                                left: 0,
-                                zIndex: 1
+                    <div style={{
+                        width: '52px',
+                        height: '62px',
+                        background: '#1a1a1a',
+                        clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.8em'
+                    }}>
+                        {raceIcons[player?.race] || '👤'}
+                    </div>
+                </div>
+                
+                {/* Player info card */}
+                <div style={{
+                    flex: 1,
+                    background: isWinner ? `linear-gradient(${isLeft ? '90deg' : '270deg'}, rgba(201, 169, 97, 0.2), #1a1a1a)` : '#1a1a1a',
+                    border: `2px solid ${isWinner ? '#c9a961' : '#333'}`,
+                    borderRadius: isLeft ? '0 8px 8px 0' : '8px 0 0 8px',
+                    marginLeft: isLeft ? '-10px' : '0',
+                    marginRight: isLeft ? '0' : '-10px',
+                    padding: '8px 12px',
+                    paddingLeft: isLeft ? '18px' : '12px',
+                    paddingRight: isLeft ? '12px' : '18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    position: 'relative'
+                }}>
+                    {/* Team name with logo */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        marginBottom: '4px',
+                        justifyContent: isLeft ? 'flex-start' : 'flex-end'
+                    }}>
+                        {team?.logo ? (
+                            <img src={team.logo} alt="" style={{ width: '16px', height: '16px', borderRadius: '3px' }} />
+                        ) : (
+                            <span style={{ fontSize: '0.9em' }}>{team?.emoji}</span>
+                        )}
+                        <span style={{ 
+                            fontSize: '0.75em', 
+                            color: teamColor.primary,
+                            fontWeight: '600',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                        }}>
+                            {team?.name}
+                        </span>
+                    </div>
+                    
+                    {/* Player name */}
+                    <div style={{
+                        fontSize: '1.1em',
+                        fontWeight: '700',
+                        color: isWinner ? '#c9a961' : '#fff',
+                        textAlign: isLeft ? 'left' : 'right'
+                    }}>
+                        {player?.name || 'Unknown'}
+                    </div>
+                    
+                    {/* Points if winner */}
+                    {isWinner && points > 0 && (
+                        <div style={{
+                            fontSize: '0.85em',
+                            color: '#4caf50',
+                            fontWeight: '600',
+                            textAlign: isLeft ? 'left' : 'right'
+                        }}>
+                            +{points} pts
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
+    // Render match bracket card
+    const renderMatchBracket = (match, team1, team2) => {
+        const player1 = getPlayer(match.player1Id);
+        const player2 = getPlayer(match.player2Id);
+        const isCompleted = match.status === 'completed';
+        const p1Won = isCompleted && match.winnerId === match.team1Id;
+        const p2Won = isCompleted && match.winnerId === match.team2Id;
+        
+        return (
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '20px',
+                padding: '15px',
+                background: isCompleted ? 'rgba(42, 42, 42, 0.5)' : 'rgba(201, 169, 97, 0.1)',
+                borderRadius: '12px',
+                border: `2px solid ${isCompleted ? '#333' : '#c9a961'}`,
+                marginBottom: '15px'
+            }}>
+                {/* Left player (Team 1) */}
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                    {renderPlayerCard(player1, team1, p1Won, true, p1Won ? match.points : 0)}
+                </div>
+                
+                {/* VS / Status */}
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    minWidth: '80px'
+                }}>
+                    {isCompleted ? (
+                        <React.Fragment>
+                            <div style={{
+                                width: '50px',
+                                height: '50px',
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, #c9a961, #8b7355)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.9em',
+                                fontWeight: '800',
+                                color: '#000',
+                                boxShadow: '0 4px 15px rgba(201, 169, 97, 0.3)'
                             }}>
-                                {matchup.team2?.logo ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
-                                        <img src={matchup.team2.logo} alt="" style={{ width: '20px', height: '20px', borderRadius: '4px' }} />
-                                        <span style={{ fontSize: '0.8em' }}>{matchup.team2?.name}</span>
-                                    </div>
-                                ) : (
-                                    <span>{matchup.team2?.emoji} {matchup.team2?.name}</span>
-                                )}
-                            </th>
-                            {team2Players.map(p2 => (
-                                <th key={p2.id || p2._id} style={{
-                                    padding: '6px 8px',
+                                VS
+                            </div>
+                            {match.points > 0 && (
+                                <div style={{
+                                    marginTop: '8px',
+                                    padding: '4px 10px',
                                     background: '#2a2a2a',
-                                    color: '#fff',
-                                    border: '1px solid #333',
-                                    fontWeight: '500',
-                                    minWidth: '80px',
-                                    fontSize: '0.9em'
+                                    borderRadius: '10px',
+                                    fontSize: '0.8em',
+                                    color: '#c9a961',
+                                    fontWeight: '600'
                                 }}>
-                                    {p2.name}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {team1Players.map(p1 => (
-                            <tr key={p1.id || p1._id}>
-                                <td style={{
-                                    padding: '6px 8px',
-                                    background: '#2a2a2a',
-                                    color: '#fff',
-                                    border: '1px solid #333',
-                                    fontWeight: '500',
-                                    position: 'sticky',
-                                    left: 0,
-                                    zIndex: 1,
-                                    fontSize: '0.9em'
+                                    {match.points} pts
+                                </div>
+                            )}
+                        </React.Fragment>
+                    ) : (
+                        <React.Fragment>
+                            <div style={{
+                                width: '50px',
+                                height: '50px',
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, #c9a961, #8b7355)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '1.5em',
+                                boxShadow: '0 4px 15px rgba(201, 169, 97, 0.3)'
+                            }}>
+                                🕐
+                            </div>
+                            {match.scheduledDate && (
+                                <div style={{
+                                    marginTop: '8px',
+                                    fontSize: '0.75em',
+                                    color: '#888',
+                                    textAlign: 'center'
                                 }}>
-                                    {p1.name}
-                                </td>
-                                {team2Players.map(p2 => {
-                                    const match = matchMap[`${p1.id || p1._id}-${p2.id || p2._id}`] || 
-                                                  matchMap[`${p2.id || p2._id}-${p1.id || p1._id}`];
-                                    
-                                    let bgColor = '#1a1a1a';
-                                    let content = '—';
-                                    let textColor = '#555';
-                                    
-                                    if (match) {
-                                        if (match.status === 'upcoming') {
-                                            bgColor = '#3d3d00';
-                                            content = '🕐';
-                                            textColor = '#c9a961';
-                                        } else if (match.status === 'completed') {
-                                            const p1Won = (match.player1Id === (p1.id || p1._id) && match.winnerId === match.team1Id) ||
-                                                         (match.player2Id === (p1.id || p1._id) && match.winnerId === match.team2Id);
-                                            if (p1Won) {
-                                                bgColor = '#1a3d1a';
-                                                content = '✅';
-                                                textColor = '#4caf50';
-                                            } else {
-                                                bgColor = '#3d1a1a';
-                                                content = '❌';
-                                                textColor = '#f44336';
-                                            }
-                                        }
-                                    }
-                                    
-                                    return (
-                                        <td key={`${p1.id || p1._id}-${p2.id || p2._id}`} style={{
-                                            padding: '8px',
-                                            background: bgColor,
-                                            border: '1px solid #333',
-                                            textAlign: 'center',
-                                            color: textColor,
-                                            fontSize: '1.1em',
-                                            cursor: match ? 'pointer' : 'default',
-                                            transition: 'background 0.2s'
-                                        }}
-                                        title={match ? (match.status === 'upcoming' ? `Предстоит ${match.scheduledDate ? new Date(match.scheduledDate).toLocaleString('ru-RU') : ''}` : `${match.points} pts`) : 'Матч не назначен'}
-                                        >
-                                            {content}
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                                    {new Date(match.scheduledDate).toLocaleDateString('ru-RU')}
+                                </div>
+                            )}
+                        </React.Fragment>
+                    )}
+                </div>
+                
+                {/* Right player (Team 2) */}
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
+                    {renderPlayerCard(player2, team2, p2Won, false, p2Won ? match.points : 0)}
+                </div>
             </div>
         );
     };
