@@ -50,11 +50,13 @@ const teamMatchSchema = new mongoose.Schema({
     team2Id: { type: String, required: true },
     player1Id: { type: String, required: true },
     player2Id: { type: String, required: true },
+    homePlayerId: { type: String }, // Player responsible for match (lobby, time, reporting)
     winnerId: { type: String },
     points: { type: Number, default: 0 },
     notes: { type: String },
     status: { type: String, enum: ['upcoming', 'completed'], default: 'upcoming' },
     scheduledDate: { type: Date },
+    reportedBy: { type: String }, // Who reported the result
     w3championsMatchId: { type: String }, // Match ID from W3Champions for FlowTV
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
