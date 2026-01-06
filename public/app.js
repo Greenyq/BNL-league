@@ -2116,9 +2116,15 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
     });
     
     const getPlayer = (playerId) => {
-        return allPlayers.find(p => (p._id || p.id) === playerId);
+        if (!playerId) return null;
+        // Convert to string for safe comparison
+        const searchId = String(playerId);
+        return allPlayers.find(p => {
+            const pId = String(p.id || p._id);
+            return pId === searchId;
+        });
     };
-    
+
     const getPlayerName = (playerId) => {
         const player = getPlayer(playerId);
         return player ? player.name : 'Unknown';
@@ -2529,14 +2535,16 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                             return false;
                         }
                     }
-                    // Filter by player name
-                    if (filterPlayer) {
-                        const searchLower = filterPlayer.toLowerCase();
+                    // Filter by player name - improved search logic
+                    if (filterPlayer && filterPlayer.trim()) {
+                        const searchLower = filterPlayer.toLowerCase().trim();
                         const hasPlayer = matchup.matches.some(m => {
                             const p1 = getPlayer(m.player1Id);
                             const p2 = getPlayer(m.player2Id);
-                            return (p1?.name?.toLowerCase().includes(searchLower)) ||
-                                   (p2?.name?.toLowerCase().includes(searchLower));
+                            const p1Name = p1?.name || '';
+                            const p2Name = p2?.name || '';
+                            return p1Name.toLowerCase().includes(searchLower) ||
+                                   p2Name.toLowerCase().includes(searchLower);
                         });
                         if (!hasPlayer) return false;
                     }
@@ -3960,17 +3968,23 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
     React.useEffect(() => {
         if (playerData?.id) {
             // Filter team matches where this player participates
-            const matches = teamMatches.filter(m => 
+            const matches = teamMatches.filter(m =>
                 m.player1Id === playerData.id || m.player2Id === playerData.id
             );
+            console.log(`Found ${matches.length} matches for player ${playerData.id} (${playerData.name})`);
+            if (matches.length === 0 && teamMatches.length > 0) {
+                console.warn('No matches found. Player ID:', playerData.id, 'TeamMatch player IDs:', teamMatches.slice(0, 3).map(m => `[${m.player1Id}, ${m.player2Id}]`));
+            }
             setMyMatches(matches);
+        } else {
+            setMyMatches([]);
         }
     }, [playerData, teamMatches]);
 
     const fetchPlayerData = () => {
-        // Find player data from loaded players instead of API
+        // Find player data from DB players (not W3Champions profiles)
         if (playerUser.linkedBattleTag && allPlayers) {
-            // Find the player with matching battleTag (may have multiple race profiles)
+            // Find player from database (use DB player ID for teamMatches compatibility)
             const playerProfiles = allPlayers.filter(p => p.battleTag === playerUser.linkedBattleTag);
 
             if (playerProfiles.length > 0) {
@@ -3979,7 +3993,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                     (current.points || 0) > (best.points || 0) ? current : best
                 );
                 setPlayerData(bestProfile);
-                console.log('Player data found:', bestProfile);
+                console.log('Player data found:', bestProfile, 'ID:', bestProfile.id);
             } else {
                 console.log('No player data found for battleTag:', playerUser.linkedBattleTag);
                 setPlayerData(null);
@@ -4413,6 +4427,13 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                         ⚔️ Мои матчи
                     </h3>
                     
+                    {/* Debug: Log home matches */}
+                    {myMatches.length > 0 && (
+                        <div style={{ color: '#888', fontSize: '0.8em', marginBottom: '10px', padding: '10px', background: '#2a2a2a', borderRadius: '5px' }}>
+                            📊 Debug: {myMatches.length} матчей найдено, домашних: {myMatches.filter(m => m.homePlayerId === playerData.id).length}, гостевых: {myMatches.filter(m => m.homePlayerId !== playerData.id).length}
+                        </div>
+                    )}
+
                     {/* Upcoming matches where this player is home */}
                     {myMatches.filter(m => m.status === 'upcoming' && m.homePlayerId === playerData.id).length > 0 && (
                         <div style={{ marginBottom: '25px' }}>
@@ -4447,6 +4468,11 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                                             <button
                                                 onClick={() => {
+                                                    // Verify this is the home player
+                                                    if (match.homePlayerId !== playerData.id) {
+                                                        alert('❌ Только организатор матча может установить время!');
+                                                        return;
+                                                    }
                                                     const date = prompt('Введите дату и время (ГГГГ-ММ-ДД ЧЧ:ММ):',
                                                         match.scheduledDate ? new Date(match.scheduledDate).toISOString().slice(0, 16).replace('T', ' ') : '');
                                                     if (date) {
@@ -4454,7 +4480,14 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                                             method: 'PUT',
                                                             headers: { 'Content-Type': 'application/json' },
                                                             body: JSON.stringify({ playerId: playerData.id, scheduledDate: new Date(date.replace(' ', 'T')) })
-                                                        }).then(() => onUpdate());
+                                                        }).then(res => res.json()).then(data => {
+                                                            if (data.error) {
+                                                                alert(`❌ Ошибка: ${data.error}`);
+                                                            } else {
+                                                                alert('✅ Дата и время установлены!');
+                                                            }
+                                                            onUpdate();
+                                                        });
                                                     }
                                                 }}
                                                 style={{
@@ -4467,15 +4500,22 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                             </button>
                                             <button
                                                 onClick={() => {
+                                                    // Verify this is the home player
+                                                    if (match.homePlayerId !== playerData.id) {
+                                                        alert('❌ Только организатор матча может отметить победителя!');
+                                                        return;
+                                                    }
                                                     const winner = confirm(`Кто победил?\n\nОК - Я победил (${playerData.name})\nОтмена - Победил соперник (${opponent?.name})`);
                                                     const winnerId = winner ? (isPlayer1 ? match.team1Id : match.team2Id) : (isPlayer1 ? match.team2Id : match.team1Id);
-                                                    
+
                                                     fetch(`${API_BASE}/api/player-matches/${match.id}/report`, {
                                                         method: 'PUT',
                                                         headers: { 'Content-Type': 'application/json' },
                                                         body: JSON.stringify({ playerId: playerData.id, winnerId })
                                                     }).then(res => res.json()).then(data => {
-                                                        if (data.points) {
+                                                        if (data.error) {
+                                                            alert(`❌ Ошибка: ${data.error}`);
+                                                        } else if (data.points) {
                                                             alert(`✅ Результат записан!\n\nОчки за победу: ${data.points}`);
                                                         }
                                                         onUpdate();
