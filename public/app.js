@@ -719,7 +719,7 @@ function App() {
                 {activeTab === 'home' && <Rules />}
                 {activeTab === 'players' && <Players players={players} />}
                 {activeTab === 'teams' && <Teams teams={teams} players={players} allPlayers={allPlayers} />}
-                {activeTab === 'schedule' && <Schedule schedule={schedule} teams={teams} allPlayers={allPlayers} teamMatches={teamMatches} />}
+                {activeTab === 'schedule' && <Schedule schedule={schedule} teams={teams} allPlayers={allPlayers} teamMatches={teamMatches} portraits={portraits} />}
                 {activeTab === 'stats' && <StatsAndMatches players={players} teams={teams} teamMatches={teamMatches} allPlayers={allPlayers} />}
                 {activeTab === 'streamers' && <Streamers />}
                 {activeTab === 'profile' && playerUser && (
