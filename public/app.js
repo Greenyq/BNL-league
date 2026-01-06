@@ -363,7 +363,7 @@ function App() {
         // Performance: Backend now filters matches before sending, so minimal filtering needed here
         // But keep as fallback in case old cached data exists
         let recentMatches = matches;
-        const cutoffDate = new Date('2025-11-27T00:00:00Z');
+        const cutoffDate = new Date('2025-12-20T00:00:00Z');
 
         // Only filter if we have old data (backend now does this)
         if (matches.length > 50) {
@@ -711,7 +711,7 @@ function App() {
                     setShowLoginModal={setShowLoginModal}
                 />
                 <div className="app">
-                    <div className="loading">⚔️ Загрузка матчей с W3Champions...<br />Подсчет очков с 27.11.2025...</div>
+                    <div className="loading">⚔️ Загрузка матчей с W3Champions...<br />Подсчет очков с 20.12.2025...</div>
                 </div>
             </div>
         );
@@ -2059,6 +2059,8 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
     const [matchFile, setMatchFile] = React.useState(null);
     const [uploadingFile, setUploadingFile] = React.useState(false);
     const [expandedMatchId, setExpandedMatchId] = React.useState(null);
+    const [showTrophySelector, setShowTrophySelector] = React.useState(false);
+    const [trophyMatchData, setTrophyMatchData] = React.useState(null);
 
     // Get current player data
     const currentPlayerData = React.useMemo(() => {
@@ -2452,27 +2454,16 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                         </div>
 
                         {/* Trophy icon for marking winner */}
+                        {match.status !== 'completed' && (
                         <div
                             onClick={() => {
-                                const isPlayer1 = match.player1Id === currentPlayerData.id;
-                                const opponent = isPlayer1 ? player2 : player1;
-                                const winner = confirm(`🏆 Отметить победителя\n\nОК - Я победил (${currentPlayerData.name})\nОтмена - Победил соперник (${opponent?.name})`);
-                                if (winner === null) return;
-
-                                const winnerId = winner ? (isPlayer1 ? match.team1Id : match.team2Id) : (isPlayer1 ? match.team2Id : match.team1Id);
-
-                                fetch(`${API_BASE}/api/player-matches/${match.id}/report`, {
-                                    method: 'PUT',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ playerId: currentPlayerData.id, winnerId })
-                                }).then(res => res.json()).then(data => {
-                                    if (data.error) {
-                                        alert(`❌ Ошибка: ${data.error}`);
-                                    } else if (data.points) {
-                                        alert(`✅ Результат записан!\n\nОчки за победу: ${data.points}`);
-                                    }
-                                    if (onUpdate) onUpdate();
+                                setTrophyMatchData({
+                                    match,
+                                    player1,
+                                    player2,
+                                    isPlayer1: match.player1Id === currentPlayerData.id
                                 });
+                                setShowTrophySelector(true);
                             }}
                             style={{
                                 fontSize: '2em',
@@ -2489,6 +2480,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                         >
                             🏆
                         </div>
+                        )}
                     </div>
                 )}
 
@@ -2688,7 +2680,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             return false;
                         }
                     }
-                    // Filter by player name - improved search logic
+                    // Filter by player name - must have at least one match with this player
                     if (filterPlayer && filterPlayer.trim()) {
                         const searchLower = filterPlayer.toLowerCase().trim();
                         const hasPlayer = matchup.matches.some(m => {
@@ -2704,6 +2696,23 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                     return true;
                 })
                 .map((matchup, idx) => {
+                    // Filter individual matches by player name
+                    let filteredMatches = matchup.matches;
+                    if (filterPlayer && filterPlayer.trim()) {
+                        const searchLower = filterPlayer.toLowerCase().trim();
+                        filteredMatches = matchup.matches.filter(m => {
+                            const p1 = getPlayer(m.player1Id);
+                            const p2 = getPlayer(m.player2Id);
+                            const p1Name = p1?.name || '';
+                            const p2Name = p2?.name || '';
+                            return p1Name.toLowerCase().includes(searchLower) ||
+                                   p2Name.toLowerCase().includes(searchLower);
+                        });
+                    }
+
+                    // Create temporary matchup with filtered matches
+                    const filteredMatchup = { ...matchup, matches: filteredMatches };
+                    if (filteredMatches.length === 0) return null;
                 const totalPoints = matchup.team1Points + matchup.team2Points;
                 const team1Percent = totalPoints > 0 ? (matchup.team1Points / totalPoints) * 100 : 50;
                 const team2Percent = totalPoints > 0 ? (matchup.team2Points / totalPoints) * 100 : 50;
@@ -2837,13 +2846,13 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                 🏆 Турнирная сетка матчей
                             </h3>
                             
-                            {matchup.matches.map(match => (
+                            {filteredMatchup.matches.map(match => (
                                 <div key={match.id || match._id}>
                                     {renderMatchBracket(match, matchup.team1, matchup.team2)}
                                 </div>
                             ))}
-                            
-                            {matchup.matches.length === 0 && (
+
+                            {filteredMatchup.matches.length === 0 && (
                                 <div style={{
                                     textAlign: 'center',
                                     padding: '40px',
@@ -2855,7 +2864,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                         </div>
                     </div>
                 );
-            })}
+            }).filter(Boolean)}
 
             {subTab === 'live' && (
                 <div>
@@ -3122,7 +3131,8 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             />
                         </div>
 
-                        {/* File Upload */}
+                        {/* File Upload - Only available after match is completed */}
+                        {selectedMatch.status === 'completed' ? (
                         <div style={{ marginBottom: '20px' }}>
                             <label style={{ display: 'block', color: '#c9a961', marginBottom: '8px', fontWeight: '600' }}>
                                 📁 Файл игры (макс. 700 кб)
@@ -3156,6 +3166,20 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                 </div>
                             )}
                         </div>
+                        ) : (
+                        <div style={{
+                            marginBottom: '20px',
+                            padding: '15px',
+                            background: 'rgba(255, 193, 7, 0.1)',
+                            border: '1px solid #ffc107',
+                            borderRadius: '8px',
+                            color: '#ffc107',
+                            textAlign: 'center',
+                            fontSize: '0.95em'
+                        }}>
+                            ⏳ Отметьте победителя чтобы загрузить файл
+                        </div>
+                        )}
 
                         {/* Buttons */}
                         <div style={{ display: 'flex', gap: '10px', marginTop: '30px' }}>
@@ -3254,6 +3278,152 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                 ❌ Отмена
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Trophy Selector Modal */}
+            {showTrophySelector && trophyMatchData && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000
+                }}>
+                    <div style={{
+                        background: '#1a1a1a',
+                        border: '3px solid #c9a961',
+                        borderRadius: '20px',
+                        padding: '40px',
+                        maxWidth: '600px',
+                        width: '90%',
+                        textAlign: 'center'
+                    }}>
+                        <h2 style={{
+                            color: '#c9a961',
+                            marginBottom: '30px',
+                            fontSize: '1.5em'
+                        }}>
+                            🏆 Кто победил?
+                        </h2>
+
+                        <div style={{
+                            display: 'flex',
+                            gap: '30px',
+                            justifyContent: 'center',
+                            marginBottom: '30px'
+                        }}>
+                            {/* Left Player (Winner option 1) */}
+                            <div
+                                onClick={() => {
+                                    const winnerId = trophyMatchData.isPlayer1 ? trophyMatchData.match.team1Id : trophyMatchData.match.team2Id;
+                                    fetch(`${API_BASE}/api/player-matches/${trophyMatchData.match.id}/report`, {
+                                        method: 'PUT',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ playerId: currentPlayerData.id, winnerId })
+                                    }).then(res => res.json()).then(data => {
+                                        if (data.error) {
+                                            alert(`❌ Ошибка: ${data.error}`);
+                                        } else if (data.points) {
+                                            alert(`✅ Результат записан!\n\nОчки за победу: ${data.points}`);
+                                        }
+                                        if (onUpdate) onUpdate();
+                                        setShowTrophySelector(false);
+                                        setTrophyMatchData(null);
+                                    });
+                                }}
+                                style={{
+                                    flex: 1,
+                                    padding: '30px',
+                                    background: 'linear-gradient(135deg, #c9a961, #8b7355)',
+                                    borderRadius: '15px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease',
+                                    border: '3px solid transparent'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                    e.currentTarget.style.borderColor = '#fff';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1)';
+                                    e.currentTarget.style.borderColor = 'transparent';
+                                }}
+                            >
+                                <div style={{ fontSize: '4em', marginBottom: '15px' }}>🏆</div>
+                                <div style={{ color: '#000', fontWeight: '700', fontSize: '1.2em' }}>
+                                    {trophyMatchData.player1?.name}
+                                </div>
+                            </div>
+
+                            {/* Right Player (Winner option 2) */}
+                            <div
+                                onClick={() => {
+                                    const winnerId = trophyMatchData.isPlayer1 ? trophyMatchData.match.team2Id : trophyMatchData.match.team1Id;
+                                    fetch(`${API_BASE}/api/player-matches/${trophyMatchData.match.id}/report`, {
+                                        method: 'PUT',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ playerId: currentPlayerData.id, winnerId })
+                                    }).then(res => res.json()).then(data => {
+                                        if (data.error) {
+                                            alert(`❌ Ошибка: ${data.error}`);
+                                        } else if (data.points) {
+                                            alert(`✅ Результат записан!\n\nОчки за победу: ${data.points}`);
+                                        }
+                                        if (onUpdate) onUpdate();
+                                        setShowTrophySelector(false);
+                                        setTrophyMatchData(null);
+                                    });
+                                }}
+                                style={{
+                                    flex: 1,
+                                    padding: '30px',
+                                    background: 'linear-gradient(135deg, #c9a961, #8b7355)',
+                                    borderRadius: '15px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease',
+                                    border: '3px solid transparent'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                    e.currentTarget.style.borderColor = '#fff';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1)';
+                                    e.currentTarget.style.borderColor = 'transparent';
+                                }}
+                            >
+                                <div style={{ fontSize: '4em', marginBottom: '15px' }}>🏆</div>
+                                <div style={{ color: '#000', fontWeight: '700', fontSize: '1.2em' }}>
+                                    {trophyMatchData.player2?.name}
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => {
+                                setShowTrophySelector(false);
+                                setTrophyMatchData(null);
+                            }}
+                            style={{
+                                padding: '12px 30px',
+                                background: '#444',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                fontSize: '1em'
+                            }}
+                        >
+                            ❌ Отмена
+                        </button>
                     </div>
                 </div>
             )}
