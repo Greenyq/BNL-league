@@ -2108,6 +2108,15 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
         return player ? player.name : 'Unknown';
     };
 
+    // Race icons for fallback (emoji)
+    const raceIcons = {
+        0: '🎲', // Random
+        1: '🏰', // Human  
+        2: '⚔️', // Orc
+        4: '🌙', // Night Elf
+        8: '💀'  // Undead
+    };
+
     // Race images for fallback
     const raceImages = {
         0: 'https://w3champions.wc3.tools/prod/integration/icons/rndicon.png',
