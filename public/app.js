@@ -2098,6 +2098,131 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
         const player = allPlayers.find(p => (p._id || p.id) === playerId);
         return player ? player.name : 'Unknown';
     };
+
+    // Create tournament bracket grid for a team matchup
+    const renderTournamentGrid = (matchup) => {
+        const team1Players = allPlayers.filter(p => p.teamId === (matchup.team1?._id || matchup.team1?.id));
+        const team2Players = allPlayers.filter(p => p.teamId === (matchup.team2?._id || matchup.team2?.id));
+
+        // Create a map of matches for quick lookup
+        const matchMap = {};
+        matchup.matches.forEach(match => {
+            const key = `${match.player1Id}-${match.player2Id}`;
+            matchMap[key] = match;
+        });
+
+        return (
+            <div style={{ overflowX: 'auto' }}>
+                <table style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    fontSize: '0.85em',
+                    minWidth: team2Players.length > 3 ? `${(team2Players.length + 1) * 100}px` : 'auto'
+                }}>
+                    <thead>
+                        <tr>
+                            <th style={{
+                                padding: '8px',
+                                background: '#1a1a1a',
+                                color: '#c9a961',
+                                border: '1px solid #333',
+                                minWidth: '100px',
+                                position: 'sticky',
+                                left: 0,
+                                zIndex: 1
+                            }}>
+                                {matchup.team2?.logo ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+                                        <img src={matchup.team2.logo} alt="" style={{ width: '20px', height: '20px', borderRadius: '4px' }} />
+                                        <span style={{ fontSize: '0.8em' }}>{matchup.team2?.name}</span>
+                                    </div>
+                                ) : (
+                                    <span>{matchup.team2?.emoji} {matchup.team2?.name}</span>
+                                )}
+                            </th>
+                            {team2Players.map(p2 => (
+                                <th key={p2.id || p2._id} style={{
+                                    padding: '6px 8px',
+                                    background: '#2a2a2a',
+                                    color: '#fff',
+                                    border: '1px solid #333',
+                                    fontWeight: '500',
+                                    minWidth: '80px',
+                                    fontSize: '0.9em'
+                                }}>
+                                    {p2.name}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {team1Players.map(p1 => (
+                            <tr key={p1.id || p1._id}>
+                                <td style={{
+                                    padding: '6px 8px',
+                                    background: '#2a2a2a',
+                                    color: '#fff',
+                                    border: '1px solid #333',
+                                    fontWeight: '500',
+                                    position: 'sticky',
+                                    left: 0,
+                                    zIndex: 1,
+                                    fontSize: '0.9em'
+                                }}>
+                                    {p1.name}
+                                </td>
+                                {team2Players.map(p2 => {
+                                    const match = matchMap[`${p1.id || p1._id}-${p2.id || p2._id}`] || 
+                                                  matchMap[`${p2.id || p2._id}-${p1.id || p1._id}`];
+                                    
+                                    let bgColor = '#1a1a1a';
+                                    let content = '—';
+                                    let textColor = '#555';
+                                    
+                                    if (match) {
+                                        if (match.status === 'upcoming') {
+                                            bgColor = '#3d3d00';
+                                            content = '🕐';
+                                            textColor = '#c9a961';
+                                        } else if (match.status === 'completed') {
+                                            const p1Won = (match.player1Id === (p1.id || p1._id) && match.winnerId === match.team1Id) ||
+                                                         (match.player2Id === (p1.id || p1._id) && match.winnerId === match.team2Id);
+                                            if (p1Won) {
+                                                bgColor = '#1a3d1a';
+                                                content = '✅';
+                                                textColor = '#4caf50';
+                                            } else {
+                                                bgColor = '#3d1a1a';
+                                                content = '❌';
+                                                textColor = '#f44336';
+                                            }
+                                        }
+                                    }
+                                    
+                                    return (
+                                        <td key={`${p1.id || p1._id}-${p2.id || p2._id}`} style={{
+                                            padding: '8px',
+                                            background: bgColor,
+                                            border: '1px solid #333',
+                                            textAlign: 'center',
+                                            color: textColor,
+                                            fontSize: '1.1em',
+                                            cursor: match ? 'pointer' : 'default',
+                                            transition: 'background 0.2s'
+                                        }}
+                                        title={match ? (match.status === 'upcoming' ? `Предстоит ${match.scheduledDate ? new Date(match.scheduledDate).toLocaleString('ru-RU') : ''}` : `${match.points} pts`) : 'Матч не назначен'}
+                                        >
+                                            {content}
+                                        </td>
+                                    );
+                                })}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        );
+    };
     
     return (
         <div>
