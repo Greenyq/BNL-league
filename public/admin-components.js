@@ -2101,25 +2101,6 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                         min="1"
                                         required
                                     />
-                                    <div style={{ fontSize: '0.85em', color: '#4caf50', marginTop: '5px' }}>
-                                        ✅ Эти очки получит победитель
-                                    </div>
-                                </div>
-                                <div style={{ marginBottom: '15px' }}>
-                                    <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Очки проигравшего (отнять)</label>
-                                    <input
-                                        type="number"
-                                        value={formData.loserPoints || 0}
-                                        onChange={(e) => setFormData({...formData, loserPoints: parseInt(e.target.value) || 0})}
-                                        style={{
-                                            width: '100%', padding: '10px', borderRadius: '8px',
-                                            border: '1px solid #444', background: '#2a2a2a', color: '#fff'
-                                        }}
-                                        min="0"
-                                    />
-                                    <div style={{ fontSize: '0.85em', color: '#f44336', marginTop: '5px' }}>
-                                        ❌ Эти очки будут отняты у проигравшего (0 = не отнимать)
-                                    </div>
                                 </div>
                                 <div style={{ marginBottom: '15px' }}>
                                     <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>
