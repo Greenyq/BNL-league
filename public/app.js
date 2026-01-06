@@ -2029,6 +2029,10 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
     const [subTab, setSubTab] = React.useState('schedule');
     const [liveMatches, setLiveMatches] = React.useState([]);
     const [loadingLive, setLoadingLive] = React.useState(false);
+    
+    // Filters
+    const [filterTeam, setFilterTeam] = React.useState('');
+    const [filterPlayer, setFilterPlayer] = React.useState('');
 
     // Fetch live matches
     const fetchLiveMatches = async () => {
