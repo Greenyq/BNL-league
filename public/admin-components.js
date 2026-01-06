@@ -1775,7 +1775,8 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
         const matchData = {
             ...formData,
             winnerId: formData.status === 'upcoming' ? null : formData.winnerId,
-            points: formData.status === 'upcoming' ? 0 : formData.points
+            points: formData.status === 'upcoming' ? 0 : formData.points,
+            loserPoints: formData.status === 'upcoming' ? 0 : (formData.loserPoints || 0)
         };
 
         try {
