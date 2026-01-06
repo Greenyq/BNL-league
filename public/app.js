@@ -740,10 +740,13 @@ function App() {
                         playerUser={playerUser}
                         playerSessionId={playerSessionId}
                         allPlayers={players}
+                        teams={teams}
+                        teamMatches={teamMatches}
                         onUpdate={async () => {
                             await verifyPlayerSession();
                             await loadAllPlayers(); // Reload database players
                             await loadPlayers(); // Reload players to get fresh data with portraits
+                            await loadTeamMatches(); // Reload matches
                         }}
                         onLogout={() => {
                             localStorage.removeItem('playerSessionId');
