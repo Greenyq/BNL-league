@@ -2126,15 +2126,6 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
         8: '💀'  // Undead
     };
 
-    // Race images from /images/ folder (same as in PlayerCard)
-    const raceImages = {
-        0: null, // Random
-        1: '/images/human.jpg',
-        2: '/images/orc.jpg',
-        4: '/images/nightelf.jpg',
-        8: '/images/undead.jpg'
-    };
-
     // Render single player card in bracket style (enlarged x2)
     const renderPlayerCard = (player, team, isWinner, isLeft, points = 0) => {
         const teamColor = getTeamColor(team?.id || team?._id);
@@ -2144,7 +2135,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
             ? portraits.find(p => p.id === player.selectedPortraitId)
             : null;
         
-        // Use portrait image if available, otherwise use race image from /images/
+        // Use portrait image if available, otherwise use race image from global raceImages
         const avatarImage = selectedPortrait ? selectedPortrait.imageUrl : raceImages[player?.race];
         
         return (
@@ -2153,12 +2144,12 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                 flexDirection: isLeft ? 'row' : 'row-reverse',
                 alignItems: 'stretch',
                 width: '100%',
-                maxWidth: '400px' // Increased from 280px
+                maxWidth: '400px'
             }}>
                 {/* Player portrait hexagon - enlarged */}
                 <div style={{
-                    width: '100px', // Increased from 60px
-                    height: '115px', // Increased from 70px
+                    width: '100px',
+                    height: '115px',
                     background: isWinner ? `linear-gradient(135deg, ${teamColor.primary}, ${teamColor.secondary})` : '#2a2a2a',
                     clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
                     display: 'flex',
@@ -2170,8 +2161,8 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                     zIndex: 2
                 }}>
                     <div style={{
-                        width: '88px', // Increased from 52px
-                        height: '100px', // Increased from 62px
+                        width: '88px',
+                        height: '100px',
                         background: '#1a1a1a',
                         clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
                         display: 'flex',
@@ -2210,19 +2201,19 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                     padding: '12px 16px',
                     paddingLeft: isLeft ? '25px' : '16px',
                     paddingRight: isLeft ? '16px' : '25px',
-                    paddingTop: '20px', // Extra top padding for team logo overlay
+                    paddingTop: '20px',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
                     position: 'relative',
                     minHeight: '90px'
                 }}>
-                    {/* Team logo overlaying the top border */}
+                    {/* Team logo overlaying the top border - CENTERED */}
                     <div style={{
                         position: 'absolute',
-                        top: '-18px', // Half outside the card
-                        left: isLeft ? '20px' : 'auto',
-                        right: isLeft ? 'auto' : '20px',
+                        top: '-18px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
                         width: '36px',
                         height: '36px',
                         borderRadius: '8px',
@@ -2242,7 +2233,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                         )}
                     </div>
                     
-                    {/* Team name */}
+                    {/* Team name - centered */}
                     <div style={{
                         fontSize: '0.85em', 
                         color: teamColor.primary,
@@ -2250,28 +2241,28 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px',
                         marginBottom: '6px',
-                        textAlign: isLeft ? 'left' : 'right'
+                        textAlign: 'center'
                     }}>
                         {team?.name}
                     </div>
                     
-                    {/* Player name - enlarged */}
+                    {/* Player name - enlarged, centered */}
                     <div style={{
-                        fontSize: '1.4em', // Increased from 1.1em
+                        fontSize: '1.4em',
                         fontWeight: '700',
                         color: isWinner ? '#c9a961' : '#fff',
-                        textAlign: isLeft ? 'left' : 'right'
+                        textAlign: 'center'
                     }}>
                         {player?.name || 'Unknown'}
                     </div>
                     
-                    {/* Points for winner - enlarged */}
+                    {/* Points for winner - enlarged, centered */}
                     {isWinner && points > 0 && (
                         <div style={{
-                            fontSize: '1em', // Increased from 0.85em
+                            fontSize: '1em',
                             color: '#4caf50',
                             fontWeight: '600',
-                            textAlign: isLeft ? 'left' : 'right',
+                            textAlign: 'center',
                             marginTop: '4px'
                         }}>
                             +{points} pts
