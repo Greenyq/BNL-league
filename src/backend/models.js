@@ -56,8 +56,16 @@ const teamMatchSchema = new mongoose.Schema({
     notes: { type: String },
     status: { type: String, enum: ['upcoming', 'completed'], default: 'upcoming' },
     scheduledDate: { type: Date },
+    scheduledTime: { type: String }, // HH:MM format (e.g., "19:30")
     reportedBy: { type: String }, // Who reported the result
     w3championsMatchId: { type: String }, // Match ID from W3Champions for FlowTV
+    matchFile: {
+        originalName: String,
+        filename: String,
+        size: Number,
+        uploadedAt: Date,
+        uploadedBy: String
+    },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });

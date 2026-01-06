@@ -476,34 +476,34 @@ router.get('/player-matches/:playerId', async (req, res) => {
 // Player reports match result (only home player can do this)
 router.put('/player-matches/:id/report', async (req, res) => {
     try {
-        const { winnerId, scheduledDate, playerId } = req.body;
+        const { winnerId, scheduledDate, scheduledTime, playerId } = req.body;
         const match = await TeamMatch.findById(req.params.id);
-        
+
         if (!match) {
             return res.status(404).json({ error: 'Match not found' });
         }
-        
+
         // Only home player can report
         if (match.homePlayerId !== playerId) {
             return res.status(403).json({ error: 'Only home player can report match result' });
         }
-        
+
         // If reporting winner, calculate points based on MMR
         let points = 0;
         if (winnerId) {
             // Get both players to compare MMR
             const player1 = await Player.findById(match.player1Id);
             const player2 = await Player.findById(match.player2Id);
-            
+
             if (player1 && player2) {
                 const winnerIsPlayer1 = winnerId === match.team1Id;
                 const winner = winnerIsPlayer1 ? player1 : player2;
                 const loser = winnerIsPlayer1 ? player2 : player1;
-                
+
                 const winnerMmr = winner.currentMmr || 0;
                 const loserMmr = loser.currentMmr || 0;
                 const mmrDiff = winnerMmr - loserMmr;
-                
+
                 // Calculate points based on MMR difference
                 if (mmrDiff >= 150) {
                     points = 10; // Winner is much stronger
@@ -516,28 +516,32 @@ router.put('/player-matches/:id/report', async (req, res) => {
                 points = 50; // Default if can't calculate
             }
         }
-        
+
         const updateData = {
             updatedAt: Date.now(),
             reportedBy: playerId
         };
-        
+
         if (scheduledDate !== undefined) {
             updateData.scheduledDate = scheduledDate;
         }
-        
+
+        if (scheduledTime !== undefined) {
+            updateData.scheduledTime = scheduledTime;
+        }
+
         if (winnerId) {
             updateData.winnerId = winnerId;
             updateData.points = points;
             updateData.status = 'completed';
         }
-        
+
         const updatedMatch = await TeamMatch.findByIdAndUpdate(
             req.params.id,
             updateData,
             { new: true }
         );
-        
+
         res.json(updatedMatch);
     } catch (error) {
         console.error('Error reporting match:', error);

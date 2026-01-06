@@ -2051,6 +2051,15 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
     const [filterTeam, setFilterTeam] = React.useState('');
     const [filterPlayer, setFilterPlayer] = React.useState('');
 
+    // Modal states for match configuration
+    const [showMatchModal, setShowMatchModal] = React.useState(false);
+    const [selectedMatch, setSelectedMatch] = React.useState(null);
+    const [matchDate, setMatchDate] = React.useState('');
+    const [matchTime, setMatchTime] = React.useState('');
+    const [matchFile, setMatchFile] = React.useState(null);
+    const [uploadingFile, setUploadingFile] = React.useState(false);
+    const [expandedMatchId, setExpandedMatchId] = React.useState(null);
+
     // Get current player data
     const currentPlayerData = React.useMemo(() => {
         if (!playerUser?.linkedBattleTag || !allPlayers) return null;
@@ -2410,47 +2419,46 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                 </div>
                 </div>
 
-                {/* Action buttons for home player */}
+                {/* Action icons for home player */}
                 {isHomePlayer && !isCompleted && (
                     <div style={{
                         display: 'flex',
-                        gap: '10px',
+                        gap: '15px',
                         justifyContent: 'center',
-                        marginTop: '15px',
-                        flexWrap: 'wrap'
+                        marginTop: '15px'
                     }}>
-                        <button
+                        {/* Calendar icon for setting time */}
+                        <div
                             onClick={() => {
-                                const date = prompt('Введите дату и время (ГГГГ-ММ-ДД ЧЧ:ММ):',
-                                    match.scheduledDate ? new Date(match.scheduledDate).toISOString().slice(0, 16).replace('T', ' ') : '');
-                                if (date) {
-                                    fetch(`${API_BASE}/api/player-matches/${match.id}/report`, {
-                                        method: 'PUT',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ playerId: currentPlayerData.id, scheduledDate: new Date(date.replace(' ', 'T')) })
-                                    }).then(res => res.json()).then(data => {
-                                        if (data.error) {
-                                            alert(`❌ Ошибка: ${data.error}`);
-                                        } else {
-                                            alert('✅ Дата и время установлены!');
-                                        }
-                                        if (onUpdate) onUpdate();
-                                    });
-                                }
+                                setSelectedMatch(match);
+                                setMatchDate(match.scheduledDate ? new Date(match.scheduledDate).toISOString().split('T')[0] : '');
+                                setMatchTime(match.scheduledTime || '');
+                                setShowMatchModal(true);
                             }}
                             style={{
-                                padding: '8px 16px', borderRadius: '8px',
-                                background: '#2196f3', color: '#fff',
-                                border: 'none', cursor: 'pointer', fontSize: '0.9em', fontWeight: '600'
+                                fontSize: '2em',
+                                cursor: 'pointer',
+                                transition: 'transform 0.2s ease',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                background: 'rgba(33, 150, 243, 0.1)',
+                                border: '2px solid #2196f3'
                             }}
+                            onMouseOver={(e) => e.target.style.transform = 'scale(1.1)'}
+                            onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+                            title="Установить дату и время"
                         >
-                            📅 Назначить время
-                        </button>
-                        <button
+                            📅
+                        </div>
+
+                        {/* Trophy icon for marking winner */}
+                        <div
                             onClick={() => {
                                 const isPlayer1 = match.player1Id === currentPlayerData.id;
                                 const opponent = isPlayer1 ? player2 : player1;
                                 const winner = confirm(`🏆 Отметить победителя\n\nОК - Я победил (${currentPlayerData.name})\nОтмена - Победил соперник (${opponent?.name})`);
+                                if (winner === null) return;
+
                                 const winnerId = winner ? (isPlayer1 ? match.team1Id : match.team2Id) : (isPlayer1 ? match.team2Id : match.team1Id);
 
                                 fetch(`${API_BASE}/api/player-matches/${match.id}/report`, {
@@ -2467,13 +2475,20 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                 });
                             }}
                             style={{
-                                padding: '8px 16px', borderRadius: '8px',
-                                background: '#4caf50', color: '#fff',
-                                border: 'none', cursor: 'pointer', fontSize: '0.9em', fontWeight: '600'
+                                fontSize: '2em',
+                                cursor: 'pointer',
+                                transition: 'transform 0.2s ease',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                background: 'rgba(76, 175, 80, 0.1)',
+                                border: '2px solid #4caf50'
                             }}
+                            onMouseOver={(e) => e.target.style.transform = 'scale(1.1)'}
+                            onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+                            title="Отметить победителя"
                         >
-                            🏆 Отметить победителя
-                        </button>
+                            🏆
+                        </div>
                     </div>
                 )}
             </div>
@@ -2980,6 +2995,197 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             })}
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Match Configuration Modal */}
+            {showMatchModal && selectedMatch && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000
+                }}>
+                    <div style={{
+                        background: '#1a1a1a',
+                        borderRadius: '15px',
+                        border: '2px solid #c9a961',
+                        padding: '30px',
+                        maxWidth: '500px',
+                        width: '90%',
+                        maxHeight: '80vh',
+                        overflowY: 'auto',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+                    }}>
+                        <h3 style={{ color: '#c9a961', marginBottom: '20px', fontSize: '1.5em' }}>
+                            ⚙️ Настройка матча
+                        </h3>
+
+                        {/* Match Info */}
+                        <div style={{ marginBottom: '20px', padding: '15px', background: '#2a2a2a', borderRadius: '10px' }}>
+                            <div style={{ color: '#888', fontSize: '0.9em' }}>
+                                {getPlayer(selectedMatch.player1Id)?.name} vs {getPlayer(selectedMatch.player2Id)?.name}
+                            </div>
+                        </div>
+
+                        {/* Date Input */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', color: '#c9a961', marginBottom: '8px', fontWeight: '600' }}>
+                                📅 Дата матча
+                            </label>
+                            <input
+                                type="date"
+                                value={matchDate}
+                                onChange={(e) => setMatchDate(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #444',
+                                    background: '#2a2a2a',
+                                    color: '#fff',
+                                    fontSize: '1em',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+
+                        {/* Time Input */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', color: '#c9a961', marginBottom: '8px', fontWeight: '600' }}>
+                                🕐 Время матча
+                            </label>
+                            <input
+                                type="time"
+                                value={matchTime}
+                                onChange={(e) => setMatchTime(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #444',
+                                    background: '#2a2a2a',
+                                    color: '#fff',
+                                    fontSize: '1em',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+
+                        {/* File Upload */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', color: '#c9a961', marginBottom: '8px', fontWeight: '600' }}>
+                                📁 Файл игры (макс. 700 кб)
+                            </label>
+                            <input
+                                type="file"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        if (file.size > 700 * 1024) {
+                                            alert('❌ Файл больше 700 кб!');
+                                            return;
+                                        }
+                                        setMatchFile(file);
+                                    }
+                                }}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #444',
+                                    background: '#2a2a2a',
+                                    color: '#888',
+                                    fontSize: '0.9em',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                            {matchFile && (
+                                <div style={{ marginTop: '10px', color: '#4caf50', fontSize: '0.9em' }}>
+                                    ✓ Выбран: {matchFile.name}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Buttons */}
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '30px' }}>
+                            <button
+                                onClick={async () => {
+                                    if (!matchDate || !matchTime) {
+                                        alert('❌ Заполните дату и время!');
+                                        return;
+                                    }
+
+                                    setUploadingFile(true);
+                                    try {
+                                        const combinedDateTime = `${matchDate}T${matchTime}:00Z`;
+                                        const updateData = {
+                                            playerId: currentPlayerData.id,
+                                            scheduledDate: new Date(combinedDateTime),
+                                            scheduledTime: matchTime
+                                        };
+
+                                        const response = await fetch(`${API_BASE}/api/player-matches/${selectedMatch.id}/report`, {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(updateData)
+                                        });
+
+                                        const data = await response.json();
+                                        if (data.error) {
+                                            alert(`❌ Ошибка: ${data.error}`);
+                                        } else {
+                                            alert('✅ Дата и время установлены!');
+                                            setShowMatchModal(false);
+                                            if (onUpdate) onUpdate();
+                                        }
+                                    } catch (error) {
+                                        alert('❌ Ошибка подключения');
+                                    } finally {
+                                        setUploadingFile(false);
+                                    }
+                                }}
+                                disabled={uploadingFile}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    background: '#4caf50',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    cursor: uploadingFile ? 'not-allowed' : 'pointer',
+                                    fontWeight: '600',
+                                    opacity: uploadingFile ? 0.6 : 1
+                                }}
+                            >
+                                {uploadingFile ? '⏳ Сохранение...' : '✅ Сохранить'}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowMatchModal(false);
+                                    setMatchFile(null);
+                                }}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    background: '#444',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    fontWeight: '600'
+                                }}
+                            >
+                                ❌ Отмена
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
