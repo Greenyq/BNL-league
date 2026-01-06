@@ -2491,6 +2491,50 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                         </div>
                     </div>
                 )}
+
+                {/* Display uploaded match file */}
+                {match.matchFile && (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '15px',
+                        marginTop: '15px',
+                        padding: '12px',
+                        background: 'rgba(76, 175, 80, 0.1)',
+                        borderRadius: '8px',
+                        border: '1px solid #4caf50'
+                    }}>
+                        <span style={{ fontSize: '1.5em' }}>📄</span>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ color: '#4caf50', fontSize: '0.9em', fontWeight: '600' }}>
+                                {match.matchFile.originalName}
+                            </div>
+                            <div style={{ color: '#888', fontSize: '0.8em' }}>
+                                {(match.matchFile.size / 1024).toFixed(1)} кб
+                            </div>
+                        </div>
+                        <a
+                            href={`${API_BASE}/api/player-matches/${match.id}/download-file`}
+                            download
+                            style={{
+                                padding: '8px 16px',
+                                background: '#4caf50',
+                                color: '#fff',
+                                borderRadius: '6px',
+                                textDecoration: 'none',
+                                fontSize: '0.85em',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s ease'
+                            }}
+                            onMouseOver={(e) => e.target.style.background = '#45a049'}
+                            onMouseOut={(e) => e.target.style.background = '#4caf50'}
+                        >
+                            ⬇️ Скачать
+                        </a>
+                    </div>
+                )}
             </div>
         );
     };
@@ -3131,6 +3175,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                             scheduledTime: matchTime
                                         };
 
+                                        // Step 1: Save date and time
                                         const response = await fetch(`${API_BASE}/api/player-matches/${selectedMatch.id}/report`, {
                                             method: 'PUT',
                                             headers: { 'Content-Type': 'application/json' },
@@ -3140,11 +3185,35 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                         const data = await response.json();
                                         if (data.error) {
                                             alert(`❌ Ошибка: ${data.error}`);
+                                            setUploadingFile(false);
+                                            return;
+                                        }
+
+                                        // Step 2: Upload file if selected
+                                        if (matchFile) {
+                                            const formData = new FormData();
+                                            formData.append('matchFile', matchFile);
+                                            formData.append('playerId', currentPlayerData.id);
+                                            formData.append('matchId', selectedMatch.id);
+
+                                            const fileResponse = await fetch(`${API_BASE}/api/player-matches/${selectedMatch.id}/upload-file`, {
+                                                method: 'POST',
+                                                body: formData
+                                            });
+
+                                            const fileData = await fileResponse.json();
+                                            if (fileData.error) {
+                                                alert(`⚠️ Дата установлена, но ошибка при загрузке файла: ${fileData.error}`);
+                                            } else {
+                                                alert(`✅ Дата, время и файл сохранены!`);
+                                            }
                                         } else {
                                             alert('✅ Дата и время установлены!');
-                                            setShowMatchModal(false);
-                                            if (onUpdate) onUpdate();
                                         }
+
+                                        setShowMatchModal(false);
+                                        setMatchFile(null);
+                                        if (onUpdate) onUpdate();
                                     } catch (error) {
                                         alert('❌ Ошибка подключения');
                                     } finally {

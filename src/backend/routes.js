@@ -2,9 +2,40 @@ const express = require('express');
 const axios = require('axios');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession, PasswordReset, PlayerCache } = require('./models');
 
 const router = express.Router();
+
+// ==================== MULTER CONFIGURATION FOR FILE UPLOADS ====================
+const uploadsDir = path.join(__dirname, '../../uploads');
+
+// Create uploads directory if it doesn't exist
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadsDir);
+    },
+    filename: (req, file, cb) => {
+        // Generate unique filename: matchId_timestamp_originalname
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 700 * 1024 }, // 700 KB limit
+    fileFilter: (req, file, cb) => {
+        // Allow any file type
+        cb(null, true);
+    }
+});
 
 // ==================== TEAMS ENDPOINTS ====================
 router.get('/teams', async (req, res) => {
@@ -546,6 +577,92 @@ router.put('/player-matches/:id/report', async (req, res) => {
     } catch (error) {
         console.error('Error reporting match:', error);
         res.status(500).json({ error: 'Failed to report match' });
+    }
+});
+
+// ==================== MATCH FILE UPLOAD ====================
+// Upload match file (only home player can do this)
+router.post('/player-matches/:id/upload-file', upload.single('matchFile'), async (req, res) => {
+    try {
+        const { matchId, playerId } = req.body;
+        const match = await TeamMatch.findById(req.params.id);
+
+        if (!match) {
+            // Clean up uploaded file if match not found
+            if (req.file) fs.unlinkSync(req.file.path);
+            return res.status(404).json({ error: 'Match not found' });
+        }
+
+        // Only home player can upload match file
+        if (match.homePlayerId !== playerId) {
+            if (req.file) fs.unlinkSync(req.file.path);
+            return res.status(403).json({ error: 'Only home player can upload match file' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file provided' });
+        }
+
+        // Update match with file info
+        const updatedMatch = await TeamMatch.findByIdAndUpdate(
+            req.params.id,
+            {
+                matchFile: {
+                    originalName: req.file.originalname,
+                    filename: req.file.filename,
+                    size: req.file.size,
+                    uploadedAt: new Date(),
+                    uploadedBy: playerId
+                },
+                updatedAt: Date.now()
+            },
+            { new: true }
+        );
+
+        res.json({
+            success: true,
+            match: updatedMatch,
+            file: {
+                originalName: req.file.originalname,
+                size: req.file.size,
+                url: `/api/player-matches/${match._id}/download-file`
+            }
+        });
+    } catch (error) {
+        // Clean up uploaded file on error
+        if (req.file) {
+            try { fs.unlinkSync(req.file.path); } catch (e) {}
+        }
+        console.error('Error uploading match file:', error);
+        res.status(500).json({ error: 'Failed to upload file' });
+    }
+});
+
+// Download match file
+router.get('/player-matches/:id/download-file', async (req, res) => {
+    try {
+        const match = await TeamMatch.findById(req.params.id);
+
+        if (!match || !match.matchFile) {
+            return res.status(404).json({ error: 'File not found' });
+        }
+
+        const filePath = path.join(uploadsDir, match.matchFile.filename);
+
+        // Check if file exists
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ error: 'File not found on disk' });
+        }
+
+        // Send file as download
+        res.download(filePath, match.matchFile.originalName, (err) => {
+            if (err) {
+                console.error('Error downloading file:', err);
+            }
+        });
+    } catch (error) {
+        console.error('Error downloading match file:', error);
+        res.status(500).json({ error: 'Failed to download file' });
     }
 });
 
