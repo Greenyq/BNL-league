@@ -2118,8 +2118,9 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
     };
 
     // Render single player card in bracket style
-    const renderPlayerCard = (player, team, isWinner, isLeft, points = 0) => {
+    const renderPlayerCard = (player, team, isWinner, isLeft, points = 0, loserPoints = 0) => {
         const teamColor = getTeamColor(team?.id || team?._id);
+        const isLoser = !isWinner && loserPoints > 0;
         
         return (
             <div style={{
@@ -2133,12 +2134,13 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                 <div style={{
                     width: '60px',
                     height: '70px',
-                    background: isWinner ? `linear-gradient(135deg, ${teamColor.primary}, ${teamColor.secondary})` : '#2a2a2a',
+                    background: isWinner ? `linear-gradient(135deg, ${teamColor.primary}, ${teamColor.secondary})` : 
+                               isLoser ? 'linear-gradient(135deg, #3d1a1a, #5d2a2a)' : '#2a2a2a',
                     clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    border: `2px solid ${isWinner ? '#c9a961' : '#444'}`,
+                    border: `2px solid ${isWinner ? '#c9a961' : isLoser ? '#f44336' : '#444'}`,
                     flexShrink: 0,
                     position: 'relative',
                     zIndex: 2
@@ -2160,8 +2162,9 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                 {/* Player info card */}
                 <div style={{
                     flex: 1,
-                    background: isWinner ? `linear-gradient(${isLeft ? '90deg' : '270deg'}, rgba(201, 169, 97, 0.2), #1a1a1a)` : '#1a1a1a',
-                    border: `2px solid ${isWinner ? '#c9a961' : '#333'}`,
+                    background: isWinner ? `linear-gradient(${isLeft ? '90deg' : '270deg'}, rgba(201, 169, 97, 0.2), #1a1a1a)` : 
+                               isLoser ? `linear-gradient(${isLeft ? '90deg' : '270deg'}, rgba(244, 67, 54, 0.15), #1a1a1a)` : '#1a1a1a',
+                    border: `2px solid ${isWinner ? '#c9a961' : isLoser ? '#f44336' : '#333'}`,
                     borderRadius: isLeft ? '0 8px 8px 0' : '8px 0 0 8px',
                     marginLeft: isLeft ? '-10px' : '0',
                     marginRight: isLeft ? '0' : '-10px',
@@ -2201,13 +2204,13 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                     <div style={{
                         fontSize: '1.1em',
                         fontWeight: '700',
-                        color: isWinner ? '#c9a961' : '#fff',
+                        color: isWinner ? '#c9a961' : isLoser ? '#f44336' : '#fff',
                         textAlign: isLeft ? 'left' : 'right'
                     }}>
                         {player?.name || 'Unknown'}
                     </div>
                     
-                    {/* Points if winner */}
+                    {/* Points for winner */}
                     {isWinner && points > 0 && (
                         <div style={{
                             fontSize: '0.85em',
@@ -2216,6 +2219,18 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                             textAlign: isLeft ? 'left' : 'right'
                         }}>
                             +{points} pts
+                        </div>
+                    )}
+                    
+                    {/* Negative points for loser */}
+                    {isLoser && (
+                        <div style={{
+                            fontSize: '0.85em',
+                            color: '#f44336',
+                            fontWeight: '600',
+                            textAlign: isLeft ? 'left' : 'right'
+                        }}>
+                            -{loserPoints} pts
                         </div>
                     )}
                 </div>
