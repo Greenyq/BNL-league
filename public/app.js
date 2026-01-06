@@ -2300,72 +2300,43 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                 const team2Color = getTeamColor(matchup.team2?._id || matchup.team2?.id);
 
                 return (
-                    <div key={idx} style={{ marginBottom: '40px' }}>
-                        {/* Team vs Team Header */}
+                    <div key={idx} style={{ marginBottom: '30px' }}>
+                        {/* Compact Team Header */}
                         <div style={{
-                            background: '#1a1a1a', padding: '20px', borderRadius: '15px',
-                            marginBottom: '15px', border: '2px solid #c9a961'
+                            background: '#1a1a1a',
+                            padding: '15px',
+                            borderRadius: '12px',
+                            marginBottom: '10px',
+                            border: '2px solid #c9a961'
                         }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                                <div style={{ flex: 1, textAlign: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     {matchup.team1?.logo ? (
-                                        <img
-                                            src={matchup.team1.logo}
-                                            alt={matchup.team1.name}
-                                            style={{
-                                                width: '80px',
-                                                height: '80px',
-                                                borderRadius: '10px',
-                                                objectFit: 'cover',
-                                                margin: '0 auto 10px'
-                                            }}
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                                e.target.nextElementSibling.style.display = 'block';
-                                            }}
-                                        />
-                                    ) : null}
-                                    <div style={{ fontSize: '2em', marginBottom: '10px', display: matchup.team1?.logo ? 'none' : 'block' }}>{matchup.team1?.emoji}</div>
-                                    <div style={{ fontSize: '1.3em', fontWeight: '700', color: '#fff' }}>
-                                        {matchup.team1?.name}
-                                    </div>
-                                    <div style={{ color: '#c9a961', fontSize: '1.5em', fontWeight: '800', marginTop: '10px' }}>
-                                        {matchup.team1Points}
+                                        <img src={matchup.team1.logo} alt={matchup.team1.name} style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />
+                                    ) : (
+                                        <span style={{ fontSize: '1.5em' }}>{matchup.team1?.emoji}</span>
+                                    )}
+                                    <div>
+                                        <div style={{ fontWeight: '700', color: '#fff', fontSize: '1.1em' }}>{matchup.team1?.name}</div>
+                                        <div style={{ color: '#c9a961', fontWeight: '700' }}>{matchup.team1Points} pts</div>
                                     </div>
                                 </div>
-                                <div style={{ fontSize: '2em', fontWeight: '800', color: '#c9a961', padding: '0 30px' }}>
-                                    VS
-                                </div>
-                                <div style={{ flex: 1, textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.3em', fontWeight: '800', color: '#c9a961' }}>VS</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'right' }}>
+                                    <div>
+                                        <div style={{ fontWeight: '700', color: '#fff', fontSize: '1.1em' }}>{matchup.team2?.name}</div>
+                                        <div style={{ color: '#c9a961', fontWeight: '700' }}>{matchup.team2Points} pts</div>
+                                    </div>
                                     {matchup.team2?.logo ? (
-                                        <img
-                                            src={matchup.team2.logo}
-                                            alt={matchup.team2.name}
-                                            style={{
-                                                width: '80px',
-                                                height: '80px',
-                                                borderRadius: '10px',
-                                                objectFit: 'cover',
-                                                margin: '0 auto 10px'
-                                            }}
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                                e.target.nextElementSibling.style.display = 'block';
-                                            }}
-                                        />
-                                    ) : null}
-                                    <div style={{ fontSize: '2em', marginBottom: '10px', display: matchup.team2?.logo ? 'none' : 'block' }}>{matchup.team2?.emoji}</div>
-                                    <div style={{ fontSize: '1.3em', fontWeight: '700', color: '#fff' }}>
-                                        {matchup.team2?.name}
-                                    </div>
-                                    <div style={{ color: '#c9a961', fontSize: '1.5em', fontWeight: '800', marginTop: '10px' }}>
-                                        {matchup.team2Points}
-                                    </div>
+                                        <img src={matchup.team2.logo} alt={matchup.team2.name} style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />
+                                    ) : (
+                                        <span style={{ fontSize: '1.5em' }}>{matchup.team2?.emoji}</span>
+                                    )}
                                 </div>
                             </div>
                             
-                            {/* Points Bar */}
-                            <div style={{ display: 'flex', height: '30px', borderRadius: '15px', overflow: 'hidden', marginBottom: '10px' }}>
+                            {/* Compact Points Bar */}
+                            <div style={{ display: 'flex', height: '20px', borderRadius: '10px', overflow: 'hidden' }}>
                                 <div style={{
                                     width: `${team1Percent}%`,
                                     background: `linear-gradient(90deg, ${team1Color.primary}, ${team1Color.secondary})`,
@@ -2373,10 +2344,10 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     color: '#fff',
-                                    fontWeight: '700',
-                                    fontSize: '0.9em'
+                                    fontWeight: '600',
+                                    fontSize: '0.75em'
                                 }}>
-                                    {matchup.team1Points > 0 && `${matchup.team1Points} pts`}
+                                    {matchup.team1Points > 0 && `${matchup.team1Points}`}
                                 </div>
                                 <div style={{
                                     width: `${team2Percent}%`,
@@ -2385,119 +2356,29 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     color: '#fff',
-                                    fontWeight: '700',
-                                    fontSize: '0.9em'
+                                    fontWeight: '600',
+                                    fontSize: '0.75em'
                                 }}>
-                                    {matchup.team2Points > 0 && `${matchup.team2Points} pts`}
+                                    {matchup.team2Points > 0 && `${matchup.team2Points}`}
                                 </div>
                             </div>
                         </div>
                         
-                        {/* Individual Matches */}
-                        {matchup.matches.map(match => (
-                            <div key={match._id || match.id} style={{
-                                background: '#2a2a2a', padding: '15px', borderRadius: '10px',
-                                marginBottom: '10px', border: `1px solid ${match.status === 'upcoming' ? '#c9a961' : '#333'}`
-                            }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{
-                                            color: match.winnerId === match.team1Id ? '#4caf50' : '#888',
-                                            fontWeight: match.winnerId === match.team1Id ? '700' : '400'
-                                        }}>
-                                            {getPlayerName(match.player1Id)}
-                                            {match.winnerId === match.team1Id && ' ✅'}
-                                        </div>
-                                    </div>
-                                    <div style={{ padding: '0 20px' }}>
-                                        <div style={{
-                                            padding: '5px 15px',
-                                            background: match.status === 'upcoming' ? '#c9a961' : '#333',
-                                            color: match.status === 'upcoming' ? '#000' : '#fff',
-                                            borderRadius: '20px',
-                                            fontSize: '0.9em',
-                                            fontWeight: '600'
-                                        }}>
-                                            {match.status === 'upcoming' ? '🕐 Предстоит' : `+${match.points} pts`}
-                                        </div>
-                                    </div>
-                                    <div style={{ flex: 1, textAlign: 'right' }}>
-                                        <div style={{
-                                            color: match.winnerId === match.team2Id ? '#4caf50' : '#888',
-                                            fontWeight: match.winnerId === match.team2Id ? '700' : '400'
-                                        }}>
-                                            {match.winnerId === match.team2Id && '✅ '}
-                                            {getPlayerName(match.player2Id)}
-                                        </div>
-                                    </div>
-                                </div>
-                                {match.scheduledDate && (
-                                    <div style={{ color: '#888', fontSize: '0.85em', marginTop: '10px', textAlign: 'center' }}>
-                                        📅 {new Date(match.scheduledDate).toLocaleString('ru-RU')}
-                                    </div>
-                                )}
-                                {match.status === 'completed' && match.w3championsMatchId && (
-                                    <div style={{ marginTop: '15px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                        <a
-                                            href={`https://w3champions.com/match/${match.w3championsMatchId}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            style={{
-                                                padding: '8px 16px',
-                                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                                color: '#fff',
-                                                borderRadius: '8px',
-                                                textDecoration: 'none',
-                                                fontSize: '0.9em',
-                                                fontWeight: '600',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '8px',
-                                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.target.style.transform = 'translateY(-2px)';
-                                                e.target.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.target.style.transform = 'translateY(0)';
-                                                e.target.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
-                                            }}
-                                        >
-                                            📺 Смотреть в W3Champions
-                                        </a>
-                                        <a
-                                            href={`w3champions://match/${match.w3championsMatchId}`}
-                                            style={{
-                                                padding: '8px 16px',
-                                                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                                                color: '#fff',
-                                                borderRadius: '8px',
-                                                textDecoration: 'none',
-                                                fontSize: '0.9em',
-                                                fontWeight: '600',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '8px',
-                                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                                boxShadow: '0 4px 15px rgba(240, 147, 251, 0.4)'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.target.style.transform = 'translateY(-2px)';
-                                                e.target.style.boxShadow = '0 6px 20px rgba(240, 147, 251, 0.6)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.target.style.transform = 'translateY(0)';
-                                                e.target.style.boxShadow = '0 4px 15px rgba(240, 147, 251, 0.4)';
-                                            }}
-                                        >
-                                            🎮 Открыть в клиенте
-                                        </a>
-                                    </div>
-                                )}
+                        {/* Tournament Grid */}
+                        <div style={{
+                            background: '#2a2a2a',
+                            padding: '15px',
+                            borderRadius: '12px',
+                            border: '1px solid #333'
+                        }}>
+                            <div style={{ marginBottom: '10px', fontSize: '0.9em', color: '#888', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                <span>✅ Победа команды слева</span>
+                                <span>❌ Поражение команды слева</span>
+                                <span>🕐 Предстоит</span>
+                                <span>— Не назначен</span>
                             </div>
-                        ))}
+                            {renderTournamentGrid(matchup)}
+                        </div>
                     </div>
                 );
             })}
