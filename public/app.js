@@ -2385,7 +2385,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
             <div style={{
                 display: 'flex',
                 gap: '15px',
-                marginBottom: '30px',
+                marginBottom: '20px',
                 borderBottom: '2px solid #333',
                 paddingBottom: '10px'
             }}>
@@ -2442,8 +2442,104 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                     )}
                 </button>
             </div>
+            
+            {/* Filters */}
+            {subTab === 'schedule' && (
+                <div style={{
+                    display: 'flex',
+                    gap: '20px',
+                    marginBottom: '25px',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    background: '#1a1a1a',
+                    padding: '15px 20px',
+                    borderRadius: '12px',
+                    border: '1px solid #333'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ color: '#888', fontSize: '0.9em' }}>🏆 Команда:</span>
+                        <select
+                            value={filterTeam}
+                            onChange={(e) => setFilterTeam(e.target.value)}
+                            style={{
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid #444',
+                                background: '#2a2a2a',
+                                color: '#fff',
+                                fontSize: '0.95em',
+                                minWidth: '180px'
+                            }}
+                        >
+                            <option value="">Все команды</option>
+                            {teams.map(team => (
+                                <option key={team.id || team._id} value={team.id || team._id}>
+                                    {team.emoji} {team.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ color: '#888', fontSize: '0.9em' }}>👤 Игрок:</span>
+                        <input
+                            type="text"
+                            placeholder="Поиск по имени..."
+                            value={filterPlayer}
+                            onChange={(e) => setFilterPlayer(e.target.value)}
+                            style={{
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid #444',
+                                background: '#2a2a2a',
+                                color: '#fff',
+                                fontSize: '0.95em',
+                                minWidth: '180px'
+                            }}
+                        />
+                    </div>
+                    {(filterTeam || filterPlayer) && (
+                        <button
+                            onClick={() => { setFilterTeam(''); setFilterPlayer(''); }}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: '#444',
+                                color: '#fff',
+                                cursor: 'pointer',
+                                fontSize: '0.9em'
+                            }}
+                        >
+                            ✕ Сбросить
+                        </button>
+                    )}
+                </div>
+            )}
 
-            {subTab === 'schedule' && Object.values(matchesByTeams).map((matchup, idx) => {
+            {subTab === 'schedule' && Object.values(matchesByTeams)
+                .filter(matchup => {
+                    // Filter by team
+                    if (filterTeam) {
+                        const team1Id = matchup.team1?.id || matchup.team1?._id;
+                        const team2Id = matchup.team2?.id || matchup.team2?._id;
+                        if (team1Id !== filterTeam && team2Id !== filterTeam) {
+                            return false;
+                        }
+                    }
+                    // Filter by player name
+                    if (filterPlayer) {
+                        const searchLower = filterPlayer.toLowerCase();
+                        const hasPlayer = matchup.matches.some(m => {
+                            const p1 = getPlayer(m.player1Id);
+                            const p2 = getPlayer(m.player2Id);
+                            return (p1?.name?.toLowerCase().includes(searchLower)) ||
+                                   (p2?.name?.toLowerCase().includes(searchLower));
+                        });
+                        if (!hasPlayer) return false;
+                    }
+                    return true;
+                })
+                .map((matchup, idx) => {
                 const totalPoints = matchup.team1Points + matchup.team2Points;
                 const team1Percent = totalPoints > 0 ? (matchup.team1Points / totalPoints) * 100 : 50;
                 const team2Percent = totalPoints > 0 ? (matchup.team2Points / totalPoints) * 100 : 50;
