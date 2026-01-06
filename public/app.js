@@ -2282,7 +2282,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
         );
     };
 
-    // Render match bracket card
+    // Render match bracket card - enlarged
     const renderMatchBracket = (match, team1, team2) => {
         const player1 = getPlayer(match.player1Id);
         const player2 = getPlayer(match.player2Id);
@@ -2294,36 +2294,37 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '20px',
-                padding: '15px',
+                gap: '30px', // Increased from 20px
+                padding: '25px', // Increased from 15px
+                paddingTop: '35px', // Extra top padding for team logo overlay
                 background: isCompleted ? 'rgba(42, 42, 42, 0.5)' : 'rgba(201, 169, 97, 0.1)',
-                borderRadius: '12px',
-                border: `2px solid ${isCompleted ? '#333' : '#c9a961'}`,
-                marginBottom: '15px'
+                borderRadius: '16px', // Increased from 12px
+                border: `3px solid ${isCompleted ? '#333' : '#c9a961'}`,
+                marginBottom: '20px' // Increased from 15px
             }}>
                 {/* Left player (Team 1) */}
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
                     {renderPlayerCard(player1, team1, p1Won, true, p1Won ? match.points : 0)}
                 </div>
                 
-                {/* VS / Status */}
+                {/* VS / Status - enlarged */}
                 <div style={{
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    minWidth: '80px'
+                    minWidth: '100px' // Increased from 80px
                 }}>
                     {isCompleted ? (
                         <React.Fragment>
                             <div style={{
-                                width: '50px',
-                                height: '50px',
+                                width: '70px', // Increased from 50px
+                                height: '70px', // Increased from 50px
                                 borderRadius: '50%',
                                 background: 'linear-gradient(135deg, #c9a961, #8b7355)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: '0.9em',
+                                fontSize: '1.2em', // Increased from 0.9em
                                 fontWeight: '800',
                                 color: '#000',
                                 boxShadow: '0 4px 15px rgba(201, 169, 97, 0.3)'
@@ -2332,11 +2333,11 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                             </div>
                             {match.points > 0 && (
                                 <div style={{
-                                    marginTop: '8px',
-                                    padding: '4px 10px',
+                                    marginTop: '10px',
+                                    padding: '6px 14px',
                                     background: '#2a2a2a',
-                                    borderRadius: '10px',
-                                    fontSize: '0.8em',
+                                    borderRadius: '12px',
+                                    fontSize: '0.95em', // Increased
                                     color: '#4caf50',
                                     fontWeight: '600'
                                 }}>
@@ -2347,22 +2348,22 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [] }) 
                     ) : (
                         <React.Fragment>
                             <div style={{
-                                width: '50px',
-                                height: '50px',
+                                width: '70px', // Increased from 50px
+                                height: '70px', // Increased from 50px
                                 borderRadius: '50%',
                                 background: 'linear-gradient(135deg, #c9a961, #8b7355)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: '1.5em',
+                                fontSize: '2em', // Increased from 1.5em
                                 boxShadow: '0 4px 15px rgba(201, 169, 97, 0.3)'
                             }}>
                                 🕐
                             </div>
                             {match.scheduledDate && (
                                 <div style={{
-                                    marginTop: '8px',
-                                    fontSize: '0.75em',
+                                    marginTop: '10px',
+                                    fontSize: '0.9em', // Increased from 0.75em
                                     color: '#888',
                                     textAlign: 'center'
                                 }}>
