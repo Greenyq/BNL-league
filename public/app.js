@@ -1340,8 +1340,6 @@ function Players({ players }) {
 }
 
 function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, portraits = [] }) {
-    const [showAchievementsModal, setShowAchievementsModal] = React.useState(false);
-
     const raceImage = raceImages[player.race];
 
     // Find selected portrait if player has one
@@ -1474,7 +1472,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                     borderTop: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : '1px solid transparent',
                     borderBottom: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : '1px solid transparent',
                     margin: '10px 0',
-                    minHeight: '50px',
+                    minHeight: player.achievements && player.achievements.length > 0 ? 'auto' : '50px',
                     position: 'relative'
                 }}>
                     {player.achievements && player.achievements.length > 0 && (
@@ -1487,18 +1485,12 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                             background: 'rgba(0,0,0,0.5)',
                             padding: '3px 8px',
                             borderRadius: '4px',
-                            cursor: 'pointer',
                             zIndex: 5
-                        }}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setShowAchievementsModal(true);
-                        }}
-                        title="Нажмите, чтобы увидеть все достижения">
+                        }}>
                             {player.achievements.length} 🏆
                         </div>
                     )}
-                    {player.achievements && player.achievements.slice(0, 6).map(achKey => {
+                    {player.achievements && player.achievements.map(achKey => {
                         const ach = achievements[achKey];
                         if (!ach) {
                             console.warn(`Achievement ${achKey} not found`);
@@ -1515,272 +1507,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                             </div>
                         );
                     })}
-                    {player.achievements && player.achievements.length > 6 && (
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '35px',
-                            height: '35px',
-                            background: 'rgba(201, 169, 97, 0.2)',
-                            border: '2px dashed #c9a961',
-                            borderRadius: '50%',
-                            fontSize: '0.9em',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                        }}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setShowAchievementsModal(true);
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(201, 169, 97, 0.4)';
-                            e.currentTarget.style.transform = 'scale(1.1)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(201, 169, 97, 0.2)';
-                            e.currentTarget.style.transform = 'scale(1)';
-                        }}
-                        title="Еще достижения">
-                            +{player.achievements.length - 6}
-                        </div>
-                    )}
                 </div>
-
-                {/* Achievements Detail Card - Full Screen Modal */}
-                {showAchievementsModal && (
-                    <div style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(0,0,0,0.92)',
-                        display: 'flex',
-                        alignItems: 'stretch',
-                        justifyContent: 'stretch',
-                        zIndex: 2000,
-                        padding: 0,
-                        overflow: 'hidden'
-                    }}
-                    onClick={() => setShowAchievementsModal(false)}>
-                        <div style={{
-                            background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
-                            border: 0,
-                            borderRadius: 0,
-                            width: '100%',
-                            height: '100%',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            overflow: 'hidden',
-                            zIndex: 2001
-                        }}
-                        onClick={(e) => e.stopPropagation()}>
-                            {/* Header - Sticky */}
-                            <div style={{
-                                background: 'linear-gradient(135deg, #c9a961 0%, #8b7355 100%)',
-                                padding: '40px 60px',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                borderBottom: '3px solid rgba(201, 169, 97, 0.5)',
-                                position: 'relative',
-                                zIndex: 10,
-                                flexShrink: 0,
-                                gap: '30px'
-                            }}>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <h1 style={{
-                                        fontSize: '3.5em',
-                                        fontWeight: '900',
-                                        color: '#000',
-                                        margin: 0,
-                                        marginBottom: '10px',
-                                        textShadow: '3px 3px 6px rgba(0,0,0,0.3)',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap'
-                                    }}>
-                                        🏆 {player.name}
-                                    </h1>
-                                    <div style={{
-                                        fontSize: '1.3em',
-                                        color: 'rgba(0,0,0,0.7)',
-                                        fontWeight: '600',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap'
-                                    }}>
-                                        {player.achievements.length} достижений • {player.achievements.reduce((sum, achKey) => sum + (achievements[achKey]?.points || 0), 0)} очков
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => setShowAchievementsModal(false)}
-                                    style={{
-                                        cursor: 'pointer',
-                                        fontSize: '3em',
-                                        color: '#000',
-                                        background: 'rgba(0,0,0,0.2)',
-                                        border: 'none',
-                                        width: '80px',
-                                        height: '80px',
-                                        borderRadius: '50%',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontWeight: 'bold',
-                                        transition: 'all 0.2s',
-                                        flexShrink: 0,
-                                        padding: 0,
-                                        lineHeight: '1'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = 'rgba(0,0,0,0.6)';
-                                        e.currentTarget.style.transform = 'scale(1.15)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = 'rgba(0,0,0,0.2)';
-                                        e.currentTarget.style.transform = 'scale(1)';
-                                    }}
-                                    title="Закрыть (Esc)">
-                                    ✕
-                                </button>
-                            </div>
-
-                            {/* Content - Full scrollable */}
-                            <div style={{
-                                overflowY: 'auto',
-                                padding: '60px',
-                                flex: 1,
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                                    gap: '35px',
-                                    width: '100%'
-                                }}>
-                                    {player.achievements && player.achievements.length > 0 ? (
-                                        player.achievements.map(achKey => {
-                                            const ach = achievements[achKey];
-                                            if (!ach) return null;
-                                            return (
-                                                <div key={achKey} style={{
-                                                    background: '#2a2a2a',
-                                                    border: '3px solid #c9a961',
-                                                    borderRadius: '18px',
-                                                    padding: '35px 25px',
-                                                    textAlign: 'center',
-                                                    transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                                                    cursor: 'default',
-                                                    position: 'relative',
-                                                    overflow: 'hidden',
-                                                    minHeight: '340px',
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    justifyContent: 'space-between'
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.transform = 'translateY(-12px) scale(1.05)';
-                                                    e.currentTarget.style.boxShadow = '0 30px 60px rgba(201, 169, 97, 0.5)';
-                                                    e.currentTarget.style.borderColor = '#ffd700';
-                                                    e.currentTarget.style.background = '#333';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                                                    e.currentTarget.style.boxShadow = 'none';
-                                                    e.currentTarget.style.borderColor = '#c9a961';
-                                                    e.currentTarget.style.background = '#2a2a2a';
-                                                }}>
-                                                    {/* Background decoration */}
-                                                    <div style={{
-                                                        position: 'absolute',
-                                                        top: '-40px',
-                                                        right: '-40px',
-                                                        width: '150px',
-                                                        height: '150px',
-                                                        background: 'rgba(201, 169, 97, 0.2)',
-                                                        borderRadius: '50%'
-                                                    }}></div>
-
-                                                    {/* Icon */}
-                                                    <div style={{
-                                                        fontSize: '5.5em',
-                                                        marginBottom: '15px',
-                                                        position: 'relative',
-                                                        zIndex: 1,
-                                                        filter: 'drop-shadow(0 5px 10px rgba(201, 169, 97, 0.4))',
-                                                        lineHeight: '1'
-                                                    }}>
-                                                        {ach.icon}
-                                                    </div>
-
-                                                    {/* Name */}
-                                                    <h3 style={{
-                                                        fontSize: '1.25em',
-                                                        fontWeight: '800',
-                                                        color: '#c9a961',
-                                                        margin: '0 0 12px 0',
-                                                        position: 'relative',
-                                                        zIndex: 1
-                                                    }}>
-                                                        {ach.name}
-                                                    </h3>
-
-                                                    {/* Description */}
-                                                    <p style={{
-                                                        color: '#bbb',
-                                                        fontSize: '1em',
-                                                        margin: '0 0 18px 0',
-                                                        lineHeight: '1.6',
-                                                        position: 'relative',
-                                                        zIndex: 1,
-                                                        flex: 1,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}>
-                                                        {ach.desc}
-                                                    </p>
-
-                                                    {/* Points Badge */}
-                                                    <div style={{
-                                                        background: 'linear-gradient(135deg, #c9a961 0%, #8b7355 100%)',
-                                                        color: '#000',
-                                                        padding: '14px 28px',
-                                                        borderRadius: '30px',
-                                                        fontWeight: '800',
-                                                        fontSize: '1.15em',
-                                                        display: 'inline-block',
-                                                        position: 'relative',
-                                                        zIndex: 1,
-                                                        margin: '0 auto',
-                                                        boxShadow: '0 5px 18px rgba(201, 169, 97, 0.4)',
-                                                        letterSpacing: '0.5px'
-                                                    }}>
-                                                        +{ach.points} очков
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
-                                    ) : (
-                                        <div style={{
-                                            gridColumn: '1 / -1',
-                                            textAlign: 'center',
-                                            padding: '120px 40px',
-                                            color: '#888'
-                                        }}>
-                                            <div style={{ fontSize: '5em', marginBottom: '30px' }}>🏆</div>
-                                            <div style={{ fontSize: '1.8em', fontWeight: '600', marginBottom: '15px' }}>Нет достижений</div>
-                                            <div style={{ fontSize: '1.1em' }}>Начните играть, чтобы получить первое достижение!</div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
 
                 {/* Always render match-graph container with fixed height */}
                 <div className="match-graph" style={{
@@ -2019,7 +1746,9 @@ function Teams({ teams, players, allPlayers }) {
 
                             <div className="member-section">
                                 <div className="section-title">⚔️ Игроки</div>
-                                {teamPlayers.map(player => (
+                                {teamPlayers
+                                    .sort((a, b) => (b.points || 0) - (a.points || 0)) // Sort by points descending
+                                    .map(player => (
                                     <div
                                         key={player.id}
                                         className="member-item"
@@ -2034,12 +1763,17 @@ function Teams({ teams, players, allPlayers }) {
                                         <div>
                                             <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{player.name}</span>
                                             <span style={{ color: '#888', marginLeft: '15px' }}>
-                                                {raceNames[player.race] || 'Random'} • {player.mmr} MMR • {player.points} pts
+                                                {raceNames[player.race] || 'Random'} • {player.mmr} MMR
                                             </span>
                                         </div>
-                                        {leader && player.id === leader.id && (
-                                            <span className="leader-badge">👑 LEADER</span>
-                                        )}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            {leader && player.id === leader.id && (
+                                                <span className="leader-badge">👑 LEADER</span>
+                                            )}
+                                            <div style={{ color: '#c9a961', fontWeight: '700', fontSize: '1.1em', minWidth: '80px', textAlign: 'right' }}>
+                                                {player.points || 0} pts
+                                            </div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
