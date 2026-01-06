@@ -51,8 +51,7 @@ const teamMatchSchema = new mongoose.Schema({
     player1Id: { type: String, required: true },
     player2Id: { type: String, required: true },
     winnerId: { type: String },
-    points: { type: Number, default: 0 }, // Points for winner
-    loserPoints: { type: Number, default: 0 }, // Points to subtract from loser (positive number)
+    points: { type: Number, default: 0 },
     notes: { type: String },
     status: { type: String, enum: ['upcoming', 'completed'], default: 'upcoming' },
     scheduledDate: { type: Date },
