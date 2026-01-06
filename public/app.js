@@ -2245,6 +2245,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
         const isCompleted = match.status === 'completed';
         const p1Won = isCompleted && match.winnerId === match.team1Id;
         const p2Won = isCompleted && match.winnerId === match.team2Id;
+        const loserPts = match.loserPoints || 0;
         
         return (
             <div style={{
@@ -2259,7 +2260,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
             }}>
                 {/* Left player (Team 1) */}
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-                    {renderPlayerCard(player1, team1, p1Won, true, p1Won ? match.points : 0)}
+                    {renderPlayerCard(player1, team1, p1Won, true, p1Won ? match.points : 0, p2Won ? loserPts : 0)}
                 </div>
                 
                 {/* VS / Status */}
@@ -2286,17 +2287,18 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                             }}>
                                 VS
                             </div>
-                            {match.points > 0 && (
+                            {(match.points > 0 || loserPts > 0) && (
                                 <div style={{
                                     marginTop: '8px',
                                     padding: '4px 10px',
                                     background: '#2a2a2a',
                                     borderRadius: '10px',
-                                    fontSize: '0.8em',
-                                    color: '#c9a961',
-                                    fontWeight: '600'
+                                    fontSize: '0.75em',
+                                    fontWeight: '600',
+                                    textAlign: 'center'
                                 }}>
-                                    {match.points} pts
+                                    <div style={{ color: '#4caf50' }}>+{match.points}</div>
+                                    {loserPts > 0 && <div style={{ color: '#f44336' }}>-{loserPts}</div>}
                                 </div>
                             )}
                         </React.Fragment>
@@ -2331,7 +2333,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches }) {
                 
                 {/* Right player (Team 2) */}
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
-                    {renderPlayerCard(player2, team2, p2Won, false, p2Won ? match.points : 0)}
+                    {renderPlayerCard(player2, team2, p2Won, false, p2Won ? match.points : 0, p1Won ? loserPts : 0)}
                 </div>
             </div>
         );
