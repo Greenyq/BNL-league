@@ -1672,6 +1672,10 @@ function AdminPlayers({ players, teams, sessionId, onUpdate }) {
 // ==================== ADMIN MATCHES ====================
 function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
     const [showForm, setShowForm] = React.useState(false);
+    const [showGridGenerator, setShowGridGenerator] = React.useState(false);
+    const [gridTeam1Id, setGridTeam1Id] = React.useState(null);
+    const [gridTeam2Id, setGridTeam2Id] = React.useState(null);
+    const [generatingGrid, setGeneratingGrid] = React.useState(false);
     const [formData, setFormData] = React.useState({
         team1Id: null, team2Id: null,
         player1Id: null, player2Id: null,
@@ -1679,6 +1683,84 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
         status: 'upcoming', scheduledDate: '',
         w3championsMatchId: ''
     });
+
+    // Generate match grid between two teams
+    const handleGenerateGrid = async () => {
+        if (!gridTeam1Id || !gridTeam2Id) {
+            alert('Выберите обе команды');
+            return;
+        }
+        if (gridTeam1Id === gridTeam2Id) {
+            alert('Выберите разные команды');
+            return;
+        }
+
+        const team1PlayersList = allPlayers.filter(p => p.teamId === gridTeam1Id);
+        const team2PlayersList = allPlayers.filter(p => p.teamId === gridTeam2Id);
+
+        if (team1PlayersList.length === 0 || team2PlayersList.length === 0) {
+            alert('В одной из команд нет игроков');
+            return;
+        }
+
+        const totalMatches = team1PlayersList.length * team2PlayersList.length;
+        if (!confirm(`Будет создано ${totalMatches} матчей (${team1PlayersList.length} x ${team2PlayersList.length} игроков). Продолжить?`)) {
+            return;
+        }
+
+        setGeneratingGrid(true);
+        let createdCount = 0;
+        let errorCount = 0;
+
+        // Create match for each pair of players
+        for (const p1 of team1PlayersList) {
+            for (const p2 of team2PlayersList) {
+                try {
+                    const matchData = {
+                        team1Id: gridTeam1Id,
+                        team2Id: gridTeam2Id,
+                        player1Id: p1.id || p1._id,
+                        player2Id: p2.id || p2._id,
+                        winnerId: null,
+                        points: 0,
+                        notes: '',
+                        status: 'upcoming',
+                        scheduledDate: ''
+                    };
+
+                    const response = await fetch(`${API_BASE}/api/admin/team-matches`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-session-id': sessionId
+                        },
+                        body: JSON.stringify(matchData)
+                    });
+
+                    if (response.ok) {
+                        createdCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } catch (error) {
+                    errorCount++;
+                }
+            }
+        }
+
+        setGeneratingGrid(false);
+        setShowGridGenerator(false);
+        setGridTeam1Id(null);
+        setGridTeam2Id(null);
+        
+        if (errorCount > 0) {
+            alert(`Создано ${createdCount} матчей, ошибок: ${errorCount}`);
+        } else {
+            alert(`Успешно создано ${createdCount} матчей!`);
+        }
+        
+        onUpdate();
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -1739,11 +1821,15 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
     const team1Players = formData.team1Id ? allPlayers.filter(p => p.teamId === formData.team1Id) : [];
     const team2Players = formData.team2Id ? allPlayers.filter(p => p.teamId === formData.team2Id) : [];
 
+    // Get preview of players for grid generator
+    const gridTeam1Players = gridTeam1Id ? allPlayers.filter(p => p.teamId === gridTeam1Id) : [];
+    const gridTeam2Players = gridTeam2Id ? allPlayers.filter(p => p.teamId === gridTeam2Id) : [];
+
     return (
         <div>
-            <div style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button
-                    onClick={() => setShowForm(!showForm)}
+                    onClick={() => { setShowForm(!showForm); setShowGridGenerator(false); }}
                     style={{
                         padding: '12px 24px', borderRadius: '8px',
                         background: '#4caf50', color: '#fff',
@@ -1752,7 +1838,116 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                 >
                     {showForm ? '❌ Отмена' : '➕ Добавить матч'}
                 </button>
+                <button
+                    onClick={() => { setShowGridGenerator(!showGridGenerator); setShowForm(false); }}
+                    style={{
+                        padding: '12px 24px', borderRadius: '8px',
+                        background: '#9c27b0', color: '#fff',
+                        border: 'none', cursor: 'pointer', fontWeight: '600'
+                    }}
+                >
+                    {showGridGenerator ? '❌ Отмена' : '🎯 Создать сетку матчей'}
+                </button>
             </div>
+
+            {/* Grid Generator Form */}
+            {showGridGenerator && (
+                <div style={{
+                    background: '#1a1a1a', padding: '20px', borderRadius: '15px',
+                    marginBottom: '20px', border: '2px solid #9c27b0'
+                }}>
+                    <h3 style={{ color: '#9c27b0', marginBottom: '15px' }}>
+                        🎯 Генератор сетки матчей
+                    </h3>
+                    <p style={{ color: '#888', marginBottom: '20px', fontSize: '0.95em' }}>
+                        Выберите две команды - будут созданы все матчи "каждый с каждым" (каждый игрок команды 1 против каждого игрока команды 2)
+                    </p>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Команда 1</label>
+                            <select
+                                value={gridTeam1Id || ''}
+                                onChange={(e) => setGridTeam1Id(e.target.value || null)}
+                                style={{
+                                    width: '100%', padding: '10px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                }}
+                            >
+                                <option value="">Выберите команду</option>
+                                {teams.map(team => (
+                                    <option key={team.id} value={team.id}>{team.emoji || '👥'} {team.name}</option>
+                                ))}
+                            </select>
+                            {gridTeam1Players.length > 0 && (
+                                <div style={{ marginTop: '10px', fontSize: '0.9em', color: '#888' }}>
+                                    Игроков: {gridTeam1Players.length}
+                                    <div style={{ marginTop: '5px', maxHeight: '100px', overflow: 'auto' }}>
+                                        {gridTeam1Players.map(p => (
+                                            <div key={p.id || p._id} style={{ padding: '2px 0' }}>• {p.name}</div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Команда 2</label>
+                            <select
+                                value={gridTeam2Id || ''}
+                                onChange={(e) => setGridTeam2Id(e.target.value || null)}
+                                style={{
+                                    width: '100%', padding: '10px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                }}
+                            >
+                                <option value="">Выберите команду</option>
+                                {teams.map(team => (
+                                    <option key={team.id} value={team.id}>{team.emoji || '👥'} {team.name}</option>
+                                ))}
+                            </select>
+                            {gridTeam2Players.length > 0 && (
+                                <div style={{ marginTop: '10px', fontSize: '0.9em', color: '#888' }}>
+                                    Игроков: {gridTeam2Players.length}
+                                    <div style={{ marginTop: '5px', maxHeight: '100px', overflow: 'auto' }}>
+                                        {gridTeam2Players.map(p => (
+                                            <div key={p.id || p._id} style={{ padding: '2px 0' }}>• {p.name}</div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {gridTeam1Id && gridTeam2Id && gridTeam1Players.length > 0 && gridTeam2Players.length > 0 && (
+                        <div style={{
+                            background: '#2a2a2a', padding: '15px', borderRadius: '10px',
+                            marginBottom: '20px', border: '1px solid #444'
+                        }}>
+                            <div style={{ color: '#c9a961', fontWeight: '600', marginBottom: '10px' }}>
+                                📊 Предпросмотр сетки:
+                            </div>
+                            <div style={{ color: '#fff' }}>
+                                Будет создано <strong style={{ color: '#9c27b0' }}>{gridTeam1Players.length * gridTeam2Players.length}</strong> матчей
+                            </div>
+                            <div style={{ color: '#888', marginTop: '5px', fontSize: '0.9em' }}>
+                                ({gridTeam1Players.length} игроков × {gridTeam2Players.length} игроков)
+                            </div>
+                        </div>
+                    )}
+
+                    <button
+                        onClick={handleGenerateGrid}
+                        disabled={generatingGrid || !gridTeam1Id || !gridTeam2Id}
+                        style={{
+                            padding: '12px 24px', borderRadius: '8px',
+                            background: generatingGrid ? '#666' : '#9c27b0', color: '#fff',
+                            border: 'none', cursor: generatingGrid ? 'wait' : 'pointer', fontWeight: '600'
+                        }}
+                    >
+                        {generatingGrid ? '⏳ Создание матчей...' : '🎯 Создать все матчи'}
+                    </button>
+                </div>
+            )}
 
             {showForm && (
                 <div style={{
