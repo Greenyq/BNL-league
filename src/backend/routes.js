@@ -419,7 +419,12 @@ router.get('/team-matches', async (req, res) => {
 
 router.post('/admin/team-matches', async (req, res) => {
     try {
-        const newMatch = await TeamMatch.create(req.body);
+        // Randomly assign home player if not provided
+        let matchData = { ...req.body };
+        if (!matchData.homePlayerId && matchData.player1Id && matchData.player2Id) {
+            matchData.homePlayerId = Math.random() < 0.5 ? matchData.player1Id : matchData.player2Id;
+        }
+        const newMatch = await TeamMatch.create(matchData);
         res.json(newMatch);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create match' });
@@ -448,6 +453,95 @@ router.delete('/admin/team-matches/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete match' });
+    }
+});
+
+// ==================== PLAYER MATCH MANAGEMENT ====================
+// Get matches for a specific player (for their profile)
+router.get('/player-matches/:playerId', async (req, res) => {
+    try {
+        const { playerId } = req.params;
+        const matches = await TeamMatch.find({
+            $or: [
+                { player1Id: playerId },
+                { player2Id: playerId }
+            ]
+        }).sort({ scheduledDate: 1 });
+        res.json(matches);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch player matches' });
+    }
+});
+
+// Player reports match result (only home player can do this)
+router.put('/player-matches/:id/report', async (req, res) => {
+    try {
+        const { winnerId, scheduledDate, playerId } = req.body;
+        const match = await TeamMatch.findById(req.params.id);
+        
+        if (!match) {
+            return res.status(404).json({ error: 'Match not found' });
+        }
+        
+        // Only home player can report
+        if (match.homePlayerId !== playerId) {
+            return res.status(403).json({ error: 'Only home player can report match result' });
+        }
+        
+        // If reporting winner, calculate points based on MMR
+        let points = 0;
+        if (winnerId) {
+            // Get both players to compare MMR
+            const player1 = await Player.findById(match.player1Id);
+            const player2 = await Player.findById(match.player2Id);
+            
+            if (player1 && player2) {
+                const winnerIsPlayer1 = winnerId === match.team1Id;
+                const winner = winnerIsPlayer1 ? player1 : player2;
+                const loser = winnerIsPlayer1 ? player2 : player1;
+                
+                const winnerMmr = winner.currentMmr || 0;
+                const loserMmr = loser.currentMmr || 0;
+                const mmrDiff = winnerMmr - loserMmr;
+                
+                // Calculate points based on MMR difference
+                if (mmrDiff >= 150) {
+                    points = 10; // Winner is much stronger
+                } else if (mmrDiff >= 100) {
+                    points = 20; // Winner is stronger
+                } else {
+                    points = 50; // Normal match
+                }
+            } else {
+                points = 50; // Default if can't calculate
+            }
+        }
+        
+        const updateData = {
+            updatedAt: Date.now(),
+            reportedBy: playerId
+        };
+        
+        if (scheduledDate !== undefined) {
+            updateData.scheduledDate = scheduledDate;
+        }
+        
+        if (winnerId) {
+            updateData.winnerId = winnerId;
+            updateData.points = points;
+            updateData.status = 'completed';
+        }
+        
+        const updatedMatch = await TeamMatch.findByIdAndUpdate(
+            req.params.id,
+            updateData,
+            { new: true }
+        );
+        
+        res.json(updatedMatch);
+    } catch (error) {
+        console.error('Error reporting match:', error);
+        res.status(500).json({ error: 'Failed to report match' });
     }
 });
 
