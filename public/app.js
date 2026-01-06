@@ -262,8 +262,13 @@ function App() {
                     // console.log(`Processing ${player.battleTag} with ${player.matchData.length} matches`);
 
                     // processMatches returns array of profiles (one per race)
-                    const playerProfiles = processMatches(player.battleTag, player.matchData, allBnlBattleTags);
+                    let playerProfiles = processMatches(player.battleTag, player.matchData, allBnlBattleTags);
                     // console.log(`Profiles created for ${player.battleTag}:`, playerProfiles.length);
+
+                    // Filter by main race if set
+                    if (player.mainRace !== undefined && player.mainRace !== null) {
+                        playerProfiles = playerProfiles.filter(p => p.race === player.mainRace);
+                    }
 
                     // Create a card for each race profile
                     playerProfiles.forEach((profile) => {
@@ -277,9 +282,10 @@ function App() {
                             // Use MMR from profile or DB
                             mmr: profile.mmr || player.currentMmr || 0,
                             teamId: player.teamId || null,
-                            // Include portrait and discord from database
+                            // Include portrait, discord and mainRace from database
                             selectedPortraitId: player.selectedPortraitId || null,
                             discordTag: player.discordTag || null,
+                            mainRace: player.mainRace || null,
                         };
 
                         loadedPlayers.push(finalPlayer);
@@ -363,7 +369,7 @@ function App() {
         // Performance: Backend now filters matches before sending, so minimal filtering needed here
         // But keep as fallback in case old cached data exists
         let recentMatches = matches;
-        const cutoffDate = new Date('2025-12-20T00:00:00Z');
+        const cutoffDate = new Date('2025-11-27T00:00:00Z');
 
         // Only filter if we have old data (backend now does this)
         if (matches.length > 50) {
@@ -711,7 +717,7 @@ function App() {
                     setShowLoginModal={setShowLoginModal}
                 />
                 <div className="app">
-                    <div className="loading">⚔️ Загрузка матчей с W3Champions...<br />Подсчет очков с 20.12.2025...</div>
+                    <div className="loading">⚔️ Загрузка матчей с W3Champions...<br />Подсчет очков с 27.11.2025...</div>
                 </div>
             </div>
         );
@@ -4524,15 +4530,28 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
         // Find player data from DB players (not W3Champions profiles)
         if (playerUser.linkedBattleTag && allPlayers) {
             // Find player from database (use DB player ID for teamMatches compatibility)
-            const playerProfiles = allPlayers.filter(p => p.battleTag === playerUser.linkedBattleTag);
+            let playerProfiles = allPlayers.filter(p => p.battleTag === playerUser.linkedBattleTag);
 
             if (playerProfiles.length > 0) {
-                // Use the profile with highest points (best race)
+                // Find the main player object (with DB info like mainRace)
+                const mainPlayer = playerProfiles[0];
+
+                // Filter by main race if set
+                if (mainPlayer.mainRace !== undefined && mainPlayer.mainRace !== null) {
+                    playerProfiles = playerProfiles.filter(p => p.race === mainPlayer.mainRace);
+                }
+
+                if (playerProfiles.length === 0) {
+                    // If main race filter resulted in no profiles, use highest points
+                    playerProfiles = allPlayers.filter(p => p.battleTag === playerUser.linkedBattleTag);
+                }
+
+                // Use the profile with highest points
                 const bestProfile = playerProfiles.reduce((best, current) =>
                     (current.points || 0) > (best.points || 0) ? current : best
                 );
                 setPlayerData(bestProfile);
-                console.log('Player data found:', bestProfile, 'ID:', bestProfile.id);
+                console.log('Player data found:', bestProfile, 'ID:', bestProfile.id, 'Main Race:', mainPlayer.mainRace);
             } else {
                 console.log('No player data found for battleTag:', playerUser.linkedBattleTag);
                 setPlayerData(null);
@@ -4829,6 +4848,71 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Main Race Selection */}
+                        <div style={{
+                            background: '#2a2a2a', padding: '20px', borderRadius: '12px',
+                            marginBottom: '30px',
+                            border: '2px solid #c9a961'
+                        }}>
+                            <h3 style={{ color: '#c9a961', marginBottom: '15px', fontSize: '1.2em' }}>
+                                ⚔️ Меин раса (для подсчета статистики)
+                            </h3>
+                            <p style={{ color: '#888', marginBottom: '15px', fontSize: '0.9em' }}>
+                                Выберите расу, на которой вы играете больше всего. Статистика будет считаться только по матчам на этой расе.
+                            </p>
+                            <select
+                                value={playerData.mainRace || ''}
+                                onChange={async (e) => {
+                                    const mainRace = parseInt(e.target.value);
+                                    if (mainRace === undefined) return;
+
+                                    try {
+                                        const response = await fetch(`${API_BASE}/api/players/auth/select-main-race`, {
+                                            method: 'PUT',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'x-player-session-id': playerSessionId
+                                            },
+                                            body: JSON.stringify({ mainRace })
+                                        });
+
+                                        const data = await response.json();
+                                        if (response.ok) {
+                                            fetchPlayerData();
+                                            alert('✅ Меин раса выбрана!');
+                                        } else {
+                                            alert(data.error || 'Ошибка выбора расы');
+                                        }
+                                    } catch (error) {
+                                        alert('Ошибка подключения к серверу');
+                                    }
+                                }}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    border: '2px solid #c9a961',
+                                    background: '#1a1a1a',
+                                    color: '#c9a961',
+                                    fontSize: '1em',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <option value="">-- Выберите расу --</option>
+                                <option value="0">🎲 Рандом</option>
+                                <option value="1">👑 Хумы</option>
+                                <option value="2">⚔️ Орки</option>
+                                <option value="4">🌙 Эльфы</option>
+                                <option value="8">💀 Андеды</option>
+                            </select>
+                            {playerData.mainRace !== undefined && playerData.mainRace !== null && (
+                                <div style={{ color: '#4caf50', marginTop: '10px', fontSize: '0.9em', fontWeight: '600' }}>
+                                    ✓ Меин раса: {raceNames[playerData.mainRace]}
+                                </div>
+                            )}
                         </div>
 
                         <div>
