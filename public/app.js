@@ -223,6 +223,16 @@ function App() {
         }
     };
 
+    const loadPortraits = async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/portraits`);
+            const data = await response.json();
+            setPortraits(data);
+        } catch (error) {
+            console.error('Error loading portraits:', error);
+        }
+    };
+
     const loadPlayers = async () => {
         try {
             console.log('🔄 Loading players with cache...');
