@@ -1659,11 +1659,8 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
     };
 
     const getPlayerPointsFromSchedule = (playerId) => {
-        // Get player's points directly from allPlayers (points stored in DB)
-        const player = allPlayers.find(p => {
-            const pId = String(p.id || p._id);
-            return pId === String(playerId);
-        });
+        // Get player's points from players array (has same ID format as teamPlayers)
+        const player = players.find(p => p.id === playerId);
         return player?.points || 0;
     };
 
