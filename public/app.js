@@ -1454,87 +1454,9 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                         <div className="rank-number">#{rank}</div>
                         <div className="rank-label" style={{ marginTop: '15px' }}>{raceNames[player.race] || 'Random'}</div>
                         <div className="mmr-display">{player.mmr} MMR</div>
-                        {/* Achievements instead of rating stars */}
-                        {player.achievements && player.achievements.length > 0 && (
-                            <div style={{
-                                display: 'flex',
-                                gap: '6px',
-                                flexWrap: 'wrap',
-                                marginTop: '10px',
-                                justifyContent: 'flex-end'
-                            }}>
-                                {player.achievements.slice(0, 5).map(achKey => {
-                                    const ach = achievements[achKey];
-                                    if (!ach) return null;
-                                    return (
-                                        <div key={achKey} style={{
-                                            width: '28px',
-                                            height: '28px',
-                                            background: 'rgba(0,0,0,0.5)',
-                                            border: '1px solid #c9a961',
-                                            borderRadius: '50%',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '0.95em',
-                                            position: 'relative',
-                                            cursor: 'pointer'
-                                        }}>
-                                            {ach.icon}
-                                            <div style={{
-                                                position: 'absolute',
-                                                bottom: '35px',
-                                                left: '50%',
-                                                transform: 'translateX(-50%)',
-                                                background: '#1a1a1a',
-                                                border: '1px solid #c9a961',
-                                                borderRadius: '4px',
-                                                padding: '4px 8px',
-                                                whiteSpace: 'nowrap',
-                                                opacity: 0,
-                                                pointerEvents: 'none',
-                                                transition: 'opacity 0.2s',
-                                                fontSize: '0.75em',
-                                                color: '#c9a961'
-                                            }} className="achievement-tooltip-mini">
-                                                {ach.name}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                                {player.achievements.length > 5 && (
-                                    <div style={{
-                                        width: '28px',
-                                        height: '28px',
-                                        background: 'rgba(201, 169, 97, 0.2)',
-                                        border: '1px dashed #c9a961',
-                                        borderRadius: '50%',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '0.8em',
-                                        color: '#c9a961',
-                                        fontWeight: '600'
-                                    }}>
-                                        +{player.achievements.length - 5}
-                                    </div>
-                                )}
-                            </div>
-                        )}
                     </div>
                 </div>
 
-                {/* Achievement hover effect */}
-                <style>{`
-                    .player-card [style*="achievement-tooltip"] {
-                        opacity: 0;
-                    }
-                    .player-card:hover [style*="achievement-tooltip"] {
-                        opacity: 1 !important;
-                    }
-                `}</style>
-
-                {/* Removed: rating-stars section */}
 
                 {/* Always render achievements container with fixed min-height */}
                 <div className="achievement-icons" style={{
