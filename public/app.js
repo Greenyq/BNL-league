@@ -1862,7 +1862,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                                         <div>
                                             <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{player.name}</span>
                                             <span style={{ color: '#888', marginLeft: '15px' }}>
-                                                {raceNames[player.race] || 'Random'} • {player.mmr} MMR
+                                                {raceNames[player.race] || 'Random'} • {player.mmr} MMR • {getPlayerPointsFromSchedule(player.id)} pts
                                             </span>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
