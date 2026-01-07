@@ -1454,6 +1454,20 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                         <div className="rank-number">#{rank}</div>
                         <div className="rank-label" style={{ marginTop: '15px' }}>{raceNames[player.race] || 'Random'}</div>
                         <div className="mmr-display">{player.mmr} MMR</div>
+                        {player.achievements && player.achievements.length > 0 && (
+                            <div style={{
+                                marginTop: '15px',
+                                fontSize: '0.85em',
+                                color: '#c9a961',
+                                background: 'rgba(0,0,0,0.5)',
+                                padding: '5px 10px',
+                                borderRadius: '4px',
+                                textAlign: 'center',
+                                fontWeight: '700'
+                            }}>
+                                🏆 {player.achievements.length}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -1470,21 +1484,6 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                     minHeight: player.achievements && player.achievements.length > 0 ? 'auto' : '50px',
                     position: 'relative'
                 }}>
-                    {player.achievements && player.achievements.length > 0 && (
-                        <div style={{
-                            position: 'absolute',
-                            top: '5px',
-                            right: '10px',
-                            fontSize: '0.8em',
-                            color: '#c9a961',
-                            background: 'rgba(0,0,0,0.5)',
-                            padding: '3px 8px',
-                            borderRadius: '4px',
-                            zIndex: 5
-                        }}>
-                            {player.achievements.length} 🏆
-                        </div>
-                    )}
                     {player.achievements && player.achievements.map(achKey => {
                         const ach = achievements[achKey];
                         if (!ach) {
@@ -1659,6 +1658,26 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
         }, 0);
     };
 
+    const getPlayerPointsFromTeamMatches = (playerId) => {
+        // Calculate player's total points from their team's victories in team matches
+        const player = players.find(p => p.id === playerId);
+        if (!player || !player.teamId) return 0;
+
+        const matches = (teamMatches || []).filter(m => {
+            const matchTeam1Id = m.team1?.id || m.team1Id;
+            const matchTeam2Id = m.team2?.id || m.team2Id;
+            return (matchTeam1Id === player.teamId || matchTeam2Id === player.teamId) && m.status === 'completed';
+        });
+
+        return matches.reduce((sum, match) => {
+            const winnerId = match.winnerId;
+            if (winnerId === player.teamId) {
+                return sum + (match.points || 0);
+            }
+            return sum;
+        }, 0);
+    };
+
     const getTeamLeader = (teamId) => {
         const teamPlayers = getTeamPlayers(teamId);
         return teamPlayers.reduce((leader, player) => (player.points || 0) > (leader?.points || 0) ? player : leader, null);
@@ -1789,7 +1808,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                                             <span className="member-role-badge">CAPTAIN</span>
                                             <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{captain.name}</span>
                                             <span style={{ color: '#888', marginLeft: '15px' }}>
-                                                {raceNames[captain.race] || 'Random'} • {captain.mmr} MMR • {captain.points} pts
+                                                {raceNames[captain.race] || 'Random'} • {captain.mmr} MMR • {getPlayerPointsFromTeamMatches(captain.id)} pts
                                             </span>
                                         </div>
                                     </div>
@@ -1815,7 +1834,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                                                 <span className="member-role-badge">COACH</span>
                                                 <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{coach.name}</span>
                                                 <span style={{ color: '#888', marginLeft: '15px' }}>
-                                                    {raceNames[coach.race] || 'Random'} • {coach.mmr} MMR • {coach.points} pts
+                                                    {raceNames[coach.race] || 'Random'} • {coach.mmr} MMR • {getPlayerPointsFromTeamMatches(coach.id)} pts
                                                 </span>
                                             </div>
                                         </div>
@@ -1826,7 +1845,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                             <div className="member-section">
                                 <div className="section-title">⚔️ Игроки</div>
                                 {teamPlayers
-                                    .sort((a, b) => (b.points || 0) - (a.points || 0)) // Sort by points descending
+                                    .sort((a, b) => getPlayerPointsFromTeamMatches(b.id) - getPlayerPointsFromTeamMatches(a.id)) // Sort by team match points descending
                                     .map(player => (
                                     <div
                                         key={player.id}
@@ -1850,7 +1869,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                                                 <span className="leader-badge">👑 LEADER</span>
                                             )}
                                             <div style={{ color: '#c9a961', fontWeight: '700', fontSize: '1.1em', minWidth: '80px', textAlign: 'right' }}>
-                                                {player.points || 0} pts
+                                                {getPlayerPointsFromTeamMatches(player.id)} pts
                                             </div>
                                         </div>
                                     </div>
@@ -3476,9 +3495,15 @@ function TeamMatches({ teamMatches = [], teams = [], allPlayers = [] }) {
                     {expandedTeamId === item.team.id && (
                         <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #444' }}>
                             {item.matches.map((match, mIdx) => {
-                                const opponent = item.team.id === (match.team1?.id || match.team1Id)
-                                    ? (match.team2 || teams.find(t => t.id === match.team2Id))
-                                    : (match.team1 || teams.find(t => t.id === match.team1Id));
+                                const p1 = allPlayers.find(p => p.id === match.player1Id);
+                                const p2 = allPlayers.find(p => p.id === match.player2Id);
+                                const p1Team = p1?.teamId;
+                                const p2Team = p2?.teamId;
+                                const teamPlayersIds = (item.team.players || []);
+
+                                const isP1TeamPlayer = p1Team === item.team.id;
+                                const p1Name = p1?.name || 'Unknown';
+                                const p2Name = p2?.name || 'Unknown';
 
                                 const isWinner = match.winnerId === item.team.id;
 
@@ -3500,9 +3525,8 @@ function TeamMatches({ teamMatches = [], teams = [], allPlayers = [] }) {
                                             <span style={{ color: isWinner ? '#4caf50' : '#f44336', fontWeight: '600' }}>
                                                 {isWinner ? '✅ Победа' : '❌ Поражение'}
                                             </span>
-                                            <span style={{ color: '#888', margin: '0 10px' }}>против</span>
-                                            <span style={{ color: '#fff', fontWeight: '600' }}>
-                                                {opponent ? opponent.name : 'Unknown'} {opponent && `(${opponent.emoji})`}
+                                            <span style={{ color: '#888', margin: '0 10px' }}>
+                                                {isP1TeamPlayer ? `${p1Name} vs ${p2Name}` : `${p2Name} vs ${p1Name}`}
                                             </span>
                                         </div>
                                         {isWinner && (
