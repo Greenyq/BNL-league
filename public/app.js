@@ -763,7 +763,6 @@ function App() {
                         }}
                     />
                 )}
-}
                 {activeTab === 'streamers' && <Streamers />}
                 {activeTab === 'profile' && playerUser && (
                     <PlayerProfile
