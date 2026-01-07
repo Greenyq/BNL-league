@@ -1668,8 +1668,22 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
             if (match.status === 'completed') {
                 // Check if player participated (compare with base ID from database)
                 if (match.player1Id === basePlayerId || match.player2Id === basePlayerId) {
-                    // If player won - add points, if lost - subtract points
+                    let playerWon = false;
+
+                    // Check if winnerId matches player ID directly (new format: player IDs)
                     if (match.winnerId === basePlayerId) {
+                        playerWon = true;
+                    }
+                    // Check if winnerId matches team ID (old format from admin panel bug)
+                    else if (match.winnerId === match.team1Id && match.player1Id === basePlayerId) {
+                        playerWon = true;
+                    }
+                    else if (match.winnerId === match.team2Id && match.player2Id === basePlayerId) {
+                        playerWon = true;
+                    }
+
+                    // Add or subtract points based on win/loss
+                    if (playerWon) {
                         totalPoints += (match.points || 0);
                     } else {
                         totalPoints -= (match.points || 0);
