@@ -747,7 +747,7 @@ function App() {
             <div className="app">
                 {activeTab === 'home' && <Rules />}
                 {activeTab === 'players' && <Players players={players} />}
-                {activeTab === 'teams' && <Teams teams={teams} players={players} allPlayers={allPlayers} teamMatches={teamMatches} />}
+                {activeTab === 'teams' && <Teams teams={teams} players={players} allPlayers={allPlayers} teamMatches={teamMatches} schedule={schedule} />}
                 {activeTab === 'schedule' && (
                     <Schedule
                         schedule={schedule}
@@ -1619,7 +1619,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
     );
 }
 
-function Teams({ teams, players, allPlayers, teamMatches = [] }) {
+function Teams({ teams, players, allPlayers, teamMatches = [], schedule = [] }) {
     const [expandedTeam, setExpandedTeam] = useState(null);
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const [portraits, setPortraits] = useState([]);
@@ -1658,24 +1658,29 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
         }, 0);
     };
 
-    const getPlayerPointsFromTeamMatches = (playerId) => {
-        // Calculate player's total points from their team's victories in team matches
-        const player = players.find(p => p.id === playerId);
-        if (!player || !player.teamId) return 0;
+    const getPlayerPointsFromSchedule = (playerId) => {
+        // Calculate player's total points from their own Schedule matches (1v1)
+        let totalPoints = 0;
 
-        const matches = (teamMatches || []).filter(m => {
-            const matchTeam1Id = m.team1?.id || m.team1Id;
-            const matchTeam2Id = m.team2?.id || m.team2Id;
-            return (matchTeam1Id === player.teamId || matchTeam2Id === player.teamId) && m.status === 'completed';
+        if (!schedule || schedule.length === 0) return 0;
+
+        schedule.forEach(matchup => {
+            if (!matchup.matches) return;
+
+            matchup.matches.forEach(m => {
+                // Check if player participated in this match
+                if ((m.player1Id === playerId || m.player2Id === playerId) && m.status === 'completed') {
+                    // If player won - add points, if lost - subtract points
+                    if (m.winnerId === playerId) {
+                        totalPoints += (m.points || 0);
+                    } else {
+                        totalPoints -= (m.points || 0);
+                    }
+                }
+            });
         });
 
-        return matches.reduce((sum, match) => {
-            const winnerId = match.winnerId;
-            if (winnerId === player.teamId) {
-                return sum + (match.points || 0);
-            }
-            return sum;
-        }, 0);
+        return totalPoints;
     };
 
     const getTeamLeader = (teamId) => {
@@ -1808,7 +1813,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                                             <span className="member-role-badge">CAPTAIN</span>
                                             <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{captain.name}</span>
                                             <span style={{ color: '#888', marginLeft: '15px' }}>
-                                                {raceNames[captain.race] || 'Random'} • {captain.mmr} MMR • {captain.points || 0} pts
+                                                {raceNames[captain.race] || 'Random'} • {captain.mmr} MMR • {getPlayerPointsFromSchedule(captain.id)} pts
                                             </span>
                                         </div>
                                     </div>
@@ -1834,7 +1839,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                                                 <span className="member-role-badge">COACH</span>
                                                 <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{coach.name}</span>
                                                 <span style={{ color: '#888', marginLeft: '15px' }}>
-                                                    {raceNames[coach.race] || 'Random'} • {coach.mmr} MMR • {coach.points || 0} pts
+                                                    {raceNames[coach.race] || 'Random'} • {coach.mmr} MMR • {getPlayerPointsFromSchedule(coach.id)} pts
                                                 </span>
                                             </div>
                                         </div>
@@ -1845,7 +1850,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                             <div className="member-section">
                                 <div className="section-title">⚔️ Игроки</div>
                                 {teamPlayers
-                                    .sort((a, b) => (b.points || 0) - (a.points || 0)) // Sort by individual points descending
+                                    .sort((a, b) => getPlayerPointsFromSchedule(b.id) - getPlayerPointsFromSchedule(a.id)) // Sort by Schedule points descending
                                     .map(player => (
                                     <div
                                         key={player.id}
@@ -1869,7 +1874,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                                                 <span className="leader-badge">👑 LEADER</span>
                                             )}
                                             <div style={{ color: '#c9a961', fontWeight: '700', fontSize: '1.1em', minWidth: '80px', textAlign: 'right' }}>
-                                                {player.points || 0} pts
+                                                {getPlayerPointsFromSchedule(player.id)} pts
                                             </div>
                                         </div>
                                     </div>
