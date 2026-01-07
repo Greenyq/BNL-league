@@ -527,7 +527,7 @@ router.put('/player-matches/:id/report', async (req, res) => {
             const player2 = await Player.findById(match.player2Id);
 
             if (player1 && player2) {
-                const winnerIsPlayer1 = winnerId === match.team1Id;
+                const winnerIsPlayer1 = winnerId === match.player1Id;
                 const winner = winnerIsPlayer1 ? player1 : player2;
                 const loser = winnerIsPlayer1 ? player2 : player1;
 

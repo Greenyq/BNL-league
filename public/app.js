@@ -3272,7 +3272,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             {/* Left Player (Winner option 1) */}
                             <div
                                 onClick={() => {
-                                    const winnerId = trophyMatchData.isPlayer1 ? trophyMatchData.match.team1Id : trophyMatchData.match.team2Id;
+                                    const winnerId = trophyMatchData.isPlayer1 ? trophyMatchData.match.player1Id : trophyMatchData.match.player2Id;
                                     fetch(`${API_BASE}/api/player-matches/${trophyMatchData.match.id}/report`, {
                                         method: 'PUT',
                                         headers: { 'Content-Type': 'application/json' },
@@ -3315,7 +3315,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             {/* Right Player (Winner option 2) */}
                             <div
                                 onClick={() => {
-                                    const winnerId = trophyMatchData.isPlayer1 ? trophyMatchData.match.team2Id : trophyMatchData.match.team1Id;
+                                    const winnerId = trophyMatchData.isPlayer1 ? trophyMatchData.match.player2Id : trophyMatchData.match.player1Id;
                                     fetch(`${API_BASE}/api/player-matches/${trophyMatchData.match.id}/report`, {
                                         method: 'PUT',
                                         headers: { 'Content-Type': 'application/json' },
