@@ -2020,9 +2020,10 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
         matchesByTeams[key].matches.push(match);
         if (match.status === 'completed') {
             // Add points to winner only
-            if (match.winnerId === match.team1Id) {
+            // Handle both old (team IDs) and new (player IDs) winner formats
+            if (match.winnerId === match.team1Id || match.winnerId === match.player1Id) {
                 matchesByTeams[key].team1Points += match.points || 0;
-            } else if (match.winnerId === match.team2Id) {
+            } else if (match.winnerId === match.team2Id || match.winnerId === match.player2Id) {
                 matchesByTeams[key].team2Points += match.points || 0;
             }
         }
@@ -2204,9 +2205,11 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
         const player1 = getPlayer(match.player1Id);
         const player2 = getPlayer(match.player2Id);
         const isCompleted = match.status === 'completed';
-        const p1Won = isCompleted && match.winnerId === match.team1Id;
-        const p2Won = isCompleted && match.winnerId === match.team2Id;
-        const isHomePlayer = currentPlayerData && (match.player1Id === currentPlayerData.id || match.player2Id === currentPlayerData.id) && match.homePlayerId === currentPlayerData.id;
+        // Handle both old (team IDs) and new (player IDs) winner formats
+        const p1Won = isCompleted && (match.winnerId === match.team1Id || match.winnerId === match.player1Id);
+        const p2Won = isCompleted && (match.winnerId === match.team2Id || match.winnerId === match.player2Id);
+        const baseCurrentPlayerId = currentPlayerData ? (currentPlayerData.id.includes('_') ? currentPlayerData.id.split('_')[0] : currentPlayerData.id) : null;
+        const isHomePlayer = currentPlayerData && (match.player1Id === baseCurrentPlayerId || match.player2Id === baseCurrentPlayerId) && match.homePlayerId === baseCurrentPlayerId;
 
         return (
             <div>
@@ -5243,17 +5246,18 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                             <button
                                                 onClick={() => {
                                                     // Verify this is the home player
-                                                    if (match.homePlayerId !== playerData.id) {
+                                                    const basePlayerId = playerData.id.includes('_') ? playerData.id.split('_')[0] : playerData.id;
+                                                    if (match.homePlayerId !== basePlayerId) {
                                                         alert('❌ Только организатор матча может отметить победителя!');
                                                         return;
                                                     }
                                                     const winner = confirm(`Кто победил?\n\nОК - Я победил (${playerData.name})\nОтмена - Победил соперник (${opponent?.name})`);
-                                                    const winnerId = winner ? (isPlayer1 ? match.team1Id : match.team2Id) : (isPlayer1 ? match.team2Id : match.team1Id);
+                                                    const winnerId = winner ? (isPlayer1 ? match.player1Id : match.player2Id) : (isPlayer1 ? match.player2Id : match.player1Id);
 
                                                     fetch(`${API_BASE}/api/player-matches/${match.id}/report`, {
                                                         method: 'PUT',
                                                         headers: { 'Content-Type': 'application/json' },
-                                                        body: JSON.stringify({ playerId: playerData.id, winnerId })
+                                                        body: JSON.stringify({ playerId: basePlayerId, winnerId })
                                                     }).then(res => res.json()).then(data => {
                                                         if (data.error) {
                                                             alert(`❌ Ошибка: ${data.error}`);
@@ -5330,7 +5334,13 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                             {myMatches.filter(m => m.status === 'completed').slice(0, 5).map(match => {
                                 const isPlayer1 = match.player1Id === playerData.id;
                                 const opponent = allPlayers.find(p => p.id === (isPlayer1 ? match.player2Id : match.player1Id));
-                                const iWon = (isPlayer1 && match.winnerId === match.team1Id) || (!isPlayer1 && match.winnerId === match.team2Id);
+                                // Handle both old (team IDs) and new (player IDs) winner formats
+                                let iWon = false;
+                                if (isPlayer1 && (match.winnerId === match.player1Id || match.winnerId === match.team1Id)) {
+                                    iWon = true;
+                                } else if (!isPlayer1 && (match.winnerId === match.player2Id || match.winnerId === match.team2Id)) {
+                                    iWon = true;
+                                }
                                 
                                 return (
                                     <div key={match.id} style={{
