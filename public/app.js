@@ -763,7 +763,7 @@ function App() {
                         }}
                     />
                 )}
-                {activeTab === 'stats' && <StatsAndMatches players={players} teams={teams} teamMatches={teamMatches} allPlayers={allPlayers} />}
+}
                 {activeTab === 'streamers' && <Streamers />}
                 {activeTab === 'profile' && playerUser && (
                     <PlayerProfile
@@ -910,7 +910,6 @@ function Nav({ activeTab, setActiveTab, isAdmin, setShowLoginModal, playerUser, 
                 <button className={`nav-btn ${activeTab === 'players' ? 'active' : ''}`} onClick={() => setActiveTab('players')}>Игроки</button>
                 <button className={`nav-btn ${activeTab === 'teams' ? 'active' : ''}`} onClick={() => setActiveTab('teams')}>Команды</button>
                 <button className={`nav-btn ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => setActiveTab('schedule')}>Расписание</button>
-                <button className={`nav-btn ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>📊 Статистика</button>
                 <button className={`nav-btn ${activeTab === 'streamers' ? 'active' : ''}`} onClick={() => setActiveTab('streamers')}>📺 Стримеры</button>
                 {isAdmin ? (
                     <button className={`nav-btn ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>⚙️ Админка</button>
@@ -1455,13 +1454,9 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                         <div className="rank-number">#{rank}</div>
                         <div className="rank-label" style={{ marginTop: '15px' }}>{raceNames[player.race] || 'Random'}</div>
                         <div className="mmr-display">{player.mmr} MMR</div>
-                        <div className="rating-stars">
-                            {[...Array(5)].map((_, i) => (
-                                <span key={i} style={{ color: '#c9a961', fontSize: '1.3em' }}>⭐</span>
-                            ))}
-                        </div>
                     </div>
                 </div>
+
 
                 {/* Always render achievements container with fixed min-height */}
                 <div className="achievement-icons" style={{
@@ -1629,6 +1624,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
     const [expandedTeam, setExpandedTeam] = useState(null);
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const [portraits, setPortraits] = useState([]);
+    const [subTeamsTab, setSubTeamsTab] = useState('team-list');
 
     // Load portraits
     React.useEffect(() => {
@@ -1671,6 +1667,71 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
     return (
         <div>
             <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>Команды</h2>
+
+            {/* Sub-tabs Navigation */}
+            <div style={{
+                display: 'flex',
+                gap: '15px',
+                marginBottom: '30px',
+                borderBottom: '2px solid #333',
+                paddingBottom: '10px'
+            }}>
+                <button
+                    onClick={() => setSubTeamsTab('team-list')}
+                    style={{
+                        padding: '12px 24px',
+                        borderRadius: '8px 8px 0 0',
+                        background: subTeamsTab === 'team-list' ? '#c9a961' : '#2a2a2a',
+                        color: subTeamsTab === 'team-list' ? '#000' : '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '1em',
+                        transition: 'all 0.2s',
+                        borderBottom: subTeamsTab === 'team-list' ? '3px solid #c9a961' : 'none'
+                    }}
+                >
+                    📋 Список команд
+                </button>
+                <button
+                    onClick={() => setSubTeamsTab('team-matches')}
+                    style={{
+                        padding: '12px 24px',
+                        borderRadius: '8px 8px 0 0',
+                        background: subTeamsTab === 'team-matches' ? '#c9a961' : '#2a2a2a',
+                        color: subTeamsTab === 'team-matches' ? '#000' : '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '1em',
+                        transition: 'all 0.2s',
+                        borderBottom: subTeamsTab === 'team-matches' ? '3px solid #c9a961' : 'none'
+                    }}
+                >
+                    ⚔️ Командные матчи
+                </button>
+                <button
+                    onClick={() => setSubTeamsTab('team-stats')}
+                    style={{
+                        padding: '12px 24px',
+                        borderRadius: '8px 8px 0 0',
+                        background: subTeamsTab === 'team-stats' ? '#c9a961' : '#2a2a2a',
+                        color: subTeamsTab === 'team-stats' ? '#000' : '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '1em',
+                        transition: 'all 0.2s',
+                        borderBottom: subTeamsTab === 'team-stats' ? '3px solid #c9a961' : 'none'
+                    }}
+                >
+                    📊 Статистика
+                </button>
+            </div>
+
+            {/* Team List Tab */}
+            {subTeamsTab === 'team-list' && (
+            <div>
             {teams.map(team => {
                 const teamPlayers = getTeamPlayers(team.id);
                 const leader = getTeamLeader(team.id);
@@ -1805,6 +1866,18 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                     portraits={portraits}
                     onClose={() => setSelectedPlayer(null)}
                 />
+            )}
+            </div>
+            )}
+
+            {/* Team Matches Tab */}
+            {subTeamsTab === 'team-matches' && (
+                <TeamMatches teamMatches={teamMatches} teams={teams} allPlayers={allPlayers} />
+            )}
+
+            {/* Statistics Tab */}
+            {subTeamsTab === 'team-stats' && (
+                <Stats players={players} teams={teams} />
             )}
         </div>
     );
