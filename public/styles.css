@@ -673,7 +673,7 @@ input[type="datetime-local"] {
 .player-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     margin-bottom: var(--spacing-md);
 }
 
@@ -772,8 +772,8 @@ input[type="datetime-local"] {
     display: flex;
     gap: var(--spacing-xs);
     justify-content: flex-end;
+    flex-wrap: wrap;
     margin-top: var(--spacing-xs);
-    font-size: 0.8em;
 }
 
 .achievement-icons {

@@ -747,7 +747,7 @@ function App() {
             <div className="app">
                 {activeTab === 'home' && <Rules />}
                 {activeTab === 'players' && <Players players={players} />}
-                {activeTab === 'teams' && <Teams teams={teams} players={players} allPlayers={allPlayers} />}
+                {activeTab === 'teams' && <Teams teams={teams} players={players} allPlayers={allPlayers} teamMatches={teamMatches} />}
                 {activeTab === 'schedule' && (
                     <Schedule
                         schedule={schedule}
@@ -1625,7 +1625,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
     );
 }
 
-function Teams({ teams, players, allPlayers }) {
+function Teams({ teams, players, allPlayers, teamMatches = [] }) {
     const [expandedTeam, setExpandedTeam] = useState(null);
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const [portraits, setPortraits] = useState([]);
@@ -1645,6 +1645,24 @@ function Teams({ teams, players, allPlayers }) {
     }, []);
 
     const getTeamPlayers = (teamId) => players.filter(p => p.teamId === teamId);
+
+    const getTeamPointsFromMatches = (teamId) => {
+        // Calculate total points from completed team matches
+        const matches = (teamMatches || []).filter(m => {
+            const matchTeam1Id = m.team1?.id || m.team1Id;
+            const matchTeam2Id = m.team2?.id || m.team2Id;
+            return (matchTeam1Id === teamId || matchTeam2Id === teamId) && m.status === 'completed';
+        });
+
+        return matches.reduce((sum, match) => {
+            const winnerId = match.winnerId;
+            if (winnerId === teamId) {
+                return sum + (match.points || 0);
+            }
+            return sum;
+        }, 0);
+    };
+
     const getTeamLeader = (teamId) => {
         const teamPlayers = getTeamPlayers(teamId);
         return teamPlayers.reduce((leader, player) => (player.points || 0) > (leader?.points || 0) ? player : leader, null);
@@ -1660,7 +1678,7 @@ function Teams({ teams, players, allPlayers }) {
                 const coaches = (team.coaches || []).map(coachId => {
                     return players.find(p => p.id === coachId) || allPlayers.find(p => p.id === coachId);
                 }).filter(Boolean);
-                const totalPoints = teamPlayers.reduce((sum, p) => sum + (p.points || 0), 0);
+                const totalPoints = getTeamPointsFromMatches(team.id);
 
                 return (
                     <div key={team.id} className="team-card" onClick={() => setExpandedTeam(expandedTeam === team.id ? null : team.id)}>
@@ -3291,6 +3309,152 @@ function StatsAndMatches({ players, teams, teamMatches, allPlayers }) {
             )}
             {subTab === 'team-matches' && (
                 <TeamMatches teamMatches={teamMatches} teams={teams} allPlayers={allPlayers} />
+            )}
+        </div>
+    );
+}
+
+
+// Team Matches Component
+function TeamMatches({ teamMatches = [], teams = [], allPlayers = [] }) {
+    const [expandedTeamId, setExpandedTeamId] = useState(null);
+
+    // Group matches by team
+    const matchesByTeam = teams.map(team => {
+        const teamMatches_ = (teamMatches || []).filter(m => {
+            const team1Id = m.team1?.id || m.team1Id;
+            const team2Id = m.team2?.id || m.team2Id;
+            return (team1Id === team.id || team2Id === team.id) && m.status === 'completed';
+        });
+
+        const totalPoints = teamMatches_.reduce((sum, match) => {
+            const winnerId = match.winnerId;
+            if (winnerId === team.id) {
+                return sum + (match.points || 0);
+            }
+            return sum;
+        }, 0);
+
+        return { team, matches: teamMatches_, totalPoints };
+    }).sort((a, b) => b.totalPoints - a.totalPoints).filter(t => t.matches.length > 0);
+
+    return (
+        <div style={{ paddingBottom: '20px' }}>
+            <div style={{ fontSize: '2em', fontWeight: '800', textAlign: 'center', marginBottom: '30px', background: 'linear-gradient(135deg, #f4e4b8 0%, #c9a961 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                ⚔️ КОМАНДНЫЕ МАТЧИ
+            </div>
+
+            {matchesByTeam.map((item, idx) => (
+                <div
+                    key={item.team.id}
+                    onClick={() => setExpandedTeamId(expandedTeamId === item.team.id ? null : item.team.id)}
+                    style={{
+                        background: '#2a2a2a',
+                        border: '2px solid #c9a961',
+                        borderRadius: '12px',
+                        padding: '20px',
+                        marginBottom: '15px',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#333';
+                        e.currentTarget.style.borderColor = '#ffd700';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#2a2a2a';
+                        e.currentTarget.style.borderColor = '#c9a961';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                >
+                    {/* Team Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            <span style={{ fontSize: '2.5em' }}>
+                                {item.team.logo ? (
+                                    <img
+                                        src={item.team.logo}
+                                        alt={item.team.name}
+                                        style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }}
+                                    />
+                                ) : item.team.emoji}
+                            </span>
+                            <div>
+                                <div style={{ fontSize: '1.3em', fontWeight: '800', color: '#fff' }}>
+                                    #{idx + 1} {item.team.name}
+                                </div>
+                                <div style={{ color: '#888', fontSize: '0.95em' }}>
+                                    {item.matches.length} матчей
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '1.5em', fontWeight: '800', color: '#c9a961' }}>
+                                {item.totalPoints} pts
+                            </div>
+                            <div style={{ color: '#888', fontSize: '0.8em', marginTop: '5px' }}>
+                                {expandedTeamId === item.team.id ? '▼ Скрыть' : '▶ Показать'}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Expanded Team Details */}
+                    {expandedTeamId === item.team.id && (
+                        <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #444' }}>
+                            {item.matches.map((match, mIdx) => {
+                                const opponent = item.team.id === (match.team1?.id || match.team1Id)
+                                    ? (match.team2 || teams.find(t => t.id === match.team2Id))
+                                    : (match.team1 || teams.find(t => t.id === match.team1Id));
+
+                                const isWinner = match.winnerId === item.team.id;
+
+                                return (
+                                    <div
+                                        key={match.id}
+                                        style={{
+                                            background: 'rgba(0,0,0,0.3)',
+                                            padding: '12px 15px',
+                                            borderRadius: '8px',
+                                            marginBottom: mIdx < item.matches.length - 1 ? '10px' : '0',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            borderLeft: `3px solid ${isWinner ? '#4caf50' : '#f44336'}`
+                                        }}
+                                    >
+                                        <div>
+                                            <span style={{ color: isWinner ? '#4caf50' : '#f44336', fontWeight: '600' }}>
+                                                {isWinner ? '✅ Победа' : '❌ Поражение'}
+                                            </span>
+                                            <span style={{ color: '#888', margin: '0 10px' }}>против</span>
+                                            <span style={{ color: '#fff', fontWeight: '600' }}>
+                                                {opponent ? opponent.name : 'Unknown'} {opponent && `(${opponent.emoji})`}
+                                            </span>
+                                        </div>
+                                        {isWinner && (
+                                            <div style={{ color: '#4caf50', fontWeight: '700' }}>
+                                                +{match.points || 0} pts
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            ))}
+
+            {matchesByTeam.length === 0 && (
+                <div style={{
+                    textAlign: 'center',
+                    padding: '60px 20px',
+                    color: '#888',
+                    fontSize: '1.1em'
+                }}>
+                    <div style={{ marginBottom: '10px' }}>⚔️</div>
+                    Командные матчи ещё не сыграны
+                </div>
             )}
         </div>
     );
