@@ -2323,11 +2323,12 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                         {match.status !== 'completed' && (
                         <div
                             onClick={() => {
+                                const baseCurrentPlayerId = currentPlayerData.id.includes('_') ? currentPlayerData.id.split('_')[0] : currentPlayerData.id;
                                 setTrophyMatchData({
                                     match,
                                     player1,
                                     player2,
-                                    isPlayer1: match.player1Id === currentPlayerData.id
+                                    isPlayer1: match.player1Id === baseCurrentPlayerId
                                 });
                                 setShowTrophySelector(true);
                             }}
