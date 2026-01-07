@@ -1660,14 +1660,16 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
 
     const getPlayerPointsFromSchedule = (playerId) => {
         // Calculate player's points from their 1v1 matches in teamMatches (Schedule tab)
+        // Handle both modified IDs (with race suffix like "id_1") and original IDs
+        const basePlayerId = playerId.includes('_') ? playerId.split('_')[0] : playerId;
         let totalPoints = 0;
 
         (teamMatches || []).forEach(match => {
             if (match.status === 'completed') {
-                // Check if player participated
-                if (match.player1Id === playerId || match.player2Id === playerId) {
+                // Check if player participated (compare with base ID from database)
+                if (match.player1Id === basePlayerId || match.player2Id === basePlayerId) {
                     // If player won - add points, if lost - subtract points
-                    if (match.winnerId === playerId) {
+                    if (match.winnerId === basePlayerId) {
                         totalPoints += (match.points || 0);
                     } else {
                         totalPoints -= (match.points || 0);
