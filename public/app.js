@@ -1745,6 +1745,71 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
     return (
         <div>
             <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>Команды</h2>
+
+            {/* Sub-tabs Navigation */}
+            <div style={{
+                display: 'flex',
+                gap: '15px',
+                marginBottom: '30px',
+                borderBottom: '2px solid #333',
+                paddingBottom: '10px'
+            }}>
+                <button
+                    onClick={() => setSubTeamsTab('team-list')}
+                    style={{
+                        padding: '12px 24px',
+                        borderRadius: '8px 8px 0 0',
+                        background: subTeamsTab === 'team-list' ? '#c9a961' : '#2a2a2a',
+                        color: subTeamsTab === 'team-list' ? '#000' : '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '1em',
+                        transition: 'all 0.2s',
+                        borderBottom: subTeamsTab === 'team-list' ? '3px solid #c9a961' : 'none'
+                    }}
+                >
+                    📋 Список команд
+                </button>
+                <button
+                    onClick={() => setSubTeamsTab('team-matches')}
+                    style={{
+                        padding: '12px 24px',
+                        borderRadius: '8px 8px 0 0',
+                        background: subTeamsTab === 'team-matches' ? '#c9a961' : '#2a2a2a',
+                        color: subTeamsTab === 'team-matches' ? '#000' : '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '1em',
+                        transition: 'all 0.2s',
+                        borderBottom: subTeamsTab === 'team-matches' ? '3px solid #c9a961' : 'none'
+                    }}
+                >
+                    ⚔️ Командные матчи
+                </button>
+                <button
+                    onClick={() => setSubTeamsTab('team-stats')}
+                    style={{
+                        padding: '12px 24px',
+                        borderRadius: '8px 8px 0 0',
+                        background: subTeamsTab === 'team-stats' ? '#c9a961' : '#2a2a2a',
+                        color: subTeamsTab === 'team-stats' ? '#000' : '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '1em',
+                        transition: 'all 0.2s',
+                        borderBottom: subTeamsTab === 'team-stats' ? '3px solid #c9a961' : 'none'
+                    }}
+                >
+                    📊 Статистика
+                </button>
+            </div>
+
+            {/* Team List Tab */}
+            {subTeamsTab === 'team-list' && (
+            <div>
             {teams.map(team => {
                 const teamPlayers = getTeamPlayers(team.id);
                 const leader = getTeamLeader(team.id);
@@ -1879,6 +1944,18 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                     portraits={portraits}
                     onClose={() => setSelectedPlayer(null)}
                 />
+            )}
+            </div>
+            )}
+
+            {/* Team Matches Tab */}
+            {subTeamsTab === 'team-matches' && (
+                <TeamMatches teamMatches={teamMatches} teams={teams} allPlayers={allPlayers} />
+            )}
+
+            {/* Statistics Tab */}
+            {subTeamsTab === 'team-stats' && (
+                <Stats players={players} teams={teams} />
             )}
         </div>
     );
