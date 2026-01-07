@@ -3275,11 +3275,12 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             {/* Left Player (Winner option 1) */}
                             <div
                                 onClick={() => {
+                                    const baseCurrentPlayerId = currentPlayerData.id.includes('_') ? currentPlayerData.id.split('_')[0] : currentPlayerData.id;
                                     const winnerId = trophyMatchData.isPlayer1 ? trophyMatchData.match.player1Id : trophyMatchData.match.player2Id;
                                     fetch(`${API_BASE}/api/player-matches/${trophyMatchData.match.id}/report`, {
                                         method: 'PUT',
                                         headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ playerId: currentPlayerData.id, winnerId })
+                                        body: JSON.stringify({ playerId: baseCurrentPlayerId, winnerId })
                                     }).then(res => res.json()).then(data => {
                                         if (data.error) {
                                             alert(`❌ Ошибка: ${data.error}`);
@@ -3318,11 +3319,12 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             {/* Right Player (Winner option 2) */}
                             <div
                                 onClick={() => {
+                                    const baseCurrentPlayerId = currentPlayerData.id.includes('_') ? currentPlayerData.id.split('_')[0] : currentPlayerData.id;
                                     const winnerId = trophyMatchData.isPlayer1 ? trophyMatchData.match.player2Id : trophyMatchData.match.player1Id;
                                     fetch(`${API_BASE}/api/player-matches/${trophyMatchData.match.id}/report`, {
                                         method: 'PUT',
                                         headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ playerId: currentPlayerData.id, winnerId })
+                                        body: JSON.stringify({ playerId: baseCurrentPlayerId, winnerId })
                                     }).then(res => res.json()).then(data => {
                                         if (data.error) {
                                             alert(`❌ Ошибка: ${data.error}`);
