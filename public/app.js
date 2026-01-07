@@ -747,7 +747,7 @@ function App() {
             <div className="app">
                 {activeTab === 'home' && <Rules />}
                 {activeTab === 'players' && <Players players={players} />}
-                {activeTab === 'teams' && <Teams teams={teams} players={players} allPlayers={allPlayers} teamMatches={teamMatches} schedule={schedule} />}
+                {activeTab === 'teams' && <Teams teams={teams} players={players} allPlayers={allPlayers} teamMatches={teamMatches} />}
                 {activeTab === 'schedule' && (
                     <Schedule
                         schedule={schedule}
@@ -1619,7 +1619,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
     );
 }
 
-function Teams({ teams, players, allPlayers, teamMatches = [], schedule = [] }) {
+function Teams({ teams, players, allPlayers, teamMatches = [] }) {
     const [expandedTeam, setExpandedTeam] = useState(null);
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const [portraits, setPortraits] = useState([]);
@@ -1659,28 +1659,12 @@ function Teams({ teams, players, allPlayers, teamMatches = [], schedule = [] }) 
     };
 
     const getPlayerPointsFromSchedule = (playerId) => {
-        // Calculate player's total points from their own Schedule matches (1v1)
-        let totalPoints = 0;
-
-        if (!schedule || schedule.length === 0) return 0;
-
-        schedule.forEach(matchup => {
-            if (!matchup.matches) return;
-
-            matchup.matches.forEach(m => {
-                // Check if player participated in this match
-                if ((m.player1Id === playerId || m.player2Id === playerId) && m.status === 'completed') {
-                    // If player won - add points, if lost - subtract points
-                    if (m.winnerId === playerId) {
-                        totalPoints += (m.points || 0);
-                    } else {
-                        totalPoints -= (m.points || 0);
-                    }
-                }
-            });
+        // Get player's points directly from allPlayers (points stored in DB)
+        const player = allPlayers.find(p => {
+            const pId = String(p.id || p._id);
+            return pId === String(playerId);
         });
-
-        return totalPoints;
+        return player?.points || 0;
     };
 
     const getTeamLeader = (teamId) => {
