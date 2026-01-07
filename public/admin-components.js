@@ -2076,14 +2076,14 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                         required
                                     >
                                         <option value="">Выберите победителя</option>
-                                        {formData.team1Id && (
-                                            <option value={formData.team1Id}>
-                                                {teams.find(t => t.id === formData.team1Id)?.name}
+                                        {formData.player1Id && (
+                                            <option value={formData.player1Id}>
+                                                {players.find(p => p.id === formData.player1Id)?.name}
                                             </option>
                                         )}
-                                        {formData.team2Id && (
-                                            <option value={formData.team2Id}>
-                                                {teams.find(t => t.id === formData.team2Id)?.name}
+                                        {formData.player2Id && (
+                                            <option value={formData.player2Id}>
+                                                {players.find(p => p.id === formData.player2Id)?.name}
                                             </option>
                                         )}
                                     </select>
@@ -2321,14 +2321,14 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                     </button>
                                     <button
                                         onClick={() => {
-                                            const winnerId = prompt(`Кто победил?\n1 - ${team1?.name} (${player1?.name})\n2 - ${team2?.name} (${player2?.name})\n\nВведите 1 или 2:`);
+                                            const winnerId = prompt(`Кто победил?\n1 - ${player1?.name}\n2 - ${player2?.name}\n\nВведите 1 или 2:`);
                                             if (winnerId === '1' || winnerId === '2') {
                                                 const points = parseInt(prompt('Введите количество очков:', '50')) || 50;
                                                 fetch(`${API_BASE}/api/admin/team-matches/${match.id}`, {
                                                     method: 'PUT',
                                                     headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId },
-                                                    body: JSON.stringify({ 
-                                                        winnerId: winnerId === '1' ? match.team1Id : match.team2Id,
+                                                    body: JSON.stringify({
+                                                        winnerId: winnerId === '1' ? match.player1Id : match.player2Id,
                                                         points: points,
                                                         status: 'completed'
                                                     })
