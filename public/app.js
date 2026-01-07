@@ -1659,9 +1659,24 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
     };
 
     const getPlayerPointsFromSchedule = (playerId) => {
-        // Get player's points from players array (has same ID format as teamPlayers)
-        const player = players.find(p => p.id === playerId);
-        return player?.points || 0;
+        // Calculate player's points from their 1v1 matches in teamMatches (Schedule tab)
+        let totalPoints = 0;
+
+        (teamMatches || []).forEach(match => {
+            if (match.status === 'completed') {
+                // Check if player participated
+                if (match.player1Id === playerId || match.player2Id === playerId) {
+                    // If player won - add points, if lost - subtract points
+                    if (match.winnerId === playerId) {
+                        totalPoints += (match.points || 0);
+                    } else {
+                        totalPoints -= (match.points || 0);
+                    }
+                }
+            }
+        });
+
+        return totalPoints;
     };
 
     const getTeamLeader = (teamId) => {
