@@ -1808,7 +1808,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                                             <span className="member-role-badge">CAPTAIN</span>
                                             <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{captain.name}</span>
                                             <span style={{ color: '#888', marginLeft: '15px' }}>
-                                                {raceNames[captain.race] || 'Random'} • {captain.mmr} MMR • {getPlayerPointsFromTeamMatches(captain.id)} pts
+                                                {raceNames[captain.race] || 'Random'} • {captain.mmr} MMR • {captain.points || 0} pts
                                             </span>
                                         </div>
                                     </div>
@@ -1834,7 +1834,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                                                 <span className="member-role-badge">COACH</span>
                                                 <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{coach.name}</span>
                                                 <span style={{ color: '#888', marginLeft: '15px' }}>
-                                                    {raceNames[coach.race] || 'Random'} • {coach.mmr} MMR • {getPlayerPointsFromTeamMatches(coach.id)} pts
+                                                    {raceNames[coach.race] || 'Random'} • {coach.mmr} MMR • {coach.points || 0} pts
                                                 </span>
                                             </div>
                                         </div>
@@ -1845,7 +1845,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                             <div className="member-section">
                                 <div className="section-title">⚔️ Игроки</div>
                                 {teamPlayers
-                                    .sort((a, b) => getPlayerPointsFromTeamMatches(b.id) - getPlayerPointsFromTeamMatches(a.id)) // Sort by team match points descending
+                                    .sort((a, b) => (b.points || 0) - (a.points || 0)) // Sort by individual points descending
                                     .map(player => (
                                     <div
                                         key={player.id}
@@ -1869,7 +1869,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                                                 <span className="leader-badge">👑 LEADER</span>
                                             )}
                                             <div style={{ color: '#c9a961', fontWeight: '700', fontSize: '1.1em', minWidth: '80px', textAlign: 'right' }}>
-                                                {getPlayerPointsFromTeamMatches(player.id)} pts
+                                                {player.points || 0} pts
                                             </div>
                                         </div>
                                     </div>
@@ -1910,6 +1910,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
     // Filters
     const [filterTeam, setFilterTeam] = React.useState('');
     const [filterPlayer, setFilterPlayer] = React.useState('');
+    const [filterStatus, setFilterStatus] = React.useState(''); // '' = all, 'completed' = completed, 'pending' = pending
 
     // Modal states for match configuration
     const [showMatchModal, setShowMatchModal] = React.useState(false);
@@ -2195,13 +2196,15 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '30px', // Increased from 20px
-                    padding: '25px', // Increased from 15px
-                    paddingTop: '35px', // Extra top padding for team logo overlay
-                    background: isCompleted ? 'rgba(42, 42, 42, 0.5)' : 'rgba(201, 169, 97, 0.1)',
+                    gap: isCompleted ? '30px' : '15px', // Smaller gap for pending
+                    padding: isCompleted ? '25px' : '15px', // Smaller padding for pending
+                    paddingTop: isCompleted ? '35px' : '25px', // Smaller top padding for pending
+                    background: isCompleted ? 'rgba(201, 169, 97, 0.1)' : 'rgba(42, 42, 42, 0.5)',
                     borderRadius: '16px', // Increased from 12px
-                    border: `3px solid ${isCompleted ? '#333' : '#c9a961'}`,
-                    marginBottom: '20px' // Increased from 15px
+                    border: `3px solid ${isCompleted ? '#c9a961' : '#333'}`, // Swapped: completed=gold, pending=dark
+                    marginBottom: '20px', // Increased from 15px
+                    transform: isCompleted ? 'scale(1)' : 'scale(0.95)', // Smaller scale for pending
+                    transformOrigin: 'center'
                 }}>
                 {/* Left player (Team 1) */}
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
@@ -2511,9 +2514,29 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             }}
                         />
                     </div>
-                    {(filterTeam || filterPlayer) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ color: '#888', fontSize: '0.9em' }}>📊 Статус:</span>
+                        <select
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                            style={{
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid #444',
+                                background: '#2a2a2a',
+                                color: '#fff',
+                                fontSize: '0.95em',
+                                minWidth: '180px'
+                            }}
+                        >
+                            <option value="">Все матчи</option>
+                            <option value="completed">✅ Сыграны</option>
+                            <option value="pending">⏳ Ожидаются</option>
+                        </select>
+                    </div>
+                    {(filterTeam || filterPlayer || filterStatus) && (
                         <button
-                            onClick={() => { setFilterTeam(''); setFilterPlayer(''); }}
+                            onClick={() => { setFilterTeam(''); setFilterPlayer(''); setFilterStatus(''); }}
                             style={{
                                 padding: '8px 16px',
                                 borderRadius: '8px',
@@ -2553,10 +2576,18 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                         });
                         if (!hasPlayer) return false;
                     }
+                    // Filter by status
+                    if (filterStatus) {
+                        const hasStatus = matchup.matches.some(m => {
+                            const isCompleted = m.status === 'completed';
+                            return filterStatus === 'completed' ? isCompleted : !isCompleted;
+                        });
+                        if (!hasStatus) return false;
+                    }
                     return true;
                 })
                 .map((matchup, idx) => {
-                    // Filter individual matches by player name
+                    // Filter individual matches by player name and status
                     let filteredMatches = matchup.matches;
                     if (filterPlayer && filterPlayer.trim()) {
                         const searchLower = filterPlayer.toLowerCase().trim();
@@ -2568,6 +2599,12 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             return p1Name.toLowerCase().includes(searchLower) ||
                                    p2Name.toLowerCase().includes(searchLower);
                         });
+                    }
+                    if (filterStatus) {
+                        const isCompleted = filterStatus === 'completed';
+                        filteredMatches = filteredMatches.filter(m =>
+                            isCompleted ? m.status === 'completed' : m.status !== 'completed'
+                        );
                     }
 
                     // Create temporary matchup with filtered matches
