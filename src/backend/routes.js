@@ -119,7 +119,10 @@ router.get('/players/with-cache', async (req, res) => {
 
         // Step 2: Fetch ALL caches in ONE query instead of N queries (N+1 problem)
         const cacheDbStart = Date.now();
-        const allCaches = await PlayerCache.find({ battleTag: { $in: battleTags } });
+        const allCaches = await PlayerCache.find(
+            { battleTag: { $in: battleTags } },
+            { battleTag: 1, expiresAt: 1, matchData: 1 } // Field projection to avoid loading unnecessary fields
+        );
         console.log(`⏱️ PlayerCache.find() took ${Date.now() - cacheDbStart}ms for ${allCaches.length} caches`);
 
         // Step 3: Build Map
