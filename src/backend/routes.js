@@ -279,15 +279,22 @@ router.get('/players/matches', async (req, res) => {
             return res.status(400).json({ error: 'battleTags query parameter required' });
         }
 
-        const tagsArray = Array.isArray(battleTags) ? battleTags : [battleTags];
-        console.log(`⏱️ Loading matchData for ${tagsArray.length} players...`);
+        const tagsArray = Array.isArray(battleTags) ? battleTags : battleTags.split(',').map(tag => tag.trim());
+        console.log(`⏱️ Loading matchData for ${tagsArray.length} players: ${tagsArray.join(', ')}`);
 
         const matchDataStart = Date.now();
         const caches = await PlayerCache.find(
             { battleTag: { $in: tagsArray } },
             { battleTag: 1, matchData: 1 }
         );
-        console.log(`⏱️ Loaded matchData in ${Date.now() - matchDataStart}ms`);
+        console.log(`⏱️ Loaded matchData in ${Date.now() - matchDataStart}ms for ${caches.length} caches`);
+
+        // Log which battleTags were found vs requested
+        const foundTags = new Set(caches.map(c => c.battleTag));
+        const missingTags = tagsArray.filter(tag => !foundTags.has(tag));
+        if (missingTags.length > 0) {
+            console.warn(`⚠️ Missing caches for: ${missingTags.join(', ')}`);
+        }
 
         const result = {};
         for (const cache of caches) {

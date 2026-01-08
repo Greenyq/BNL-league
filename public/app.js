@@ -345,6 +345,7 @@ function App() {
             // Load matchData in the background (for stats calculation)
             // This allows page to display immediately while stats load separately
             const battleTagsToLoad = cachedPlayers.map(p => p.battleTag).join(',');
+            console.log(`📋 Will load matchData for ${cachedPlayers.length} players: ${battleTagsToLoad.substring(0, 100)}...`);
             if (battleTagsToLoad) {
                 setTimeout(async () => {
                     try {
@@ -355,6 +356,7 @@ function App() {
 
                         const matchDataMap = await matchDataResponse.json();
                         console.log(`✅ Loaded matchData in ${Date.now() - matchDataStart}ms`);
+                        console.log(`📊 Received matchData for ${Object.keys(matchDataMap).length} players`);
 
                         // Reprocess players with actual matchData
                         const updatedPlayers = [];
@@ -362,6 +364,7 @@ function App() {
 
                         cachedPlayers.forEach((player) => {
                             const matchData = matchDataMap[player.battleTag] || [];
+                            console.log(`  ${player.battleTag}: ${matchData.length} matches`);
 
                             if (matchData.length > 0) {
                                 let playerProfiles = processMatches(player.battleTag, matchData, allBnlBattleTags);
@@ -393,6 +396,8 @@ function App() {
                         if (updatedPlayers.length > 0) {
                             console.log(`✅ Updated ${updatedPlayers.length} players with stats`);
                             setPlayers(updatedPlayers);
+                        } else {
+                            console.warn(`⚠️ No players with matchData found`);
                         }
                     } catch (error) {
                         console.error('⚠️ Failed to load matchData in background:', error);
