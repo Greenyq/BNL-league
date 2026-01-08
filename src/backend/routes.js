@@ -279,7 +279,7 @@ router.get('/players/matches', async (req, res) => {
             return res.status(400).json({ error: 'battleTags query parameter required' });
         }
 
-        const tagsArray = Array.isArray(battleTags) ? battleTags : [battleTags];
+        const tagsArray = Array.isArray(battleTags) ? battleTags : battleTags.split(',').map(tag => tag.trim());
         console.log(`⏱️ Loading matchData for ${tagsArray.length} players...`);
 
         const matchDataStart = Date.now();
