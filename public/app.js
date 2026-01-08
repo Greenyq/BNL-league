@@ -5035,6 +5035,10 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                             // Refresh all player data from server and wait for completion
                                             if (onUpdate) {
                                                 await onUpdate();
+                                            }
+                                            // After onUpdate completes, update the UI
+                                            fetchPlayerData();
+                                            alert('✅ Меин раса выбрана! Статистика и портреты обновлены.');
                                                 // After onUpdate completes, update the UI
                                                 fetchPlayerData();
                                                 alert('✅ Меин раса выбрана! Статистика и портреты обновлены.');
