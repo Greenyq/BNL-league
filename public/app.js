@@ -361,10 +361,11 @@ function App() {
                         // Reprocess players with actual matchData
                         const updatedPlayers = [];
                         const allBnlBattleTags = new Set(cachedPlayers.map(p => p.battleTag));
+                        const totalProcessStart = performance.now();
 
                         cachedPlayers.forEach((player) => {
                             const matchData = matchDataMap[player.battleTag] || [];
-                            console.log(`  ${player.battleTag}: ${matchData.length} matches`);
+                            console.log(`📊 Processing ${player.battleTag}: ${matchData.length} matches`);
 
                             // Process ALL players, not just those with matchData
                             let playerProfiles = processMatches(player.battleTag, matchData, allBnlBattleTags);
@@ -392,11 +393,12 @@ function App() {
                             });
                         });
 
+                        const totalProcessTime = performance.now() - totalProcessStart;
                         if (updatedPlayers.length > 0) {
-                            console.log(`✅ Updated ${updatedPlayers.length} players with stats`);
+                            console.log(`✅ Updated ${updatedPlayers.length} players with stats in ${totalProcessTime.toFixed(2)}ms`);
                             setPlayers(updatedPlayers);
                         } else {
-                            console.warn(`⚠️ No players processed`);
+                            console.warn(`⚠️ No players processed in ${totalProcessTime.toFixed(2)}ms`);
                         }
                     } catch (error) {
                         console.error('⚠️ Failed to load matchData in background:', error);
@@ -416,6 +418,8 @@ function App() {
     // Returns array of profiles - one per race played
     // allBnlBattleTags is a Set for O(1) lookup performance
     const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
+        const processStart = performance.now();
+
         if (!matches || matches.length === 0) {
             return [{
                 race: 0,
@@ -436,10 +440,12 @@ function App() {
 
         // Only filter if we have old data (backend now does this)
         if (matches.length > 50) {
+            const filterStart = performance.now();
             recentMatches = matches.filter(match => {
                 const matchDate = new Date(match.startTime);
                 return matchDate >= cutoffDate;
             });
+            console.log(`    ⏱️ Filter matches took ${(performance.now() - filterStart).toFixed(2)}ms (${recentMatches.length}/${matches.length})`);
         }
 
         // Performance: Skip sorting if already sorted (backend should send sorted)
@@ -449,11 +455,14 @@ function App() {
             const lastTime = new Date(recentMatches[recentMatches.length - 1].startTime).getTime();
             if (firstTime > lastTime) {
                 // Only sort if not in order
+                const sortStart = performance.now();
                 recentMatches.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+                console.log(`    ⏱️ Sort matches took ${(performance.now() - sortStart).toFixed(2)}ms`);
             }
         }
 
         // Group matches by race
+        const groupStart = performance.now();
         const matchesByRace = {};
         const mmrByRace = {};
 
@@ -500,6 +509,7 @@ function App() {
             // Update MMR to latest match value (since matches are sorted chronologically)
             mmrByRace[race] = player.currentMmr || mmrByRace[race] || 0;
         }
+        console.log(`    ⏱️ Group matches took ${(performance.now() - groupStart).toFixed(2)}ms`);
 
         // If no races found, return empty profile
         if (Object.keys(matchesByRace).length === 0) {
@@ -517,6 +527,7 @@ function App() {
 
         // Create profile for each race
         const profiles = [];
+        const calculateStart = performance.now();
 
         for (const [race, raceMatches] of Object.entries(matchesByRace)) {
             const raceInt = parseInt(race);
@@ -623,10 +634,12 @@ function App() {
                 activityData: generateActivityData(battleTag)
             });
         }
+        console.log(`    ⏱️ Calculate points took ${(performance.now() - calculateStart).toFixed(2)}ms for ${Object.keys(matchesByRace).length} races`);
 
         // Sort profiles by race ID to ensure consistent ordering (0, 1, 2, 4, 8)
         profiles.sort((a, b) => a.race - b.race);
 
+        console.log(`  ✅ processMatches(${battleTag}) took ${(performance.now() - processStart).toFixed(2)}ms`);
         return profiles;
     };
 
