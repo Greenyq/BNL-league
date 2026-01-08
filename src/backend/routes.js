@@ -125,39 +125,21 @@ router.get('/players/with-cache', async (req, res) => {
         );
         console.log(`⏱️ PlayerCache.find() took ${Date.now() - cacheDbStart}ms for ${allCaches.length} caches (without matchData)`);
 
-        // Step 3: Identify which caches are valid (not expired)
+        // Step 3: Build cacheMap for quick lookups (SKIP matchData - it's too large!)
         const mapStart = Date.now();
-        const validBattleTags = allCaches
-            .filter(cache => new Date(cache.expiresAt) > now)
-            .map(c => c.battleTag);
-        console.log(`⏱️ Found ${validBattleTags.length} valid caches`);
-
-        // Step 4: Load matchData ONLY for valid caches (avoid loading expired data)
-        let matchDataMap = new Map();
-        if (validBattleTags.length > 0) {
-            const matchDataLoadStart = Date.now();
-            const validCachesWithData = await PlayerCache.find(
-                { battleTag: { $in: validBattleTags } },
-                { battleTag: 1, matchData: 1 }
-            );
-            matchDataMap = new Map(validCachesWithData.map(c => [c.battleTag, c.matchData]));
-            console.log(`⏱️ Load matchData took ${Date.now() - matchDataLoadStart}ms for ${validBattleTags.length} players`);
-        }
-
-        // Step 5: Build cacheMap for quick lookups
         const cacheMap = new Map(allCaches.map(c => [c.battleTag, c]));
         console.log(`⏱️ Build cacheMap took ${Date.now() - mapStart}ms`);
 
-        // Step 6: Process players
+        // Step 4: Process players
         const processStart = Date.now();
         for (const player of players) {
             const cache = cacheMap.get(player.battleTag);
 
             if (cache && new Date(cache.expiresAt) > now) {
-                // Use cached data (matchData already loaded)
+                // Use cached data - return empty matchData array (will be loaded on-demand)
                 cachedPlayers.push({
                     ...player.toJSON(),
-                    matchData: matchDataMap.get(player.battleTag) || []
+                    matchData: [] // Skip loading huge matchData array - return empty
                 });
             } else {
                 // Need to fetch fresh data
