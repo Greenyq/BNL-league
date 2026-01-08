@@ -4680,34 +4680,44 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
 
     const fetchPlayerData = () => {
         // Find player data from DB players (not W3Champions profiles)
-        if (playerUser.linkedBattleTag && allPlayers) {
-            // Find player from database (use DB player ID for teamMatches compatibility)
-            let playerProfiles = allPlayers.filter(p => p.battleTag === playerUser.linkedBattleTag);
+        if (!playerUser.linkedBattleTag) {
+            console.warn('No linkedBattleTag');
+            setPlayerData(null);
+            return;
+        }
 
-            if (playerProfiles.length > 0) {
-                // Find the main player object (with DB info like mainRace)
-                const mainPlayer = playerProfiles[0];
+        if (!allPlayers || allPlayers.length === 0) {
+            console.warn('allPlayers is empty or null:', { allPlayers });
+            setPlayerData(null);
+            return;
+        }
 
-                // Filter by main race if set
-                if (mainPlayer.mainRace !== undefined && mainPlayer.mainRace !== null) {
-                    playerProfiles = playerProfiles.filter(p => p.race === mainPlayer.mainRace);
-                }
+        // Find player from database (use DB player ID for teamMatches compatibility)
+        let playerProfiles = allPlayers.filter(p => p.battleTag === playerUser.linkedBattleTag);
 
-                if (playerProfiles.length === 0) {
-                    // If main race filter resulted in no profiles, use highest points
-                    playerProfiles = allPlayers.filter(p => p.battleTag === playerUser.linkedBattleTag);
-                }
+        if (playerProfiles.length > 0) {
+            // Find the main player object (with DB info like mainRace)
+            const mainPlayer = playerProfiles[0];
 
-                // Use the profile with highest points
-                const bestProfile = playerProfiles.reduce((best, current) =>
-                    (current.points || 0) > (best.points || 0) ? current : best
-                );
-                setPlayerData(bestProfile);
-                console.log('Player data found:', bestProfile, 'ID:', bestProfile.id, 'Main Race:', mainPlayer.mainRace);
-            } else {
-                console.log('No player data found for battleTag:', playerUser.linkedBattleTag);
-                setPlayerData(null);
+            // Filter by main race if set
+            if (mainPlayer.mainRace !== undefined && mainPlayer.mainRace !== null) {
+                playerProfiles = playerProfiles.filter(p => p.race === mainPlayer.mainRace);
             }
+
+            if (playerProfiles.length === 0) {
+                // If main race filter resulted in no profiles, use highest points
+                playerProfiles = allPlayers.filter(p => p.battleTag === playerUser.linkedBattleTag);
+            }
+
+            // Use the profile with highest points
+            const bestProfile = playerProfiles.reduce((best, current) =>
+                (current.points || 0) > (best.points || 0) ? current : best
+            );
+            setPlayerData(bestProfile);
+            console.log('Player data found:', bestProfile, 'ID:', bestProfile.id, 'Main Race:', mainPlayer.mainRace);
+        } else {
+            console.warn('No player profiles found for battleTag:', playerUser.linkedBattleTag);
+            setPlayerData(null);
         }
     };
 
