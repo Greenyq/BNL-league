@@ -111,8 +111,14 @@ router.get('/players/with-cache', async (req, res) => {
         const playersToFetch = [];
 
         const cacheCheckStart = Date.now();
+        // CRITICAL: Fetch ALL caches in ONE query instead of N queries (N+1 problem)
+        const battleTags = players.map(p => p.battleTag);
+        const allCaches = await PlayerCache.find({ battleTag: { $in: battleTags } });
+        const cacheMap = new Map(allCaches.map(c => [c.battleTag, c]));
+        console.log(`⏱️ Bulk cache lookup took ${Date.now() - cacheCheckStart}ms for ${players.length} players`);
+
         for (const player of players) {
-            let cache = await PlayerCache.findOne({ battleTag: player.battleTag });
+            const cache = cacheMap.get(player.battleTag);
 
             if (cache && new Date(cache.expiresAt) > now) {
                 // Use cached data
@@ -125,7 +131,6 @@ router.get('/players/with-cache', async (req, res) => {
                 playersToFetch.push({ player, cache });
             }
         }
-        console.log(`⏱️ Cache lookup loop took ${Date.now() - cacheCheckStart}ms for ${players.length} players`);
 
         console.log(`📊 Cache status: ${cachedPlayers.length} cached, ${playersToFetch.length} to fetch (60min TTL)`);
 

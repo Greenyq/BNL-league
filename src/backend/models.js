@@ -35,9 +35,6 @@ const playerSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 
-// Create explicit indexes for performance
-playerSchema.index({ battleTag: 1 }); // For fast lookups by battleTag
-
 // Transform _id to id for JSON responses
 playerSchema.set('toJSON', {
     virtuals: true,
@@ -171,12 +168,8 @@ const playerCacheSchema = new mongoose.Schema({
     battleTag: { type: String, required: true, unique: true, index: true },
     matchData: { type: Array, default: [] }, // Raw match data from W3Champions
     lastUpdated: { type: Date, default: Date.now },
-    expiresAt: { type: Date, required: true, index: true } // Cache expiration (e.g., 10 minutes)
+    expiresAt: { type: Date, required: true, index: true } // Cache expiration with TTL auto-deletion
 });
-
-// Create explicit indexes for performance
-playerCacheSchema.index({ battleTag: 1 }); // For fast lookups by battleTag
-playerCacheSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index for auto-deletion
 
 // Transform _id to id for JSON responses
 playerCacheSchema.set('toJSON', {
