@@ -111,12 +111,24 @@ router.get('/players/with-cache', async (req, res) => {
         const playersToFetch = [];
 
         const cacheCheckStart = Date.now();
-        // CRITICAL: Fetch ALL caches in ONE query instead of N queries (N+1 problem)
-        const battleTags = players.map(p => p.battleTag);
-        const allCaches = await PlayerCache.find({ battleTag: { $in: battleTags } });
-        const cacheMap = new Map(allCaches.map(c => [c.battleTag, c]));
-        console.log(`⏱️ Bulk cache lookup took ${Date.now() - cacheCheckStart}ms for ${players.length} players`);
 
+        // Step 1: Extract battleTags
+        const tagsStart = Date.now();
+        const battleTags = players.map(p => p.battleTag);
+        console.log(`⏱️ Battle tags extraction took ${Date.now() - tagsStart}ms`);
+
+        // Step 2: Fetch ALL caches in ONE query instead of N queries (N+1 problem)
+        const cacheDbStart = Date.now();
+        const allCaches = await PlayerCache.find({ battleTag: { $in: battleTags } });
+        console.log(`⏱️ PlayerCache.find() took ${Date.now() - cacheDbStart}ms for ${allCaches.length} caches`);
+
+        // Step 3: Build Map
+        const mapStart = Date.now();
+        const cacheMap = new Map(allCaches.map(c => [c.battleTag, c]));
+        console.log(`⏱️ Build cacheMap took ${Date.now() - mapStart}ms`);
+
+        // Step 4: Process players
+        const processStart = Date.now();
         for (const player of players) {
             const cache = cacheMap.get(player.battleTag);
 
@@ -131,7 +143,9 @@ router.get('/players/with-cache', async (req, res) => {
                 playersToFetch.push({ player, cache });
             }
         }
+        console.log(`⏱️ Process players loop took ${Date.now() - processStart}ms`);
 
+        console.log(`⏱️ TOTAL Cache check took ${Date.now() - cacheCheckStart}ms`);
         console.log(`📊 Cache status: ${cachedPlayers.length} cached, ${playersToFetch.length} to fetch (60min TTL)`);
 
         // Helper function: Fetch with retry logic
@@ -207,12 +221,17 @@ router.get('/players/with-cache', async (req, res) => {
         // Batch parallel requests: fetch in groups of 6 to maximize parallelism
         const BATCH_SIZE = 6;
         const fetchedPlayers = [];
+        const fetchStartTime = Date.now();
+        console.log(`🔄 Starting to fetch ${playersToFetch.length} fresh players...`);
 
         for (let i = 0; i < playersToFetch.length; i += BATCH_SIZE) {
             const batch = playersToFetch.slice(i, i + BATCH_SIZE);
+            const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+            const batchTime = Date.now();
             const batchResults = await Promise.all(
                 batch.map(({ player, cache }) => fetchPlayerWithRetry(player, cache))
             );
+            console.log(`⏱️ Batch ${batchNum} (${batch.length} players) took ${Date.now() - batchTime}ms`);
             fetchedPlayers.push(...batchResults);
 
             // Minimal delay between batches to avoid overwhelming API
@@ -220,6 +239,8 @@ router.get('/players/with-cache', async (req, res) => {
                 await new Promise(resolve => setTimeout(resolve, 50));
             }
         }
+        console.log(`⏱️ Total fetch time for ${playersToFetch.length} players: ${Date.now() - fetchStartTime}ms`);
+
         const result = [...cachedPlayers, ...fetchedPlayers];
 
         let serializationTime = Date.now();
@@ -227,7 +248,7 @@ router.get('/players/with-cache', async (req, res) => {
         console.log(`⏱️ Data preparation took ${Date.now() - serializationTime}ms`);
 
         const totalTime = Date.now() - startTime;
-        console.log(`✅ Loaded ${result.length} players in ${totalTime}ms`);
+        console.log(`✅ Loaded ${result.length} players (${cachedPlayers.length} cached + ${fetchedPlayers.length} fetched) in ${totalTime}ms`);
 
         // If cache was old, trigger Go stats computation in background (async, don't wait)
         if (playersToFetch.length > 0) {
