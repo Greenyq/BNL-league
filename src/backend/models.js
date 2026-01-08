@@ -23,7 +23,7 @@ teamSchema.set('toJSON', {
 
 // Player Schema
 const playerSchema = new mongoose.Schema({
-    battleTag: { type: String, required: true, unique: true },
+    battleTag: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
     race: { type: Number },
     mainRace: { type: Number }, // Main race for stats calculation (0=Random, 1=Human, 2=Orc, 4=NightElf, 8=Undead)
@@ -34,6 +34,9 @@ const playerSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
+
+// Create explicit indexes for performance
+playerSchema.index({ battleTag: 1 }); // For fast lookups by battleTag
 
 // Transform _id to id for JSON responses
 playerSchema.set('toJSON', {
@@ -165,11 +168,15 @@ const passwordResetSchema = new mongoose.Schema({
 
 // Player Cache Schema - for caching W3Champions match data
 const playerCacheSchema = new mongoose.Schema({
-    battleTag: { type: String, required: true, unique: true },
+    battleTag: { type: String, required: true, unique: true, index: true },
     matchData: { type: Array, default: [] }, // Raw match data from W3Champions
     lastUpdated: { type: Date, default: Date.now },
-    expiresAt: { type: Date, required: true } // Cache expiration (e.g., 10 minutes)
+    expiresAt: { type: Date, required: true, index: true } // Cache expiration (e.g., 10 minutes)
 });
+
+// Create explicit indexes for performance
+playerCacheSchema.index({ battleTag: 1 }); // For fast lookups by battleTag
+playerCacheSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index for auto-deletion
 
 // Transform _id to id for JSON responses
 playerCacheSchema.set('toJSON', {
