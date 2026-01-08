@@ -5036,15 +5036,9 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                             if (onUpdate) {
                                                 await onUpdate();
                                             }
-                                            // After onUpdate completes, update the UI
+                                            // Then refresh current player's profile with new main race
                                             fetchPlayerData();
                                             alert('✅ Меин раса выбрана! Статистика и портреты обновлены.');
-                                                // After onUpdate completes, update the UI
-                                                fetchPlayerData();
-                                                alert('✅ Меин раса выбрана! Статистика и портреты обновлены.');
-                                            } else {
-                                                alert('Ошибка: не удалось обновить данные');
-                                            }
                                         } else {
                                             alert(data.error || 'Ошибка выбора расы');
                                         }
