@@ -102,11 +102,6 @@ router.get('/players/with-cache', async (req, res) => {
         const players = await Player.find();
         console.log(`⏱️ Player.find() took ${Date.now() - playerStartTime}ms`);
 
-        const CACHE_DURATION_MS = 60 * 60 * 1000; // 60 minutes (increased from 10)
-        let dbTime = Date.now();
-        const players = await Player.find();
-        console.log(`⏱️ Player.find() took ${Date.now() - dbTime}ms`);
-
         const CACHE_DURATION_MS = 60 * 60 * 1000; // 60 minutes
         const now = Date.now();
         const cutoffDate = new Date('2025-11-27T00:00:00Z'); // Only fetch recent matches
@@ -116,24 +111,8 @@ router.get('/players/with-cache', async (req, res) => {
         const playersToFetch = [];
 
         const cacheCheckStart = Date.now();
-        for (let i = 0; i < players.length; i++) {
-            const player = players[i];
-            const singleCacheStart = Date.now();
-            let cache = await PlayerCache.findOne({ battleTag: player.battleTag });
-            const singleCacheTime = Date.now() - singleCacheStart;
-            if (singleCacheTime > 100) {
-                console.log(`⏱️ Cache lookup for ${player.battleTag} took ${singleCacheTime}ms`);
-            }
-        let cacheCheckTime = Date.now();
-
-        // OPTIMIZATION: Fetch ALL caches in ONE query instead of N queries (N+1 problem fix)
-        const battleTags = players.map(p => p.battleTag);
-        const allCaches = await PlayerCache.find({ battleTag: { $in: battleTags } });
-        const cacheMap = new Map(allCaches.map(c => [c.battleTag, c]));
-        console.log(`⏱️ Bulk cache lookup for ${players.length} players took ${Date.now() - cacheCheckTime}ms`);
-
         for (const player of players) {
-            const cache = cacheMap.get(player.battleTag);
+            let cache = await PlayerCache.findOne({ battleTag: player.battleTag });
 
             if (cache && new Date(cache.expiresAt) > now) {
                 // Use cached data
@@ -146,7 +125,7 @@ router.get('/players/with-cache', async (req, res) => {
                 playersToFetch.push({ player, cache });
             }
         }
-        console.log(`⏱️ Total cache lookup for ${players.length} players took ${Date.now() - cacheCheckStart}ms`);
+        console.log(`⏱️ Cache lookup loop took ${Date.now() - cacheCheckStart}ms for ${players.length} players`);
 
         console.log(`📊 Cache status: ${cachedPlayers.length} cached, ${playersToFetch.length} to fetch (60min TTL)`);
 
