@@ -341,6 +341,65 @@ function App() {
 
             console.log(`✅ Total player cards created: ${loadedPlayers.length}`);
             setPlayers(loadedPlayers);
+
+            // Load matchData in the background (for stats calculation)
+            // This allows page to display immediately while stats load separately
+            const battleTagsToLoad = cachedPlayers.map(p => p.battleTag).join(',');
+            if (battleTagsToLoad) {
+                setTimeout(async () => {
+                    try {
+                        console.log('⏳ Loading matchData in background for stats...');
+                        const matchDataStart = Date.now();
+                        const matchDataResponse = await fetch(`${API_BASE}/api/players/matches?battleTags=${encodeURIComponent(battleTagsToLoad)}`);
+                        if (!matchDataResponse.ok) throw new Error(`HTTP ${matchDataResponse.status}`);
+
+                        const matchDataMap = await matchDataResponse.json();
+                        console.log(`✅ Loaded matchData in ${Date.now() - matchDataStart}ms`);
+
+                        // Reprocess players with actual matchData
+                        const updatedPlayers = [];
+                        const allBnlBattleTags = new Set(cachedPlayers.map(p => p.battleTag));
+
+                        cachedPlayers.forEach((player) => {
+                            const matchData = matchDataMap[player.battleTag] || [];
+
+                            if (matchData.length > 0) {
+                                let playerProfiles = processMatches(player.battleTag, matchData, allBnlBattleTags);
+
+                                // Filter by main race if set
+                                if (player.mainRace !== undefined && player.mainRace !== null) {
+                                    playerProfiles = playerProfiles.filter(p => p.race === player.mainRace);
+                                }
+
+                                // Create cards with actual stats
+                                playerProfiles.forEach((profile) => {
+                                    const finalPlayer = {
+                                        id: `${player.id}_${profile.race}`,
+                                        name: player.name || player.battleTag.split('#')[0],
+                                        battleTag: player.battleTag,
+                                        ...profile,
+                                        race: profile.race || player.race || 0,
+                                        mmr: profile.mmr || player.currentMmr || 0,
+                                        teamId: player.teamId || null,
+                                        selectedPortraitId: player.selectedPortraitId || null,
+                                        discordTag: player.discordTag || null,
+                                        mainRace: player.mainRace || null,
+                                    };
+                                    updatedPlayers.push(finalPlayer);
+                                });
+                            }
+                        });
+
+                        if (updatedPlayers.length > 0) {
+                            console.log(`✅ Updated ${updatedPlayers.length} players with stats`);
+                            setPlayers(updatedPlayers);
+                        }
+                    } catch (error) {
+                        console.error('⚠️ Failed to load matchData in background:', error);
+                        // Don't fail - UI already has initial data
+                    }
+                }, 100); // Small delay to not block the initial render
+            }
         } catch (error) {
             console.error('❌ Error loading players:', error);
             setError('Не удалось загрузить данные игроков');
