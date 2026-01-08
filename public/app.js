@@ -4993,13 +4993,13 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
 
                                         const data = await response.json();
                                         if (response.ok) {
-                                            // Refresh all player data from server
-                                            if (onUpdate) onUpdate();
+                                            // Refresh all player data from server and wait for completion
+                                            if (onUpdate) {
+                                                await onUpdate();
+                                            }
                                             // Then refresh current player's profile with new main race
-                                            setTimeout(() => {
-                                                fetchPlayerData();
-                                                alert('✅ Меин раса выбрана! Статистика и портреты обновлены.');
-                                            }, 500);
+                                            fetchPlayerData();
+                                            alert('✅ Меин раса выбрана! Статистика и портреты обновлены.');
                                         } else {
                                             alert(data.error || 'Ошибка выбора расы');
                                         }
