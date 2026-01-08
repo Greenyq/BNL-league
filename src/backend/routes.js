@@ -97,7 +97,11 @@ router.get('/players', async (req, res) => {
 router.get('/players/with-cache', async (req, res) => {
     try {
         const startTime = Date.now();
+
+        let dbTime = Date.now();
         const players = await Player.find();
+        console.log(`⏱️ Player.find() took ${Date.now() - dbTime}ms`);
+
         const CACHE_DURATION_MS = 60 * 60 * 1000; // 60 minutes
         const now = Date.now();
         const cutoffDate = new Date('2025-11-27T00:00:00Z'); // Only fetch recent matches
@@ -106,8 +110,16 @@ router.get('/players/with-cache', async (req, res) => {
         const cachedPlayers = [];
         const playersToFetch = [];
 
+        let cacheCheckTime = Date.now();
+
+        // OPTIMIZATION: Fetch ALL caches in ONE query instead of N queries (N+1 problem fix)
+        const battleTags = players.map(p => p.battleTag);
+        const allCaches = await PlayerCache.find({ battleTag: { $in: battleTags } });
+        const cacheMap = new Map(allCaches.map(c => [c.battleTag, c]));
+        console.log(`⏱️ Bulk cache lookup for ${players.length} players took ${Date.now() - cacheCheckTime}ms`);
+
         for (const player of players) {
-            let cache = await PlayerCache.findOne({ battleTag: player.battleTag });
+            const cache = cacheMap.get(player.battleTag);
 
             if (cache && new Date(cache.expiresAt) > now) {
                 // Use cached data
@@ -211,6 +223,10 @@ router.get('/players/with-cache', async (req, res) => {
         }
         const result = [...cachedPlayers, ...fetchedPlayers];
 
+        let serializationTime = Date.now();
+        const jsonReady = result; // Prepare JSON (no actual serialization needed for timing)
+        console.log(`⏱️ Data preparation took ${Date.now() - serializationTime}ms`);
+
         const totalTime = Date.now() - startTime;
         console.log(`✅ Loaded ${result.length} players in ${totalTime}ms`);
 
@@ -222,7 +238,9 @@ router.get('/players/with-cache', async (req, res) => {
             });
         }
 
+        let sendTime = Date.now();
         res.json(result);
+        console.log(`⏱️ JSON response sent in ${Date.now() - sendTime}ms`);
     } catch (error) {
         console.error('Error in /players/with-cache:', error);
         res.status(500).json({ error: 'Failed to fetch players with cache' });
