@@ -97,7 +97,11 @@ router.get('/players', async (req, res) => {
 router.get('/players/with-cache', async (req, res) => {
     try {
         const startTime = Date.now();
+
+        const playerStartTime = Date.now();
         const players = await Player.find();
+        console.log(`⏱️ Player.find() took ${Date.now() - playerStartTime}ms`);
+
         const CACHE_DURATION_MS = 60 * 60 * 1000; // 60 minutes (increased from 10)
         const now = Date.now();
         const cutoffDate = new Date('2025-11-27T00:00:00Z'); // Only fetch recent matches
@@ -106,8 +110,15 @@ router.get('/players/with-cache', async (req, res) => {
         const cachedPlayers = [];
         const playersToFetch = [];
 
-        for (const player of players) {
+        const cacheCheckStart = Date.now();
+        for (let i = 0; i < players.length; i++) {
+            const player = players[i];
+            const singleCacheStart = Date.now();
             let cache = await PlayerCache.findOne({ battleTag: player.battleTag });
+            const singleCacheTime = Date.now() - singleCacheStart;
+            if (singleCacheTime > 100) {
+                console.log(`⏱️ Cache lookup for ${player.battleTag} took ${singleCacheTime}ms`);
+            }
 
             if (cache && new Date(cache.expiresAt) > now) {
                 // Use cached data
@@ -120,6 +131,7 @@ router.get('/players/with-cache', async (req, res) => {
                 playersToFetch.push({ player, cache });
             }
         }
+        console.log(`⏱️ Total cache lookup for ${players.length} players took ${Date.now() - cacheCheckStart}ms`);
 
         console.log(`📊 Cache status: ${cachedPlayers.length} cached, ${playersToFetch.length} to fetch (60min TTL)`);
 
