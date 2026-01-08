@@ -103,6 +103,11 @@ router.get('/players/with-cache', async (req, res) => {
         console.log(`⏱️ Player.find() took ${Date.now() - playerStartTime}ms`);
 
         const CACHE_DURATION_MS = 60 * 60 * 1000; // 60 minutes (increased from 10)
+        let dbTime = Date.now();
+        const players = await Player.find();
+        console.log(`⏱️ Player.find() took ${Date.now() - dbTime}ms`);
+
+        const CACHE_DURATION_MS = 60 * 60 * 1000; // 60 minutes
         const now = Date.now();
         const cutoffDate = new Date('2025-11-27T00:00:00Z'); // Only fetch recent matches
 
@@ -119,6 +124,16 @@ router.get('/players/with-cache', async (req, res) => {
             if (singleCacheTime > 100) {
                 console.log(`⏱️ Cache lookup for ${player.battleTag} took ${singleCacheTime}ms`);
             }
+        let cacheCheckTime = Date.now();
+
+        // OPTIMIZATION: Fetch ALL caches in ONE query instead of N queries (N+1 problem fix)
+        const battleTags = players.map(p => p.battleTag);
+        const allCaches = await PlayerCache.find({ battleTag: { $in: battleTags } });
+        const cacheMap = new Map(allCaches.map(c => [c.battleTag, c]));
+        console.log(`⏱️ Bulk cache lookup for ${players.length} players took ${Date.now() - cacheCheckTime}ms`);
+
+        for (const player of players) {
+            const cache = cacheMap.get(player.battleTag);
 
             if (cache && new Date(cache.expiresAt) > now) {
                 // Use cached data
@@ -147,7 +162,7 @@ router.get('/players/with-cache', async (req, res) => {
                             'User-Agent': 'BNL-League-App',
                             'Accept': 'application/json'
                         },
-                        timeout: 12000 // Increased to 12s for more reliable responses
+                        timeout: 12000
                     });
 
                     let matchData = response.data.matches || [];
@@ -206,7 +221,7 @@ router.get('/players/with-cache', async (req, res) => {
         }
 
         // Batch parallel requests: fetch in groups of 6 to maximize parallelism
-        const BATCH_SIZE = 6; // Increased from 3 for faster loading
+        const BATCH_SIZE = 6;
         const fetchedPlayers = [];
 
         for (let i = 0; i < playersToFetch.length; i += BATCH_SIZE) {
@@ -218,10 +233,14 @@ router.get('/players/with-cache', async (req, res) => {
 
             // Minimal delay between batches to avoid overwhelming API
             if (i + BATCH_SIZE < playersToFetch.length) {
-                await new Promise(resolve => setTimeout(resolve, 50)); // Reduced from 100ms
+                await new Promise(resolve => setTimeout(resolve, 50));
             }
         }
         const result = [...cachedPlayers, ...fetchedPlayers];
+
+        let serializationTime = Date.now();
+        const jsonReady = result; // Prepare JSON (no actual serialization needed for timing)
+        console.log(`⏱️ Data preparation took ${Date.now() - serializationTime}ms`);
 
         const totalTime = Date.now() - startTime;
         console.log(`✅ Loaded ${result.length} players in ${totalTime}ms`);
@@ -234,7 +253,9 @@ router.get('/players/with-cache', async (req, res) => {
             });
         }
 
+        let sendTime = Date.now();
         res.json(result);
+        console.log(`⏱️ JSON response sent in ${Date.now() - sendTime}ms`);
     } catch (error) {
         console.error('Error in /players/with-cache:', error);
         res.status(500).json({ error: 'Failed to fetch players with cache' });

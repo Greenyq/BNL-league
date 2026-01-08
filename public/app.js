@@ -1197,23 +1197,44 @@ function Players({ players }) {
         });
     }, [players]);
 
+    // Create Map for O(1) lookup of groupedPlayers by battleTag
+    const groupedPlayersMap = React.useMemo(() => {
+        const map = new Map();
+        groupedPlayers.forEach(group => {
+            map.set(group.battleTag, group);
+        });
+        return map;
+    }, [groupedPlayers]);
+
     // Sort by best profile points (descending)
-    const sortedPlayers = [...groupedPlayers].sort((a, b) =>
-        (b.bestProfile.points || 0) - (a.bestProfile.points || 0)
-    );
+    const sortedPlayers = React.useMemo(() => {
+        return [...groupedPlayers].sort((a, b) =>
+            (b.bestProfile.points || 0) - (a.bestProfile.points || 0)
+        );
+    }, [groupedPlayers]);
 
     // Split players into two leagues based on MMR
-    const premierLeague = sortedPlayers.filter(group => (group.bestProfile.mmr || 0) >= 1700);
-    const league1 = sortedPlayers.filter(group => (group.bestProfile.mmr || 0) < 1700);
+    const premierLeague = React.useMemo(() => {
+        return sortedPlayers.filter(group => (group.bestProfile.mmr || 0) >= 1700);
+    }, [sortedPlayers]);
 
-    const toggleRace = (battleTag) => {
+    const league1 = React.useMemo(() => {
+        return sortedPlayers.filter(group => (group.bestProfile.mmr || 0) < 1700);
+    }, [sortedPlayers]);
+
+    const toggleRace = React.useCallback((battleTag) => {
         setSelectedRaces(prev => {
             const currentIndex = prev[battleTag] || 0;
-            const group = groupedPlayers.find(g => g.battleTag === battleTag);
+            const group = groupedPlayersMap.get(battleTag);
+            if (!group) return prev;
             const nextIndex = (currentIndex + 1) % group.profiles.length;
             return { ...prev, [battleTag]: nextIndex };
         });
-    };
+    }, [groupedPlayersMap]);
+
+    const handleSelectPlayer = React.useCallback((profile) => {
+        setSelectedPlayer(profile);
+    }, []);
 
     const renderPlayers = (leaguePlayers) => {
         if (leaguePlayers.length === 0) {
@@ -1232,14 +1253,14 @@ function Players({ players }) {
                     const hasMultipleRaces = group.profiles.length > 1;
 
                     return (
-                        <PlayerCard
+                        <MemoizedPlayerCard
                             key={group.battleTag}
                             player={displayedProfile}
                             rank={index + 1}
                             hasMultipleRaces={hasMultipleRaces}
                             portraits={portraits}
                             onToggleRace={() => toggleRace(group.battleTag)}
-                            onClick={() => setSelectedPlayer(displayedProfile)}
+                            onClick={() => handleSelectPlayer(displayedProfile)}
                         />
                     );
                 })}
@@ -1340,25 +1361,22 @@ function Players({ players }) {
 function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, portraits = [] }) {
     const raceImage = raceImages[player.race];
 
+    // Create portrait Map for O(1) lookup
+    const portraitsMap = React.useMemo(() => {
+        const map = new Map();
+        portraits.forEach(p => {
+            map.set(p.id, p);
+        });
+        return map;
+    }, [portraits]);
+
     // Find selected portrait if player has one
     const selectedPortrait = player.selectedPortraitId
-        ? portraits.find(p => p.id === player.selectedPortraitId)
+        ? portraitsMap.get(player.selectedPortraitId)
         : null;
 
     // Use portrait image if available, otherwise use race image
     const avatarImage = selectedPortrait ? selectedPortrait.imageUrl : raceImage;
-
-    // Debug logging
-    React.useEffect(() => {
-        console.log(`PlayerCard for ${player.name}:`, {
-            race: player.race,
-            raceName: raceNames[player.race],
-            selectedPortraitId: player.selectedPortraitId,
-            hasPortrait: !!selectedPortrait,
-            avatarImage: avatarImage,
-            hasMultipleRaces
-        });
-    }, [player.race, player.selectedPortraitId, hasMultipleRaces]);
 
     const hasQualified = (player.points || 0) >= 500;
 
@@ -1617,6 +1635,27 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
         </div>
     );
 }
+
+// Memoize PlayerCard with custom comparison function
+const MemoizedPlayerCard = React.memo(
+    PlayerCard,
+    (prevProps, nextProps) => {
+        // Return true if props are equal (don't re-render), false if they differ (re-render)
+        return (
+            prevProps.player.battleTag === nextProps.player.battleTag &&
+            prevProps.player.race === nextProps.player.race &&
+            prevProps.player.selectedPortraitId === nextProps.player.selectedPortraitId &&
+            prevProps.player.points === nextProps.player.points &&
+            prevProps.player.wins === nextProps.player.wins &&
+            prevProps.player.losses === nextProps.player.losses &&
+            prevProps.rank === nextProps.rank &&
+            prevProps.hasMultipleRaces === nextProps.hasMultipleRaces &&
+            prevProps.onClick === nextProps.onClick &&
+            prevProps.onToggleRace === nextProps.onToggleRace &&
+            prevProps.portraits === nextProps.portraits
+        );
+    }
+);
 
 function Teams({ teams, players, allPlayers, teamMatches = [] }) {
     const [expandedTeam, setExpandedTeam] = useState(null);
@@ -5000,10 +5039,17 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                             // After onUpdate completes, update the UI
                                             fetchPlayerData();
                                             alert('✅ Меин раса выбрана! Статистика и портреты обновлены.');
+                                                // After onUpdate completes, update the UI
+                                                fetchPlayerData();
+                                                alert('✅ Меин раса выбрана! Статистика и портреты обновлены.');
+                                            } else {
+                                                alert('Ошибка: не удалось обновить данные');
+                                            }
                                         } else {
                                             alert(data.error || 'Ошибка выбора расы');
                                         }
                                     } catch (error) {
+                                        console.error('Error selecting main race:', error);
                                         alert('Ошибка подключения к серверу');
                                     }
                                 }}
