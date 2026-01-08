@@ -98,7 +98,7 @@ router.get('/players/with-cache', async (req, res) => {
     try {
         const startTime = Date.now();
         const players = await Player.find();
-        const CACHE_DURATION_MS = 60 * 60 * 1000; // 60 minutes (increased from 10)
+        const CACHE_DURATION_MS = 4 * 60 * 60 * 1000; // 4 hours (increased from 60 min for better performance)
         const now = Date.now();
         const cutoffDate = new Date('2025-11-27T00:00:00Z'); // Only fetch recent matches
 
@@ -121,7 +121,7 @@ router.get('/players/with-cache', async (req, res) => {
             }
         }
 
-        console.log(`📊 Cache status: ${cachedPlayers.length} cached, ${playersToFetch.length} to fetch (60min TTL)`);
+        console.log(`📊 Cache status: ${cachedPlayers.length} cached, ${playersToFetch.length} to fetch (4hour TTL)`);
 
         // Helper function: Fetch with retry logic
         async function fetchPlayerWithRetry(player, cache, maxRetries = 2) {
@@ -129,13 +129,13 @@ router.get('/players/with-cache', async (req, res) => {
 
             for (let attempt = 0; attempt <= maxRetries; attempt++) {
                 try {
-                    const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=20&season=23&pageSize=100`;
+                    const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=20&season=23&pageSize=200`;
                     const response = await axios.get(apiUrl, {
                         headers: {
                             'User-Agent': 'BNL-League-App',
                             'Accept': 'application/json'
                         },
-                        timeout: 12000 // Increased to 12s for more reliable responses
+                        timeout: 15000 // Increased to 15s for W3Champions API reliability
                     });
 
                     let matchData = response.data.matches || [];
@@ -184,7 +184,7 @@ router.get('/players/with-cache', async (req, res) => {
             console.error(`❌ ${player.battleTag}: API request failed after ${maxRetries + 1} attempts`);
             console.error(`   Status: HTTP ${statusCode} ${statusText}`);
             console.error(`   Error: ${errorMsg}`);
-            console.error(`   URL: https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=20&season=23&pageSize=100`);
+            console.error(`   URL: https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=20&season=23&pageSize=200`);
 
             return {
                 ...player.toJSON(),
@@ -193,8 +193,8 @@ router.get('/players/with-cache', async (req, res) => {
             };
         }
 
-        // Batch parallel requests: fetch in groups of 6 to maximize parallelism
-        const BATCH_SIZE = 6; // Increased from 3 for faster loading
+        // Batch parallel requests: fetch in groups of 10 to maximize parallelism
+        const BATCH_SIZE = 10; // Increased from 6 for faster loading
         const fetchedPlayers = [];
 
         for (let i = 0; i < playersToFetch.length; i += BATCH_SIZE) {
@@ -206,7 +206,7 @@ router.get('/players/with-cache', async (req, res) => {
 
             // Minimal delay between batches to avoid overwhelming API
             if (i + BATCH_SIZE < playersToFetch.length) {
-                await new Promise(resolve => setTimeout(resolve, 50)); // Reduced from 100ms
+                await new Promise(resolve => setTimeout(resolve, 25)); // Reduced from 50ms
             }
         }
         const result = [...cachedPlayers, ...fetchedPlayers];

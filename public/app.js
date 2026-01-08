@@ -5032,17 +5032,20 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
 
                                         const data = await response.json();
                                         if (response.ok) {
-                                            // Refresh all player data from server
-                                            if (onUpdate) onUpdate();
-                                            // Then refresh current player's profile with new main race
-                                            setTimeout(() => {
+                                            // Refresh all player data from server and wait for completion
+                                            if (onUpdate) {
+                                                await onUpdate();
+                                                // After onUpdate completes, update the UI
                                                 fetchPlayerData();
                                                 alert('✅ Меин раса выбрана! Статистика и портреты обновлены.');
-                                            }, 500);
+                                            } else {
+                                                alert('Ошибка: не удалось обновить данные');
+                                            }
                                         } else {
                                             alert(data.error || 'Ошибка выбора расы');
                                         }
                                     } catch (error) {
+                                        console.error('Error selecting main race:', error);
                                         alert('Ошибка подключения к серверу');
                                     }
                                 }}
