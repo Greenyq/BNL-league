@@ -366,38 +366,37 @@ function App() {
                             const matchData = matchDataMap[player.battleTag] || [];
                             console.log(`  ${player.battleTag}: ${matchData.length} matches`);
 
-                            if (matchData.length > 0) {
-                                let playerProfiles = processMatches(player.battleTag, matchData, allBnlBattleTags);
+                            // Process ALL players, not just those with matchData
+                            let playerProfiles = processMatches(player.battleTag, matchData, allBnlBattleTags);
 
-                                // Filter by main race if set
-                                if (player.mainRace !== undefined && player.mainRace !== null) {
-                                    playerProfiles = playerProfiles.filter(p => p.race === player.mainRace);
-                                }
-
-                                // Create cards with actual stats
-                                playerProfiles.forEach((profile) => {
-                                    const finalPlayer = {
-                                        id: `${player.id}_${profile.race}`,
-                                        name: player.name || player.battleTag.split('#')[0],
-                                        battleTag: player.battleTag,
-                                        ...profile,
-                                        race: profile.race || player.race || 0,
-                                        mmr: profile.mmr || player.currentMmr || 0,
-                                        teamId: player.teamId || null,
-                                        selectedPortraitId: player.selectedPortraitId || null,
-                                        discordTag: player.discordTag || null,
-                                        mainRace: player.mainRace || null,
-                                    };
-                                    updatedPlayers.push(finalPlayer);
-                                });
+                            // Filter by main race if set
+                            if (player.mainRace !== undefined && player.mainRace !== null) {
+                                playerProfiles = playerProfiles.filter(p => p.race === player.mainRace);
                             }
+
+                            // Create cards for each profile (even if empty/0 stats)
+                            playerProfiles.forEach((profile) => {
+                                const finalPlayer = {
+                                    id: `${player.id}_${profile.race}`,
+                                    name: player.name || player.battleTag.split('#')[0],
+                                    battleTag: player.battleTag,
+                                    ...profile,
+                                    race: profile.race || player.race || 0,
+                                    mmr: profile.mmr || player.currentMmr || 0,
+                                    teamId: player.teamId || null,
+                                    selectedPortraitId: player.selectedPortraitId || null,
+                                    discordTag: player.discordTag || null,
+                                    mainRace: player.mainRace || null,
+                                };
+                                updatedPlayers.push(finalPlayer);
+                            });
                         });
 
                         if (updatedPlayers.length > 0) {
                             console.log(`✅ Updated ${updatedPlayers.length} players with stats`);
                             setPlayers(updatedPlayers);
                         } else {
-                            console.warn(`⚠️ No players with matchData found`);
+                            console.warn(`⚠️ No players processed`);
                         }
                     } catch (error) {
                         console.error('⚠️ Failed to load matchData in background:', error);
