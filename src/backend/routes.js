@@ -270,6 +270,37 @@ router.get('/players/with-cache', async (req, res) => {
     }
 });
 
+// New endpoint: Load matchData for specific players (for stats calculation)
+// Called separately so initial page load is fast
+router.get('/players/matches', async (req, res) => {
+    try {
+        const { battleTags } = req.query;
+        if (!battleTags) {
+            return res.status(400).json({ error: 'battleTags query parameter required' });
+        }
+
+        const tagsArray = Array.isArray(battleTags) ? battleTags : [battleTags];
+        console.log(`⏱️ Loading matchData for ${tagsArray.length} players...`);
+
+        const matchDataStart = Date.now();
+        const caches = await PlayerCache.find(
+            { battleTag: { $in: tagsArray } },
+            { battleTag: 1, matchData: 1 }
+        );
+        console.log(`⏱️ Loaded matchData in ${Date.now() - matchDataStart}ms`);
+
+        const result = {};
+        for (const cache of caches) {
+            result[cache.battleTag] = cache.matchData || [];
+        }
+
+        res.json(result);
+    } catch (error) {
+        console.error('Error loading matchData:', error);
+        res.status(500).json({ error: 'Failed to load matchData' });
+    }
+});
+
 // Helper function to trigger Go stats computation in background
 async function triggerGoStatsComputation(players) {
     const GO_WORKER_URL = process.env.GO_WORKER_URL || 'http://localhost:3001';
