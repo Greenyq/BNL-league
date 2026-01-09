@@ -1549,39 +1549,17 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                 </div>
 
                 {player.discordTag && (
-                    <div style={{
-                        marginTop: '8px',
-                        padding: '8px 12px',
-                        background: '#5865F2',
-                        borderRadius: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        border: '2px solid rgba(88, 101, 242, 0.3)'
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#4752C4';
-                        e.currentTarget.style.transform = 'scale(1.03)';
-                        e.currentTarget.style.borderColor = '#5865F2';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#5865F2';
-                        e.currentTarget.style.transform = 'scale(1)';
-                        e.currentTarget.style.borderColor = 'rgba(88, 101, 242, 0.3)';
-                    }}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        navigator.clipboard.writeText(player.discordTag);
-                        const originalBg = e.currentTarget.style.background;
-                        e.currentTarget.style.background = '#43B581';
-                        setTimeout(() => {
-                            e.currentTarget.style.background = originalBg;
-                        }, 300);
-                    }}
-                    title="Нажмите, чтобы скопировать Discord тег"
+                    <div
+                        className="discord-button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(player.discordTag);
+                            e.currentTarget.style.background = '#43B581';
+                            setTimeout(() => {
+                                e.currentTarget.style.background = '#5865F2';
+                            }, 300);
+                        }}
+                        title="Нажмите, чтобы скопировать Discord тег"
                     >
                         <svg width="18" height="18" viewBox="0 0 71 55" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <g clipPath="url(#clip0)">
@@ -1593,13 +1571,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                                 </clipPath>
                             </defs>
                         </svg>
-                        <span style={{
-                            color: '#fff',
-                            fontSize: '0.9em',
-                            fontWeight: '600'
-                        }}>
-                            {player.discordTag}
-                        </span>
+                        <span>{player.discordTag}</span>
                     </div>
                 )}
 

@@ -712,17 +712,18 @@ input[type="datetime-local"] {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    margin-top: -10px;
+    margin-top: -5px;
 }
 
 .player-name {
-    font-size: 1.6em;
+    font-size: 1.4em;
     font-weight: 800;
     color: var(--color-text-primary);
     text-shadow: 0 2px 10px rgba(0,0,0,0.5);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    line-height: 1.2;
 }
 
 .battle-tag {
@@ -733,6 +734,30 @@ input[type="datetime-local"] {
     text-overflow: ellipsis;
     white-space: nowrap;
     margin-top: var(--spacing-xs);
+}
+
+.discord-button {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: #5865F2;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid rgba(88, 101, 242, 0.3);
+    min-height: 42px;
+    font-size: 0.9em;
+    font-weight: 600;
+    color: #fff;
+}
+
+.discord-button:hover {
+    background: #4752C4;
+    transform: scale(1.03);
+    border-color: #5865F2;
 }
 
 .silhouette-bg {
