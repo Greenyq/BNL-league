@@ -274,6 +274,12 @@ function App() {
                         selectedPortraitId: player.selectedPortraitId || null,
                         discordTag: player.discordTag || null,
                     };
+                    // DEBUG: Log matchHistory
+                    if (finalPlayer.matchHistory && finalPlayer.matchHistory.length > 0) {
+                        console.log(`✅ ${finalPlayer.name} has ${finalPlayer.matchHistory.length} matches:`, finalPlayer.matchHistory);
+                    } else {
+                        console.log(`❌ ${finalPlayer.name} has NO matchHistory`);
+                    }
                     loadedPlayers.push(finalPlayer);
                 } else {
                     // Show all races from raceStats
@@ -296,6 +302,10 @@ function App() {
                                 selectedPortraitId: player.selectedPortraitId || null,
                                 discordTag: player.discordTag || null,
                             };
+                            // DEBUG: Log matchHistory
+                            if (finalPlayer.matchHistory && finalPlayer.matchHistory.length > 0) {
+                                console.log(`✅ ${finalPlayer.name} (${['Random', 'Human', 'Orc', 'NE', 'UD'][finalPlayer.race]}) has ${finalPlayer.matchHistory.length} matches`);
+                            }
                             loadedPlayers.push(finalPlayer);
                         });
                     } else {
@@ -1513,22 +1523,34 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                     })}
                 </div>
 
-                {/* Match graph - only show when there is match history */}
-                {player.matchHistory && player.matchHistory.length > 0 && (
-                    <div className="match-graph" style={{
-                        minHeight: '80px',
-                        display: 'flex',
-                        alignItems: 'flex-end',
-                        justifyContent: 'center'
-                    }}>
-                        {player.matchHistory.slice(0, 20).map((match, idx) => {
+                {/* Match graph - ALWAYS show */}
+                <div className="match-graph" style={{
+                    minHeight: '80px',
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    justifyContent: 'center',
+                    position: 'relative'
+                }}>
+                    {player.matchHistory && player.matchHistory.length > 0 ? (
+                        player.matchHistory.slice(0, 20).map((match, idx) => {
                             const result = typeof match === 'string' ? match : match.result;
-                            // Fixed height based on result: wins are taller
                             const height = result === 'win' ? 70 : 40;
                             return <div key={idx} className={`match-bar ${result}`} style={{ height: `${height}px` }} />;
-                        })}
-                    </div>
-                )}
+                        })
+                    ) : (
+                        <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            color: '#666',
+                            fontSize: '0.8em',
+                            textAlign: 'center'
+                        }}>
+                            No match history
+                        </div>
+                    )}
+                </div>
 
                 <div className="points-section">
                     <div className="points-value">{player.points || 0}</div>
