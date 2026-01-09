@@ -274,12 +274,6 @@ function App() {
                         selectedPortraitId: player.selectedPortraitId || null,
                         discordTag: player.discordTag || null,
                     };
-                    // DEBUG: Log matchHistory
-                    if (finalPlayer.matchHistory && finalPlayer.matchHistory.length > 0) {
-                        console.log(`✅ ${finalPlayer.name} has ${finalPlayer.matchHistory.length} matches:`, finalPlayer.matchHistory);
-                    } else {
-                        console.log(`❌ ${finalPlayer.name} has NO matchHistory`);
-                    }
                     loadedPlayers.push(finalPlayer);
                 } else {
                     // Show all races from raceStats
@@ -302,10 +296,6 @@ function App() {
                                 selectedPortraitId: player.selectedPortraitId || null,
                                 discordTag: player.discordTag || null,
                             };
-                            // DEBUG: Log matchHistory
-                            if (finalPlayer.matchHistory && finalPlayer.matchHistory.length > 0) {
-                                console.log(`✅ ${finalPlayer.name} (${['Random', 'Human', 'Orc', 'NE', 'UD'][finalPlayer.race]}) has ${finalPlayer.matchHistory.length} matches`);
-                            }
                             loadedPlayers.push(finalPlayer);
                         });
                     } else {

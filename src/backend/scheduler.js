@@ -386,7 +386,8 @@ async function recalculateAllPlayerStats() {
                     losses: profile.losses,
                     mmr: profile.mmr,
                     achievements: profile.achievements,
-                    matchCount: profile.matchCount
+                    matchCount: profile.matchCount,
+                    matchHistory: profile.matchHistory || []
                 }));
 
                 raceStats.forEach(stat => {
