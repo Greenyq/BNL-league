@@ -1485,7 +1485,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
 
                 {/* Always render achievements container with fixed min-height */}
                 <div className="achievement-icons" style={{
-                    display: 'flex',
+                    display: 'none',
                     gap: '8px',
                     padding: player.achievements && player.achievements.length > 0 ? '10px 15px' : '10px 15px',
                     flexWrap: 'wrap',
