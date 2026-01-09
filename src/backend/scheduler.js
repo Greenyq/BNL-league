@@ -320,7 +320,8 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
             losses: losses,
             points: totalPoints,
             achievements: achs,
-            matchCount: raceMatches.length
+            matchCount: raceMatches.length,
+            matchHistory: matchHistory.reverse().slice(0, 20) // Last 20 matches, most recent first
         });
     }
 
