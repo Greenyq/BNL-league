@@ -673,7 +673,7 @@ input[type="datetime-local"] {
 .player-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: var(--spacing-sm);
 }
 
@@ -712,7 +712,6 @@ input[type="datetime-local"] {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    margin-top: -5px;
 }
 
 .player-name {
