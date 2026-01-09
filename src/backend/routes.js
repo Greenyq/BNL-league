@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession, PasswordReset, PlayerCache, PlayerStats } = require('./models');
+const { recalculateAllPlayerStats } = require('./scheduler');
 
 const router = express.Router();
 
@@ -241,6 +242,22 @@ router.delete('/admin/players/cache', async (req, res) => {
     } catch (error) {
         console.error('Error clearing all cache:', error);
         res.status(500).json({ error: 'Failed to clear all cache' });
+    }
+});
+
+// Manually trigger stats recalculation (admin only)
+router.post('/admin/recalculate-stats', async (req, res) => {
+    try {
+        console.log('🔄 Admin triggered stats recalculation...');
+        const result = await recalculateAllPlayerStats();
+        res.json({
+            success: true,
+            message: 'Stats recalculation completed',
+            ...result
+        });
+    } catch (error) {
+        console.error('Error recalculating stats:', error);
+        res.status(500).json({ error: 'Failed to recalculate stats' });
     }
 });
 
