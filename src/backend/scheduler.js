@@ -347,15 +347,21 @@ async function updateAllPlayerMMR() {
             });
 
             if (response.data && response.data.length > 0) {
-                // Get highest MMR across all game modes
-                const highestMmr = Math.max(...response.data.map(mode => mode.mmr || 0));
-                if (highestMmr > 0 && highestMmr !== player.currentMmr) {
-                    await Player.updateOne({ _id: player._id }, { currentMmr: highestMmr });
-                    updated++;
+                // Find 1v1 Solo mode (gameMode === 1)
+                const solo1v1 = response.data.find(mode => mode.gameMode === 1);
+
+                if (solo1v1 && solo1v1.mmr > 0) {
+                    if (solo1v1.mmr !== player.currentMmr) {
+                        await Player.updateOne({ _id: player._id }, { currentMmr: solo1v1.mmr });
+                        console.log(`   Updated ${player.battleTag}: ${player.currentMmr || 'none'} → ${solo1v1.mmr}`);
+                        updated++;
+                    }
+                } else {
+                    console.log(`   ⚠️ No 1v1 Solo MMR found for ${player.battleTag}`);
                 }
             }
         } catch (error) {
-            // Silently skip players with errors (might be offline, renamed, etc.)
+            console.log(`   ❌ Error fetching MMR for ${player.battleTag}: ${error.message}`);
         }
     }
 
