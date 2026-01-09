@@ -2006,6 +2006,10 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
 
         // Use team ID to consistently assign color
         const index = teams.findIndex(t => (t._id || t.id) === teamId);
+        // Return default color if team not found
+        if (index === -1) {
+            return { primary: '#888888', secondary: '#aaaaaa' }; // Gray
+        }
         return colors[index % colors.length];
     };
 
