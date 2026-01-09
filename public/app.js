@@ -1485,7 +1485,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
 
                 {/* Always render achievements container with fixed min-height */}
                 <div className="achievement-icons" style={{
-                    display: 'flex',
+                    display: 'none',
                     gap: '8px',
                     padding: player.achievements && player.achievements.length > 0 ? '10px 15px' : '10px 15px',
                     flexWrap: 'wrap',
@@ -5039,9 +5039,11 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                             // Refresh all player data from server and wait for completion
                                             if (onUpdate) {
                                                 await onUpdate();
+                                                // Give React time to process the state update before fetching player data
+                                                setTimeout(() => {
+                                                    fetchPlayerData();
+                                                }, 100);
                                             }
-                                            // Then refresh current player's profile with new main race
-                                            fetchPlayerData();
                                             alert('✅ Меин раса выбрана! Статистика и портреты обновлены.');
                                         } else {
                                             alert(data.error || 'Ошибка выбора расы');

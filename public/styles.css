@@ -679,7 +679,7 @@ input[type="datetime-local"] {
 
 .player-title {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--spacing-md);
     min-width: 0;
     flex: 1;
