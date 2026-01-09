@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 const multer = require('multer');
 const { Team, Player, TeamMatch, Portrait, Streamer, AdminSession } = require('./models');
 const routes = require('./routes');
-const { initializeScheduler, recalculateAllPlayerStats } = require('./scheduler');
+const { initializeScheduler } = require('./scheduler');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -149,34 +149,6 @@ app.get('/api/admin/verify', async (req, res) => {
         res.json({ isAuthenticated: session && session.isLoggedIn && sessionAge < 24 * 60 * 60 * 1000 });
     } catch (error) {
         res.json({ isAuthenticated: false });
-    }
-});
-
-// Public endpoint for stats recalculation (for Render/deployment)
-// Usage: POST /api/recalc-stats with header X-Recalc-Token: your-secret-token
-// Set RECALC_SECRET_TOKEN environment variable in Render
-app.post('/api/recalc-stats', async (req, res) => {
-    try {
-        const token = req.headers['x-recalc-token'];
-        const expectedToken = process.env.RECALC_SECRET_TOKEN;
-
-        // If no token is configured, anyone can trigger (dev mode)
-        // In production, ALWAYS set RECALC_SECRET_TOKEN in Render environment variables
-        if (expectedToken && token !== expectedToken) {
-            return res.status(403).json({ error: 'Invalid token' });
-        }
-
-        console.log('🔄 Stats recalculation triggered via public endpoint...');
-        const result = await recalculateAllPlayerStats();
-
-        res.json({
-            success: true,
-            message: 'Stats recalculation completed',
-            ...result
-        });
-    } catch (error) {
-        console.error('Error recalculating stats:', error);
-        res.status(500).json({ error: 'Failed to recalculate stats', message: error.message });
     }
 });
 

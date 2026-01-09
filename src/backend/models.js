@@ -197,7 +197,15 @@ const playerStatsSchema = new mongoose.Schema({
         losses: Number,
         mmr: Number,
         achievements: [String],
-        matchCount: Number
+        matchCount: Number,
+        matchHistory: [{
+            result: String,        // 'win' or 'loss'
+            mmrDiff: Number,       // opponent MMR - player MMR
+            playerMMR: Number,     // player MMR at the time
+            opponentMMR: Number,   // opponent MMR at the time
+            isBnlMatch: Boolean,   // was it against another BNL player
+            opponentTag: String    // opponent's battle tag
+        }]
     }],
     // Metadata
     cachedAt: { type: Date, default: Date.now },
