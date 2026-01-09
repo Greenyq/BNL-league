@@ -679,10 +679,11 @@ input[type="datetime-local"] {
 
 .player-title {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--spacing-md);
     min-width: 0;
     flex: 1;
+    align-self: flex-start;
 }
 
 .player-avatar {
@@ -772,6 +773,7 @@ input[type="datetime-local"] {
 
 .rank-mmr {
     text-align: right;
+    align-self: flex-start;
 }
 
 .rank-number {
