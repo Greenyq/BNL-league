@@ -1465,6 +1465,19 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                         <div className="rank-number">#{rank}</div>
                         <div className="rank-label" style={{ marginTop: '15px' }}>{raceNames[player.race] || 'Random'}</div>
                         <div className="mmr-display">{player.mmr} MMR</div>
+                        {player.achievements && player.achievements.length > 0 && (
+                            <div style={{
+                                marginTop: '15px',
+                                fontSize: '0.85em',
+                                color: '#c9a961',
+                                padding: '5px 10px',
+                                borderRadius: '4px',
+                                textAlign: 'center',
+                                fontWeight: '700'
+                            }}>
+                                🏆 {player.achievements.length}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -1473,12 +1486,12 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                 <div className="achievement-icons" style={{
                     display: 'flex',
                     gap: '8px',
-                    padding: player.achievements && player.achievements.length > 0 ? '10px 15px' : '10px 15px',
+                    padding: player.achievements && player.achievements.length > 0 ? '10px 15px' : '0',
                     flexWrap: 'wrap',
-                    borderTop: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : '1px solid transparent',
-                    borderBottom: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : '1px solid transparent',
-                    margin: '10px 0',
-                    minHeight: player.achievements && player.achievements.length > 0 ? 'auto' : '50px',
+                    borderTop: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : 'none',
+                    borderBottom: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : 'none',
+                    margin: player.achievements && player.achievements.length > 0 ? '10px 0' : '0',
+                    minHeight: '0',
                     position: 'relative'
                 }}>
                     {player.achievements && player.achievements.map(achKey => {
