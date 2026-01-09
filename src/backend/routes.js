@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
-const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession, PasswordReset, PlayerCache } = require('./models');
+const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession, PasswordReset, PlayerCache, PlayerStats } = require('./models');
 
 const router = express.Router();
 
@@ -93,182 +93,62 @@ router.get('/players', async (req, res) => {
     }
 });
 
-// Get all players with cached match data
+// Get all players with pre-calculated stats (from PlayerStats collection)
 router.get('/players/with-cache', async (req, res) => {
     try {
         const startTime = Date.now();
 
-        const playerStartTime = Date.now();
+        // Step 1: Get all players from database
+        const playerStart = Date.now();
         const players = await Player.find();
-        console.log(`⏱️ Player.find() took ${Date.now() - playerStartTime}ms`);
+        console.log(`⏱️ Loaded ${players.length} players in ${Date.now() - playerStart}ms`);
 
-        const CACHE_DURATION_MS = 60 * 60 * 1000; // 60 minutes
-        const now = Date.now();
-        const cutoffDate = new Date('2025-11-27T00:00:00Z'); // Only fetch recent matches
-
-        // First pass: check all caches and separate into hits vs misses
-        const cachedPlayers = [];
-        const playersToFetch = [];
-
-        const cacheCheckStart = Date.now();
-
-        // Step 1: Extract battleTags
-        const tagsStart = Date.now();
+        // Step 2: Get pre-calculated stats from PlayerStats collection
+        const statsStart = Date.now();
         const battleTags = players.map(p => p.battleTag);
-        console.log(`⏱️ Battle tags extraction took ${Date.now() - tagsStart}ms`);
+        const allStats = await PlayerStats.find({ battleTag: { $in: battleTags } });
+        const statsMap = new Map(allStats.map(s => [s.battleTag, s]));
+        console.log(`⏱️ Loaded stats for ${allStats.length}/${battleTags.length} players in ${Date.now() - statsStart}ms`);
 
-        // Step 2: Fetch ALL caches in ONE query instead of N queries (N+1 problem)
-        const cacheDbStart = Date.now();
-        const allCaches = await PlayerCache.find(
-            { battleTag: { $in: battleTags } },
-            { battleTag: 1, expiresAt: 1 } // Field projection: Skip matchData initially (huge array!)
-        );
-        console.log(`⏱️ PlayerCache.find() took ${Date.now() - cacheDbStart}ms for ${allCaches.length} caches (without matchData)`);
+        // Step 3: Merge player data with stats
+        const mergeStart = Date.now();
+        const result = players.map(player => {
+            const stats = statsMap.get(player.battleTag);
+            const playerObj = player.toJSON();
 
-        // Step 3: Build cacheMap for quick lookups (SKIP matchData - it's too large!)
-        const mapStart = Date.now();
-        const cacheMap = new Map(allCaches.map(c => [c.battleTag, c]));
-        console.log(`⏱️ Build cacheMap took ${Date.now() - mapStart}ms`);
-
-        // Step 4: Process players
-        const processStart = Date.now();
-        for (const player of players) {
-            const cache = cacheMap.get(player.battleTag);
-
-            if (cache && new Date(cache.expiresAt) > now) {
-                // Use cached data - return empty matchData array (will be loaded on-demand)
-                cachedPlayers.push({
-                    ...player.toJSON(),
-                    matchData: [] // Skip loading huge matchData array - return empty
-                });
+            // Add stats to player object
+            if (stats) {
+                playerObj.points = stats.points;
+                playerObj.wins = stats.wins;
+                playerObj.losses = stats.losses;
+                playerObj.raceStats = stats.raceStats || [];
+                playerObj.statsUpdatedAt = stats.updatedAt;
             } else {
-                // Need to fetch fresh data
-                playersToFetch.push({ player, cache });
-            }
-        }
-        console.log(`⏱️ Process players loop took ${Date.now() - processStart}ms`);
-
-        console.log(`⏱️ TOTAL Cache check took ${Date.now() - cacheCheckStart}ms`);
-        console.log(`📊 Cache status: ${cachedPlayers.length} cached, ${playersToFetch.length} to fetch (60min TTL)`);
-
-        // Helper function: Fetch with retry logic
-        async function fetchPlayerWithRetry(player, cache, maxRetries = 2) {
-            let lastError;
-
-            for (let attempt = 0; attempt <= maxRetries; attempt++) {
-                try {
-                    const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=20&season=23&pageSize=100`;
-                    const response = await axios.get(apiUrl, {
-                        headers: {
-                            'User-Agent': 'BNL-League-App',
-                            'Accept': 'application/json'
-                        },
-                        timeout: 12000
-                    });
-
-                    let matchData = response.data.matches || [];
-                    matchData = matchData.filter(m => new Date(m.startTime) >= cutoffDate);
-
-                    // Save to cache
-                    const expiresAt = new Date(now + CACHE_DURATION_MS);
-                    if (cache) {
-                        cache.matchData = matchData;
-                        cache.lastUpdated = new Date(now);
-                        cache.expiresAt = expiresAt;
-                        await cache.save();
-                    } else {
-                        await PlayerCache.create({
-                            battleTag: player.battleTag,
-                            matchData,
-                            lastUpdated: new Date(now),
-                            expiresAt
-                        });
-                    }
-
-                    console.log(`✅ ${player.battleTag}: Loaded ${matchData.length} matches`);
-
-                    return {
-                        ...player.toJSON(),
-                        matchData
-                    };
-                } catch (error) {
-                    lastError = error;
-                    const statusCode = error.response?.status || 'N/A';
-                    const statusText = error.response?.statusText || '';
-                    const errorMsg = error.message || 'Unknown error';
-
-                    if (attempt < maxRetries) {
-                        const delay = Math.pow(2, attempt) * 500; // Exponential backoff: 500ms, 1s, 2s
-                        console.warn(`⚠️ ${player.battleTag} (attempt ${attempt + 1}/${maxRetries + 1}): HTTP ${statusCode} ${statusText} - ${errorMsg}. Retrying in ${delay}ms...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    }
-                }
+                // Fallback if stats not calculated yet
+                playerObj.points = 0;
+                playerObj.wins = 0;
+                playerObj.losses = 0;
+                playerObj.raceStats = [];
+                playerObj.statsUpdatedAt = null;
             }
 
-            // All retries failed
-            const statusCode = lastError?.response?.status || 'N/A';
-            const statusText = lastError?.response?.statusText || '';
-            const errorMsg = lastError?.message || 'Unknown error';
-            console.error(`❌ ${player.battleTag}: API request failed after ${maxRetries + 1} attempts`);
-            console.error(`   Status: HTTP ${statusCode} ${statusText}`);
-            console.error(`   Error: ${errorMsg}`);
-            console.error(`   URL: https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=20&season=23&pageSize=100`);
+            // Don't include matchData (it's no longer used)
+            playerObj.matchData = undefined;
 
-            return {
-                ...player.toJSON(),
-                matchData: [],
-                fetchError: true // Flag to indicate API fetch failed
-            };
-        }
-
-        // Batch parallel requests: fetch in groups of 6 to maximize parallelism
-        const BATCH_SIZE = 6;
-        const fetchedPlayers = [];
-        const fetchStartTime = Date.now();
-        console.log(`🔄 Starting to fetch ${playersToFetch.length} fresh players...`);
-
-        for (let i = 0; i < playersToFetch.length; i += BATCH_SIZE) {
-            const batch = playersToFetch.slice(i, i + BATCH_SIZE);
-            const batchNum = Math.floor(i / BATCH_SIZE) + 1;
-            const batchTime = Date.now();
-            const batchResults = await Promise.all(
-                batch.map(({ player, cache }) => fetchPlayerWithRetry(player, cache))
-            );
-            console.log(`⏱️ Batch ${batchNum} (${batch.length} players) took ${Date.now() - batchTime}ms`);
-            fetchedPlayers.push(...batchResults);
-
-            // Minimal delay between batches to avoid overwhelming API
-            if (i + BATCH_SIZE < playersToFetch.length) {
-                await new Promise(resolve => setTimeout(resolve, 50));
-            }
-        }
-        console.log(`⏱️ Total fetch time for ${playersToFetch.length} players: ${Date.now() - fetchStartTime}ms`);
-
-        const result = [...cachedPlayers, ...fetchedPlayers];
-
-        let serializationTime = Date.now();
-        const jsonReady = result; // Prepare JSON (no actual serialization needed for timing)
-        console.log(`⏱️ Data preparation took ${Date.now() - serializationTime}ms`);
+            return playerObj;
+        });
+        console.log(`⏱️ Merged data in ${Date.now() - mergeStart}ms`);
 
         const totalTime = Date.now() - startTime;
-        console.log(`✅ Loaded ${result.length} players (${cachedPlayers.length} cached + ${fetchedPlayers.length} fetched) in ${totalTime}ms`);
+        console.log(`✅ Loaded ${result.length} players with pre-calculated stats in ${totalTime}ms`);
 
-        // If cache was old, trigger Go stats computation in background (async, don't wait)
-        if (playersToFetch.length > 0) {
-            triggerGoStatsComputation(result).catch(err => {
-                console.warn('⚠️ Background Go computation failed:', err.message);
-                // Don't fail the request if background job fails
-            });
-        }
-
-        let sendTime = Date.now();
         res.json(result);
-        console.log(`⏱️ JSON response sent in ${Date.now() - sendTime}ms`);
     } catch (error) {
         console.error('Error in /players/with-cache:', error);
-        res.status(500).json({ error: 'Failed to fetch players with cache' });
+        res.status(500).json({ error: 'Failed to fetch players' });
     }
 });
+
 
 // New endpoint: Load matchData for specific players (for stats calculation)
 // Called separately so initial page load is fast

@@ -237,175 +237,90 @@ function App() {
 
     const loadPlayers = async () => {
         try {
-            console.log('🔄 Loading players with cache...');
+            console.log('🔄 Loading players...');
+            const loadStart = Date.now();
 
-            // Use cached endpoint - much faster!
+            // Fetch players with pre-calculated stats from backend
             const response = await fetch(`${API_BASE}/api/players/with-cache`);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
             const cachedPlayers = await response.json();
-            console.log(`✅ Loaded ${cachedPlayers.length} player profiles from cache`);
+            console.log(`✅ Loaded ${cachedPlayers.length} players in ${Date.now() - loadStart}ms`);
 
             const loadedPlayers = [];
 
-            // Extract all BNL BattleTags for BNL match detection (use Set for O(1) lookup instead of Array includes)
-            const allBnlBattleTags = new Set(cachedPlayers.map(p => p.battleTag));
+            // Convert API response to player cards
+            // If mainRace is set, show only that race; otherwise show all races from raceStats
+            cachedPlayers.forEach((player) => {
+                const raceStats = player.raceStats || [];
 
-            // Process each cached player
-            cachedPlayers.forEach((player, i) => {
-                // Check if the API fetch failed
-                const fetchFailed = player.fetchError === true;
-
-                // If player has matchData, process it
-                if (player.matchData && player.matchData.length > 0) {
-                    // Performance: Skip verbose per-player logging (too slow with 50+ players)
-                    // console.log(`Processing ${player.battleTag} with ${player.matchData.length} matches`);
-
-                    // processMatches returns array of profiles (one per race)
-                    let playerProfiles = processMatches(player.battleTag, player.matchData, allBnlBattleTags);
-                    // console.log(`Profiles created for ${player.battleTag}:`, playerProfiles.length);
-
-                    // Filter by main race if set
-                    if (player.mainRace !== undefined && player.mainRace !== null) {
-                        playerProfiles = playerProfiles.filter(p => p.race === player.mainRace);
-                    }
-
-                    // Create a card for each race profile
-                    playerProfiles.forEach((profile) => {
+                if (player.mainRace !== undefined && player.mainRace !== null) {
+                    // Show only selected race
+                    const raceStat = raceStats.find(r => r.race === player.mainRace);
+                    const finalPlayer = {
+                        id: `${player.id}_${player.mainRace}`,
+                        name: player.name || player.battleTag.split('#')[0],
+                        battleTag: player.battleTag,
+                        race: player.mainRace,
+                        mmr: player.mmr || player.currentMmr || 0,
+                        points: raceStat?.points || player.points || 0,
+                        wins: raceStat?.wins || player.wins || 0,
+                        losses: raceStat?.losses || player.losses || 0,
+                        achievements: raceStat?.achievements || [],
+                        matchHistory: [],
+                        activityData: generateActivityData(player.battleTag),
+                        teamId: player.teamId || null,
+                        selectedPortraitId: player.selectedPortraitId || null,
+                        discordTag: player.discordTag || null,
+                    };
+                    loadedPlayers.push(finalPlayer);
+                } else {
+                    // Show all races from raceStats
+                    if (raceStats.length > 0) {
+                        raceStats.forEach((raceStat) => {
+                            const finalPlayer = {
+                                id: `${player.id}_${raceStat.race}`,
+                                name: player.name || player.battleTag.split('#')[0],
+                                battleTag: player.battleTag,
+                                race: raceStat.race,
+                                mmr: raceStat.mmr || player.currentMmr || 0,
+                                points: raceStat.points || 0,
+                                wins: raceStat.wins || 0,
+                                losses: raceStat.losses || 0,
+                                achievements: raceStat.achievements || [],
+                                matchHistory: [],
+                                activityData: generateActivityData(player.battleTag),
+                                teamId: player.teamId || null,
+                                selectedPortraitId: player.selectedPortraitId || null,
+                                discordTag: player.discordTag || null,
+                            };
+                            loadedPlayers.push(finalPlayer);
+                        });
+                    } else {
+                        // Fallback: no race stats, show with overall stats
                         const finalPlayer = {
-                            id: `${player.id}_${profile.race}`,
+                            id: player.id,
                             name: player.name || player.battleTag.split('#')[0],
                             battleTag: player.battleTag,
-                            ...profile,
-                            // Use race from profile
-                            race: profile.race || player.race || 0,
-                            // Use MMR from profile or DB
-                            mmr: profile.mmr || player.currentMmr || 0,
+                            race: player.race || 0,
+                            mmr: player.currentMmr || 0,
+                            points: player.points || 0,
+                            wins: player.wins || 0,
+                            losses: player.losses || 0,
+                            achievements: [],
+                            matchHistory: [],
+                            activityData: generateActivityData(player.battleTag),
                             teamId: player.teamId || null,
-                            // Include portrait, discord and mainRace from database
                             selectedPortraitId: player.selectedPortraitId || null,
                             discordTag: player.discordTag || null,
-                            mainRace: player.mainRace || null,
                         };
-
                         loadedPlayers.push(finalPlayer);
-                    });
-                } else if (fetchFailed) {
-                    // API fetch failed - show error
-                    console.error(`Failed to fetch data for ${player.battleTag}`);
-                    const fallbackPlayer = {
-                        id: player.id,
-                        name: player.name || player.battleTag.split('#')[0],
-                        battleTag: player.battleTag,
-                        race: player.race || 0,
-                        mmr: player.currentMmr || 0,
-                        wins: 0,
-                        losses: 0,
-                        points: 0,
-                        achievements: [],
-                        teamId: player.teamId || null,
-                        matchHistory: [],
-                        activityData: generateActivityData(player.battleTag),
-                        // Include portrait and discord from database
-                        selectedPortraitId: player.selectedPortraitId || null,
-                        discordTag: player.discordTag || null,
-                        error: true // Show error indicator
-                    };
-
-                    loadedPlayers.push(fallbackPlayer);
-                } else {
-                    // No match data but fetch succeeded - player just has no matches
-                    console.log(`No matches found for ${player.battleTag}`);
-                    const fallbackPlayer = {
-                        id: player.id,
-                        name: player.name || player.battleTag.split('#')[0],
-                        battleTag: player.battleTag,
-                        race: player.race || 0,
-                        mmr: player.currentMmr || 0,
-                        wins: 0,
-                        losses: 0,
-                        points: 0,
-                        achievements: [],
-                        teamId: player.teamId || null,
-                        matchHistory: [],
-                        activityData: generateActivityData(player.battleTag),
-                        // Include portrait and discord from database
-                        selectedPortraitId: player.selectedPortraitId || null,
-                        discordTag: player.discordTag || null,
-                        error: false // No error - just no matches
-                    };
-
-                    loadedPlayers.push(fallbackPlayer);
+                    }
                 }
             });
 
-            console.log(`✅ Total player cards created: ${loadedPlayers.length}`);
+            console.log(`✅ Processed ${loadedPlayers.length} player cards in ${Date.now() - loadStart}ms`);
             setPlayers(loadedPlayers);
-
-            // Load matchData in the background (for stats calculation)
-            // This allows page to display immediately while stats load separately
-            const battleTagsToLoad = cachedPlayers.map(p => p.battleTag).join(',');
-            console.log(`📋 Will load matchData for ${cachedPlayers.length} players: ${battleTagsToLoad.substring(0, 100)}...`);
-            if (battleTagsToLoad) {
-                setTimeout(async () => {
-                    try {
-                        console.log('⏳ Loading matchData in background for stats...');
-                        const matchDataStart = Date.now();
-                        const matchDataResponse = await fetch(`${API_BASE}/api/players/matches?battleTags=${encodeURIComponent(battleTagsToLoad)}`);
-                        if (!matchDataResponse.ok) throw new Error(`HTTP ${matchDataResponse.status}`);
-
-                        const matchDataMap = await matchDataResponse.json();
-                        console.log(`✅ Loaded matchData in ${Date.now() - matchDataStart}ms`);
-                        console.log(`📊 Received matchData for ${Object.keys(matchDataMap).length} players`);
-
-                        // Reprocess players with actual matchData
-                        const updatedPlayers = [];
-                        const allBnlBattleTags = new Set(cachedPlayers.map(p => p.battleTag));
-                        const totalProcessStart = performance.now();
-
-                        cachedPlayers.forEach((player) => {
-                            const matchData = matchDataMap[player.battleTag] || [];
-                            console.log(`📊 Processing ${player.battleTag}: ${matchData.length} matches`);
-
-                            // Process ALL players, not just those with matchData
-                            let playerProfiles = processMatches(player.battleTag, matchData, allBnlBattleTags);
-
-                            // Filter by main race if set
-                            if (player.mainRace !== undefined && player.mainRace !== null) {
-                                playerProfiles = playerProfiles.filter(p => p.race === player.mainRace);
-                            }
-
-                            // Create cards for each profile (even if empty/0 stats)
-                            playerProfiles.forEach((profile) => {
-                                const finalPlayer = {
-                                    id: `${player.id}_${profile.race}`,
-                                    name: player.name || player.battleTag.split('#')[0],
-                                    battleTag: player.battleTag,
-                                    ...profile,
-                                    race: profile.race || player.race || 0,
-                                    mmr: profile.mmr || player.currentMmr || 0,
-                                    teamId: player.teamId || null,
-                                    selectedPortraitId: player.selectedPortraitId || null,
-                                    discordTag: player.discordTag || null,
-                                    mainRace: player.mainRace || null,
-                                };
-                                updatedPlayers.push(finalPlayer);
-                            });
-                        });
-
-                        const totalProcessTime = performance.now() - totalProcessStart;
-                        if (updatedPlayers.length > 0) {
-                            console.log(`✅ Updated ${updatedPlayers.length} players with stats in ${totalProcessTime.toFixed(2)}ms`);
-                            setPlayers(updatedPlayers);
-                        } else {
-                            console.warn(`⚠️ No players processed in ${totalProcessTime.toFixed(2)}ms`);
-                        }
-                    } catch (error) {
-                        console.error('⚠️ Failed to load matchData in background:', error);
-                        // Don't fail - UI already has initial data
-                    }
-                }, 100); // Small delay to not block the initial render
-            }
         } catch (error) {
             console.error('❌ Error loading players:', error);
             setError('Не удалось загрузить данные игроков');
