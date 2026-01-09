@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const multer = require('multer');
 const { Team, Player, TeamMatch, Portrait, Streamer, AdminSession } = require('./models');
 const routes = require('./routes');
+const { initializeScheduler } = require('./scheduler');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -209,5 +210,8 @@ mongoose.connection.once('open', () => {
         console.log(`🚀 BNL (Breaking New Limits) server running on http://localhost:${PORT}`);
         console.log(`📊 Using W3Champions matches API`);
         console.log(`💾 MongoDB Ready`);
+
+        // Initialize stats scheduler (runs every 10 minutes)
+        initializeScheduler();
     });
 });

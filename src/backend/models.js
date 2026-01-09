@@ -181,6 +181,39 @@ playerCacheSchema.set('toJSON', {
     }
 });
 
+// Player Stats Schema - pre-calculated statistics (updated by cron job)
+const playerStatsSchema = new mongoose.Schema({
+    battleTag: { type: String, required: true, unique: true, index: true },
+    // Overall stats
+    points: { type: Number, default: 0 },
+    wins: { type: Number, default: 0 },
+    losses: { type: Number, default: 0 },
+    mmr: { type: Number, default: 0 },
+    // Stats per race (1=Human, 2=Orc, 4=NightElf, 8=Undead)
+    raceStats: [{
+        race: Number,
+        points: Number,
+        wins: Number,
+        losses: Number,
+        mmr: Number,
+        achievements: [String],
+        matchCount: Number
+    }],
+    // Metadata
+    cachedAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+// Transform _id to id for JSON responses
+playerStatsSchema.set('toJSON', {
+    virtuals: true,
+    versionKey: false,
+    transform: function (doc, ret) {
+        ret.id = ret._id.toString();
+        delete ret._id;
+    }
+});
+
 module.exports = {
     Team: mongoose.model('Team', teamSchema),
     Player: mongoose.model('Player', playerSchema),
@@ -191,5 +224,6 @@ module.exports = {
     PlayerUser: mongoose.model('PlayerUser', playerUserSchema),
     PlayerSession: mongoose.model('PlayerSession', playerSessionSchema),
     PasswordReset: mongoose.model('PasswordReset', passwordResetSchema),
-    PlayerCache: mongoose.model('PlayerCache', playerCacheSchema)
+    PlayerCache: mongoose.model('PlayerCache', playerCacheSchema),
+    PlayerStats: mongoose.model('PlayerStats', playerStatsSchema)
 };
