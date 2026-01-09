@@ -1,19 +1,37 @@
 const { Player, PlayerCache, PlayerStats } = require('./models');
 const cron = require('node-cron');
 
-// Achievement bonuses (copied from frontend)
+// Achievement bonuses (must match frontend's achievements object)
 const achievements = {
-    centurion: { points: 100 },
-    centurionSupreme: { points: 150 },
-    warrior: { points: 50 },
-    gladiator: { points: 30 },
-    perfectWeek: { points: 40 },
-    noMercy: { points: 60 },
-    risingDragon: { points: 45 },
-    oneShotWonder: { points: 25 },
-    bnlDominator: { points: 80 },
-    streamHunter: { points: 35 },
-    unbeatenStreak: { points: 55 },
+    // Win Streaks
+    winStreak3: { points: 30 },
+    winStreak5: { points: 50 },
+    winStreak10: { points: 100 },
+    winStreak15: { points: 150 },
+    // Total Wins
+    warrior: { points: 30 },
+    centurion: { points: 50 },
+    centurionSupreme: { points: 80 },
+    noMercy: { points: 40 },
+    // Weekly/Activity
+    gladiator: { points: 20 },
+    perfectWeek: { points: 50 },
+    // Points
+    goldRush: { points: 30 },
+    platinumRush: { points: 60 },
+    // Special
+    comeback: { points: 20 },
+    persistent: { points: 40 },
+    veteran: { points: 35 },
+    marathonRunner: { points: 30 },
+    // MMR
+    mmrMillionaire: { points: 50 },
+    eliteWarrior: { points: 100 },
+    // BNL
+    bnlRobber: { points: 30 },
+    bnlVictim: { points: -10 },
+    bnlRivalry: { points: 25 },
+    bnlDominator: { points: 60 },
 };
 
 // Determine achievements based on stats
@@ -28,7 +46,7 @@ const determineAchievements = (wins, losses, points, totalGames, matchHistory = 
     const validCurrentMmr = Math.max(0, parseInt(currentMmr) || 0);
     const validMatchHistory = Array.isArray(matchHistory) ? matchHistory : [];
 
-    // Win milestones
+    // Total Wins
     if (validWins >= 200) achs.push('centurionSupreme');
     else if (validWins >= 100) achs.push('centurion');
     else if (validWins >= 50) achs.push('warrior');
@@ -38,20 +56,7 @@ const determineAchievements = (wins, losses, points, totalGames, matchHistory = 
     else if (validWins >= 10) achs.push('gladiator');
     if (validWins >= 50) achs.push('noMercy');
 
-    // High rating
-    if (validCurrentMmr >= 2500) achs.push('risingDragon');
-
-    // One-shot wins (no losses)
-    if (validWins >= 3 && validLosses === 0) achs.push('oneShotWonder');
-
-    // BNL-specific wins
-    const bnlWins = validMatchHistory.filter(m => m.result === 'win' && m.isBnlMatch).length;
-    if (bnlWins >= 5) achs.push('bnlDominator');
-
-    // High points
-    if (validPoints >= 1000) achs.push('streamHunter');
-
-    // Winning streak
+    // Win Streaks
     let maxWinStreak = 0;
     let currentStreak = 0;
     for (const match of validMatchHistory) {
@@ -62,7 +67,62 @@ const determineAchievements = (wins, losses, points, totalGames, matchHistory = 
             currentStreak = 0;
         }
     }
-    if (maxWinStreak >= 5) achs.push('unbeatenStreak');
+    if (maxWinStreak >= 15) achs.push('winStreak15');
+    else if (maxWinStreak >= 10) achs.push('winStreak10');
+    else if (maxWinStreak >= 5) achs.push('winStreak5');
+    else if (maxWinStreak >= 3) achs.push('winStreak3');
+
+    // Points
+    if (validPoints >= 2000) achs.push('platinumRush');
+    else if (validPoints >= 1000) achs.push('goldRush');
+
+    // MMR
+    if (validCurrentMmr >= 2200) achs.push('eliteWarrior');
+    else if (validCurrentMmr >= 2000) achs.push('mmrMillionaire');
+
+    // Game counts
+    if (validTotalGames >= 100) achs.push('marathonRunner');
+    if (validTotalGames >= 500) achs.push('veteran');
+
+    // BNL-specific
+    const bnlWins = validMatchHistory.filter(m => m.result === 'win' && m.isBnlMatch).length;
+    const bnlLosses = validMatchHistory.filter(m => m.result === 'loss' && m.isBnlMatch).length;
+
+    if (bnlWins >= 10) achs.push('bnlDominator');
+    else if (bnlWins >= 5) achs.push('bnlRivalry');
+    else if (bnlWins >= 1) achs.push('bnlRobber');
+
+    if (bnlLosses >= 1) achs.push('bnlVictim');
+
+    // Comeback (5 wins after 5 losses) - simplified check
+    let hasComeback = false;
+    let lossCount = 0;
+    let winCountAfterLosses = 0;
+    for (const match of validMatchHistory) {
+        if (match.result === 'loss') {
+            lossCount++;
+            winCountAfterLosses = 0;
+        } else {
+            if (lossCount >= 5) {
+                winCountAfterLosses++;
+                if (winCountAfterLosses >= 5) {
+                    hasComeback = true;
+                    break;
+                }
+            }
+        }
+    }
+    if (hasComeback) achs.push('persistent');
+
+    // Simple comeback (any win after a loss)
+    if (validMatchHistory.length > 1 && validWins > 0 && validLosses > 0) {
+        for (let i = 1; i < validMatchHistory.length; i++) {
+            if (validMatchHistory[i-1].result === 'loss' && validMatchHistory[i].result === 'win') {
+                achs.push('comeback');
+                break;
+            }
+        }
+    }
 
     return achs;
 };
