@@ -673,16 +673,17 @@ input[type="datetime-local"] {
 .player-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: var(--spacing-sm);
 }
 
 .player-title {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--spacing-md);
     min-width: 0;
     flex: 1;
+    align-self: flex-start;
 }
 
 .player-avatar {
@@ -712,7 +713,6 @@ input[type="datetime-local"] {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    margin-top: -5px;
 }
 
 .player-name {
@@ -773,6 +773,7 @@ input[type="datetime-local"] {
 
 .rank-mmr {
     text-align: right;
+    align-self: flex-start;
 }
 
 .rank-number {
