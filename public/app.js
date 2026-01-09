@@ -1465,27 +1465,13 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                         <div className="rank-number">#{rank}</div>
                         <div className="rank-label" style={{ marginTop: '15px' }}>{raceNames[player.race] || 'Random'}</div>
                         <div className="mmr-display">{player.mmr} MMR</div>
-                        {player.achievements && player.achievements.length > 0 && (
-                            <div style={{
-                                marginTop: '15px',
-                                fontSize: '0.85em',
-                                color: '#c9a961',
-                                background: 'rgba(0,0,0,0.5)',
-                                padding: '5px 10px',
-                                borderRadius: '4px',
-                                textAlign: 'center',
-                                fontWeight: '700'
-                            }}>
-                                🏆 {player.achievements.length}
-                            </div>
-                        )}
                     </div>
                 </div>
 
 
                 {/* Always render achievements container with fixed min-height */}
                 <div className="achievement-icons" style={{
-                    display: 'none',
+                    display: 'flex',
                     gap: '8px',
                     padding: player.achievements && player.achievements.length > 0 ? '10px 15px' : '10px 15px',
                     flexWrap: 'wrap',
