@@ -1513,20 +1513,22 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                     })}
                 </div>
 
-                {/* Always render match-graph container with fixed height */}
-                <div className="match-graph" style={{
-                    minHeight: '80px',
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    justifyContent: 'center'
-                }}>
-                    {player.matchHistory && player.matchHistory.length > 0 && player.matchHistory.slice(0, 20).map((match, idx) => {
-                        const result = typeof match === 'string' ? match : match.result;
-                        // Fixed height based on result: wins are taller
-                        const height = result === 'win' ? 70 : 40;
-                        return <div key={idx} className={`match-bar ${result}`} style={{ height: `${height}px` }} />;
-                    })}
-                </div>
+                {/* Match graph - only show when there is match history */}
+                {player.matchHistory && player.matchHistory.length > 0 && (
+                    <div className="match-graph" style={{
+                        minHeight: '80px',
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        justifyContent: 'center'
+                    }}>
+                        {player.matchHistory.slice(0, 20).map((match, idx) => {
+                            const result = typeof match === 'string' ? match : match.result;
+                            // Fixed height based on result: wins are taller
+                            const height = result === 'win' ? 70 : 40;
+                            return <div key={idx} className={`match-bar ${result}`} style={{ height: `${height}px` }} />;
+                        })}
+                    </div>
+                )}
 
                 <div className="points-section">
                     <div className="points-value">{player.points || 0}</div>
@@ -1548,8 +1550,8 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
 
                 {player.discordTag && (
                     <div style={{
-                        marginTop: '12px',
-                        padding: '10px 14px',
+                        marginTop: '8px',
+                        padding: '8px 12px',
                         background: '#5865F2',
                         borderRadius: '10px',
                         display: 'flex',
