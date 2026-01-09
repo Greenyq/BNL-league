@@ -8,6 +8,13 @@ const achievements = {
     winStreak5: { points: 50 },
     winStreak10: { points: 100 },
     winStreak15: { points: 150 },
+    // Loss Streaks
+    loseStreak3: { points: 10 },
+    loseStreak10: { points: 25 },
+    // MMR Challenges
+    giantSlayer: { points: 25 },
+    titanSlayer: { points: 50 },
+    davidVsGoliath: { points: 100 },
     // Total Wins
     warrior: { points: 30 },
     centurion: { points: 50 },
@@ -24,7 +31,7 @@ const achievements = {
     persistent: { points: 40 },
     veteran: { points: 35 },
     marathonRunner: { points: 30 },
-    // MMR
+    // MMR Milestones
     mmrMillionaire: { points: 50 },
     eliteWarrior: { points: 100 },
     // BNL
@@ -56,21 +63,46 @@ const determineAchievements = (wins, losses, points, totalGames, matchHistory = 
     else if (validWins >= 10) achs.push('gladiator');
     if (validWins >= 50) achs.push('noMercy');
 
-    // Win Streaks
+    // Win Streaks and Loss Streaks
     let maxWinStreak = 0;
-    let currentStreak = 0;
+    let maxLossStreak = 0;
+    let currentWinStreak = 0;
+    let currentLossStreak = 0;
+    let hasGiantSlayer = false;
+    let hasTitanSlayer = false;
+    let hasDavidVsGoliath = false;
+
     for (const match of validMatchHistory) {
         if (match.result === 'win') {
-            currentStreak++;
-            maxWinStreak = Math.max(maxWinStreak, currentStreak);
+            currentWinStreak++;
+            currentLossStreak = 0;
+            maxWinStreak = Math.max(maxWinStreak, currentWinStreak);
+
+            // Check MMR challenge achievements (giant slayer, titan slayer, david vs goliath)
+            if (match.mmrDiff >= 200) hasDavidVsGoliath = true;
+            else if (match.mmrDiff >= 100) hasTitanSlayer = true;
+            else if (match.mmrDiff >= 50) hasGiantSlayer = true;
         } else {
-            currentStreak = 0;
+            currentLossStreak++;
+            currentWinStreak = 0;
+            maxLossStreak = Math.max(maxLossStreak, currentLossStreak);
         }
     }
+
+    // Win streak achievements
     if (maxWinStreak >= 15) achs.push('winStreak15');
     else if (maxWinStreak >= 10) achs.push('winStreak10');
     else if (maxWinStreak >= 5) achs.push('winStreak5');
     else if (maxWinStreak >= 3) achs.push('winStreak3');
+
+    // Loss streak achievements
+    if (maxLossStreak >= 10) achs.push('loseStreak10');
+    else if (maxLossStreak >= 3) achs.push('loseStreak3');
+
+    // MMR challenge achievements
+    if (hasDavidVsGoliath) achs.push('davidVsGoliath');
+    if (hasTitanSlayer) achs.push('titanSlayer');
+    if (hasGiantSlayer) achs.push('giantSlayer');
 
     // Points
     if (validPoints >= 2000) achs.push('platinumRush');
