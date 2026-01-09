@@ -712,7 +712,7 @@ input[type="datetime-local"] {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    margin-top: -5px;
+    margin-top: -10px;
 }
 
 .player-name {
