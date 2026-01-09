@@ -1,5 +1,6 @@
 const { Player, PlayerCache, PlayerStats } = require('./models');
 const cron = require('node-cron');
+const axios = require('axios');
 
 // Achievement bonuses (must match frontend's achievements object)
 const achievements = {
@@ -331,11 +332,45 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
     return profiles;
 };
 
+// Update MMR for all players from W3Champions
+async function updateAllPlayerMMR() {
+    console.log('🔄 Updating MMR from W3Champions...');
+    const players = await Player.find({});
+    let updated = 0;
+
+    for (const player of players) {
+        try {
+            const apiUrl = `https://website-backend.w3champions.com/api/players/${encodeURIComponent(player.battleTag)}/game-mode-stats?gateWay=20&season=23`;
+            const response = await axios.get(apiUrl, {
+                headers: { 'User-Agent': 'BNL-League-App', 'Accept': 'application/json' },
+                timeout: 10000
+            });
+
+            if (response.data && response.data.length > 0) {
+                // Get highest MMR across all game modes
+                const highestMmr = Math.max(...response.data.map(mode => mode.mmr || 0));
+                if (highestMmr > 0 && highestMmr !== player.currentMmr) {
+                    await Player.updateOne({ _id: player._id }, { currentMmr: highestMmr });
+                    updated++;
+                }
+            }
+        } catch (error) {
+            // Silently skip players with errors (might be offline, renamed, etc.)
+        }
+    }
+
+    console.log(`✅ Updated MMR for ${updated}/${players.length} players`);
+    return updated;
+}
+
 // Main function: Recalculate stats for all players
 async function recalculateAllPlayerStats() {
     try {
         console.log('🔄 Starting player stats recalculation...');
         const startTime = Date.now();
+
+        // First, update all players' MMR from W3Champions
+        await updateAllPlayerMMR();
 
         // Get all players from database
         const players = await Player.find({});
