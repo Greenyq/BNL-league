@@ -358,6 +358,43 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
     return profiles;
 };
 
+// Load match data from W3Champions API
+async function loadMatchDataForPlayer(player) {
+    try {
+        const cutoffDate = new Date('2025-11-27T00:00:00Z');
+        const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=20&season=23&pageSize=100`;
+
+        const response = await axios.get(apiUrl, {
+            headers: { 'User-Agent': 'BNL-League-App', 'Accept': 'application/json' },
+            timeout: 12000
+        });
+
+        let matchData = response.data.matches || [];
+        matchData = matchData.filter(m => new Date(m.startTime) >= cutoffDate);
+
+        // Save to cache
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour TTL
+
+        await PlayerCache.findOneAndUpdate(
+            { battleTag: player.battleTag },
+            {
+                battleTag: player.battleTag,
+                matchData,
+                lastUpdated: new Date(),
+                expiresAt
+            },
+            { upsert: true, new: true }
+        );
+
+        console.log(`   📥 Loaded ${matchData.length} matches for ${player.battleTag}`);
+        return matchData;
+    } catch (error) {
+        console.log(`   ❌ Error loading matches for ${player.battleTag}: ${error.message}`);
+        return [];
+    }
+}
+
 // Update MMR for all players from W3Champions
 async function updateAllPlayerMMR() {
     console.log('🔄 Updating MMR from W3Champions...');
@@ -421,10 +458,22 @@ async function recalculateAllPlayerStats() {
         for (const player of players) {
             try {
                 // Get cached matchData for this player
-                const cache = await PlayerCache.findOne({ battleTag: player.battleTag });
+                let cache = await PlayerCache.findOne({ battleTag: player.battleTag });
 
+                console.log(`📦 ${player.battleTag}: cache=${!!cache}, matchData=${cache?.matchData?.length || 0}`);
+
+                // Load match data if missing
                 if (!cache || !cache.matchData || cache.matchData.length === 0) {
-                    // No match data yet, create empty stats
+                    console.log(`   ⚠️ ${player.battleTag}: NO CACHE DATA - loading from W3Champions API...`);
+                    await loadMatchDataForPlayer(player);
+
+                    // Refetch cache after loading
+                    cache = await PlayerCache.findOne({ battleTag: player.battleTag });
+                }
+
+                // If still no data after loading, create empty stats
+                if (!cache || !cache.matchData || cache.matchData.length === 0) {
+                    console.log(`   ⚠️ ${player.battleTag}: Still no data - creating empty stats`);
                     await PlayerStats.findOneAndUpdate(
                         { battleTag: player.battleTag },
                         {
