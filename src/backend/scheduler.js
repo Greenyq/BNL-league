@@ -453,21 +453,16 @@ async function recalculateAllPlayerStats() {
         // Process each player
         for (const player of players) {
             try {
+                // ALWAYS load fresh match data from W3Champions
+                console.log(`📥 ${player.battleTag}: Loading fresh match data...`);
+                await loadMatchDataForPlayer(player);
+
                 // Get cached matchData for this player
-                let cache = await PlayerCache.findOne({ battleTag: player.battleTag });
+                const cache = await PlayerCache.findOne({ battleTag: player.battleTag });
 
                 console.log(`📦 ${player.battleTag}: cache=${!!cache}, matchData=${cache?.matchData?.length || 0}`);
 
-                // Load match data if missing
-                if (!cache || !cache.matchData || cache.matchData.length === 0) {
-                    console.log(`   ⚠️ ${player.battleTag}: NO CACHE DATA - loading from W3Champions API...`);
-                    await loadMatchDataForPlayer(player);
-
-                    // Refetch cache after loading
-                    cache = await PlayerCache.findOne({ battleTag: player.battleTag });
-                }
-
-                // If still no data after loading, create empty stats
+                // If no data after loading, create empty stats
                 if (!cache || !cache.matchData || cache.matchData.length === 0) {
                     console.log(`   ⚠️ ${player.battleTag}: Still no data - creating empty stats`);
                     await PlayerStats.findOneAndUpdate(
@@ -550,11 +545,17 @@ function initializeScheduler() {
     // Run every hour: "0 * * * *"
     // Run every 5 minutes for testing: "*/5 * * * *"
     const job = cron.schedule('*/10 * * * *', async () => {
-        console.log('⏰ Cron job triggered at', new Date().toISOString());
+        console.log('\n' + '='.repeat(70));
+        console.log('⏰ CRON JOB TRIGGERED at', new Date().toISOString());
+        console.log('='.repeat(70));
         await recalculateAllPlayerStats();
+        console.log('='.repeat(70));
+        console.log('✅ CRON JOB COMPLETED at', new Date().toISOString());
+        console.log('='.repeat(70) + '\n');
     });
 
     console.log('✅ Stats scheduler initialized (every 10 minutes)');
+    console.log('   Next run will be in ~10 minutes');
     return job;
 }
 
