@@ -161,7 +161,7 @@ const determineAchievements = (wins, losses, points, totalGames, matchHistory = 
 };
 
 // Process matches and calculate stats (ported from frontend)
-const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
+const processMatches = (battleTag, matches, allBnlBattleTags = new Set(), currentMmrFromDB = null) => {
     if (!matches || matches.length === 0) {
         return [{
             race: 0,
@@ -230,7 +230,12 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
         }
 
         matchesByRace[race].push(match);
-        mmrByRace[race] = player.currentMmr || mmrByRace[race] || 0;
+        // Use MMR from database if available, otherwise from match data
+        if (currentMmrFromDB !== null && currentMmrFromDB > 0) {
+            mmrByRace[race] = currentMmrFromDB;
+        } else {
+            mmrByRace[race] = player.currentMmr || mmrByRace[race] || 0;
+        }
     }
 
     // If no races found, return empty profile
@@ -340,7 +345,7 @@ async function updateAllPlayerMMR() {
 
     for (const player of players) {
         try {
-            const apiUrl = `https://website-backend.w3champions.com/api/players/${encodeURIComponent(player.battleTag)}/game-mode-stats?gateWay=20&season=23`;
+            const apiUrl = `https://website-backend.w3champions.com/api/players/${encodeURIComponent(player.battleTag)}/game-mode-stats?gateway=20&season=23`;
             const response = await axios.get(apiUrl, {
                 headers: { 'User-Agent': 'BNL-League-App', 'Accept': 'application/json' },
                 timeout: 10000
@@ -355,10 +360,14 @@ async function updateAllPlayerMMR() {
                         await Player.updateOne({ _id: player._id }, { currentMmr: solo1v1.mmr });
                         console.log(`   Updated ${player.battleTag}: ${player.currentMmr || 'none'} → ${solo1v1.mmr}`);
                         updated++;
+                    } else {
+                        console.log(`   ✓ ${player.battleTag} MMR already up to date: ${player.currentMmr}`);
                     }
                 } else {
-                    console.log(`   ⚠️ No 1v1 Solo MMR found for ${player.battleTag}`);
+                    console.log(`   ⚠️ No 1v1 Solo MMR found for ${player.battleTag} (available modes: ${response.data.map(m => `gameMode=${m.gameMode}`).join(', ')})`);
                 }
+            } else {
+                console.log(`   ⚠️ No game mode stats returned for ${player.battleTag} (response empty)`);
             }
         } catch (error) {
             console.log(`   ❌ Error fetching MMR for ${player.battleTag}: ${error.message}`);
@@ -413,7 +422,7 @@ async function recalculateAllPlayerStats() {
                 }
 
                 // Calculate stats for this player
-                const profiles = processMatches(player.battleTag, cache.matchData, allBnlBattleTags);
+                const profiles = processMatches(player.battleTag, cache.matchData, allBnlBattleTags, player.currentMmr);
 
                 // Calculate overall stats (sum across all races)
                 let overallWins = 0;
