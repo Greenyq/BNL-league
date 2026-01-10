@@ -161,7 +161,7 @@ const determineAchievements = (wins, losses, points, totalGames, matchHistory = 
 };
 
 // Process matches and calculate stats (ported from frontend)
-const processMatches = (battleTag, matches, allBnlBattleTags = new Set(), currentMmrFromDB = null) => {
+const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
     if (!matches || matches.length === 0) {
         return [{
             race: 0,
@@ -230,12 +230,7 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set(), curren
         }
 
         matchesByRace[race].push(match);
-        // Use MMR from database if available, otherwise from match data
-        if (currentMmrFromDB !== null && currentMmrFromDB > 0) {
-            mmrByRace[race] = currentMmrFromDB;
-        } else {
-            mmrByRace[race] = player.currentMmr || mmrByRace[race] || 0;
-        }
+        mmrByRace[race] = player.currentMmr || mmrByRace[race] || 0;
     }
 
     // If no races found, return empty profile
@@ -422,7 +417,7 @@ async function recalculateAllPlayerStats() {
                 }
 
                 // Calculate stats for this player
-                const profiles = processMatches(player.battleTag, cache.matchData, allBnlBattleTags, player.currentMmr);
+                const profiles = processMatches(player.battleTag, cache.matchData, allBnlBattleTags);
 
                 // Calculate overall stats (sum across all races)
                 let overallWins = 0;
