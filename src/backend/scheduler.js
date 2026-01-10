@@ -419,8 +419,11 @@ async function recalculateAllPlayerStats() {
                 // Get cached matchData for this player
                 const cache = await PlayerCache.findOne({ battleTag: player.battleTag });
 
+                console.log(`📦 ${player.battleTag}: cache=${!!cache}, matchData=${cache?.matchData?.length || 0}`);
+
                 if (!cache || !cache.matchData || cache.matchData.length === 0) {
                     // No match data yet, create empty stats
+                    console.log(`   ⚠️ ${player.battleTag}: NO CACHE DATA - creating empty stats`);
                     await PlayerStats.findOneAndUpdate(
                         { battleTag: player.battleTag },
                         {
