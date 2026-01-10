@@ -162,7 +162,10 @@ const determineAchievements = (wins, losses, points, totalGames, matchHistory = 
 
 // Process matches and calculate stats (ported from frontend)
 const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
+    console.log(`  🔄 Processing ${battleTag}: ${matches ? matches.length : 0} total matches`);
+
     if (!matches || matches.length === 0) {
+        console.log(`  ⚠️ ${battleTag}: NO MATCHES IN CACHE!`);
         return [{
             race: 0,
             mmr: 0,
@@ -183,6 +186,7 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
             const matchDate = new Date(match.startTime);
             return matchDate >= cutoffDate;
         });
+        console.log(`  📅 ${battleTag}: After date filter (>= 2025-11-27): ${recentMatches.length} matches`);
     }
 
     // Sort by date if needed
@@ -197,12 +201,22 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
     // Group matches by race
     const matchesByRace = {};
     const mmrByRace = {};
+    let skippedNot1v1 = 0;
+    let skippedNoTeams = 0;
+    let skippedNoPlayer = 0;
+    let processedMatches = 0;
 
     for (let i = 0; i < recentMatches.length; i++) {
         const match = recentMatches[i];
 
-        if (match.gameMode !== 1) continue;
-        if (!match.teams || !Array.isArray(match.teams) || match.teams.length < 2) continue;
+        if (match.gameMode !== 1) {
+            skippedNot1v1++;
+            continue;
+        }
+        if (!match.teams || !Array.isArray(match.teams) || match.teams.length < 2) {
+            skippedNoTeams++;
+            continue;
+        }
 
         let playerTeam = null;
         let player = null;
@@ -222,7 +236,10 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
             if (playerTeam) break;
         }
 
-        if (!playerTeam || !player || !player.race) continue;
+        if (!playerTeam || !player || !player.race) {
+            skippedNoPlayer++;
+            continue;
+        }
 
         const race = player.race;
         if (!matchesByRace[race]) {
@@ -231,10 +248,14 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
 
         matchesByRace[race].push(match);
         mmrByRace[race] = player.currentMmr || mmrByRace[race] || 0;
+        processedMatches++;
     }
+
+    console.log(`  📊 ${battleTag}: Skipped - Not 1v1: ${skippedNot1v1}, No teams: ${skippedNoTeams}, Player not found: ${skippedNoPlayer}, PROCESSED: ${processedMatches}`);
 
     // If no races found, return empty profile
     if (Object.keys(matchesByRace).length === 0) {
+        console.log(`  ❌ ${battleTag}: NO VALID MATCHES FOUND after filtering!`);
         return [{
             race: 0,
             mmr: 0,
@@ -328,6 +349,11 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
 
     // Sort profiles by race ID
     profiles.sort((a, b) => a.race - b.race);
+
+    const totalWins = profiles.reduce((sum, p) => sum + p.wins, 0);
+    const totalLosses = profiles.reduce((sum, p) => sum + p.losses, 0);
+    const totalPoints = profiles.reduce((sum, p) => sum + p.points, 0);
+    console.log(`  ✅ ${battleTag}: RESULT - ${profiles.length} race(s), Wins: ${totalWins}, Losses: ${totalLosses}, Points: ${totalPoints}`);
 
     return profiles;
 };
