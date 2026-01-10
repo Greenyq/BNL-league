@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/backend/server.js",
     "dev": "nodemon src/backend/server.js",
-    "recalc-stats": "node scripts/recalculate-stats.js"
+    "recalc-stats": "node scripts/recalculate-stats.js",
+    "reload-cache": "node scripts/reload-match-cache.js"
   },
   "dependencies": {
     "axios": "^1.6.0",
