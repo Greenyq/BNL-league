@@ -431,30 +431,6 @@ router.post('/admin/team-matches', async (req, res) => {
         if (!matchData.homePlayerId && matchData.player1Id && matchData.player2Id) {
             matchData.homePlayerId = Math.random() < 0.5 ? matchData.player1Id : matchData.player2Id;
         }
-
-        // If creating with winner, calculate correct points
-        if (matchData.winnerId && matchData.status === 'completed') {
-            const player1 = await Player.findById(matchData.player1Id);
-            const player2 = await Player.findById(matchData.player2Id);
-
-            if (player1 && player2) {
-                const winnerIsPlayer1 = matchData.winnerId === matchData.player1Id;
-                const winner = winnerIsPlayer1 ? player1 : player2;
-                const loser = winnerIsPlayer1 ? player2 : player1;
-
-                const winnerMmr = winner.currentMmr || 0;
-                const loserMmr = loser.currentMmr || 0;
-                const mmrDiff = winnerMmr - loserMmr;
-
-                // Calculate points based on MMR difference
-                if (mmrDiff >= 100) {
-                    matchData.points = 10; // Winner is much stronger (100+ ММР разница)
-                } else {
-                    matchData.points = 50; // Normal/equal match
-                }
-            }
-        }
-
         const newMatch = await TeamMatch.create(matchData);
         res.json(newMatch);
     } catch (error) {
@@ -464,40 +440,15 @@ router.post('/admin/team-matches', async (req, res) => {
 
 router.put('/admin/team-matches/:id', async (req, res) => {
     try {
-        const match = await TeamMatch.findById(req.params.id);
-        if (!match) {
-            return res.status(404).json({ error: 'Match not found' });
-        }
-
-        // If setting a winner, calculate correct points
-        if (req.body.winnerId && req.body.status === 'completed') {
-            const player1 = await Player.findById(match.player1Id);
-            const player2 = await Player.findById(match.player2Id);
-
-            if (player1 && player2) {
-                const winnerIsPlayer1 = req.body.winnerId === match.player1Id;
-                const winner = winnerIsPlayer1 ? player1 : player2;
-                const loser = winnerIsPlayer1 ? player2 : player1;
-
-                const winnerMmr = winner.currentMmr || 0;
-                const loserMmr = loser.currentMmr || 0;
-                const mmrDiff = winnerMmr - loserMmr;
-
-                // Calculate points based on MMR difference
-                if (mmrDiff >= 100) {
-                    req.body.points = 10; // Winner is much stronger (100+ ММР разница)
-                } else {
-                    req.body.points = 50; // Normal/equal match
-                }
-            }
-        }
-
-        const updatedMatch = await TeamMatch.findByIdAndUpdate(
+        const match = await TeamMatch.findByIdAndUpdate(
             req.params.id,
             { ...req.body, updatedAt: Date.now() },
             { new: true }
         );
-        res.json(updatedMatch);
+        if (!match) {
+            return res.status(404).json({ error: 'Match not found' });
+        }
+        res.json(match);
     } catch (error) {
         res.status(500).json({ error: 'Failed to update match' });
     }
@@ -561,10 +512,12 @@ router.put('/player-matches/:id/report', async (req, res) => {
                 const mmrDiff = winnerMmr - loserMmr;
 
                 // Calculate points based on MMR difference
-                if (mmrDiff >= 100) {
-                    points = 10; // Winner is much stronger (100+ ММР разница)
+                if (mmrDiff >= 150) {
+                    points = 10; // Winner is much stronger
+                } else if (mmrDiff >= 100) {
+                    points = 20; // Winner is stronger
                 } else {
-                    points = 50; // Normal/equal match
+                    points = 50; // Normal match
                 }
             } else {
                 points = 50; // Default if can't calculate
