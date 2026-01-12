@@ -1702,8 +1702,6 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                     // Add or subtract points based on win/loss
                     if (playerWon) {
                         totalPoints += (match.points || 0);
-                    } else {
-                        totalPoints -= (match.points || 0);
                     }
                 }
             }
