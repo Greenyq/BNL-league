@@ -373,20 +373,20 @@ func calculateRaceStats(battleTag string, matches []MatchData) (wins, losses, po
 		if playerTeam.Won {
 			wins++
 			if mmrDiff >= 20 {
-				points += 70 // Win vs stronger
+				points += 30 // Win vs stronger
 			} else if mmrDiff >= -19 {
 				points += 50 // Win vs equal
 			} else {
-				points += 30 // Win vs weaker
+				points += 70 // Win vs weaker
 			}
 		} else {
 			losses++
 			if mmrDiff <= -20 {
-				points -= 70 // Loss to weaker
+				points -= 30 // Loss to weaker
 			} else if mmrDiff >= -19 && mmrDiff <= 19 {
 				points -= 50 // Loss to equal
 			} else {
-				points -= 30 // Loss to stronger
+				points -= 70 // Loss to stronger
 			}
 		}
 	}
