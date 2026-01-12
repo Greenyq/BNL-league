@@ -2206,13 +2206,17 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                     {/* Points for winner - enlarged, centered */}
                     {isWinner && points > 0 && (
                         <div style={{
-                            fontSize: '1em',
+                            fontSize: '1.1em',
                             color: '#4caf50',
-                            fontWeight: '600',
+                            fontWeight: '700',
                             textAlign: 'center',
-                            marginTop: '4px'
+                            marginTop: '8px',
+                            padding: '4px 12px',
+                            background: 'rgba(76, 175, 80, 0.15)',
+                            borderRadius: '8px',
+                            border: '1px solid #4caf50'
                         }}>
-                            +{points} pts
+                            ⭐ +{points} pts
                         </div>
                     )}
                 </div>
@@ -2275,15 +2279,17 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             </div>
                             {match.points > 0 && (
                                 <div style={{
-                                    marginTop: '10px',
-                                    padding: '6px 14px',
-                                    background: '#2a2a2a',
+                                    marginTop: '12px',
+                                    padding: '8px 16px',
+                                    background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(76, 175, 80, 0.1))',
                                     borderRadius: '12px',
-                                    fontSize: '0.95em', // Increased
+                                    fontSize: '1em',
                                     color: '#4caf50',
-                                    fontWeight: '600'
+                                    fontWeight: '700',
+                                    border: '1px solid rgba(76, 175, 80, 0.4)',
+                                    boxShadow: '0 2px 8px rgba(76, 175, 80, 0.15)'
                                 }}>
-                                    +{match.points} pts
+                                    ⭐ +{match.points} pts
                                 </div>
                             )}
                         </React.Fragment>
