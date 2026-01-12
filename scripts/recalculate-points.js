@@ -55,15 +55,10 @@ async function recalculateAllPoints() {
 
             // Calculate points with CORRECT K-factor logic
             let points = 0;
-            if (mmrDiff >= 150) {
-                points = 10; // Winner is much stronger (easy win)
-            } else if (mmrDiff >= 100) {
-                points = 20; // Winner is stronger
-            } else if (mmrDiff >= -99) {
-                points = 50; // Normal match (around equal)
+            if (mmrDiff >= 100) {
+                points = 10; // Winner is much stronger (100+ ММР разница)
             } else {
-                // Winner is weaker (difficult win)
-                points = 70;
+                points = 50; // Normal/equal match
             }
 
             // Update match with correct points

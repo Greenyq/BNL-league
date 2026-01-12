@@ -2204,7 +2204,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                     </div>
                     
                     {/* Points for winner - enlarged, centered */}
-                    {isWinner && points > 0 && (
+                    {isWinner && parseInt(points) > 0 && (
                         <div style={{
                             fontSize: '1.1em',
                             color: '#4caf50',
