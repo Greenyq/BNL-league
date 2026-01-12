@@ -1683,39 +1683,6 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
         status: 'upcoming', scheduledDate: '',
         w3championsMatchId: ''
     });
-    const [recalculatingPoints, setRecalculatingPoints] = React.useState(false);
-
-    // Recalculate points for all completed matches
-    const handleRecalculatePoints = async () => {
-        if (!confirm('Пересчитать очки для всех завершенных матчей с правильной логикой K-фактора?\n\nЭто займет время...')) {
-            return;
-        }
-
-        setRecalculatingPoints(true);
-        try {
-            const response = await fetch(`${API_BASE}/api/admin/recalculate-match-points`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-session-id': sessionId
-                }
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                alert(`✅ ${result.message}\nОновлено матчей: ${result.updatedCount}`);
-                if (onUpdate) onUpdate();
-            } else {
-                alert(`❌ Ошибка: ${result.error}`);
-            }
-        } catch (error) {
-            console.error('Error recalculating points:', error);
-            alert(`❌ Ошибка: ${error.message}`);
-        } finally {
-            setRecalculatingPoints(false);
-        }
-    };
 
     // Generate match grid between two teams
     const handleGenerateGrid = async () => {
@@ -1880,18 +1847,6 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                     }}
                 >
                     {showGridGenerator ? '❌ Отмена' : '🎯 Создать сетку матчей'}
-                </button>
-                <button
-                    onClick={handleRecalculatePoints}
-                    disabled={recalculatingPoints}
-                    style={{
-                        padding: '12px 24px', borderRadius: '8px',
-                        background: '#ff9800', color: '#fff',
-                        border: 'none', cursor: recalculatingPoints ? 'not-allowed' : 'pointer',
-                        fontWeight: '600', opacity: recalculatingPoints ? 0.6 : 1
-                    }}
-                >
-                    {recalculatingPoints ? '🔄 Пересчитываю...' : '🔢 Пересчитать очки всех матчей'}
                 </button>
             </div>
 
