@@ -2216,7 +2216,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             borderRadius: '8px',
                             border: '1px solid #4caf50'
                         }}>
-                            ⭐ +{points} pts
+                            +{points} pts
                         </div>
                     )}
                 </div>
@@ -2289,7 +2289,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                     border: '1px solid rgba(76, 175, 80, 0.4)',
                                     boxShadow: '0 2px 8px rgba(76, 175, 80, 0.15)'
                                 }}>
-                                    ⭐ +{match.points} pts
+                                    +{match.points} pts
                                 </div>
                             )}
                         </React.Fragment>
