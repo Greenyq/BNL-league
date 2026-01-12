@@ -1285,4 +1285,72 @@ router.get('/live-matches', async (req, res) => {
     }
 });
 
+// ==================== RECALCULATE MATCH POINTS ====================
+// Admin endpoint to recalculate points for all completed matches with correct K-factor
+router.post('/admin/recalculate-match-points', async (req, res) => {
+    try {
+        // Find all completed matches with winners
+        const matches = await TeamMatch.find({
+            status: 'completed',
+            winnerId: { $ne: null }
+        });
+
+        console.log(`🔄 Recalculating points for ${matches.length} completed matches...`);
+        let updatedCount = 0;
+
+        for (const match of matches) {
+            // Get both players to compare MMR
+            const player1 = await Player.findById(match.player1Id);
+            const player2 = await Player.findById(match.player2Id);
+
+            if (!player1 || !player2) {
+                console.log(`⚠️ Skipping match ${match.id}: Player not found`);
+                continue;
+            }
+
+            const winnerIsPlayer1 = match.winnerId === match.player1Id;
+            const winner = winnerIsPlayer1 ? player1 : player2;
+            const loser = winnerIsPlayer1 ? player2 : player1;
+
+            const winnerMmr = winner.currentMmr || 0;
+            const loserMmr = loser.currentMmr || 0;
+            const mmrDiff = winnerMmr - loserMmr;
+
+            // Calculate points with CORRECT K-factor logic
+            let points = 0;
+            if (mmrDiff >= 150) {
+                points = 10; // Winner is much stronger (easy win)
+            } else if (mmrDiff >= 100) {
+                points = 20; // Winner is stronger
+            } else if (mmrDiff >= -99) {
+                points = 50; // Normal match (around equal)
+            } else {
+                // Winner is weaker (difficult win)
+                points = 70;
+            }
+
+            // Update match with correct points
+            await TeamMatch.findByIdAndUpdate(
+                match.id,
+                { points: points },
+                { new: true }
+            );
+
+            updatedCount++;
+            console.log(`✅ Match ${match.id}: ${winner.name} vs ${loser.name} = ${points} pts (MMR diff: ${mmrDiff})`);
+        }
+
+        res.json({
+            success: true,
+            message: `✅ Recalculated points for ${updatedCount} matches`,
+            updatedCount: updatedCount
+        });
+
+        console.log(`✅ Recalculation complete: ${updatedCount}/${matches.length} matches updated`);
+    } catch (error) {
+        console.error('Error recalculating match points:', error);
+        res.status(500).json({ error: 'Failed to recalculate match points', details: error.message });
+    }
+});
+
 module.exports = router;
