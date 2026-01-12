@@ -53,12 +53,14 @@ async function recalculateAllPoints() {
             const loserMmr = loser.currentMmr || 0;
             const mmrDiff = winnerMmr - loserMmr;
 
-            // Calculate points with CORRECT K-factor logic
+            // Calculate points with correct logic
             let points = 0;
-            if (mmrDiff >= 100) {
-                points = 10; // Winner is much stronger (100+ ММР разница)
+            if (mmrDiff >= 150) {
+                points = 10; // Winner is much stronger
+            } else if (mmrDiff >= 100) {
+                points = 20; // Winner is stronger
             } else {
-                points = 50; // Normal/equal match
+                points = 50; // Normal match
             }
 
             // Update match with correct points
