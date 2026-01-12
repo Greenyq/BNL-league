@@ -2277,21 +2277,6 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             }}>
                                 VS
                             </div>
-                            {match.points > 0 && (
-                                <div style={{
-                                    marginTop: '12px',
-                                    padding: '8px 16px',
-                                    background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(76, 175, 80, 0.1))',
-                                    borderRadius: '12px',
-                                    fontSize: '1em',
-                                    color: '#4caf50',
-                                    fontWeight: '700',
-                                    border: '1px solid rgba(76, 175, 80, 0.4)',
-                                    boxShadow: '0 2px 8px rgba(76, 175, 80, 0.15)'
-                                }}>
-                                    +{match.points} pts
-                                </div>
-                            )}
                         </React.Fragment>
                     ) : (
                         <React.Fragment>
