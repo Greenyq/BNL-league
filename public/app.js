@@ -2039,9 +2039,9 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
         matchesByTeams[key].matches.push(match);
         if (match.status === 'completed') {
             // Add points to winner only
-            if (match.winnerId === match.team1Id) {
+            if (match.winnerId === match.player1Id) {
                 matchesByTeams[key].team1Points += match.points || 0;
-            } else if (match.winnerId === match.team2Id) {
+            } else if (match.winnerId === match.player2Id) {
                 matchesByTeams[key].team2Points += match.points || 0;
             }
         }
@@ -2227,8 +2227,8 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
         const player1 = getPlayer(match.player1Id);
         const player2 = getPlayer(match.player2Id);
         const isCompleted = match.status === 'completed';
-        const p1Won = isCompleted && match.winnerId === match.team1Id;
-        const p2Won = isCompleted && match.winnerId === match.team2Id;
+        const p1Won = isCompleted && match.winnerId === match.player1Id;
+        const p2Won = isCompleted && match.winnerId === match.player2Id;
         const isHomePlayer = currentPlayerData && (match.player1Id === currentPlayerData.id || match.player2Id === currentPlayerData.id) && match.homePlayerId === currentPlayerData.id;
 
         return (
@@ -5353,7 +5353,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                             {myMatches.filter(m => m.status === 'completed').slice(0, 5).map(match => {
                                 const isPlayer1 = match.player1Id === playerData.id;
                                 const opponent = allPlayers.find(p => p.id === (isPlayer1 ? match.player2Id : match.player1Id));
-                                const iWon = (isPlayer1 && match.winnerId === match.team1Id) || (!isPlayer1 && match.winnerId === match.team2Id);
+                                const iWon = (isPlayer1 && match.winnerId === match.player1Id) || (!isPlayer1 && match.winnerId === match.player2Id);
                                 
                                 return (
                                     <div key={match.id} style={{
