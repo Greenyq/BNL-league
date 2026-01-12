@@ -2203,16 +2203,16 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                         {player?.name || 'Unknown'}
                     </div>
                     
-                    {/* Points display */}
-                    {points !== 0 && (
+                    {/* Points for winner - enlarged, centered */}
+                    {isWinner && points > 0 && (
                         <div style={{
                             fontSize: '1em',
-                            color: points > 0 ? '#4caf50' : '#f44336',
+                            color: '#4caf50',
                             fontWeight: '600',
                             textAlign: 'center',
                             marginTop: '4px'
                         }}>
-                            {points > 0 ? '+' : ''}{points} pts
+                            +{points} pts
                         </div>
                     )}
                 </div>
@@ -2246,7 +2246,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                 }}>
                 {/* Left player (Team 1) */}
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-                    {renderPlayerCard(player1, team1, p1Won, true, p1Won ? match.points : -match.points)}
+                    {renderPlayerCard(player1, team1, p1Won, true, p1Won ? match.points : 0)}
                 </div>
                 
                 {/* VS / Status - enlarged */}
@@ -2318,7 +2318,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                 
                 {/* Right player (Team 2) */}
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
-                    {renderPlayerCard(player2, team2, p2Won, false, p2Won ? match.points : -match.points)}
+                    {renderPlayerCard(player2, team2, p2Won, false, p2Won ? match.points : 0)}
                 </div>
                 </div>
 
