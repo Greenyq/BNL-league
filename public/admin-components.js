@@ -136,22 +136,36 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
         });
 
         teamMatches.forEach(match => {
+            // Determine which team the winner belongs to
+            let winnerTeamId = null;
+            if (match.winnerId === match.player1Id) {
+                winnerTeamId = match.team1Id;
+            } else if (match.winnerId === match.player2Id) {
+                winnerTeamId = match.team2Id;
+            }
+            // Also handle old format where winnerId might be team ID (for backwards compatibility)
+            else if (match.winnerId === match.team1Id) {
+                winnerTeamId = match.team1Id;
+            } else if (match.winnerId === match.team2Id) {
+                winnerTeamId = match.team2Id;
+            }
+
             if (match.team1Id && rankings[match.team1Id]) {
                 rankings[match.team1Id].matches++;
-                if (match.winnerId === match.team1Id) {
+                if (winnerTeamId === match.team1Id) {
                     rankings[match.team1Id].wins++;
                     rankings[match.team1Id].totalPoints += match.points || 0;
-                } else if (match.winnerId === match.team2Id) {
+                } else if (winnerTeamId === match.team2Id) {
                     rankings[match.team1Id].losses++;
                 }
             }
-            
+
             if (match.team2Id && rankings[match.team2Id]) {
                 rankings[match.team2Id].matches++;
-                if (match.winnerId === match.team2Id) {
+                if (winnerTeamId === match.team2Id) {
                     rankings[match.team2Id].wins++;
                     rankings[match.team2Id].totalPoints += match.points || 0;
-                } else if (match.winnerId === match.team1Id) {
+                } else if (winnerTeamId === match.team1Id) {
                     rankings[match.team2Id].losses++;
                 }
             }

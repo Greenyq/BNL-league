@@ -1668,7 +1668,23 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
 
         return matches.reduce((sum, match) => {
             const winnerId = match.winnerId;
-            if (winnerId === teamId) {
+            // Determine which team the winner belongs to
+            let winnerTeamId = null;
+
+            if (winnerId === match.player1Id) {
+                winnerTeamId = match.team1Id;
+            } else if (winnerId === match.player2Id) {
+                winnerTeamId = match.team2Id;
+            }
+            // Also handle old format where winnerId might be team ID (for backwards compatibility)
+            else if (winnerId === match.team1Id) {
+                winnerTeamId = match.team1Id;
+            } else if (winnerId === match.team2Id) {
+                winnerTeamId = match.team2Id;
+            }
+
+            // Add points if this team won
+            if (winnerTeamId === teamId) {
                 return sum + (match.points || 0);
             }
             return sum;
