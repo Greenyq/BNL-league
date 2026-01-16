@@ -2268,7 +2268,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                         />
                                     ) : null}
                                     <div style={{ fontSize: '1.5em', marginBottom: '5px', display: team1?.logo ? 'none' : 'block' }}>{team1?.emoji}</div>
-                                    <div style={{ fontWeight: match.winnerId === match.team1Id ? '700' : '400', color: match.winnerId === match.team1Id ? '#4caf50' : '#888' }}>
+                                    <div style={{ fontWeight: (match.winnerId === match.player1Id) ? '700' : '400', color: (match.winnerId === match.player1Id) ? '#4caf50' : '#888' }}>
                                         {team1?.name}
                                     </div>
                                     <div style={{ color: '#c9a961', fontSize: '0.9em' }}>
@@ -2297,7 +2297,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                         />
                                     ) : null}
                                     <div style={{ fontSize: '1.5em', marginBottom: '5px', display: team2?.logo ? 'none' : 'block' }}>{team2?.emoji}</div>
-                                    <div style={{ fontWeight: match.winnerId === match.team2Id ? '700' : '400', color: match.winnerId === match.team2Id ? '#4caf50' : '#888' }}>
+                                    <div style={{ fontWeight: (match.winnerId === match.player2Id) ? '700' : '400', color: (match.winnerId === match.player2Id) ? '#4caf50' : '#888' }}>
                                         {team2?.name}
                                     </div>
                                     <div style={{ color: '#c9a961', fontSize: '0.9em' }}>
