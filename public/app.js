@@ -2032,10 +2032,19 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
     teams.forEach(team => {
         teamPoints[team._id || team.id] = 0;
     });
-    
-    teamMatches.filter(m => m.status === 'completed').forEach(match => {
-        if (match.winnerId && teamPoints[match.winnerId] !== undefined) {
-            teamPoints[match.winnerId] += match.points || 0;
+
+    teamMatches.filter(m => m.status === 'completed' && m.winnerId).forEach(match => {
+        // Determine which team the winner belongs to
+        let winnerTeamId = null;
+        if (match.winnerId === match.player1Id) {
+            winnerTeamId = match.team1Id;
+        } else if (match.winnerId === match.player2Id) {
+            winnerTeamId = match.team2Id;
+        }
+
+        // Add points only if we can determine the winner's team
+        if (winnerTeamId && teamPoints[winnerTeamId] !== undefined) {
+            teamPoints[winnerTeamId] += match.points || 0;
         }
     });
     
