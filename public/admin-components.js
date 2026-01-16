@@ -395,7 +395,7 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
                         Завершенных матчей пока нет.
                     </div>
                 )}
-                {teamMatches.filter(m => m.status === 'completed').slice().reverse().map(match => {
+                {teamMatches.filter(m => m.status === 'completed' && m.winnerId).slice().reverse().map(match => {
                     const team1 = teams.find(t => t.id === match.team1Id);
                     const team2 = teams.find(t => t.id === match.team2Id);
 
