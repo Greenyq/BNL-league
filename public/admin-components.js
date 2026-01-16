@@ -136,8 +136,8 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
         });
 
         teamMatches.forEach(match => {
-            // Only count completed matches
-            if (match.status !== 'completed') {
+            // Only count completed matches with a winner
+            if (match.status !== 'completed' || !match.winnerId) {
                 return;
             }
 
@@ -153,6 +153,11 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
                 winnerTeamId = match.team1Id;
             } else if (match.winnerId === match.team2Id) {
                 winnerTeamId = match.team2Id;
+            }
+
+            // Only count if we can determine the winner
+            if (!winnerTeamId) {
+                return;
             }
 
             if (match.team1Id && rankings[match.team1Id]) {
@@ -390,7 +395,7 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
                         Завершенных матчей пока нет.
                     </div>
                 )}
-                {teamMatches.filter(m => m.status === 'completed').slice().reverse().map(match => {
+                {teamMatches.filter(m => m.status === 'completed' && m.winnerId).slice().reverse().map(match => {
                     const team1 = teams.find(t => t.id === match.team1Id);
                     const team2 = teams.find(t => t.id === match.team2Id);
 
@@ -2268,7 +2273,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                         />
                                     ) : null}
                                     <div style={{ fontSize: '1.5em', marginBottom: '5px', display: team1?.logo ? 'none' : 'block' }}>{team1?.emoji}</div>
-                                    <div style={{ fontWeight: match.winnerId === match.team1Id ? '700' : '400', color: match.winnerId === match.team1Id ? '#4caf50' : '#888' }}>
+                                    <div style={{ fontWeight: (match.winnerId === match.player1Id) ? '700' : '400', color: (match.winnerId === match.player1Id) ? '#4caf50' : '#888' }}>
                                         {team1?.name}
                                     </div>
                                     <div style={{ color: '#c9a961', fontSize: '0.9em' }}>
@@ -2297,7 +2302,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                         />
                                     ) : null}
                                     <div style={{ fontSize: '1.5em', marginBottom: '5px', display: team2?.logo ? 'none' : 'block' }}>{team2?.emoji}</div>
-                                    <div style={{ fontWeight: match.winnerId === match.team2Id ? '700' : '400', color: match.winnerId === match.team2Id ? '#4caf50' : '#888' }}>
+                                    <div style={{ fontWeight: (match.winnerId === match.player2Id) ? '700' : '400', color: (match.winnerId === match.player2Id) ? '#4caf50' : '#888' }}>
                                         {team2?.name}
                                     </div>
                                     <div style={{ color: '#c9a961', fontSize: '0.9em' }}>
