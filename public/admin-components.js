@@ -136,6 +136,11 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
         });
 
         teamMatches.forEach(match => {
+            // Only count completed matches
+            if (match.status !== 'completed') {
+                return;
+            }
+
             // Determine which team the winner belongs to
             let winnerTeamId = null;
             if (match.winnerId === match.player1Id) {
