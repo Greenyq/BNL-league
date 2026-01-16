@@ -1659,11 +1659,11 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
     const getTeamPlayers = (teamId) => players.filter(p => p.teamId === teamId);
 
     const getTeamPointsFromMatches = (teamId) => {
-        // Calculate total points from completed team matches
+        // Calculate total points from completed team matches with a winner
         const matches = (teamMatches || []).filter(m => {
             const matchTeam1Id = m.team1?.id || m.team1Id;
             const matchTeam2Id = m.team2?.id || m.team2Id;
-            return (matchTeam1Id === teamId || matchTeam2Id === teamId) && m.status === 'completed';
+            return (matchTeam1Id === teamId || matchTeam2Id === teamId) && m.status === 'completed' && m.winnerId;
         });
 
         return matches.reduce((sum, match) => {
@@ -1683,7 +1683,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                 winnerTeamId = match.team2Id;
             }
 
-            // Add points if this team won
+            // Add points only if we can determine the winner's team
             if (winnerTeamId === teamId) {
                 return sum + (match.points || 0);
             }

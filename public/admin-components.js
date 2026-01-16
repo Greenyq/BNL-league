@@ -136,8 +136,8 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
         });
 
         teamMatches.forEach(match => {
-            // Only count completed matches
-            if (match.status !== 'completed') {
+            // Only count completed matches with a winner
+            if (match.status !== 'completed' || !match.winnerId) {
                 return;
             }
 
@@ -153,6 +153,11 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
                 winnerTeamId = match.team1Id;
             } else if (match.winnerId === match.team2Id) {
                 winnerTeamId = match.team2Id;
+            }
+
+            // Only count if we can determine the winner
+            if (!winnerTeamId) {
+                return;
             }
 
             if (match.team1Id && rankings[match.team1Id]) {
