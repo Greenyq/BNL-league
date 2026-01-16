@@ -393,7 +393,15 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
                 {teamMatches.filter(m => m.status === 'completed').slice().reverse().map(match => {
                     const team1 = teams.find(t => t.id === match.team1Id);
                     const team2 = teams.find(t => t.id === match.team2Id);
-                    const isTeam1Winner = match.winnerId === match.team1Id;
+
+                    // Determine which team the winner belongs to
+                    let winnerTeamId = null;
+                    if (match.winnerId === match.player1Id) {
+                        winnerTeamId = match.team1Id;
+                    } else if (match.winnerId === match.player2Id) {
+                        winnerTeamId = match.team2Id;
+                    }
+                    const isTeam1Winner = winnerTeamId === match.team1Id;
 
                     return (
                         <div key={match.id} style={{
