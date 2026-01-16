@@ -3508,12 +3508,19 @@ function TeamMatches({ teamMatches = [], teams = [], allPlayers = [] }) {
         const teamMatches_ = (teamMatches || []).filter(m => {
             const team1Id = m.team1?.id || m.team1Id;
             const team2Id = m.team2?.id || m.team2Id;
-            return (team1Id === team.id || team2Id === team.id) && m.status === 'completed';
+            return (team1Id === team.id || team2Id === team.id) && m.status === 'completed' && m.winnerId;
         });
 
         const totalPoints = teamMatches_.reduce((sum, match) => {
-            const winnerId = match.winnerId;
-            if (winnerId === team.id) {
+            // Determine which team the winner belongs to
+            let winnerTeamId = null;
+            if (match.winnerId === match.player1Id) {
+                winnerTeamId = match.team1Id;
+            } else if (match.winnerId === match.player2Id) {
+                winnerTeamId = match.team2Id;
+            }
+
+            if (winnerTeamId === team.id) {
                 return sum + (match.points || 0);
             }
             return sum;
@@ -3597,7 +3604,14 @@ function TeamMatches({ teamMatches = [], teams = [], allPlayers = [] }) {
                                 const p1Name = p1?.name || 'Unknown';
                                 const p2Name = p2?.name || 'Unknown';
 
-                                const isWinner = match.winnerId === item.team.id;
+                                // Determine which team the winner belongs to
+                                let winnerTeamId = null;
+                                if (match.winnerId === match.player1Id) {
+                                    winnerTeamId = match.team1Id;
+                                } else if (match.winnerId === match.player2Id) {
+                                    winnerTeamId = match.team2Id;
+                                }
+                                const isWinner = winnerTeamId === item.team.id;
 
                                 return (
                                     <div
@@ -5296,7 +5310,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                                         return;
                                                     }
                                                     const winner = confirm(`Кто победил?\n\nОК - Я победил (${playerData.name})\nОтмена - Победил соперник (${opponent?.name})`);
-                                                    const winnerId = winner ? (isPlayer1 ? match.team1Id : match.team2Id) : (isPlayer1 ? match.team2Id : match.team1Id);
+                                                    const winnerId = winner ? (isPlayer1 ? match.player1Id : match.player2Id) : (isPlayer1 ? match.player2Id : match.player1Id);
 
                                                     fetch(`${API_BASE}/api/player-matches/${match.id}/report`, {
                                                         method: 'PUT',
