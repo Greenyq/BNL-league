@@ -263,7 +263,7 @@ function App() {
                         battleTag: player.battleTag,
                         race: player.mainRace,
                         mainRace: player.mainRace,
-                        mmr: player.mmr || player.currentMmr || 0,
+                        mmr: raceStat?.mmr || player.currentMmr || 0,
                         points: raceStat?.points || player.points || 0,
                         wins: raceStat?.wins || player.wins || 0,
                         losses: raceStat?.losses || player.losses || 0,
