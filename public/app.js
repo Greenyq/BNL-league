@@ -250,75 +250,52 @@ function App() {
             const loadedPlayers = [];
 
             // Convert API response to player cards
-            // If mainRace is set, show only that race; otherwise show all races from raceStats
+            // Always load all races to enable race switcher, mainRace is used for default display
             cachedPlayers.forEach((player) => {
                 const raceStats = player.raceStats || [];
 
-                if (player.mainRace !== undefined && player.mainRace !== null) {
-                    // Show only selected race
-                    const raceStat = raceStats.find(r => r.race === player.mainRace);
-                    const finalPlayer = {
-                        id: `${player.id}_${player.mainRace}`,
-                        name: player.name || player.battleTag.split('#')[0],
-                        battleTag: player.battleTag,
-                        race: player.mainRace,
-                        mainRace: player.mainRace,
-                        mmr: raceStat?.mmr || player.currentMmr || 0,
-                        points: raceStat?.points || player.points || 0,
-                        wins: raceStat?.wins || player.wins || 0,
-                        losses: raceStat?.losses || player.losses || 0,
-                        achievements: raceStat?.achievements || [],
-                        matchHistory: raceStat?.matchHistory || [],
-                        activityData: generateActivityData(player.battleTag),
-                        teamId: player.teamId || null,
-                        selectedPortraitId: player.selectedPortraitId || null,
-                        discordTag: player.discordTag || null,
-                    };
-                    loadedPlayers.push(finalPlayer);
-                } else {
-                    // Show all races from raceStats
-                    if (raceStats.length > 0) {
-                        raceStats.forEach((raceStat) => {
-                            const finalPlayer = {
-                                id: `${player.id}_${raceStat.race}`,
-                                name: player.name || player.battleTag.split('#')[0],
-                                battleTag: player.battleTag,
-                                race: raceStat.race,
-                                mainRace: player.mainRace,
-                                mmr: raceStat.mmr || player.currentMmr || 0,
-                                points: raceStat.points || 0,
-                                wins: raceStat.wins || 0,
-                                losses: raceStat.losses || 0,
-                                achievements: raceStat.achievements || [],
-                                matchHistory: raceStat.matchHistory || [],
-                                activityData: generateActivityData(player.battleTag),
-                                teamId: player.teamId || null,
-                                selectedPortraitId: player.selectedPortraitId || null,
-                                discordTag: player.discordTag || null,
-                            };
-                            loadedPlayers.push(finalPlayer);
-                        });
-                    } else {
-                        // Fallback: no race stats, show with overall stats
+                // Always load all races for race switcher functionality
+                if (raceStats.length > 0) {
+                    raceStats.forEach((raceStat) => {
                         const finalPlayer = {
-                            id: player.id,
+                            id: `${player.id}_${raceStat.race}`,
                             name: player.name || player.battleTag.split('#')[0],
                             battleTag: player.battleTag,
-                            race: player.race || 0,
-                            mainRace: player.mainRace,
-                            mmr: player.currentMmr || 0,
-                            points: player.points || 0,
-                            wins: player.wins || 0,
-                            losses: player.losses || 0,
-                            achievements: [],
-                            matchHistory: player.matchHistory || [],
+                            race: raceStat.race,
+                            mainRace: player.mainRace, // Keep mainRace for sorting/display logic
+                            mmr: raceStat.mmr || player.currentMmr || 0,
+                            points: raceStat.points || 0,
+                            wins: raceStat.wins || 0,
+                            losses: raceStat.losses || 0,
+                            achievements: raceStat.achievements || [],
+                            matchHistory: raceStat.matchHistory || [],
                             activityData: generateActivityData(player.battleTag),
                             teamId: player.teamId || null,
                             selectedPortraitId: player.selectedPortraitId || null,
                             discordTag: player.discordTag || null,
                         };
                         loadedPlayers.push(finalPlayer);
-                    }
+                    });
+                } else {
+                    // Fallback: no race stats, show with overall stats
+                    const finalPlayer = {
+                        id: player.id,
+                        name: player.name || player.battleTag.split('#')[0],
+                        battleTag: player.battleTag,
+                        race: player.race || player.mainRace || 0,
+                        mainRace: player.mainRace,
+                        mmr: player.currentMmr || 0,
+                        points: player.points || 0,
+                        wins: player.wins || 0,
+                        losses: player.losses || 0,
+                        achievements: [],
+                        matchHistory: player.matchHistory || [],
+                        activityData: generateActivityData(player.battleTag),
+                        teamId: player.teamId || null,
+                        selectedPortraitId: player.selectedPortraitId || null,
+                        discordTag: player.discordTag || null,
+                    };
+                    loadedPlayers.push(finalPlayer);
                 }
             });
 
@@ -1179,14 +1156,25 @@ function Players({ players }) {
             groups[player.battleTag].push(player);
         });
 
-        // For each battleTag, sort races by points and select the best one
+        // For each battleTag, select mainRace profile or best by points
         return Object.entries(groups).map(([battleTag, raceProfiles]) => {
             // Sort by points descending
             const sorted = raceProfiles.sort((a, b) => (b.points || 0) - (a.points || 0));
+
+            // Use mainRace profile if set, otherwise use the one with most points
+            const mainRace = sorted[0]?.mainRace;
+            let bestProfile = sorted[0];
+            if (mainRace !== undefined && mainRace !== null) {
+                const mainRaceProfile = sorted.find(p => p.race === mainRace);
+                if (mainRaceProfile) {
+                    bestProfile = mainRaceProfile;
+                }
+            }
+
             return {
                 battleTag,
                 profiles: sorted,
-                bestProfile: sorted[0]
+                bestProfile: bestProfile
             };
         });
     }, [players]);
@@ -1242,7 +1230,19 @@ function Players({ players }) {
         return (
             <div className="players-grid">
                 {leaguePlayers.map((group, index) => {
-                    const selectedIndex = selectedRaces[group.battleTag] || 0;
+                    // Find index of mainRace profile or default to 0
+                    let defaultIndex = 0;
+                    const mainRace = group.profiles[0]?.mainRace;
+                    if (mainRace !== undefined && mainRace !== null) {
+                        const mainRaceIndex = group.profiles.findIndex(p => p.race === mainRace);
+                        if (mainRaceIndex !== -1) {
+                            defaultIndex = mainRaceIndex;
+                        }
+                    }
+
+                    const selectedIndex = selectedRaces[group.battleTag] !== undefined
+                        ? selectedRaces[group.battleTag]
+                        : defaultIndex;
                     const displayedProfile = group.profiles[selectedIndex];
                     const hasMultipleRaces = group.profiles.length > 1;
 
