@@ -1483,71 +1483,34 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
 
 
                 {/* Always render achievements container with fixed min-height */}
-                <div style={{
+                <div className="achievement-icons" style={{
                     display: 'flex',
-                    gap: '15px',
+                    gap: '8px',
                     padding: player.achievements && player.achievements.length > 0 ? '10px 15px' : '0',
+                    flexWrap: 'wrap',
                     borderTop: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : 'none',
                     borderBottom: player.achievements && player.achievements.length > 0 ? '1px solid rgba(201, 169, 97, 0.2)' : 'none',
                     margin: player.achievements && player.achievements.length > 0 ? '10px 0' : '0',
                     minHeight: '0',
-                    position: 'relative',
-                    justifyContent: 'space-between'
+                    position: 'relative'
                 }}>
-                    {/* Last 2 achievements on the left */}
-                    {player.achievements && player.achievements.length > 0 && (
-                        <div className="achievement-icons" style={{
-                            display: 'flex',
-                            gap: '8px',
-                            flexWrap: 'wrap'
-                        }}>
-                            {player.achievements.slice(-2).map(achKey => {
-                                const ach = achievements[achKey];
-                                if (!ach) {
-                                    console.warn(`Achievement ${achKey} not found`);
-                                    return null;
-                                }
-                                return (
-                                    <div key={achKey} className="achievement-icon">
-                                        {ach.icon}
-                                        <div className="achievement-tooltip">
-                                            <div style={{ fontWeight: '700' }}>{ach.name}</div>
-                                            <div style={{ color: '#888', fontSize: '0.9em', marginTop: '3px' }}>{ach.desc}</div>
-                                            <div style={{ color: '#4caf50', marginTop: '5px' }}>+{ach.points} pts</div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    {/* Other achievements on the right */}
-                    {player.achievements && player.achievements.length > 2 && (
-                        <div className="achievement-icons" style={{
-                            display: 'flex',
-                            gap: '8px',
-                            flexWrap: 'wrap',
-                            justifyContent: 'flex-end'
-                        }}>
-                            {player.achievements.slice(0, -2).map(achKey => {
-                                const ach = achievements[achKey];
-                                if (!ach) {
-                                    console.warn(`Achievement ${achKey} not found`);
-                                    return null;
-                                }
-                                return (
-                                    <div key={achKey} className="achievement-icon">
-                                        {ach.icon}
-                                        <div className="achievement-tooltip">
-                                            <div style={{ fontWeight: '700' }}>{ach.name}</div>
-                                            <div style={{ color: '#888', fontSize: '0.9em', marginTop: '3px' }}>{ach.desc}</div>
-                                            <div style={{ color: '#4caf50', marginTop: '5px' }}>+{ach.points} pts</div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
+                    {player.achievements && player.achievements.map(achKey => {
+                        const ach = achievements[achKey];
+                        if (!ach) {
+                            console.warn(`Achievement ${achKey} not found`);
+                            return null;
+                        }
+                        return (
+                            <div key={achKey} className="achievement-icon">
+                                {ach.icon}
+                                <div className="achievement-tooltip">
+                                    <div style={{ fontWeight: '700' }}>{ach.name}</div>
+                                    <div style={{ color: '#888', fontSize: '0.9em', marginTop: '3px' }}>{ach.desc}</div>
+                                    <div style={{ color: '#4caf50', marginTop: '5px' }}>+{ach.points} pts</div>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {/* Match graph - ALWAYS show */}
