@@ -1517,9 +1517,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                         <div style={{
                             marginLeft: 'auto',
                             display: 'flex',
-                            gap: '8px',
-                            flexWrap: 'wrap',
-                            justifyContent: 'flex-end'
+                            gap: '8px'
                         }}>
                             {player.achievements.slice(-2).map(achKey => {
                                 const ach = achievements[achKey];
