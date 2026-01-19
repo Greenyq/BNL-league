@@ -629,7 +629,7 @@ input[type="datetime-local"] {
     padding: 0;
     margin-bottom: 0;
     position: relative;
-    overflow: hidden;
+    clip-path: inset(0 round 15px);
     transition: all var(--transition-normal);
     box-shadow: var(--shadow-md);
     height: 100%;
