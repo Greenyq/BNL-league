@@ -1382,7 +1382,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
     };
 
     return (
-        <div className="player-card" onClick={handleCardClick} style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
+        <div className="player-card" onClick={handleCardClick} style={{ cursor: 'pointer', position: 'relative', overflow: 'visible' }}>
             <div className="player-card-inner" style={{ paddingBottom: hasQualified ? '40px' : undefined }}>
                 <div className="player-header">
                     <div className="player-title">
