@@ -4153,38 +4153,10 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                                                 position: 'relative',
                                                 display: 'flex',
                                                 flexDirection: 'column',
-                                                alignItems: 'center',
-                                                gap: '3px'
+                                                alignItems: 'center'
                                             }}
                                         >
-                                            {/* Achievement badges */}
-                                            {matchAchs.length > 0 && (
-                                                <div style={{
-                                                    display: 'flex',
-                                                    gap: '2px',
-                                                    height: '20px',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    minWidth: '44px'
-                                                }}>
-                                                    {matchAchs.slice(0, 2).map((achKey, achIdx) => {
-                                                        const ach = achievements[achKey];
-                                                        return (
-                                                            <div
-                                                                key={achIdx}
-                                                                style={{
-                                                                    fontSize: '1.2em',
-                                                                    cursor: 'help'
-                                                                }}
-                                                                title={ach ? `${ach.name}: ${ach.desc}` : achKey}
-                                                            >
-                                                                {ach ? ach.icon : '?'}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-                                            {/* Match result and points */}
+                                            {/* Match result, points, or achievement badge */}
                                             <div
                                                 style={{
                                                     width: '44px',
@@ -4204,8 +4176,16 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                                                 }}
                                                 title={`${match.result === 'win' ? 'Победа' : 'Поражение'} (${match.mmrDiff >= 0 ? '+' : ''}${match.mmrDiff} MMR)${matchAchs.length > 0 ? '\n\nДостижения:\n' + matchAchs.map(k => achievements[k]?.name).join(', ') : ''}`}
                                             >
-                                                <div>{match.result === 'win' ? 'W' : 'L'}</div>
-                                                <div style={{ fontSize: '0.75em', color: '#ffeb3b' }}>{pointsStr}</div>
+                                                {matchAchs.length > 0 ? (
+                                                    <div style={{ fontSize: '1.8em', lineHeight: '1' }}>
+                                                        {achievements[matchAchs[0]]?.icon || '?'}
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div>{match.result === 'win' ? 'W' : 'L'}</div>
+                                                        <div style={{ fontSize: '0.75em', color: '#ffeb3b' }}>{pointsStr}</div>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     );
