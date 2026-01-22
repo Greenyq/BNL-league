@@ -4145,6 +4145,7 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                                     const pointsStr = points >= 0 ? `+${points}` : `${points}`;
                                     const matchAchievements = getMatchAchievements(player.matchHistory, player.achievements || []);
                                     const matchAchs = matchAchievements[idx] || [];
+                                    const primaryAch = matchAchs.length > 0 ? achievements[matchAchs[0]] : null;
 
                                     return (
                                         <div
@@ -4164,7 +4165,6 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                                                     borderRadius: '5px',
                                                     background: match.result === 'win' ? '#4caf50' : '#f44336',
                                                     display: 'flex',
-                                                    flexDirection: 'column',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     color: '#fff',
@@ -4174,17 +4174,17 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                                                     boxShadow: matchAchs.length > 0 ? '0 0 10px rgba(201, 169, 97, 0.5)' : 'none',
                                                     transition: 'all 0.2s'
                                                 }}
-                                                title={`${match.result === 'win' ? 'Победа' : 'Поражение'} (${match.mmrDiff >= 0 ? '+' : ''}${match.mmrDiff} MMR)${matchAchs.length > 0 ? '\n\nДостижения:\n' + matchAchs.map(k => achievements[k]?.name).join(', ') : ''}`}
+                                                title={primaryAch ? `${primaryAch.name}: ${primaryAch.desc}` : `${match.result === 'win' ? 'Победа' : 'Поражение'} (${match.mmrDiff >= 0 ? '+' : ''}${match.mmrDiff} MMR)`}
                                             >
-                                                {matchAchs.length > 0 ? (
-                                                    <div style={{ fontSize: '1.8em', lineHeight: '1' }}>
-                                                        {achievements[matchAchs[0]]?.icon || '?'}
+                                                {primaryAch ? (
+                                                    <div style={{ fontSize: '1.8em', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1' }}>
+                                                        {primaryAch.icon}
                                                     </div>
                                                 ) : (
-                                                    <>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0px' }}>
                                                         <div>{match.result === 'win' ? 'W' : 'L'}</div>
                                                         <div style={{ fontSize: '0.75em', color: '#ffeb3b' }}>{pointsStr}</div>
-                                                    </>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
