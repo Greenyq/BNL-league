@@ -2333,7 +2333,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                 <div style={{ marginTop: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                                     <button
                                         onClick={() => {
-                                            const date = prompt('Введите дату и время (ГГГГ-ММ-ДД ЧЧ:ММ):', 
+                                            const date = prompt('Введите дату и время (ГГГГ-ММ-ДД ЧЧ:ММ):',
                                                 match.scheduledDate ? new Date(match.scheduledDate).toISOString().slice(0, 16).replace('T', ' ') : '');
                                             if (date) {
                                                 fetch(`${API_BASE}/api/admin/team-matches/${match.id}`, {
@@ -2374,6 +2374,56 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                         }}
                                     >
                                         🏆 Указать победителя
+                                    </button>
+                                </div>
+                            )}
+                            {/* Edit buttons for completed matches */}
+                            {match.status === 'completed' && (
+                                <div style={{ marginTop: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                    <button
+                                        onClick={() => {
+                                            if (confirm('Отменить результат матча? Матч будет возвращён в статус "Ожидание"')) {
+                                                fetch(`${API_BASE}/api/admin/team-matches/${match.id}`, {
+                                                    method: 'PUT',
+                                                    headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId },
+                                                    body: JSON.stringify({
+                                                        status: 'upcoming',
+                                                        winnerId: null,
+                                                        points: 0
+                                                    })
+                                                }).then(() => onUpdate());
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '8px 16px', borderRadius: '8px',
+                                            background: '#ff9800', color: '#fff',
+                                            border: 'none', cursor: 'pointer', fontSize: '0.9em'
+                                        }}
+                                    >
+                                        🔄 Отменить результат
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const winnerId = prompt(`Изменить победителя?\n1 - ${player1?.name} (победил)\n2 - ${player2?.name} (победил)\n\nВведите 1 или 2 или отмена:`);
+                                            if (winnerId === '1' || winnerId === '2') {
+                                                const points = parseInt(prompt('Введите количество очков:', String(match.points))) || match.points;
+                                                fetch(`${API_BASE}/api/admin/team-matches/${match.id}`, {
+                                                    method: 'PUT',
+                                                    headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId },
+                                                    body: JSON.stringify({
+                                                        winnerId: winnerId === '1' ? match.player1Id : match.player2Id,
+                                                        points: points
+                                                    })
+                                                }).then(() => onUpdate());
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '8px 16px', borderRadius: '8px',
+                                            background: '#2196f3', color: '#fff',
+                                            border: 'none', cursor: 'pointer', fontSize: '0.9em'
+                                        }}
+                                    >
+                                        ✏️ Изменить результат
                                     </button>
                                 </div>
                             )}
