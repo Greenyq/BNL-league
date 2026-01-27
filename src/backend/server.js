@@ -185,7 +185,7 @@ app.post('/api/admin/teams/:id/upload-logo', checkAuth, upload.single('logo'), a
 app.get('/api/matches/:battleTag', async (req, res) => {
     try {
         const battleTag = decodeURIComponent(req.params.battleTag);
-        const { gateway = 20, season = 23, pageSize = 100, offset = 0 } = req.query;
+        const { gateway = 20, season = 24, pageSize = 100, offset = 0 } = req.query;
         const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(battleTag)}&gateway=${gateway}&season=${season}&offset=${offset}&pageSize=${pageSize}`;
         
         const response = await axios.get(apiUrl, {

@@ -177,16 +177,16 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
         }];
     }
 
-    // Filter recent matches (from 2025-11-27 onwards)
+    // Filter recent matches (from 2026-01-26 onwards)
     let recentMatches = matches;
-    const cutoffDate = new Date('2025-11-27T00:00:00Z');
+    const cutoffDate = new Date('2026-01-26T00:00:00Z');
 
     if (matches.length > 50) {
         recentMatches = matches.filter(match => {
             const matchDate = new Date(match.startTime);
             return matchDate >= cutoffDate;
         });
-        console.log(`  📅 ${battleTag}: After date filter (>= 2025-11-27): ${recentMatches.length} matches`);
+        console.log(`  📅 ${battleTag}: After date filter (>= 2026-01-26): ${recentMatches.length} matches`);
     }
 
     // Sort by date if needed
@@ -361,8 +361,8 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
 // Load match data from W3Champions API
 async function loadMatchDataForPlayer(player) {
     try {
-        const cutoffDate = new Date('2025-11-27T00:00:00Z');
-        const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=20&season=23&pageSize=100`;
+        const cutoffDate = new Date('2026-01-26T00:00:00Z');
+        const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=20&season=24&pageSize=100`;
 
         const response = await axios.get(apiUrl, {
             headers: { 'User-Agent': 'BNL-League-App', 'Accept': 'application/json' },
@@ -403,7 +403,7 @@ async function updateAllPlayerMMR() {
 
     for (const player of players) {
         try {
-            const apiUrl = `https://website-backend.w3champions.com/api/players/${encodeURIComponent(player.battleTag)}/game-mode-stats?gateway=20&season=23`;
+            const apiUrl = `https://website-backend.w3champions.com/api/players/${encodeURIComponent(player.battleTag)}/game-mode-stats?gateway=20&season=24`;
             const response = await axios.get(apiUrl, {
                 headers: { 'User-Agent': 'BNL-League-App', 'Accept': 'application/json' },
                 timeout: 10000
