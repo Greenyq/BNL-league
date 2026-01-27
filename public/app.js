@@ -1032,7 +1032,7 @@ function Header({ activeTab }) {
                             WebkitTextFillColor: 'transparent',
                             marginTop: '10px'
                         }}>Warcraft Breaking New Limits</h2>
-                        <div style={{ color: '#888', marginTop: '20px', fontSize: '1.2em' }}>📅 Season 23 • Starting Nov 27, 2025</div>
+                        <div style={{ color: '#888', marginTop: '20px', fontSize: '1.2em' }}>📅 Season 24 • Starting Jan 26, 2026</div>
                     </div>
                 </div>
             </div>

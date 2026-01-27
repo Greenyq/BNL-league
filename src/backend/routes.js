@@ -287,7 +287,7 @@ async function searchW3ChampionsPlayer(battleTag) {
     // Try each variation until we find matches
     for (const variation of uniqueVariations) {
         try {
-            const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(variation)}&gateway=20&season=23&pageSize=10`;
+            const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(variation)}&gateway=20&season=24&pageSize=10`;
 
             const response = await axios.get(apiUrl, {
                 headers: {

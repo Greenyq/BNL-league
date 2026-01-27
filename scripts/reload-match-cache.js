@@ -8,7 +8,7 @@ const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost:27017/gnl_league
 async function loadMatchesForPlayer(battleTag) {
     try {
         const gateway = 20;
-        const season = 23;
+        const season = 24;
         const pageSize = 100;
         const apiUrl = `https://website-backend.w3champions.com/api/matches/search?playerId=${encodeURIComponent(battleTag)}&gateway=${gateway}&season=${season}&offset=0&pageSize=${pageSize}`;
 
