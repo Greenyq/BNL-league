@@ -603,6 +603,17 @@ function AdminPanel({ teams, allPlayers, teamMatches, sessionId, onUpdate, onLog
                         🖼️ Портреты
                     </button>
                     <button
+                        onClick={() => setActiveSection('points')}
+                        style={{
+                            padding: '12px 24px', borderRadius: '8px',
+                            background: activeSection === 'points' ? '#c9a961' : '#2a2a2a',
+                            color: activeSection === 'points' ? '#000' : '#fff',
+                            border: 'none', cursor: 'pointer', fontWeight: '600'
+                        }}
+                    >
+                        💎 Очки
+                    </button>
+                    <button
                         onClick={() => setActiveSection('cache')}
                         style={{
                             padding: '12px 24px', borderRadius: '8px',
@@ -630,6 +641,9 @@ function AdminPanel({ teams, allPlayers, teamMatches, sessionId, onUpdate, onLog
             )}
             {activeSection === 'portraits' && (
                 <AdminPortraits sessionId={sessionId} onUpdate={onUpdate} />
+            )}
+            {activeSection === 'points' && (
+                <AdminPoints players={allPlayers} sessionId={sessionId} onUpdate={onUpdate} />
             )}
             {activeSection === 'cache' && (
                 <AdminCache sessionId={sessionId} onUpdate={onUpdate} />
@@ -3055,6 +3069,158 @@ function AdminPortraits({ sessionId, onUpdate }) {
                     </div>
                 ))
             )}
+        </div>
+    );
+}
+
+// ==================== ADMIN POINTS ====================
+function AdminPoints({ players, sessionId, onUpdate }) {
+    const [selectedPlayer, setSelectedPlayer] = React.useState(null);
+    const [pointsAmount, setPointsAmount] = React.useState('');
+    const [reason, setReason] = React.useState('');
+    const [loading, setLoading] = React.useState(false);
+    const [message, setMessage] = React.useState('');
+
+    const handleAddPoints = async (e) => {
+        e.preventDefault();
+        if (!selectedPlayer || !pointsAmount || !reason) {
+            setMessage('Заполните все поля');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await fetch(`${API_BASE}/api/admin/players/${selectedPlayer}/add-points`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-session-id': sessionId
+                },
+                body: JSON.stringify({
+                    amount: parseInt(pointsAmount),
+                    reason: reason
+                })
+            });
+
+            if (response.ok) {
+                setMessage(`✅ ${pointsAmount} очков добавлено игроку`);
+                setSelectedPlayer(null);
+                setPointsAmount('');
+                setReason('');
+                onUpdate();
+            } else {
+                const error = await response.json();
+                setMessage(`❌ Ошибка: ${error.message || 'Не удалось добавить очки'}`);
+            }
+        } catch (error) {
+            setMessage(`❌ Ошибка подключения: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div style={{
+            background: '#1a1a1a', padding: '25px', borderRadius: '15px',
+            border: '2px solid #c9a961'
+        }}>
+            <h3 style={{ fontSize: '1.5em', color: '#c9a961', marginBottom: '20px' }}>
+                💎 Добавление очков игрокам
+            </h3>
+
+            <form onSubmit={handleAddPoints} style={{ maxWidth: '500px' }}>
+                <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', color: '#fff', fontWeight: '600' }}>
+                        Выберите игрока
+                    </label>
+                    <select
+                        value={selectedPlayer || ''}
+                        onChange={(e) => setSelectedPlayer(e.target.value)}
+                        style={{
+                            width: '100%', padding: '12px', borderRadius: '8px',
+                            border: '1px solid #444', background: '#2a2a2a',
+                            color: '#fff', fontSize: '16px', cursor: 'pointer'
+                        }}
+                    >
+                        <option value="">-- Выберите игрока --</option>
+                        {players && players.map(player => (
+                            <option key={player.id} value={player.id}>
+                                {player.w3_name} ({player.elo_rating} очков)
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', color: '#fff', fontWeight: '600' }}>
+                        Количество очков
+                    </label>
+                    <input
+                        type="number"
+                        value={pointsAmount}
+                        onChange={(e) => setPointsAmount(e.target.value)}
+                        placeholder="Введите количество очков"
+                        style={{
+                            width: '100%', padding: '12px', borderRadius: '8px',
+                            border: '1px solid #444', background: '#2a2a2a',
+                            color: '#fff', fontSize: '16px'
+                        }}
+                    />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', color: '#fff', fontWeight: '600' }}>
+                        Причина
+                    </label>
+                    <input
+                        type="text"
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        placeholder="Например: Победа по скриншоту, Бонус за активность тренера"
+                        style={{
+                            width: '100%', padding: '12px', borderRadius: '8px',
+                            border: '1px solid #444', background: '#2a2a2a',
+                            color: '#fff', fontSize: '16px'
+                        }}
+                    />
+                </div>
+
+                {message && (
+                    <div style={{
+                        padding: '12px', background: message.includes('✅') ? '#4caf50' : '#f44336',
+                        color: '#fff', borderRadius: '8px', marginBottom: '20px',
+                        textAlign: 'center', fontWeight: '600'
+                    }}>
+                        {message}
+                    </div>
+                )}
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    style={{
+                        width: '100%', padding: '12px', borderRadius: '8px',
+                        background: loading ? '#666' : '#4caf50', color: '#fff',
+                        border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                        fontWeight: '600', fontSize: '16px'
+                    }}
+                >
+                    {loading ? '⏳ Добавляю...' : '✅ Добавить очки'}
+                </button>
+            </form>
+
+            <div style={{
+                marginTop: '30px', padding: '20px', background: '#2a2a2a',
+                borderRadius: '10px', border: '1px solid #444'
+            }}>
+                <h4 style={{ color: '#c9a961', marginBottom: '15px' }}>ℹ️ Информация</h4>
+                <ul style={{ color: '#e0e0e0', lineHeight: '1.8' }}>
+                    <li>✅ Админ может добавить очки любому игроку</li>
+                    <li>✅ Очки добавляются к текущему счету игрока</li>
+                    <li>✅ Используйте для добавления бонусов тренерам и дополнительных очков</li>
+                    <li>✅ Все действия логируются в системе</li>
+                </ul>
+            </div>
         </div>
     );
 }
