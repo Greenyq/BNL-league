@@ -346,6 +346,52 @@ async function searchW3ChampionsPlayer(battleTag) {
         }
     }
 
+    // Fallback: try W3C player profile API (works even with 0 matches)
+    for (const variation of uniqueVariations) {
+        try {
+            const profileUrl = `https://website-backend.w3champions.com/api/players/${encodeURIComponent(variation)}`;
+            const profileResponse = await axios.get(profileUrl, {
+                headers: {
+                    'User-Agent': 'BNL-League-App',
+                    'Accept': 'application/json'
+                },
+                timeout: 5000
+            });
+
+            if (profileResponse.data && profileResponse.data.battleTag) {
+                const profile = profileResponse.data;
+                // Try to get race from game-mode-stats
+                let race = 0;
+                let mmr = 0;
+                try {
+                    const statsUrl = `https://website-backend.w3champions.com/api/players/${encodeURIComponent(profile.battleTag)}/game-mode-stats?gateway=20&season=24`;
+                    const statsResponse = await axios.get(statsUrl, {
+                        headers: { 'User-Agent': 'BNL-League-App', 'Accept': 'application/json' },
+                        timeout: 5000
+                    });
+                    const solo1v1 = statsResponse.data.find(mode => mode.gameMode === 1);
+                    if (solo1v1) {
+                        race = solo1v1.race || 0;
+                        mmr = solo1v1.mmr || 0;
+                    }
+                } catch (e) {
+                    // Stats not available, use defaults
+                }
+
+                return {
+                    found: true,
+                    battleTag: profile.battleTag,
+                    name: profile.name || profile.battleTag.split('#')[0],
+                    race: race,
+                    currentMmr: mmr,
+                    matchCount: 0
+                };
+            }
+        } catch (err) {
+            continue;
+        }
+    }
+
     return { found: false };
 }
 
