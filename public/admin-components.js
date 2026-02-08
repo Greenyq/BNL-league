@@ -1350,6 +1350,8 @@ function AdminPlayers({ players, teams, sessionId, onUpdate }) {
     const [searching, setSearching] = React.useState(false);
     const [editingPlayer, setEditingPlayer] = React.useState(null);
     const [discordInputs, setDiscordInputs] = React.useState({});
+    const [showManualForm, setShowManualForm] = React.useState(false);
+    const [manualData, setManualData] = React.useState({ name: '', race: 0, currentMmr: 0 });
 
     const handleSearch = async (e) => {
         e.preventDefault();
@@ -1404,9 +1406,42 @@ function AdminPlayers({ players, teams, sessionId, onUpdate }) {
         }
     };
 
+    const handleManualAdd = async () => {
+        if (!battleTag.trim() || !manualData.name.trim()) return;
+        try {
+            const response = await fetch(`${API_BASE}/api/admin/players`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-session-id': sessionId
+                },
+                body: JSON.stringify({
+                    battleTag: battleTag.trim(),
+                    name: manualData.name.trim(),
+                    race: parseInt(manualData.race) || 0,
+                    currentMmr: parseInt(manualData.currentMmr) || 0
+                })
+            });
+
+            if (response.ok) {
+                setShowForm(false);
+                setBattleTag('');
+                setSearchResult(null);
+                setShowManualForm(false);
+                setManualData({ name: '', race: 0, currentMmr: 0 });
+                onUpdate();
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Ошибка при добавлении игрока');
+            }
+        } catch (error) {
+            alert('Ошибка при добавлении игрока');
+        }
+    };
+
     const handleDelete = async (id) => {
         if (!confirm('Удалить игрока?')) return;
-        
+
         try {
             await fetch(`${API_BASE}/api/admin/players/${id}`, {
                 method: 'DELETE',
@@ -1600,8 +1635,94 @@ function AdminPlayers({ players, teams, sessionId, onUpdate }) {
                                 </div>
                             ) : (
                                 <div>
-                                    <h4 style={{ color: '#fff', marginBottom: '10px' }}>❌ Игрок не найден</h4>
-                                    <div style={{ color: '#fff' }}>{searchResult.message}</div>
+                                    <h4 style={{ color: '#fff', marginBottom: '10px' }}>❌ Игрок не найден на W3Champions</h4>
+                                    <div style={{ color: '#fff', marginBottom: '15px' }}>{searchResult.message}</div>
+                                    {!showManualForm ? (
+                                        <button
+                                            onClick={() => {
+                                                setShowManualForm(true);
+                                                setManualData({ name: battleTag.split('#')[0], race: 0, currentMmr: 0 });
+                                            }}
+                                            style={{
+                                                padding: '10px 20px', borderRadius: '8px',
+                                                background: '#ff9800', color: '#fff',
+                                                border: 'none', cursor: 'pointer', fontWeight: '600'
+                                            }}
+                                        >
+                                            Добавить вручную
+                                        </button>
+                                    ) : (
+                                        <div style={{ marginTop: '15px', padding: '15px', background: '#333', borderRadius: '8px' }}>
+                                            <h4 style={{ color: '#ff9800', marginBottom: '15px' }}>Ручное добавление</h4>
+                                            <div style={{ marginBottom: '10px' }}>
+                                                <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>BattleTag:</label>
+                                                <div style={{ color: '#fff', fontWeight: '600' }}>{battleTag}</div>
+                                            </div>
+                                            <div style={{ marginBottom: '10px' }}>
+                                                <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>Имя:</label>
+                                                <input
+                                                    type="text"
+                                                    value={manualData.name}
+                                                    onChange={(e) => setManualData({...manualData, name: e.target.value})}
+                                                    style={{
+                                                        padding: '8px 12px', borderRadius: '6px', border: '1px solid #555',
+                                                        background: '#1a1a1a', color: '#fff', width: '100%'
+                                                    }}
+                                                />
+                                            </div>
+                                            <div style={{ marginBottom: '10px' }}>
+                                                <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>Раса:</label>
+                                                <select
+                                                    value={manualData.race}
+                                                    onChange={(e) => setManualData({...manualData, race: parseInt(e.target.value)})}
+                                                    style={{
+                                                        padding: '8px 12px', borderRadius: '6px', border: '1px solid #555',
+                                                        background: '#1a1a1a', color: '#fff', width: '100%'
+                                                    }}
+                                                >
+                                                    <option value={0}>Random / Неизвестно</option>
+                                                    <option value={1}>Human</option>
+                                                    <option value={2}>Orc</option>
+                                                    <option value={4}>Night Elf</option>
+                                                    <option value={8}>Undead</option>
+                                                </select>
+                                            </div>
+                                            <div style={{ marginBottom: '15px' }}>
+                                                <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>MMR:</label>
+                                                <input
+                                                    type="number"
+                                                    value={manualData.currentMmr}
+                                                    onChange={(e) => setManualData({...manualData, currentMmr: parseInt(e.target.value) || 0})}
+                                                    style={{
+                                                        padding: '8px 12px', borderRadius: '6px', border: '1px solid #555',
+                                                        background: '#1a1a1a', color: '#fff', width: '100%'
+                                                    }}
+                                                />
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '10px' }}>
+                                                <button
+                                                    onClick={handleManualAdd}
+                                                    style={{
+                                                        padding: '10px 20px', borderRadius: '8px',
+                                                        background: '#4caf50', color: '#fff',
+                                                        border: 'none', cursor: 'pointer', fontWeight: '600'
+                                                    }}
+                                                >
+                                                    Добавить
+                                                </button>
+                                                <button
+                                                    onClick={() => setShowManualForm(false)}
+                                                    style={{
+                                                        padding: '10px 20px', borderRadius: '8px',
+                                                        background: '#666', color: '#fff',
+                                                        border: 'none', cursor: 'pointer', fontWeight: '600'
+                                                    }}
+                                                >
+                                                    Отмена
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
