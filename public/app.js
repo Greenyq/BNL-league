@@ -1690,7 +1690,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                         <div className="player-info">
                             <div className="player-name">
                                 {player.name}
-                                {player.race && player.race !== 0 && (
+                                {player.race > 0 && (
                                     <span style={{
                                         color: '#c9a961',
                                         marginLeft: '8px',
@@ -3193,7 +3193,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                                         <div style={{ color: '#888', fontSize: '0.85em' }}>
                                                             {player.currentMmr ? `MMR: ${player.currentMmr}` : 'MMR: Loading...'}
                                                         </div>
-                                                        {player.race && (
+                                                        {player.race != null && (
                                                             <div style={{ color: '#c9a961', fontSize: '0.8em', marginTop: '3px' }}>
                                                                 {player.race === 1 ? '🏰 Human' : player.race === 2 ? '⚔️ Orc' : player.race === 4 ? '🌙 Night Elf' : player.race === 8 ? '💀 Undead' : '❓ Random'}
                                                             </div>
@@ -4056,7 +4056,7 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                         <div>
                             <h2 style={{ fontSize: '2.5em', fontWeight: '900', color: '#000', marginBottom: '5px' }}>
                                 {player.name}
-                                {player.race && player.race !== 0 && (
+                                {player.race > 0 && (
                                     <span style={{
                                         color: '#8b7355',
                                         marginLeft: '10px',
