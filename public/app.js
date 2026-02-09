@@ -499,7 +499,7 @@ function App() {
         // Performance: Backend now filters matches before sending, so minimal filtering needed here
         // But keep as fallback in case old cached data exists
         let recentMatches = matches;
-        const cutoffDate = new Date('2025-11-27T00:00:00Z');
+        const cutoffDate = new Date('2026-02-09T00:00:00Z');
 
         // Only filter if we have old data (backend now does this)
         if (matches.length > 50) {
@@ -1032,7 +1032,7 @@ function Header({ activeTab }) {
                             WebkitTextFillColor: 'transparent',
                             marginTop: '10px'
                         }}>Warcraft Breaking New Limits</h2>
-                        <div style={{ color: '#888', marginTop: '20px', fontSize: '1.2em' }}>📅 Season 24 • Starting Jan 26, 2026</div>
+                        <div style={{ color: '#888', marginTop: '20px', fontSize: '1.2em' }}>📅 Season 24 • Starting Feb 9, 2026</div>
                     </div>
                 </div>
             </div>
@@ -3914,7 +3914,7 @@ function Stats({ players, teams }) {
     return (
         <div>
             <div className="team-stats-section">
-                <div className="total-games">{totalGames} BNL GAMES PLAYED SINCE NOV 27, 2025!</div>
+                <div className="total-games">{totalGames} BNL GAMES PLAYED SINCE FEB 9, 2026!</div>
                 <div style={{ fontSize: '2em', fontWeight: '800', textAlign: 'center', marginBottom: '30px', background: 'linear-gradient(135deg, #f4e4b8 0%, #c9a961 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                     CURRENT BNL LADDER GODS
                 </div>
