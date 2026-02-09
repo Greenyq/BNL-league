@@ -322,7 +322,7 @@ async function searchW3ChampionsPlayer(battleTag) {
                             raceCounts[race] = (raceCounts[race] || 0) + 1;
 
                             // Track most frequent race
-                            if (!mostFrequentRace || raceCounts[race] > raceCounts[mostFrequentRace]) {
+                            if (mostFrequentRace === null || mostFrequentRace === undefined || raceCounts[race] > raceCounts[mostFrequentRace]) {
                                 mostFrequentRace = race;
                             }
                         }
@@ -334,7 +334,7 @@ async function searchW3ChampionsPlayer(battleTag) {
                         found: true,
                         battleTag: playerData.battleTag,
                         name: playerData.name,
-                        race: mostFrequentRace || playerData.race,
+                        race: mostFrequentRace !== null && mostFrequentRace !== undefined ? mostFrequentRace : playerData.race,
                         currentMmr: playerData.currentMmr,
                         matchCount: response.data.count
                     };
