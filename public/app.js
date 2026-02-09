@@ -450,7 +450,7 @@ function App() {
                         id: player.id,
                         name: player.name || player.battleTag.split('#')[0],
                         battleTag: player.battleTag,
-                        race: player.race || player.mainRace || 0,
+                        race: player.race != null ? player.race : (player.mainRace != null ? player.mainRace : 0),
                         mainRace: player.mainRace,
                         mmr: player.currentMmr || 0,
                         points: player.points || 0,
