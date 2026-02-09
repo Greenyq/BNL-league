@@ -218,7 +218,7 @@ func processPlayersParallel(players []PlayerData) []StatResult {
 
 // Process matches for a single player
 func processPlayerMatches(player PlayerData) StatResult {
-	cutoffDate := time.Date(2025, 11, 27, 0, 0, 0, 0, time.UTC)
+	cutoffDate := time.Date(2026, 2, 9, 0, 0, 0, 0, time.UTC)
 
 	// Filter recent matches
 	var recentMatches []MatchData
