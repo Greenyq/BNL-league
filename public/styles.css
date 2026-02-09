@@ -1472,3 +1472,174 @@ input[type="datetime-local"] {
         font-size: var(--font-size-lg);
     }
 }
+
+/* ===== Top 3 Animated Borders ===== */
+
+@keyframes waveGlow1 {
+    0% {
+        background-position: -200% 0;
+        opacity: 0.7;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        background-position: 200% 0;
+        opacity: 0.7;
+    }
+}
+
+@keyframes waveGlow2 {
+    0% {
+        background-position: 200% 0;
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 0.9;
+    }
+    100% {
+        background-position: -200% 0;
+        opacity: 0.6;
+    }
+}
+
+/* 1st place — Blue */
+.player-card.rank-1 {
+    border-color: rgba(30, 144, 255, 0.35);
+    box-shadow: 0 0 12px rgba(30, 144, 255, 0.15), var(--shadow-md);
+}
+
+.player-card.rank-1::before {
+    opacity: 1;
+    height: 3px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(30, 144, 255, 0.3) 15%,
+        rgba(100, 180, 255, 1) 50%,
+        rgba(30, 144, 255, 0.3) 85%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: waveGlow1 3s ease-in-out infinite;
+}
+
+.player-card.rank-1::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(100, 180, 255, 0.2) 20%,
+        rgba(30, 144, 255, 0.8) 50%,
+        rgba(100, 180, 255, 0.2) 80%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: waveGlow2 4s ease-in-out infinite;
+    z-index: 2;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.player-card.rank-1:hover {
+    border-color: rgba(30, 144, 255, 0.6);
+    box-shadow: 0 0 20px rgba(30, 144, 255, 0.3), var(--shadow-accent);
+}
+
+/* 2nd place — Purple */
+.player-card.rank-2 {
+    border-color: rgba(160, 80, 220, 0.35);
+    box-shadow: 0 0 12px rgba(160, 80, 220, 0.15), var(--shadow-md);
+}
+
+.player-card.rank-2::before {
+    opacity: 1;
+    height: 3px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(160, 80, 220, 0.3) 15%,
+        rgba(200, 140, 255, 1) 50%,
+        rgba(160, 80, 220, 0.3) 85%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: waveGlow1 3s ease-in-out infinite;
+}
+
+.player-card.rank-2::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(200, 140, 255, 0.2) 20%,
+        rgba(160, 80, 220, 0.8) 50%,
+        rgba(200, 140, 255, 0.2) 80%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: waveGlow2 4s ease-in-out infinite;
+    z-index: 2;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.player-card.rank-2:hover {
+    border-color: rgba(160, 80, 220, 0.6);
+    box-shadow: 0 0 20px rgba(160, 80, 220, 0.3), var(--shadow-accent);
+}
+
+/* 3rd place — Red */
+.player-card.rank-3 {
+    border-color: rgba(220, 50, 50, 0.35);
+    box-shadow: 0 0 12px rgba(220, 50, 50, 0.15), var(--shadow-md);
+}
+
+.player-card.rank-3::before {
+    opacity: 1;
+    height: 3px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(220, 50, 50, 0.3) 15%,
+        rgba(255, 120, 120, 1) 50%,
+        rgba(220, 50, 50, 0.3) 85%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: waveGlow1 3s ease-in-out infinite;
+}
+
+.player-card.rank-3::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 120, 120, 0.2) 20%,
+        rgba(220, 50, 50, 0.8) 50%,
+        rgba(255, 120, 120, 0.2) 80%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: waveGlow2 4s ease-in-out infinite;
+    z-index: 2;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.player-card.rank-3:hover {
+    border-color: rgba(220, 50, 50, 0.6);
+    box-shadow: 0 0 20px rgba(220, 50, 50, 0.3), var(--shadow-accent);
+}
