@@ -236,7 +236,7 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
             if (playerTeam) break;
         }
 
-        if (!playerTeam || !player || !player.race) {
+        if (!playerTeam || !player || player.race === undefined || player.race === null) {
             skippedNoPlayer++;
             continue;
         }

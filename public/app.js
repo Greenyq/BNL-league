@@ -1406,6 +1406,17 @@ function Players({ players }) {
                 const mainRaceProfile = sorted.find(p => p.race === mainRace);
                 if (mainRaceProfile) {
                     bestProfile = mainRaceProfile;
+                } else {
+                    // No profile for selected mainRace - create synthetic profile
+                    bestProfile = {
+                        ...sorted[0],
+                        race: mainRace,
+                        points: 0,
+                        wins: 0,
+                        losses: 0,
+                    };
+                    // Add synthetic profile to sorted array so it appears in race switcher
+                    sorted.unshift(bestProfile);
                 }
             }
 
@@ -4980,12 +4991,23 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
 
             // Filter by main race if set
             if (mainPlayer.mainRace !== undefined && mainPlayer.mainRace !== null) {
-                playerProfiles = playerProfiles.filter(p => p.race === mainPlayer.mainRace);
-            }
-
-            if (playerProfiles.length === 0) {
-                // If main race filter resulted in no profiles, use highest points
-                playerProfiles = allPlayers.filter(p => p.battleTag === playerUser.linkedBattleTag);
+                const filteredByMainRace = playerProfiles.filter(p => p.race === mainPlayer.mainRace);
+                if (filteredByMainRace.length > 0) {
+                    playerProfiles = filteredByMainRace;
+                } else {
+                    // No profile for selected mainRace - create synthetic profile with 0 stats
+                    const baseProfile = playerProfiles[0];
+                    const syntheticProfile = {
+                        ...baseProfile,
+                        race: mainPlayer.mainRace,
+                        points: 0,
+                        wins: 0,
+                        losses: 0,
+                    };
+                    setPlayerData(syntheticProfile);
+                    console.log('Player data (synthetic for mainRace):', syntheticProfile, 'Main Race:', mainPlayer.mainRace);
+                    return;
+                }
             }
 
             // Use the profile with highest points
@@ -5304,10 +5326,10 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                 Выберите расу, на которой вы играете больше всего. Статистика будет считаться только по матчам на этой расе.
                             </p>
                             <select
-                                value={playerData.mainRace || ''}
+                                value={playerData.mainRace !== undefined && playerData.mainRace !== null ? playerData.mainRace : ''}
                                 onChange={async (e) => {
                                     const mainRace = parseInt(e.target.value);
-                                    if (mainRace === undefined) return;
+                                    if (isNaN(mainRace)) return;
 
                                     try {
                                         const response = await fetch(`${API_BASE}/api/players/auth/select-main-race`, {
