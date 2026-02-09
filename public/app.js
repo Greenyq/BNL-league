@@ -559,7 +559,7 @@ function App() {
                 if (playerTeam) break;
             }
 
-            if (!playerTeam || !player || !player.race) continue;
+            if (!playerTeam || !player || player.race === undefined || player.race === null) continue;
 
             const race = player.race;
 
