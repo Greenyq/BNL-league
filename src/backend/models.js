@@ -189,6 +189,7 @@ const playerStatsSchema = new mongoose.Schema({
     wins: { type: Number, default: 0 },
     losses: { type: Number, default: 0 },
     mmr: { type: Number, default: 0 },
+    maxPointsAchieved: { type: Number, default: 0 },
     // Stats per race (1=Human, 2=Orc, 4=NightElf, 8=Undead)
     raceStats: [{
         race: Number,

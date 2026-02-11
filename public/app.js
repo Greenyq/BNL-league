@@ -84,8 +84,9 @@ const calculateMatchPoints = (match) => {
         else if (mmrDiff >= -19) return 50; // vs equal (-19 to +19 MMR)
         else return 70;                     // vs weaker (-20+ MMR)
     } else {
-        // Stage 1: no points deducted for losses
-        return 0;
+        if (mmrDiff <= -20) return -40;     // vs weaker: -40
+        else if (mmrDiff >= -19 && mmrDiff <= 19) return -30; // vs equal: -30
+        else return -20;                    // vs stronger: -20
     }
 };
 
@@ -654,11 +655,19 @@ function App() {
                     losses++;
                     matchHistory.push({ result: 'loss', mmrDiff, playerMMR, opponentMMR, isBnlMatch, opponentTag: opponent.battleTag });
 
-                    // Stage 1: no points deducted for losses
-                    matchPoints = 0;
+                    // Reduced loss penalties
+                    if (mmrDiff <= -20) {
+                        matchPoints = -40;      // Loss to weaker
+                    } else if (mmrDiff >= -19 && mmrDiff <= 19) {
+                        matchPoints = -30;      // Loss to equal
+                    } else {
+                        matchPoints = -20;      // Loss to stronger
+                    }
                 }
 
                 totalPoints += matchPoints;
+                // Floor: points cannot go below 0 per race
+                if (totalPoints < 0) totalPoints = 0;
             });
 
             // Determine achievements for this race

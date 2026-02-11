@@ -317,11 +317,15 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
             } else {
                 losses++;
                 matchHistory.push({ result: 'loss', mmrDiff, playerMMR, opponentMMR, isBnlMatch, opponentTag: opponent.battleTag });
-                // Stage 1: no points deducted for losses
-                matchPoints = 0;
+                // Reduced loss penalties
+                if (mmrDiff <= -20) matchPoints = -40;      // Loss to weaker
+                else if (mmrDiff >= -19 && mmrDiff <= 19) matchPoints = -30; // Loss to equal
+                else matchPoints = -20;                      // Loss to stronger
             }
 
             totalPoints += matchPoints;
+            // Floor: points cannot go below 0 per race
+            if (totalPoints < 0) totalPoints = 0;
         });
 
         // Determine achievements
@@ -510,6 +514,13 @@ async function recalculateAllPlayerStats() {
                     overallPoints += stat.points;
                 });
 
+                // Apply points floor: cannot go below 0, and if reached 500 cannot go below 500
+                const existingStats = await PlayerStats.findOne({ battleTag: player.battleTag });
+                const previousMaxPoints = existingStats?.maxPointsAchieved || existingStats?.points || 0;
+                const maxPointsAchieved = Math.max(overallPoints, previousMaxPoints);
+                const pointsFloor = maxPointsAchieved >= 500 ? 500 : 0;
+                overallPoints = Math.max(pointsFloor, overallPoints);
+
                 // Save to PlayerStats collection
                 await PlayerStats.findOneAndUpdate(
                     { battleTag: player.battleTag },
@@ -519,6 +530,7 @@ async function recalculateAllPlayerStats() {
                         wins: overallWins,
                         losses: overallLosses,
                         mmr: player.currentMmr || 0,
+                        maxPointsAchieved: maxPointsAchieved,
                         raceStats: raceStats,
                         updatedAt: new Date()
                     },
