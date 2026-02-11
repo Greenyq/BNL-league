@@ -84,9 +84,8 @@ const calculateMatchPoints = (match) => {
         else if (mmrDiff >= -19) return 50; // vs equal (-19 to +19 MMR)
         else return 70;                     // vs weaker (-20+ MMR)
     } else {
-        if (mmrDiff <= -20) return -30;     // vs weaker (-20+ MMR lower)
-        else if (mmrDiff >= -19 && mmrDiff <= 19) return -50; // vs equal
-        else return -70;                    // vs stronger (+20+ MMR higher)
+        // Stage 1: no points deducted for losses
+        return 0;
     }
 };
 
@@ -655,17 +654,8 @@ function App() {
                     losses++;
                     matchHistory.push({ result: 'loss', mmrDiff, playerMMR, opponentMMR, isBnlMatch, opponentTag: opponent.battleTag });
 
-                    // Loss points (negative) based on opponent MMR
-                    if (mmrDiff <= -20) {
-                        // Loss to weaker opponent: -70 points
-                        matchPoints = -70;
-                    } else if (mmrDiff >= -19 && mmrDiff <= 19) {
-                        // Loss to equal opponent: -50 points
-                        matchPoints = -50;
-                    } else {
-                        // Loss to stronger opponent: less penalty
-                        matchPoints = -30;
-                    }
+                    // Stage 1: no points deducted for losses
+                    matchPoints = 0;
                 }
 
                 totalPoints += matchPoints;

@@ -317,9 +317,8 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
             } else {
                 losses++;
                 matchHistory.push({ result: 'loss', mmrDiff, playerMMR, opponentMMR, isBnlMatch, opponentTag: opponent.battleTag });
-                if (mmrDiff <= -20) matchPoints = -30;
-                else if (mmrDiff >= -19 && mmrDiff <= 19) matchPoints = -50;
-                else matchPoints = -70;
+                // Stage 1: no points deducted for losses
+                matchPoints = 0;
             }
 
             totalPoints += matchPoints;
