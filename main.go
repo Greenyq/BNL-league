@@ -381,7 +381,18 @@ func calculateRaceStats(battleTag string, matches []MatchData) (wins, losses, po
 			}
 		} else {
 			losses++
-			// Stage 1: no points deducted for losses
+			// Reduced loss penalties
+			if mmrDiff <= -20 {
+				points -= 40 // Loss to weaker
+			} else if mmrDiff >= -19 && mmrDiff <= 19 {
+				points -= 30 // Loss to equal
+			} else {
+				points -= 20 // Loss to stronger
+			}
+			// Floor: points cannot go below 0
+			if points < 0 {
+				points = 0
+			}
 		}
 	}
 
