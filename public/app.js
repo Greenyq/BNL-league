@@ -105,136 +105,118 @@ const getStreakEndIndex = (recentMatches, streakLength, result = 'win') => {
 };
 
 // Map achievements to the matches that earned them
-const getMatchAchievements = (matchHistory, achievements) => {
+const getMatchAchievements = (matchHistory, playerAchievements) => {
     const matchAchievements = {}; // { matchIndex: [achievementKeys] }
 
     if (!matchHistory || matchHistory.length === 0) return matchAchievements;
 
-    // Reverse to get recent matches first
-    const recentMatches = [...matchHistory].reverse().slice(0, 20);
+    // matchHistory is already most-recent-first (reversed in backend)
+    const recentMatches = matchHistory.slice(0, 20);
 
-    achievements.forEach(achKey => {
-        const ach = achievements[achKey] || achievements[achKey];
+    // Deduplicate achievement keys to know which types to look for
+    const uniqueAchKeys = [...new Set(playerAchievements || [])];
 
-        // Win streaks - show on last match of streak
-        if (achKey === 'winStreak15') {
-            const idx = getStreakEndIndex(recentMatches, 15, 'win');
-            if (idx >= 0) {
-                const matchIdx = recentMatches.length - 1 - idx;
-                if (!matchAchievements[matchIdx]) matchAchievements[matchIdx] = [];
-                matchAchievements[matchIdx].push(achKey);
-            }
-        } else if (achKey === 'winStreak10') {
-            const idx = getStreakEndIndex(recentMatches, 10, 'win');
-            if (idx >= 0) {
-                const matchIdx = recentMatches.length - 1 - idx;
-                if (!matchAchievements[matchIdx]) matchAchievements[matchIdx] = [];
-                matchAchievements[matchIdx].push(achKey);
-            }
-        } else if (achKey === 'winStreak5') {
-            const idx = getStreakEndIndex(recentMatches, 5, 'win');
-            if (idx >= 0) {
-                const matchIdx = recentMatches.length - 1 - idx;
-                if (!matchAchievements[matchIdx]) matchAchievements[matchIdx] = [];
-                matchAchievements[matchIdx].push(achKey);
-            }
-        } else if (achKey === 'winStreak3') {
-            const idx = getStreakEndIndex(recentMatches, 3, 'win');
-            if (idx >= 0) {
-                const matchIdx = recentMatches.length - 1 - idx;
-                if (!matchAchievements[matchIdx]) matchAchievements[matchIdx] = [];
-                matchAchievements[matchIdx].push(achKey);
+    // Helper: find ALL streak end indices (not just the first one)
+    const getAllStreakEndIndices = (matches, streakLength, result = 'win') => {
+        const indices = [];
+        let currentStreak = 0;
+        // Scan from oldest to newest (reversed)
+        for (let i = matches.length - 1; i >= 0; i--) {
+            if (matches[i].result === result) {
+                currentStreak++;
+                if (currentStreak === streakLength) {
+                    indices.push(i);
+                }
+            } else {
+                currentStreak = 0;
             }
         }
-        // Loss streaks - show on last match of streak
-        else if (achKey === 'loseStreak10') {
-            const idx = getStreakEndIndex(recentMatches, 10, 'loss');
-            if (idx >= 0) {
-                const matchIdx = recentMatches.length - 1 - idx;
-                if (!matchAchievements[matchIdx]) matchAchievements[matchIdx] = [];
-                matchAchievements[matchIdx].push(achKey);
-            }
-        } else if (achKey === 'loseStreak3') {
-            const idx = getStreakEndIndex(recentMatches, 3, 'loss');
-            if (idx >= 0) {
-                const matchIdx = recentMatches.length - 1 - idx;
-                if (!matchAchievements[matchIdx]) matchAchievements[matchIdx] = [];
-                matchAchievements[matchIdx].push(achKey);
-            }
+        return indices;
+    };
+
+    uniqueAchKeys.forEach(achKey => {
+        // Win streaks - show on the match that completes the streak (all occurrences)
+        if (['winStreak15', 'winStreak10', 'winStreak5', 'winStreak3'].includes(achKey)) {
+            const streakLen = achKey === 'winStreak15' ? 15 : achKey === 'winStreak10' ? 10 : achKey === 'winStreak5' ? 5 : 3;
+            const indices = getAllStreakEndIndices(recentMatches, streakLen, 'win');
+            indices.forEach(idx => {
+                if (!matchAchievements[idx]) matchAchievements[idx] = [];
+                matchAchievements[idx].push(achKey);
+            });
         }
-        // MMR challenges - find first occurrence in recent matches
+        // Loss streaks - all occurrences
+        else if (['loseStreak10', 'loseStreak3'].includes(achKey)) {
+            const streakLen = achKey === 'loseStreak10' ? 10 : 3;
+            const indices = getAllStreakEndIndices(recentMatches, streakLen, 'loss');
+            indices.forEach(idx => {
+                if (!matchAchievements[idx]) matchAchievements[idx] = [];
+                matchAchievements[idx].push(achKey);
+            });
+        }
+        // MMR challenges - show on ALL matching wins
         else if (achKey === 'davidVsGoliath') {
-            for (let i = recentMatches.length - 1; i >= 0; i--) {
+            for (let i = 0; i < recentMatches.length; i++) {
                 if (recentMatches[i].result === 'win' && recentMatches[i].mmrDiff >= 200) {
-                    const matchIdx = recentMatches.length - 1 - i;
-                    if (!matchAchievements[matchIdx]) matchAchievements[matchIdx] = [];
-                    matchAchievements[matchIdx].push(achKey);
-                    break;
+                    if (!matchAchievements[i]) matchAchievements[i] = [];
+                    matchAchievements[i].push(achKey);
                 }
             }
         } else if (achKey === 'titanSlayer') {
-            for (let i = recentMatches.length - 1; i >= 0; i--) {
-                if (recentMatches[i].result === 'win' && recentMatches[i].mmrDiff >= 100) {
-                    const matchIdx = recentMatches.length - 1 - i;
-                    if (!matchAchievements[matchIdx]) matchAchievements[matchIdx] = [];
-                    matchAchievements[matchIdx].push(achKey);
-                    break;
+            for (let i = 0; i < recentMatches.length; i++) {
+                if (recentMatches[i].result === 'win' && recentMatches[i].mmrDiff >= 100 && recentMatches[i].mmrDiff < 200) {
+                    if (!matchAchievements[i]) matchAchievements[i] = [];
+                    matchAchievements[i].push(achKey);
                 }
             }
         } else if (achKey === 'giantSlayer') {
-            for (let i = recentMatches.length - 1; i >= 0; i--) {
-                if (recentMatches[i].result === 'win' && recentMatches[i].mmrDiff >= 50) {
-                    const matchIdx = recentMatches.length - 1 - i;
-                    if (!matchAchievements[matchIdx]) matchAchievements[matchIdx] = [];
-                    matchAchievements[matchIdx].push(achKey);
-                    break;
+            for (let i = 0; i < recentMatches.length; i++) {
+                if (recentMatches[i].result === 'win' && recentMatches[i].mmrDiff >= 50 && recentMatches[i].mmrDiff < 100) {
+                    if (!matchAchievements[i]) matchAchievements[i] = [];
+                    matchAchievements[i].push(achKey);
                 }
             }
         }
-        // Comeback - find the winning match after 3 losses
+        // Comeback - show on ALL wins after 3+ consecutive losses
         else if (achKey === 'comeback') {
-            for (let i = 0; i < recentMatches.length - 3; i++) {
-                if (recentMatches[i].result === 'win' &&
-                    recentMatches[i + 1].result === 'loss' &&
-                    recentMatches[i + 2].result === 'loss' &&
-                    recentMatches[i + 3].result === 'loss') {
-                    const matchIdx = recentMatches.length - 1 - i;
-                    if (!matchAchievements[matchIdx]) matchAchievements[matchIdx] = [];
-                    matchAchievements[matchIdx].push(achKey);
-                    break;
+            let consecutiveLosses = 0;
+            // Scan from oldest to newest (reverse order since matchHistory is most-recent-first)
+            for (let i = recentMatches.length - 1; i >= 0; i--) {
+                if (recentMatches[i].result === 'loss') {
+                    consecutiveLosses++;
+                } else {
+                    if (consecutiveLosses >= 3) {
+                        if (!matchAchievements[i]) matchAchievements[i] = [];
+                        matchAchievements[i].push(achKey);
+                    }
+                    consecutiveLosses = 0;
                 }
             }
         }
-        // Persistent - find the 5th win after 5 loss streak
+        // Persistent - find all 5 wins after 5 loss streaks
         else if (achKey === 'persistent') {
             for (let i = 0; i < recentMatches.length - 9; i++) {
                 const fiveWins = recentMatches.slice(i, i + 5).every(m => m.result === 'win');
                 const fiveLosses = recentMatches.slice(i + 5, i + 10).every(m => m.result === 'loss');
                 if (fiveWins && fiveLosses) {
-                    const matchIdx = recentMatches.length - 1 - (i + 9);
+                    const matchIdx = i;
                     if (!matchAchievements[matchIdx]) matchAchievements[matchIdx] = [];
                     matchAchievements[matchIdx].push(achKey);
-                    break;
                 }
             }
         }
-        // BNL achievements - show on the relevant match
+        // BNL achievements - show on ALL relevant matches
         else if (achKey === 'bnlRobber') {
-            for (let i = recentMatches.length - 1; i >= 0; i--) {
+            for (let i = 0; i < recentMatches.length; i++) {
                 if (recentMatches[i].result === 'win' && recentMatches[i].isBnlMatch) {
-                    const matchIdx = recentMatches.length - 1 - i;
-                    if (!matchAchievements[matchIdx]) matchAchievements[matchIdx] = [];
-                    matchAchievements[matchIdx].push(achKey);
-                    break;
+                    if (!matchAchievements[i]) matchAchievements[i] = [];
+                    matchAchievements[i].push(achKey);
                 }
             }
         } else if (achKey === 'bnlVictim') {
-            for (let i = recentMatches.length - 1; i >= 0; i--) {
+            for (let i = 0; i < recentMatches.length; i++) {
                 if (recentMatches[i].result === 'loss' && recentMatches[i].isBnlMatch) {
-                    const matchIdx = recentMatches.length - 1 - i;
-                    if (!matchAchievements[matchIdx]) matchAchievements[matchIdx] = [];
-                    matchAchievements[matchIdx].push(achKey);
-                    break;
+                    if (!matchAchievements[i]) matchAchievements[i] = [];
+                    matchAchievements[i].push(achKey);
                 }
             }
         }
@@ -1103,7 +1085,7 @@ function Rules() {
                                 <li style={{ marginBottom: '8px' }}>📊 Каждая победа в ладдере приносит вам очки</li>
                                 <li style={{ marginBottom: '8px' }}>🏅 Дополнительные очки дают достижения (ачивки)</li>
                                 <li style={{ marginBottom: '8px' }}>🖼️ Очки разблокируют уникальные портреты для вашей расы</li>
-                                <li style={{ marginBottom: '8px' }}>🏆 Набрав нужное количество очков, вы поднимаетесь на следующий этап</li>
+                                <li style={{ marginBottom: '8px' }}>🏆 Показав активность играми, вы проходите на следующий этап</li>
                             </ul>
                         </div>
                         <p style={{ color: '#c9a961', fontWeight: 'bold', textAlign: 'center' }}>
@@ -1257,7 +1239,10 @@ function Rules() {
                                 🏆 Условие перехода во второй этап:
                             </p>
                             <p style={{ fontSize: '1.3em', fontWeight: '800', color: '#4caf50' }}>
-                                Набрать 500 очков
+                                Показать активность играми в ладдере
+                            </p>
+                            <p style={{ fontSize: '0.95em', color: '#888', marginTop: '10px' }}>
+                                Играйте в ладдер, набирайте очки и выполняйте ачивки — мы оцениваем вашу активность и заинтересованность!
                             </p>
                         </div>
                     </div>
@@ -1269,7 +1254,7 @@ function Rules() {
                     </h3>
                     <div style={{ fontSize: '1.1em', lineHeight: '1.8', color: '#e0e0e0' }}>
                         <p style={{ marginBottom: '15px' }}>
-                            Игроки, набравшие <strong>500 очков</strong> на первом этапе, автоматически попадают во второй этап командного соревнования. На этом этапе все участники разделяются на две команды, и начинается «война команд».
+                            Игроки, показавшие активность на первом этапе, попадают во второй этап командного соревнования. На этом этапе все участники разделяются на две команды, и начинается «война команд».
                         </p>
                         <p style={{ marginBottom: '15px' }}>
                             Каждую команду возглавляют и управляют:
@@ -1723,7 +1708,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                                 textAlign: 'center',
                                 fontWeight: '700'
                             }}>
-                                🏆 {player.achievements.length}
+                                🏆 {new Set(player.achievements).size}
                             </div>
                         )}
                     </div>
@@ -1742,23 +1727,53 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                     minHeight: '0',
                     position: 'relative'
                 }}>
-                    {player.achievements && player.achievements.map(achKey => {
-                        const ach = achievements[achKey];
-                        if (!ach) {
-                            console.warn(`Achievement ${achKey} not found`);
-                            return null;
-                        }
-                        return (
-                            <div key={achKey} className="achievement-icon">
-                                {ach.icon}
-                                <div className="achievement-tooltip">
-                                    <div style={{ fontWeight: '700' }}>{ach.name}</div>
-                                    <div style={{ color: '#888', fontSize: '0.9em', marginTop: '3px' }}>{ach.desc}</div>
-                                    <div style={{ color: '#4caf50', marginTop: '5px' }}>+{ach.points} pts</div>
+                    {player.achievements && (() => {
+                        const achCounts = {};
+                        player.achievements.forEach(k => { achCounts[k] = (achCounts[k] || 0) + 1; });
+                        return Object.keys(achCounts).map(achKey => {
+                            const ach = achievements[achKey];
+                            if (!ach) {
+                                console.warn(`Achievement ${achKey} not found`);
+                                return null;
+                            }
+                            const count = achCounts[achKey];
+                            return (
+                                <div key={achKey} className="achievement-icon" style={{ position: 'relative' }}>
+                                    {ach.icon}
+                                    {count > 1 && (
+                                        <span style={{
+                                            position: 'absolute',
+                                            top: '-4px',
+                                            right: '-4px',
+                                            background: '#c9a961',
+                                            color: '#000',
+                                            fontSize: '0.6em',
+                                            fontWeight: '800',
+                                            borderRadius: '50%',
+                                            width: '16px',
+                                            height: '16px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            lineHeight: '1'
+                                        }}>
+                                            {count}
+                                        </span>
+                                    )}
+                                    <div className="achievement-tooltip">
+                                        <div style={{ fontWeight: '700' }}>{ach.name}{count > 1 ? ` x${count}` : ''}</div>
+                                        <div style={{ color: '#888', fontSize: '0.9em', marginTop: '3px' }}>{ach.desc}</div>
+                                        <div style={{ color: '#4caf50', marginTop: '5px' }}>
+                                            {count > 1
+                                                ? `+${ach.points} x ${count} = +${ach.points * count} pts`
+                                                : `+${ach.points} pts`
+                                            }
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        });
+                    })()}
                 </div>
 
                 {/* Match graph - ALWAYS show */}
@@ -4163,116 +4178,145 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                     </div>
 
                     {/* Achievements */}
-                    {player.achievements && player.achievements.length > 0 && (
-                        <div style={{
-                            background: '#2a2a2a',
-                            padding: '20px',
-                            borderRadius: '15px',
-                            marginBottom: '30px'
-                        }}>
-                            <div style={{ fontSize: '1.2em', fontWeight: '700', marginBottom: '15px', color: '#c9a961' }}>
-                                🏆 Достижения
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
-                                {player.achievements.map(achKey => {
-                                    const ach = achievements[achKey];
-                                    if (!ach) return null;
-                                    return (
-                                        <div
-                                            key={achKey}
-                                            style={{
-                                                background: '#1a1a1a',
-                                                padding: '15px',
-                                                borderRadius: '10px',
-                                                border: '1px solid #c9a961',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '10px'
-                                            }}
-                                        >
-                                            <span style={{ fontSize: '2em' }}>{ach.icon}</span>
-                                            <div>
-                                                <div style={{ fontWeight: '700', color: '#fff', fontSize: '0.95em' }}>
-                                                    {ach.name}
-                                                </div>
-                                                <div style={{ fontSize: '0.8em', color: '#888' }}>
-                                                    {ach.desc}
-                                                </div>
-                                                <div style={{ fontSize: '0.85em', color: '#c9a961', marginTop: '3px' }}>
-                                                    +{ach.points} pts
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
+                    {player.achievements && player.achievements.length > 0 && (() => {
+                        // Group achievements by key and count occurrences
+                        const achCounts = {};
+                        player.achievements.forEach(achKey => {
+                            achCounts[achKey] = (achCounts[achKey] || 0) + 1;
+                        });
+                        const uniqueAchKeys = Object.keys(achCounts);
 
-                    {/* Match History */}
-                    {player.matchHistory && player.matchHistory.length > 0 && (
-                        <div style={{
-                            background: '#2a2a2a',
-                            padding: '20px',
-                            borderRadius: '15px'
-                        }}>
-                            <div style={{ fontSize: '1.2em', fontWeight: '700', marginBottom: '15px', color: '#c9a961' }}>
-                                📜 История матчей (последние {Math.min(20, player.matchHistory.length)})
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                {player.matchHistory.slice(0, 20).map((match, idx) => {
-                                    const points = calculateMatchPoints(match);
-                                    const pointsStr = points >= 0 ? `+${points}` : `${points}`;
-                                    const matchAchievements = getMatchAchievements(player.matchHistory, player.achievements || []);
-                                    const matchAchs = matchAchievements[idx] || [];
-                                    const primaryAch = matchAchs.length > 0 ? achievements[matchAchs[0]] : null;
-
-                                    return (
-                                        <div
-                                            key={idx}
-                                            style={{
-                                                position: 'relative',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center'
-                                            }}
-                                        >
-                                            {/* Match result, points, or achievement badge */}
+                        return (
+                            <div style={{
+                                background: '#2a2a2a',
+                                padding: '20px',
+                                borderRadius: '15px',
+                                marginBottom: '30px'
+                            }}>
+                                <div style={{ fontSize: '1.2em', fontWeight: '700', marginBottom: '15px', color: '#c9a961' }}>
+                                    🏆 Достижения
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
+                                    {uniqueAchKeys.map(achKey => {
+                                        const ach = achievements[achKey];
+                                        if (!ach) return null;
+                                        const count = achCounts[achKey];
+                                        return (
                                             <div
+                                                key={achKey}
                                                 style={{
-                                                    width: '44px',
-                                                    height: '44px',
-                                                    borderRadius: '5px',
-                                                    background: match.result === 'win' ? '#4caf50' : '#f44336',
+                                                    background: '#1a1a1a',
+                                                    padding: '15px',
+                                                    borderRadius: '10px',
+                                                    border: '1px solid #c9a961',
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    color: '#fff',
-                                                    fontWeight: '700',
-                                                    fontSize: '0.85em',
-                                                    cursor: 'help',
-                                                    boxShadow: matchAchs.length > 0 ? '0 0 10px rgba(201, 169, 97, 0.5)' : 'none',
-                                                    transition: 'all 0.2s'
+                                                    gap: '10px',
+                                                    position: 'relative'
                                                 }}
-                                                title={primaryAch ? `${primaryAch.name}: ${primaryAch.desc}` : `${match.result === 'win' ? 'Победа' : 'Поражение'} (${match.mmrDiff >= 0 ? '+' : ''}${match.mmrDiff} MMR)`}
                                             >
-                                                {primaryAch ? (
-                                                    <div style={{ fontSize: '1.8em', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1' }}>
-                                                        {primaryAch.icon}
+                                                <span style={{ fontSize: '2em' }}>{ach.icon}</span>
+                                                <div>
+                                                    <div style={{ fontWeight: '700', color: '#fff', fontSize: '0.95em' }}>
+                                                        {ach.name}
+                                                        {count > 1 && (
+                                                            <span style={{
+                                                                marginLeft: '6px',
+                                                                fontSize: '0.85em',
+                                                                color: '#c9a961',
+                                                                fontWeight: '800'
+                                                            }}>
+                                                                x{count}
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                ) : (
-                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0px' }}>
-                                                        <div>{match.result === 'win' ? 'W' : 'L'}</div>
-                                                        <div style={{ fontSize: '0.75em', color: '#ffeb3b' }}>{pointsStr}</div>
+                                                    <div style={{ fontSize: '0.8em', color: '#888' }}>
+                                                        {ach.desc}
                                                     </div>
-                                                )}
+                                                    <div style={{ fontSize: '0.85em', color: '#c9a961', marginTop: '3px' }}>
+                                                        {count > 1
+                                                            ? `+${ach.points} x ${count} = +${ach.points * count} pts`
+                                                            : `+${ach.points} pts`
+                                                        }
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        );
+                    })()}
+
+                    {/* Match History */}
+                    {player.matchHistory && player.matchHistory.length > 0 && (() => {
+                        const allMatchAchs = getMatchAchievements(player.matchHistory, player.achievements || []);
+                        return (
+                            <div style={{
+                                background: '#2a2a2a',
+                                padding: '20px',
+                                borderRadius: '15px'
+                            }}>
+                                <div style={{ fontSize: '1.2em', fontWeight: '700', marginBottom: '15px', color: '#c9a961' }}>
+                                    📜 История матчей (последние {Math.min(20, player.matchHistory.length)})
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    {player.matchHistory.slice(0, 20).map((match, idx) => {
+                                        const points = calculateMatchPoints(match);
+                                        const pointsStr = points >= 0 ? `+${points}` : `${points}`;
+                                        const matchAchs = allMatchAchs[idx] || [];
+                                        const primaryAch = matchAchs.length > 0 ? achievements[matchAchs[0]] : null;
+                                        const achTitle = matchAchs.length > 0
+                                            ? matchAchs.map(k => { const a = achievements[k]; return a ? `${a.name}: ${a.desc}` : ''; }).filter(Boolean).join('\n')
+                                            : `${match.result === 'win' ? 'Победа' : 'Поражение'} (${match.mmrDiff >= 0 ? '+' : ''}${match.mmrDiff} MMR)`;
+
+                                        return (
+                                            <div
+                                                key={idx}
+                                                style={{
+                                                    position: 'relative',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                {/* Match result, points, or achievement badge */}
+                                                <div
+                                                    style={{
+                                                        width: '44px',
+                                                        height: '44px',
+                                                        borderRadius: '5px',
+                                                        background: match.result === 'win' ? '#4caf50' : '#f44336',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: '#fff',
+                                                        fontWeight: '700',
+                                                        fontSize: '0.85em',
+                                                        cursor: 'help',
+                                                        boxShadow: matchAchs.length > 0 ? '0 0 10px rgba(201, 169, 97, 0.5)' : 'none',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                    title={achTitle}
+                                                >
+                                                    {primaryAch ? (
+                                                        <div style={{ fontSize: '1.8em', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1' }}>
+                                                            {primaryAch.icon}
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0px' }}>
+                                                            <div>{match.result === 'win' ? 'W' : 'L'}</div>
+                                                            <div style={{ fontSize: '0.75em', color: '#ffeb3b' }}>{pointsStr}</div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
             </div>
         </div>
@@ -4639,12 +4683,8 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                     setError(data.error || 'Ошибка при сбросе пароля');
                 }
             } else {
-                // Login or Register
-                const endpoint = mode === 'login'
-                    ? '/api/players/auth/login'
-                    : '/api/players/auth/register';
-
-                const response = await fetch(`${API_BASE}${endpoint}`, {
+                // Login only (registration closed)
+                const response = await fetch(`${API_BASE}/api/players/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
@@ -4735,6 +4775,44 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                     </div>
                 )}
 
+                {mode === 'register' && (
+                    <div style={{
+                        textAlign: 'center',
+                        padding: '30px 20px',
+                        marginBottom: '20px'
+                    }}>
+                        <div style={{ fontSize: '3em', marginBottom: '15px' }}>🔒</div>
+                        <div style={{
+                            fontSize: '1.3em',
+                            fontWeight: '700',
+                            color: '#f44336',
+                            marginBottom: '15px'
+                        }}>
+                            Регистрация закрыта
+                        </div>
+                        <div style={{
+                            fontSize: '0.95em',
+                            color: '#888',
+                            lineHeight: '1.6',
+                            marginBottom: '20px'
+                        }}>
+                            Набор участников в лигу BNL завершен. Следите за новостями — возможно, регистрация откроется в следующем сезоне!
+                        </div>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            style={{
+                                padding: '12px 30px', borderRadius: '8px',
+                                background: '#c9a961', color: '#000',
+                                border: 'none', cursor: 'pointer',
+                                fontWeight: '700', fontSize: '1em'
+                            }}
+                        >
+                            Понятно
+                        </button>
+                    </div>
+                )}
+
                 {(mode === 'reset' || mode === 'reset-confirm') && (
                     <div style={{ marginBottom: '20px', textAlign: 'center' }}>
                         <button
@@ -4759,7 +4837,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit}>
+                {mode !== 'register' && <form onSubmit={handleSubmit}>
                     {mode === 'admin' ? (
                         <>
                             <input
@@ -4804,7 +4882,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                                 autoFocus
                             />
 
-                            {(mode === 'login' || mode === 'register') && (
+                            {mode === 'login' && (
                                 <input
                                     type="password"
                                     value={password}
@@ -4908,7 +4986,6 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                         >
                             {loading ? '...' :
                              mode === 'login' ? 'Войти' :
-                             mode === 'register' ? 'Зарегистрироваться' :
                              mode === 'admin' ? '⚙️ Войти как Админ' :
                              mode === 'reset' ? 'Получить код' :
                              'Сбросить пароль'}
@@ -4925,7 +5002,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                             Отмена
                         </button>
                     </div>
-                </form>
+                </form>}
             </div>
         </div>
     );
