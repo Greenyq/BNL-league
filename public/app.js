@@ -4719,12 +4719,13 @@ function PlayerAuthModal({ onClose, onSuccess }) {
             }}>
                 <h2 style={{ color: '#c9a961', marginBottom: '20px', textAlign: 'center' }}>
                     {mode === 'login' ? '🔐 Вход' :
+                     mode === 'register' ? '📝 Регистрация' :
                      mode === 'admin' ? '⚙️ Админ' :
                      mode === 'reset' ? '🔑 Сброс пароля' :
                      '🔑 Подтверждение сброса'}
                 </h2>
 
-                {(mode === 'login' || mode === 'admin') && (
+                {(mode === 'login' || mode === 'register' || mode === 'admin') && (
                     <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
                         <button
                             onClick={() => {
@@ -4743,6 +4744,21 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                         </button>
                         <button
                             onClick={() => {
+                                setMode('register');
+                                setError('');
+                                setSuccess('');
+                            }}
+                            style={{
+                                flex: 1, padding: '10px', borderRadius: '8px',
+                                background: mode === 'register' ? '#c9a961' : '#2a2a2a',
+                                color: mode === 'register' ? '#000' : '#fff',
+                                border: 'none', cursor: 'pointer', fontWeight: '600'
+                            }}
+                        >
+                            Регистрация
+                        </button>
+                        <button
+                            onClick={() => {
                                 setMode('admin');
                                 setError('');
                                 setSuccess('');
@@ -4755,6 +4771,44 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                             }}
                         >
                             ⚙️ Админ
+                        </button>
+                    </div>
+                )}
+
+                {mode === 'register' && (
+                    <div style={{
+                        textAlign: 'center',
+                        padding: '30px 20px',
+                        marginBottom: '20px'
+                    }}>
+                        <div style={{ fontSize: '3em', marginBottom: '15px' }}>🔒</div>
+                        <div style={{
+                            fontSize: '1.3em',
+                            fontWeight: '700',
+                            color: '#f44336',
+                            marginBottom: '15px'
+                        }}>
+                            Регистрация закрыта
+                        </div>
+                        <div style={{
+                            fontSize: '0.95em',
+                            color: '#888',
+                            lineHeight: '1.6',
+                            marginBottom: '20px'
+                        }}>
+                            Набор участников в лигу BNL завершен. Следите за новостями — возможно, регистрация откроется в следующем сезоне!
+                        </div>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            style={{
+                                padding: '12px 30px', borderRadius: '8px',
+                                background: '#c9a961', color: '#000',
+                                border: 'none', cursor: 'pointer',
+                                fontWeight: '700', fontSize: '1em'
+                            }}
+                        >
+                            Понятно
                         </button>
                     </div>
                 )}
@@ -4783,7 +4837,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit}>
+                {mode !== 'register' && <form onSubmit={handleSubmit}>
                     {mode === 'admin' ? (
                         <>
                             <input
@@ -4948,7 +5002,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                             Отмена
                         </button>
                     </div>
-                </form>
+                </form>}
             </div>
         </div>
     );
