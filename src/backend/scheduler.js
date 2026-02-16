@@ -43,6 +43,7 @@ const achievements = {
 };
 
 // Determine achievements based on stats
+// Returns array of achievement keys (repeatable achievements appear multiple times)
 const determineAchievements = (wins, losses, points, totalGames, matchHistory = [], currentMmr = 0) => {
     const achs = [];
 
@@ -54,6 +55,8 @@ const determineAchievements = (wins, losses, points, totalGames, matchHistory = 
     const validCurrentMmr = Math.max(0, parseInt(currentMmr) || 0);
     const validMatchHistory = Array.isArray(matchHistory) ? matchHistory : [];
 
+    // === ONE-TIME MILESTONE ACHIEVEMENTS ===
+
     // Total Wins
     if (validWins >= 200) achs.push('centurionSupreme');
     else if (validWins >= 100) achs.push('centurion');
@@ -63,47 +66,6 @@ const determineAchievements = (wins, losses, points, totalGames, matchHistory = 
     if (validWins >= 20) achs.push('perfectWeek');
     else if (validWins >= 10) achs.push('gladiator');
     if (validWins >= 50) achs.push('noMercy');
-
-    // Win Streaks and Loss Streaks
-    let maxWinStreak = 0;
-    let maxLossStreak = 0;
-    let currentWinStreak = 0;
-    let currentLossStreak = 0;
-    let hasGiantSlayer = false;
-    let hasTitanSlayer = false;
-    let hasDavidVsGoliath = false;
-
-    for (const match of validMatchHistory) {
-        if (match.result === 'win') {
-            currentWinStreak++;
-            currentLossStreak = 0;
-            maxWinStreak = Math.max(maxWinStreak, currentWinStreak);
-
-            // Check MMR challenge achievements (giant slayer, titan slayer, david vs goliath)
-            if (match.mmrDiff >= 200) hasDavidVsGoliath = true;
-            else if (match.mmrDiff >= 100) hasTitanSlayer = true;
-            else if (match.mmrDiff >= 50) hasGiantSlayer = true;
-        } else {
-            currentLossStreak++;
-            currentWinStreak = 0;
-            maxLossStreak = Math.max(maxLossStreak, currentLossStreak);
-        }
-    }
-
-    // Win streak achievements
-    if (maxWinStreak >= 15) achs.push('winStreak15');
-    else if (maxWinStreak >= 10) achs.push('winStreak10');
-    else if (maxWinStreak >= 5) achs.push('winStreak5');
-    else if (maxWinStreak >= 3) achs.push('winStreak3');
-
-    // Loss streak achievements
-    if (maxLossStreak >= 10) achs.push('loseStreak10');
-    else if (maxLossStreak >= 3) achs.push('loseStreak3');
-
-    // MMR challenge achievements
-    if (hasDavidVsGoliath) achs.push('davidVsGoliath');
-    if (hasTitanSlayer) achs.push('titanSlayer');
-    if (hasGiantSlayer) achs.push('giantSlayer');
 
     // Points
     if (validPoints >= 2000) achs.push('platinumRush');
@@ -117,7 +79,7 @@ const determineAchievements = (wins, losses, points, totalGames, matchHistory = 
     if (validTotalGames >= 100) achs.push('marathonRunner');
     if (validTotalGames >= 500) achs.push('veteran');
 
-    // BNL-specific
+    // BNL-specific (milestone-based)
     const bnlWins = validMatchHistory.filter(m => m.result === 'win' && m.isBnlMatch).length;
     const bnlLosses = validMatchHistory.filter(m => m.result === 'loss' && m.isBnlMatch).length;
 
@@ -127,10 +89,74 @@ const determineAchievements = (wins, losses, points, totalGames, matchHistory = 
 
     if (bnlLosses >= 1) achs.push('bnlVictim');
 
-    // Comeback (5 wins after 5 losses) - simplified check
-    let hasComeback = false;
+    // === REPEATABLE ACHIEVEMENTS (count all occurrences) ===
+
+    // Count all separate win streaks
+    let currentWinStreak = 0;
+    const winStreaks = [];
+    for (const match of validMatchHistory) {
+        if (match.result === 'win') {
+            currentWinStreak++;
+        } else {
+            if (currentWinStreak > 0) winStreaks.push(currentWinStreak);
+            currentWinStreak = 0;
+        }
+    }
+    if (currentWinStreak > 0) winStreaks.push(currentWinStreak);
+
+    // Classify each win streak at its highest tier
+    for (const streak of winStreaks) {
+        if (streak >= 15) achs.push('winStreak15');
+        else if (streak >= 10) achs.push('winStreak10');
+        else if (streak >= 5) achs.push('winStreak5');
+        else if (streak >= 3) achs.push('winStreak3');
+    }
+
+    // Count all separate loss streaks
+    let currentLossStreak = 0;
+    const lossStreaks = [];
+    for (const match of validMatchHistory) {
+        if (match.result === 'loss') {
+            currentLossStreak++;
+        } else {
+            if (currentLossStreak > 0) lossStreaks.push(currentLossStreak);
+            currentLossStreak = 0;
+        }
+    }
+    if (currentLossStreak > 0) lossStreaks.push(currentLossStreak);
+
+    // Classify each loss streak at its highest tier
+    for (const streak of lossStreaks) {
+        if (streak >= 10) achs.push('loseStreak10');
+        else if (streak >= 3) achs.push('loseStreak3');
+    }
+
+    // Count all MMR challenge wins (each occurrence counts)
+    for (const match of validMatchHistory) {
+        if (match.result === 'win') {
+            if (match.mmrDiff >= 200) achs.push('davidVsGoliath');
+            else if (match.mmrDiff >= 100) achs.push('titanSlayer');
+            else if (match.mmrDiff >= 50) achs.push('giantSlayer');
+        }
+    }
+
+    // Count all comebacks (win after 3+ consecutive losses)
+    let consecutiveLosses = 0;
+    for (const match of validMatchHistory) {
+        if (match.result === 'loss') {
+            consecutiveLosses++;
+        } else {
+            if (consecutiveLosses >= 3) {
+                achs.push('comeback');
+            }
+            consecutiveLosses = 0;
+        }
+    }
+
+    // Persistent: 5 wins after 5 losses streak
     let lossCount = 0;
     let winCountAfterLosses = 0;
+    let persistentCount = 0;
     for (const match of validMatchHistory) {
         if (match.result === 'loss') {
             lossCount++;
@@ -139,22 +165,15 @@ const determineAchievements = (wins, losses, points, totalGames, matchHistory = 
             if (lossCount >= 5) {
                 winCountAfterLosses++;
                 if (winCountAfterLosses >= 5) {
-                    hasComeback = true;
-                    break;
+                    persistentCount++;
+                    lossCount = 0;
+                    winCountAfterLosses = 0;
                 }
             }
         }
     }
-    if (hasComeback) achs.push('persistent');
-
-    // Simple comeback (any win after a loss)
-    if (validMatchHistory.length > 1 && validWins > 0 && validLosses > 0) {
-        for (let i = 1; i < validMatchHistory.length; i++) {
-            if (validMatchHistory[i-1].result === 'loss' && validMatchHistory[i].result === 'win') {
-                achs.push('comeback');
-                break;
-            }
-        }
+    for (let i = 0; i < persistentCount; i++) {
+        achs.push('persistent');
     }
 
     return achs;
