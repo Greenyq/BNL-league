@@ -196,17 +196,16 @@ const processMatches = (battleTag, matches, allBnlBattleTags = new Set()) => {
         }];
     }
 
-    // Filter recent matches (from 2026-02-09 onwards)
+    // Filter matches for Stage 1 (2026-02-09 to 2026-02-22)
     let recentMatches = matches;
     const cutoffDate = new Date('2026-02-09T00:00:00Z');
+    const stage1EndDate = new Date('2026-02-23T00:00:00Z'); // Stage 1 ended Feb 22 (inclusive)
 
-    if (matches.length > 50) {
-        recentMatches = matches.filter(match => {
-            const matchDate = new Date(match.startTime);
-            return matchDate >= cutoffDate;
-        });
-        console.log(`  📅 ${battleTag}: After date filter (>= 2026-02-09): ${recentMatches.length} matches`);
-    }
+    recentMatches = matches.filter(match => {
+        const matchDate = new Date(match.startTime);
+        return matchDate >= cutoffDate && matchDate < stage1EndDate;
+    });
+    console.log(`  📅 ${battleTag}: After date filter (2026-02-09 to 2026-02-22): ${recentMatches.length} matches`);
 
     // Sort by date if needed
     if (recentMatches.length > 1) {
@@ -392,7 +391,11 @@ async function loadMatchDataForPlayer(player) {
         });
 
         let matchData = response.data.matches || [];
-        matchData = matchData.filter(m => new Date(m.startTime) >= cutoffDate);
+        const stage1EndDate = new Date('2026-02-23T00:00:00Z'); // Stage 1 ended Feb 22 (inclusive)
+        matchData = matchData.filter(m => {
+            const d = new Date(m.startTime);
+            return d >= cutoffDate && d < stage1EndDate;
+        });
 
         // Save to cache
         const expiresAt = new Date();
