@@ -1357,4 +1357,205 @@ router.post('/admin/recalculate-match-points', async (req, res) => {
     }
 });
 
+// ==================== SMART MMR MATCHMAKING ====================
+// Generate matches between teams based on MMR proximity instead of round-robin
+router.post('/admin/team-matches/smart-generate', async (req, res) => {
+    try {
+        const { teamIds, maxMmrDiff } = req.body;
+        const MAX_MMR_DIFF = maxMmrDiff || 300; // Default +-300 MMR
+
+        if (!teamIds || !Array.isArray(teamIds) || teamIds.length < 2) {
+            return res.status(400).json({ error: 'At least 2 team IDs are required' });
+        }
+
+        // Load all players for selected teams
+        const players = await Player.find({ teamId: { $in: teamIds } });
+
+        // Group players by team
+        const teamPlayers = {};
+        for (const teamId of teamIds) {
+            teamPlayers[teamId] = players
+                .filter(p => p.teamId === teamId)
+                .map(p => ({
+                    id: p._id.toString(),
+                    name: p.name,
+                    battleTag: p.battleTag,
+                    mmr: p.currentMmr || 0,
+                    teamId: p.teamId
+                }))
+                .sort((a, b) => a.mmr - b.mmr); // Sort by MMR ascending
+        }
+
+        // Check that all teams have players
+        for (const teamId of teamIds) {
+            if (!teamPlayers[teamId] || teamPlayers[teamId].length === 0) {
+                const team = await Team.findById(teamId);
+                return res.status(400).json({
+                    error: `Team "${team ? team.name : teamId}" has no players`
+                });
+            }
+        }
+
+        // Generate all team pairs
+        const teamPairs = [];
+        for (let i = 0; i < teamIds.length; i++) {
+            for (let j = i + 1; j < teamIds.length; j++) {
+                teamPairs.push([teamIds[i], teamIds[j]]);
+            }
+        }
+
+        // MMR-based matching for each team pair
+        const allMatches = [];
+
+        for (const [teamAId, teamBId] of teamPairs) {
+            const teamA = [...teamPlayers[teamAId]];
+            const teamB = [...teamPlayers[teamBId]];
+
+            // Determine smaller and larger team
+            const smallerTeam = teamA.length <= teamB.length ? teamA : teamB;
+            const largerTeam = teamA.length <= teamB.length ? teamB : teamA;
+            const smallerTeamId = teamA.length <= teamB.length ? teamAId : teamBId;
+            const largerTeamId = teamA.length <= teamB.length ? teamBId : teamAId;
+
+            // Track which players from the larger team have been matched
+            const matchedLarger = new Set();
+
+            // For each player in the smaller team, find closest MMR in larger team
+            for (const playerS of smallerTeam) {
+                let bestMatch = null;
+                let bestDiff = Infinity;
+
+                for (const playerL of largerTeam) {
+                    if (matchedLarger.has(playerL.id)) continue;
+                    const diff = Math.abs(playerS.mmr - playerL.mmr);
+                    if (diff < bestDiff) {
+                        bestDiff = diff;
+                        bestMatch = playerL;
+                    }
+                }
+
+                if (bestMatch) {
+                    matchedLarger.add(bestMatch.id);
+                    // Maintain original team order (teamA = team1, teamB = team2)
+                    const isTeamASmaller = smallerTeamId === teamAId;
+                    allMatches.push({
+                        team1Id: teamAId,
+                        team2Id: teamBId,
+                        player1Id: isTeamASmaller ? playerS.id : bestMatch.id,
+                        player2Id: isTeamASmaller ? bestMatch.id : playerS.id,
+                        player1Name: isTeamASmaller ? playerS.name : bestMatch.name,
+                        player2Name: isTeamASmaller ? bestMatch.name : playerS.name,
+                        player1Mmr: isTeamASmaller ? playerS.mmr : bestMatch.mmr,
+                        player2Mmr: isTeamASmaller ? bestMatch.mmr : playerS.mmr,
+                        mmrDiff: bestDiff
+                    });
+                }
+            }
+
+            // Handle remaining unmatched players from larger team
+            // They get matched with closest MMR from smaller team (duplicate matchup)
+            for (const playerL of largerTeam) {
+                if (matchedLarger.has(playerL.id)) continue;
+
+                let bestMatch = null;
+                let bestDiff = Infinity;
+
+                for (const playerS of smallerTeam) {
+                    const diff = Math.abs(playerL.mmr - playerS.mmr);
+                    if (diff < bestDiff) {
+                        bestDiff = diff;
+                        bestMatch = playerS;
+                    }
+                }
+
+                if (bestMatch) {
+                    const isTeamALarger = largerTeamId === teamAId;
+                    allMatches.push({
+                        team1Id: teamAId,
+                        team2Id: teamBId,
+                        player1Id: isTeamALarger ? playerL.id : bestMatch.id,
+                        player2Id: isTeamALarger ? bestMatch.id : playerL.id,
+                        player1Name: isTeamALarger ? playerL.name : bestMatch.name,
+                        player2Name: isTeamALarger ? bestMatch.name : playerL.name,
+                        player1Mmr: isTeamALarger ? playerL.mmr : bestMatch.mmr,
+                        player2Mmr: isTeamALarger ? bestMatch.mmr : playerL.mmr,
+                        mmrDiff: bestDiff
+                    });
+                }
+            }
+        }
+
+        // Return preview (don't create yet - let admin confirm)
+        const preview = allMatches.map(m => ({
+            ...m,
+            withinRange: m.mmrDiff <= MAX_MMR_DIFF
+        }));
+
+        // Load team names for the response
+        const teamsData = await Team.find({ _id: { $in: teamIds } });
+        const teamNames = {};
+        teamsData.forEach(t => { teamNames[t._id.toString()] = { name: t.name, emoji: t.emoji }; });
+
+        res.json({
+            success: true,
+            preview: preview,
+            teamNames: teamNames,
+            totalMatches: preview.length,
+            withinRange: preview.filter(m => m.withinRange).length,
+            outOfRange: preview.filter(m => !m.withinRange).length,
+            maxMmrDiff: MAX_MMR_DIFF
+        });
+    } catch (error) {
+        console.error('Error generating smart matches:', error);
+        res.status(500).json({ error: 'Failed to generate smart matches', details: error.message });
+    }
+});
+
+// Confirm and create smart-matched matches
+router.post('/admin/team-matches/smart-generate/confirm', async (req, res) => {
+    try {
+        const { matches } = req.body;
+
+        if (!matches || !Array.isArray(matches) || matches.length === 0) {
+            return res.status(400).json({ error: 'No matches to create' });
+        }
+
+        let createdCount = 0;
+        let errorCount = 0;
+
+        for (const match of matches) {
+            try {
+                // Randomly assign home player
+                const homePlayerId = Math.random() < 0.5 ? match.player1Id : match.player2Id;
+
+                await TeamMatch.create({
+                    team1Id: match.team1Id,
+                    team2Id: match.team2Id,
+                    player1Id: match.player1Id,
+                    player2Id: match.player2Id,
+                    homePlayerId: homePlayerId,
+                    winnerId: null,
+                    points: 0,
+                    notes: '',
+                    status: 'upcoming'
+                });
+                createdCount++;
+            } catch (err) {
+                console.error(`Error creating match: ${err.message}`);
+                errorCount++;
+            }
+        }
+
+        res.json({
+            success: true,
+            createdCount,
+            errorCount,
+            message: `Created ${createdCount} matches${errorCount > 0 ? `, ${errorCount} errors` : ''}`
+        });
+    } catch (error) {
+        console.error('Error confirming smart matches:', error);
+        res.status(500).json({ error: 'Failed to create matches', details: error.message });
+    }
+});
+
 module.exports = router;

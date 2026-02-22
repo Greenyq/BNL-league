@@ -1843,6 +1843,13 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
     const [gridTeam1Id, setGridTeam1Id] = React.useState(null);
     const [gridTeam2Id, setGridTeam2Id] = React.useState(null);
     const [generatingGrid, setGeneratingGrid] = React.useState(false);
+    // Smart MMR matchmaking state
+    const [showSmartMatchmaking, setShowSmartMatchmaking] = React.useState(false);
+    const [smartSelectedTeams, setSmartSelectedTeams] = React.useState([]);
+    const [smartMaxMmrDiff, setSmartMaxMmrDiff] = React.useState(300);
+    const [smartPreview, setSmartPreview] = React.useState(null);
+    const [smartLoading, setSmartLoading] = React.useState(false);
+    const [smartCreating, setSmartCreating] = React.useState(false);
     const [formData, setFormData] = React.useState({
         team1Id: null, team2Id: null,
         player1Id: null, player2Id: null,
@@ -1850,6 +1857,89 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
         status: 'upcoming', scheduledDate: '',
         w3championsMatchId: ''
     });
+
+    // Smart MMR matchmaking - generate preview
+    const handleSmartPreview = async () => {
+        if (smartSelectedTeams.length < 2) {
+            alert('Выберите минимум 2 команды');
+            return;
+        }
+
+        setSmartLoading(true);
+        setSmartPreview(null);
+
+        try {
+            const response = await fetch(`${API_BASE}/api/admin/team-matches/smart-generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-session-id': sessionId
+                },
+                body: JSON.stringify({
+                    teamIds: smartSelectedTeams,
+                    maxMmrDiff: smartMaxMmrDiff
+                })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                setSmartPreview(data);
+            } else {
+                alert(data.error || 'Ошибка при генерации матчей');
+            }
+        } catch (error) {
+            alert('Ошибка при генерации матчей');
+        }
+
+        setSmartLoading(false);
+    };
+
+    // Smart MMR matchmaking - confirm and create matches
+    const handleSmartConfirm = async () => {
+        if (!smartPreview || !smartPreview.preview || smartPreview.preview.length === 0) return;
+
+        if (!confirm(`Создать ${smartPreview.totalMatches} матчей по MMR? Продолжить?`)) return;
+
+        setSmartCreating(true);
+
+        try {
+            const response = await fetch(`${API_BASE}/api/admin/team-matches/smart-generate/confirm`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-session-id': sessionId
+                },
+                body: JSON.stringify({
+                    matches: smartPreview.preview
+                })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                alert(`Успешно создано ${data.createdCount} матчей!${data.errorCount > 0 ? ` Ошибок: ${data.errorCount}` : ''}`);
+                setShowSmartMatchmaking(false);
+                setSmartPreview(null);
+                setSmartSelectedTeams([]);
+                onUpdate();
+            } else {
+                alert(data.error || 'Ошибка при создании матчей');
+            }
+        } catch (error) {
+            alert('Ошибка при создании матчей');
+        }
+
+        setSmartCreating(false);
+    };
+
+    // Toggle team selection for smart matchmaking
+    const toggleSmartTeam = (teamId) => {
+        setSmartPreview(null); // Reset preview when teams change
+        setSmartSelectedTeams(prev =>
+            prev.includes(teamId)
+                ? prev.filter(id => id !== teamId)
+                : [...prev, teamId]
+        );
+    };
 
     // Generate match grid between two teams
     const handleGenerateGrid = async () => {
@@ -1996,7 +2086,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
         <div>
             <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button
-                    onClick={() => { setShowForm(!showForm); setShowGridGenerator(false); }}
+                    onClick={() => { setShowForm(!showForm); setShowGridGenerator(false); setShowSmartMatchmaking(false); }}
                     style={{
                         padding: '12px 24px', borderRadius: '8px',
                         background: '#4caf50', color: '#fff',
@@ -2006,14 +2096,24 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                     {showForm ? '❌ Отмена' : '➕ Добавить матч'}
                 </button>
                 <button
-                    onClick={() => { setShowGridGenerator(!showGridGenerator); setShowForm(false); }}
+                    onClick={() => { setShowGridGenerator(!showGridGenerator); setShowForm(false); setShowSmartMatchmaking(false); }}
                     style={{
                         padding: '12px 24px', borderRadius: '8px',
                         background: '#9c27b0', color: '#fff',
                         border: 'none', cursor: 'pointer', fontWeight: '600'
                     }}
                 >
-                    {showGridGenerator ? '❌ Отмена' : '🎯 Создать сетку матчей'}
+                    {showGridGenerator ? '❌ Отмена' : '🎯 Сетка (каждый с каждым)'}
+                </button>
+                <button
+                    onClick={() => { setShowSmartMatchmaking(!showSmartMatchmaking); setShowForm(false); setShowGridGenerator(false); setSmartPreview(null); }}
+                    style={{
+                        padding: '12px 24px', borderRadius: '8px',
+                        background: showSmartMatchmaking ? '#666' : '#ff9800', color: '#fff',
+                        border: 'none', cursor: 'pointer', fontWeight: '600'
+                    }}
+                >
+                    {showSmartMatchmaking ? '❌ Отмена' : '🧠 Smart Matchmaking (по MMR)'}
                 </button>
             </div>
 
@@ -2113,6 +2213,219 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                     >
                         {generatingGrid ? '⏳ Создание матчей...' : '🎯 Создать все матчи'}
                     </button>
+                </div>
+            )}
+
+            {/* Smart MMR Matchmaking */}
+            {showSmartMatchmaking && (
+                <div style={{
+                    background: '#1a1a1a', padding: '20px', borderRadius: '15px',
+                    marginBottom: '20px', border: '2px solid #ff9800'
+                }}>
+                    <h3 style={{ color: '#ff9800', marginBottom: '15px' }}>
+                        🧠 Smart Matchmaking по MMR
+                    </h3>
+                    <p style={{ color: '#888', marginBottom: '20px', fontSize: '0.95em' }}>
+                        Выберите команды — игроки будут распределены по соперникам на основе близости MMR.
+                        Каждый игрок получит одного соперника из каждой выбранной команды с ближайшим MMR.
+                    </p>
+
+                    {/* Team selection */}
+                    <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', marginBottom: '10px', color: '#fff', fontWeight: '600' }}>
+                            Выберите команды (минимум 2):
+                        </label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                            {teams.map(team => {
+                                const isSelected = smartSelectedTeams.includes(team.id);
+                                const teamPlayersList = allPlayers.filter(p => p.teamId === team.id);
+                                return (
+                                    <button
+                                        key={team.id}
+                                        onClick={() => toggleSmartTeam(team.id)}
+                                        style={{
+                                            padding: '10px 18px', borderRadius: '10px',
+                                            background: isSelected ? '#ff9800' : '#2a2a2a',
+                                            color: isSelected ? '#000' : '#fff',
+                                            border: isSelected ? '2px solid #ff9800' : '2px solid #444',
+                                            cursor: 'pointer', fontWeight: '600',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        {team.emoji || '👥'} {team.name} ({teamPlayersList.length})
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* MMR diff setting */}
+                    <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>
+                            Макс. разница MMR (для подсветки): ±{smartMaxMmrDiff}
+                        </label>
+                        <input
+                            type="range"
+                            min="100"
+                            max="500"
+                            step="50"
+                            value={smartMaxMmrDiff}
+                            onChange={(e) => { setSmartMaxMmrDiff(Number(e.target.value)); setSmartPreview(null); }}
+                            style={{ width: '300px', accentColor: '#ff9800' }}
+                        />
+                        <span style={{ color: '#888', marginLeft: '10px', fontSize: '0.9em' }}>
+                            ({smartMaxMmrDiff} MMR)
+                        </span>
+                    </div>
+
+                    {/* Selected teams preview */}
+                    {smartSelectedTeams.length >= 2 && (
+                        <div style={{
+                            background: '#2a2a2a', padding: '15px', borderRadius: '10px',
+                            marginBottom: '20px', border: '1px solid #444'
+                        }}>
+                            <div style={{ color: '#c9a961', fontWeight: '600', marginBottom: '10px' }}>
+                                Выбранные команды ({smartSelectedTeams.length}):
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
+                                {smartSelectedTeams.map(teamId => {
+                                    const team = teams.find(t => t.id === teamId);
+                                    const teamPlayersList = allPlayers.filter(p => p.teamId === teamId);
+                                    return (
+                                        <div key={teamId} style={{
+                                            background: '#1a1a1a', padding: '10px 15px', borderRadius: '8px',
+                                            border: '1px solid #ff9800', minWidth: '150px'
+                                        }}>
+                                            <div style={{ color: '#ff9800', fontWeight: '600', marginBottom: '5px' }}>
+                                                {team ? `${team.emoji || '👥'} ${team.name}` : teamId}
+                                            </div>
+                                            <div style={{ fontSize: '0.85em', color: '#888', maxHeight: '80px', overflow: 'auto' }}>
+                                                {teamPlayersList.sort((a, b) => (b.currentMmr || 0) - (a.currentMmr || 0)).map(p => (
+                                                    <div key={p.id || p._id} style={{ padding: '1px 0' }}>
+                                                        {p.name} — <span style={{ color: '#c9a961' }}>{p.currentMmr || 0} MMR</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Generate preview button */}
+                    <button
+                        onClick={handleSmartPreview}
+                        disabled={smartLoading || smartSelectedTeams.length < 2}
+                        style={{
+                            padding: '12px 24px', borderRadius: '8px',
+                            background: smartLoading || smartSelectedTeams.length < 2 ? '#666' : '#ff9800',
+                            color: '#fff', border: 'none',
+                            cursor: smartLoading || smartSelectedTeams.length < 2 ? 'not-allowed' : 'pointer',
+                            fontWeight: '600', marginRight: '10px'
+                        }}
+                    >
+                        {smartLoading ? '⏳ Подбор соперников...' : '🔍 Показать распределение'}
+                    </button>
+
+                    {/* Preview results */}
+                    {smartPreview && (
+                        <div style={{ marginTop: '20px' }}>
+                            <div style={{
+                                background: '#2a2a2a', padding: '15px', borderRadius: '10px',
+                                marginBottom: '15px', border: '1px solid #444'
+                            }}>
+                                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                                    <div style={{ color: '#fff' }}>
+                                        Всего матчей: <strong style={{ color: '#ff9800' }}>{smartPreview.totalMatches}</strong>
+                                    </div>
+                                    <div style={{ color: '#4caf50' }}>
+                                        В пределах ±{smartPreview.maxMmrDiff}: <strong>{smartPreview.withinRange}</strong>
+                                    </div>
+                                    {smartPreview.outOfRange > 0 && (
+                                        <div style={{ color: '#f44336' }}>
+                                            Выше лимита: <strong>{smartPreview.outOfRange}</strong>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Match list grouped by team pairs */}
+                            <div style={{ maxHeight: '400px', overflow: 'auto', marginBottom: '15px' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '2px solid #444' }}>
+                                            <th style={{ padding: '8px', textAlign: 'left', color: '#888' }}>Команда 1</th>
+                                            <th style={{ padding: '8px', textAlign: 'left', color: '#888' }}>Игрок 1</th>
+                                            <th style={{ padding: '8px', textAlign: 'center', color: '#888' }}>MMR</th>
+                                            <th style={{ padding: '8px', textAlign: 'center', color: '#888' }}>vs</th>
+                                            <th style={{ padding: '8px', textAlign: 'center', color: '#888' }}>MMR</th>
+                                            <th style={{ padding: '8px', textAlign: 'left', color: '#888' }}>Игрок 2</th>
+                                            <th style={{ padding: '8px', textAlign: 'left', color: '#888' }}>Команда 2</th>
+                                            <th style={{ padding: '8px', textAlign: 'center', color: '#888' }}>Разница</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {smartPreview.preview.map((match, idx) => {
+                                            const t1 = smartPreview.teamNames[match.team1Id];
+                                            const t2 = smartPreview.teamNames[match.team2Id];
+                                            const diffColor = match.withinRange ? '#4caf50' : '#f44336';
+                                            return (
+                                                <tr key={idx} style={{
+                                                    borderBottom: '1px solid #333',
+                                                    background: match.withinRange ? 'rgba(76,175,80,0.05)' : 'rgba(244,67,54,0.05)'
+                                                }}>
+                                                    <td style={{ padding: '8px', color: '#888', fontSize: '0.85em' }}>
+                                                        {t1 ? `${t1.emoji || ''} ${t1.name}` : ''}
+                                                    </td>
+                                                    <td style={{ padding: '8px', color: '#fff' }}>{match.player1Name}</td>
+                                                    <td style={{ padding: '8px', textAlign: 'center', color: '#c9a961' }}>{match.player1Mmr}</td>
+                                                    <td style={{ padding: '8px', textAlign: 'center', color: '#666' }}>vs</td>
+                                                    <td style={{ padding: '8px', textAlign: 'center', color: '#c9a961' }}>{match.player2Mmr}</td>
+                                                    <td style={{ padding: '8px', color: '#fff' }}>{match.player2Name}</td>
+                                                    <td style={{ padding: '8px', color: '#888', fontSize: '0.85em' }}>
+                                                        {t2 ? `${t2.emoji || ''} ${t2.name}` : ''}
+                                                    </td>
+                                                    <td style={{
+                                                        padding: '8px', textAlign: 'center',
+                                                        color: diffColor, fontWeight: '600'
+                                                    }}>
+                                                        ±{match.mmrDiff}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Confirm button */}
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button
+                                    onClick={handleSmartConfirm}
+                                    disabled={smartCreating}
+                                    style={{
+                                        padding: '12px 24px', borderRadius: '8px',
+                                        background: smartCreating ? '#666' : '#4caf50', color: '#fff',
+                                        border: 'none', cursor: smartCreating ? 'wait' : 'pointer',
+                                        fontWeight: '600', fontSize: '1em'
+                                    }}
+                                >
+                                    {smartCreating ? '⏳ Создание матчей...' : `✅ Создать ${smartPreview.totalMatches} матчей`}
+                                </button>
+                                <button
+                                    onClick={() => setSmartPreview(null)}
+                                    style={{
+                                        padding: '12px 24px', borderRadius: '8px',
+                                        background: '#333', color: '#fff',
+                                        border: '1px solid #555', cursor: 'pointer', fontWeight: '600'
+                                    }}
+                                >
+                                    Отмена
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
