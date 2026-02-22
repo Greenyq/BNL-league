@@ -1919,7 +1919,25 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
         fetchPortraits();
     }, []);
 
-    const getTeamPlayers = (teamId) => players.filter(p => p.teamId === teamId);
+    const getTeamPlayers = (teamId) => {
+        const teamAll = players.filter(p => p.teamId === teamId);
+        // Deduplicate: keep only the mainRace profile for each player
+        const seen = new Map();
+        teamAll.forEach(p => {
+            const baseId = p.id.includes('_') ? p.id.split('_')[0] : p.id;
+            if (!seen.has(baseId)) {
+                // Prefer the mainRace profile
+                if (p.mainRace != null && p.race === p.mainRace) {
+                    seen.set(baseId, p);
+                } else {
+                    seen.set(baseId, p); // placeholder, may be replaced
+                }
+            } else if (p.mainRace != null && p.race === p.mainRace) {
+                seen.set(baseId, p); // replace with mainRace profile
+            }
+        });
+        return Array.from(seen.values());
+    };
 
     const getTeamPointsFromMatches = (teamId) => {
         // Calculate total points from completed team matches with a winner
