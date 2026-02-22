@@ -1352,6 +1352,7 @@ function Players({ players }) {
     const [selectedRaces, setSelectedRaces] = useState({});
     const [portraits, setPortraits] = useState([]);
     const [selectedLeague, setSelectedLeague] = useState('premier'); // 'premier' or 'league1'
+    const [showStageModal, setShowStageModal] = useState(true); // Show stage announcement on mount
 
     // Load portraits
     React.useEffect(() => {
@@ -1581,6 +1582,103 @@ function Players({ players }) {
                     onClose={() => setSelectedPlayer(null)}
                 />
             )}
+
+            {/* Stage Announcement Modal */}
+            {showStageModal && (
+                <div
+                    onClick={() => setShowStageModal(false)}
+                    style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0, 0, 0, 0.85)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        zIndex: 10000, cursor: 'pointer',
+                        animation: 'fadeIn 0.3s ease'
+                    }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            background: 'linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 100%)',
+                            border: '2px solid #c9a961',
+                            borderRadius: '20px',
+                            padding: '50px 60px',
+                            textAlign: 'center',
+                            maxWidth: '550px',
+                            width: '90%',
+                            boxShadow: '0 0 60px rgba(201, 169, 97, 0.3), 0 0 120px rgba(201, 169, 97, 0.1)',
+                            animation: 'modalSlideIn 0.4s ease'
+                        }}
+                    >
+                        <div style={{
+                            fontSize: '3em',
+                            marginBottom: '20px'
+                        }}>
+                            ⚔️
+                        </div>
+                        <h2 style={{
+                            color: '#c9a961',
+                            fontSize: '2em',
+                            fontWeight: '800',
+                            marginBottom: '15px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '3px',
+                            textShadow: '0 0 20px rgba(201, 169, 97, 0.5)'
+                        }}>
+                            ПЕРВЫЙ ЭТАП ЗАКОНЧИЛСЯ!
+                        </h2>
+                        <div style={{
+                            width: '80px',
+                            height: '3px',
+                            background: 'linear-gradient(90deg, transparent, #c9a961, transparent)',
+                            margin: '20px auto'
+                        }} />
+                        <p style={{
+                            color: '#888',
+                            fontSize: '1.1em',
+                            lineHeight: '1.6',
+                            marginBottom: '30px'
+                        }}>
+                            Результаты первого этапа зафиксированы. Следите за обновлениями!
+                        </p>
+                        <button
+                            onClick={() => setShowStageModal(false)}
+                            style={{
+                                padding: '14px 40px',
+                                fontSize: '1.1em',
+                                fontWeight: '700',
+                                border: 'none',
+                                borderRadius: '10px',
+                                cursor: 'pointer',
+                                background: 'linear-gradient(135deg, #c9a961 0%, #8b7355 100%)',
+                                color: '#000',
+                                letterSpacing: '1px',
+                                transition: 'all 0.3s ease',
+                                boxShadow: '0 4px 15px rgba(201, 169, 97, 0.4)'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.transform = 'scale(1.05)';
+                                e.target.style.boxShadow = '0 6px 20px rgba(201, 169, 97, 0.6)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.transform = 'scale(1)';
+                                e.target.style.boxShadow = '0 4px 15px rgba(201, 169, 97, 0.4)';
+                            }}
+                        >
+                            ПОНЯТНО
+                        </button>
+                    </div>
+                </div>
+            )}
+            <style>{`
+                @keyframes modalSlideIn {
+                    from { opacity: 0; transform: scale(0.85) translateY(-20px); }
+                    to { opacity: 1; transform: scale(1) translateY(0); }
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+            `}</style>
         </div>
     );
 }
