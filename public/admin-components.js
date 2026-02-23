@@ -1898,7 +1898,13 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
     const handleSmartConfirm = async () => {
         if (!smartPreview || !smartPreview.preview || smartPreview.preview.length === 0) return;
 
-        if (!confirm(`Создать ${smartPreview.totalMatches} матчей по MMR? Продолжить?`)) return;
+        const validMatches = smartPreview.preview.filter(m => m.withinRange);
+        if (validMatches.length === 0) {
+            alert('Нет матчей в пределах MMR диапазона!');
+            return;
+        }
+
+        if (!confirm(`Создать ${validMatches.length} матчей по MMR (${smartPreview.outOfRange} пропущено из-за большой разницы)? Продолжить?`)) return;
 
         setSmartCreating(true);
 
@@ -1910,7 +1916,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                     'x-session-id': sessionId
                 },
                 body: JSON.stringify({
-                    matches: smartPreview.preview
+                    matches: validMatches
                 })
             });
 
@@ -2411,7 +2417,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                         fontWeight: '600', fontSize: '1em'
                                     }}
                                 >
-                                    {smartCreating ? '⏳ Создание матчей...' : `✅ Создать ${smartPreview.totalMatches} матчей`}
+                                    {smartCreating ? '⏳ Создание матчей...' : `✅ Создать ${smartPreview.withinRange} матчей`}
                                 </button>
                                 <button
                                     onClick={() => setSmartPreview(null)}

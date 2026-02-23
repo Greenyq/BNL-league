@@ -1404,82 +1404,27 @@ router.post('/admin/team-matches/smart-generate', async (req, res) => {
             }
         }
 
-        // MMR-based matching for each team pair
+        // Full cross-match: every player vs every player from the other team
+        // Skip pairs where MMR difference exceeds MAX_MMR_DIFF
         const allMatches = [];
 
         for (const [teamAId, teamBId] of teamPairs) {
-            const teamA = [...teamPlayers[teamAId]];
-            const teamB = [...teamPlayers[teamBId]];
+            const teamA = teamPlayers[teamAId];
+            const teamB = teamPlayers[teamBId];
 
-            // Determine smaller and larger team
-            const smallerTeam = teamA.length <= teamB.length ? teamA : teamB;
-            const largerTeam = teamA.length <= teamB.length ? teamB : teamA;
-            const smallerTeamId = teamA.length <= teamB.length ? teamAId : teamBId;
-            const largerTeamId = teamA.length <= teamB.length ? teamBId : teamAId;
-
-            // Track which players from the larger team have been matched
-            const matchedLarger = new Set();
-
-            // For each player in the smaller team, find closest MMR in larger team
-            for (const playerS of smallerTeam) {
-                let bestMatch = null;
-                let bestDiff = Infinity;
-
-                for (const playerL of largerTeam) {
-                    if (matchedLarger.has(playerL.id)) continue;
-                    const diff = Math.abs(playerS.mmr - playerL.mmr);
-                    if (diff < bestDiff) {
-                        bestDiff = diff;
-                        bestMatch = playerL;
-                    }
-                }
-
-                if (bestMatch) {
-                    matchedLarger.add(bestMatch.id);
-                    // Maintain original team order (teamA = team1, teamB = team2)
-                    const isTeamASmaller = smallerTeamId === teamAId;
+            for (const playerA of teamA) {
+                for (const playerB of teamB) {
+                    const mmrDiff = Math.abs(playerA.mmr - playerB.mmr);
                     allMatches.push({
                         team1Id: teamAId,
                         team2Id: teamBId,
-                        player1Id: isTeamASmaller ? playerS.id : bestMatch.id,
-                        player2Id: isTeamASmaller ? bestMatch.id : playerS.id,
-                        player1Name: isTeamASmaller ? playerS.name : bestMatch.name,
-                        player2Name: isTeamASmaller ? bestMatch.name : playerS.name,
-                        player1Mmr: isTeamASmaller ? playerS.mmr : bestMatch.mmr,
-                        player2Mmr: isTeamASmaller ? bestMatch.mmr : playerS.mmr,
-                        mmrDiff: bestDiff
-                    });
-                }
-            }
-
-            // Handle remaining unmatched players from larger team
-            // They get matched with closest MMR from smaller team (duplicate matchup)
-            for (const playerL of largerTeam) {
-                if (matchedLarger.has(playerL.id)) continue;
-
-                let bestMatch = null;
-                let bestDiff = Infinity;
-
-                for (const playerS of smallerTeam) {
-                    const diff = Math.abs(playerL.mmr - playerS.mmr);
-                    if (diff < bestDiff) {
-                        bestDiff = diff;
-                        bestMatch = playerS;
-                    }
-                }
-
-                if (bestMatch) {
-                    const isTeamALarger = largerTeamId === teamAId;
-                    allMatches.push({
-                        team1Id: teamAId,
-                        team2Id: teamBId,
-                        player1Id: isTeamALarger ? playerL.id : bestMatch.id,
-                        player2Id: isTeamALarger ? bestMatch.id : playerL.id,
-                        player1Name: isTeamALarger ? playerL.name : bestMatch.name,
-                        player2Name: isTeamALarger ? bestMatch.name : playerL.name,
-                        player1Mmr: isTeamALarger ? playerL.mmr : bestMatch.mmr,
-                        player2Mmr: isTeamALarger ? bestMatch.mmr : playerL.mmr,
-                        mmrDiff: bestDiff
+                        player1Id: playerA.id,
+                        player2Id: playerB.id,
+                        player1Name: playerA.name,
+                        player2Name: playerB.name,
+                        player1Mmr: playerA.mmr,
+                        player2Mmr: playerB.mmr,
+                        mmrDiff: mmrDiff
                     });
                 }
             }
