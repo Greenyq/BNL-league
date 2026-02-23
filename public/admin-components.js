@@ -1846,7 +1846,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
     // Smart MMR matchmaking state
     const [showSmartMatchmaking, setShowSmartMatchmaking] = React.useState(false);
     const [smartSelectedTeams, setSmartSelectedTeams] = React.useState([]);
-    const [smartMaxMmrDiff, setSmartMaxMmrDiff] = React.useState(300);
+    const [smartMaxMmrDiff, setSmartMaxMmrDiff] = React.useState(500);
     const [smartPreview, setSmartPreview] = React.useState(null);
     const [smartLoading, setSmartLoading] = React.useState(false);
     const [smartCreating, setSmartCreating] = React.useState(false);

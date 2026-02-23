@@ -1362,7 +1362,7 @@ router.post('/admin/recalculate-match-points', async (req, res) => {
 router.post('/admin/team-matches/smart-generate', async (req, res) => {
     try {
         const { teamIds, maxMmrDiff } = req.body;
-        const MAX_MMR_DIFF = maxMmrDiff || 300; // Default +-300 MMR
+        const MAX_MMR_DIFF = maxMmrDiff || 500; // Default +-500 MMR
 
         if (!teamIds || !Array.isArray(teamIds) || teamIds.length < 2) {
             return res.status(400).json({ error: 'At least 2 team IDs are required' });
