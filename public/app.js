@@ -2476,7 +2476,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
     };
 
     // Render single player card in bracket style (enlarged x2)
-    const renderPlayerCard = (player, team, isWinner, isLeft, points = 0) => {
+    const renderPlayerCard = (player, team, isWinner, isLeft, points = 0, isHome = false) => {
         const teamColor = getTeamColor(team?.id || team?._id);
         
         // Find selected portrait for player
@@ -2582,9 +2582,31 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                         )}
                     </div>
                     
+                    {/* Home team indicator badge */}
+                    {isHome && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '-12px',
+                            [isLeft ? 'right' : 'left']: '8px',
+                            background: 'linear-gradient(135deg, #ff9800, #f57c00)',
+                            color: '#fff',
+                            fontSize: '0.65em',
+                            fontWeight: '700',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            zIndex: 4,
+                            boxShadow: '0 2px 6px rgba(255, 152, 0, 0.4)',
+                            letterSpacing: '0.5px',
+                            textTransform: 'uppercase',
+                            whiteSpace: 'nowrap'
+                        }}>
+                            HOME
+                        </div>
+                    )}
+
                     {/* Team name - centered */}
                     <div style={{
-                        fontSize: '0.85em', 
+                        fontSize: '0.85em',
                         color: teamColor.primary,
                         fontWeight: '600',
                         textTransform: 'uppercase',
@@ -2634,6 +2656,8 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
         const p1Won = isCompleted && match.winnerId === match.player1Id;
         const p2Won = isCompleted && match.winnerId === match.player2Id;
         const isHomePlayer = currentPlayerData && (match.player1Id === currentPlayerData.id || match.player2Id === currentPlayerData.id) && match.homePlayerId === currentPlayerData.id;
+        const p1IsHome = match.homePlayerId === match.player1Id;
+        const p2IsHome = match.homePlayerId === match.player2Id;
 
         return (
             <div>
@@ -2652,7 +2676,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                 }}>
                 {/* Left player (Team 1) */}
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-                    {renderPlayerCard(player1, team1, p1Won, true, p1Won ? match.points : 0)}
+                    {renderPlayerCard(player1, team1, p1Won, true, p1Won ? match.points : 0, p1IsHome)}
                 </div>
                 
                 {/* VS / Status - enlarged */}
@@ -2711,7 +2735,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                 
                 {/* Right player (Team 2) */}
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
-                    {renderPlayerCard(player2, team2, p2Won, false, p2Won ? match.points : 0)}
+                    {renderPlayerCard(player2, team2, p2Won, false, p2Won ? match.points : 0, p2IsHome)}
                 </div>
                 </div>
 
@@ -3982,6 +4006,8 @@ function TeamMatches({ teamMatches = [], teams = [], allPlayers = [] }) {
                                 const isP1TeamPlayer = p1Team === item.team.id;
                                 const p1Name = p1?.name || 'Unknown';
                                 const p2Name = p2?.name || 'Unknown';
+                                const p1IsHome = match.homePlayerId === match.player1Id;
+                                const p2IsHome = match.homePlayerId === match.player2Id;
 
                                 // Determine which team the winner belongs to
                                 let winnerTeamId = null;
@@ -4011,7 +4037,16 @@ function TeamMatches({ teamMatches = [], teams = [], allPlayers = [] }) {
                                                 {isWinner ? '✅ Победа' : '❌ Поражение'}
                                             </span>
                                             <span style={{ color: '#888', margin: '0 10px' }}>
-                                                {isP1TeamPlayer ? `${p1Name} vs ${p2Name}` : `${p2Name} vs ${p1Name}`}
+                                                {isP1TeamPlayer
+                                                    ? React.createElement(React.Fragment, null,
+                                                        p1Name, p1IsHome ? React.createElement('span', { style: { color: '#ff9800', fontSize: '0.85em', marginLeft: '3px' }, title: 'Home' }, ' [H]') : null,
+                                                        ' vs ',
+                                                        p2Name, p2IsHome ? React.createElement('span', { style: { color: '#ff9800', fontSize: '0.85em', marginLeft: '3px' }, title: 'Home' }, ' [H]') : null)
+                                                    : React.createElement(React.Fragment, null,
+                                                        p2Name, p2IsHome ? React.createElement('span', { style: { color: '#ff9800', fontSize: '0.85em', marginLeft: '3px' }, title: 'Home' }, ' [H]') : null,
+                                                        ' vs ',
+                                                        p1Name, p1IsHome ? React.createElement('span', { style: { color: '#ff9800', fontSize: '0.85em', marginLeft: '3px' }, title: 'Home' }, ' [H]') : null)
+                                                }
                                             </span>
                                         </div>
                                         {isWinner && (
