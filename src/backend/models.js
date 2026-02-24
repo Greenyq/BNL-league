@@ -54,6 +54,7 @@ const teamMatchSchema = new mongoose.Schema({
     homePlayerId: { type: String }, // Player responsible for match (lobby, time, reporting)
     winnerId: { type: String },
     points: { type: Number, default: 0 },
+    pointsOverride: { type: Number }, // Admin-set points override (e.g. for off-race matches)
     notes: { type: String },
     status: { type: String, enum: ['upcoming', 'completed'], default: 'upcoming' },
     scheduledDate: { type: Date },

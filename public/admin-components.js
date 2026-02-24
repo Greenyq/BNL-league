@@ -1857,6 +1857,8 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
         status: 'upcoming', scheduledDate: '',
         w3championsMatchId: ''
     });
+    const [matchFilter, setMatchFilter] = React.useState('');
+    const [filterStatus, setFilterStatus] = React.useState('all');
 
     // Smart MMR matchmaking - generate preview
     const handleSmartPreview = async () => {
@@ -2635,6 +2637,35 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                 </div>
             )}
 
+            {/* Filter panel */}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap' }}>
+                <input
+                    type="text"
+                    placeholder="🔍 Поиск по игроку или команде..."
+                    value={matchFilter}
+                    onChange={e => setMatchFilter(e.target.value)}
+                    style={{
+                        flex: 1, minWidth: '200px', padding: '10px 14px',
+                        background: '#1a1a1a', color: '#fff', border: '1px solid #444',
+                        borderRadius: '8px', fontSize: '0.95em'
+                    }}
+                />
+                {['all', 'upcoming', 'completed'].map(s => (
+                    <button
+                        key={s}
+                        onClick={() => setFilterStatus(s)}
+                        style={{
+                            padding: '10px 18px', borderRadius: '8px', border: 'none',
+                            cursor: 'pointer', fontWeight: '600', fontSize: '0.9em',
+                            background: filterStatus === s ? '#c9a961' : '#2a2a2a',
+                            color: filterStatus === s ? '#000' : '#aaa'
+                        }}
+                    >
+                        {s === 'all' ? 'Все' : s === 'upcoming' ? '🕐 Предстоящие' : '✅ Завершённые'}
+                    </button>
+                ))}
+            </div>
+
             <div>
                 {teamMatches.length === 0 && (
                     <div style={{
@@ -2644,7 +2675,23 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                         Матчей пока нет
                     </div>
                 )}
-                {teamMatches.slice().reverse().map(match => {
+                {(() => {
+                    const filterLower = matchFilter.toLowerCase();
+                    const filtered = teamMatches.slice().reverse().filter(match => {
+                        if (filterStatus !== 'all' && match.status !== filterStatus) return false;
+                        if (!filterLower) return true;
+                        const p1 = allPlayers.find(p => p.id === match.player1Id);
+                        const p2 = allPlayers.find(p => p.id === match.player2Id);
+                        const t1 = teams.find(t => t.id === match.team1Id);
+                        const t2 = teams.find(t => t.id === match.team2Id);
+                        return [p1?.name, p2?.name, t1?.name, t2?.name].some(v => v?.toLowerCase().includes(filterLower));
+                    });
+                    if (filtered.length === 0) return (
+                        <div style={{ padding: '40px', textAlign: 'center', color: '#888', background: '#1a1a1a', borderRadius: '15px' }}>
+                            Матчей не найдено
+                        </div>
+                    );
+                    return filtered.map(match => {
                     const team1 = teams.find(t => t.id === match.team1Id);
                     const team2 = teams.find(t => t.id === match.team2Id);
                     const player1 = allPlayers.find(p => p.id === match.player1Id);
@@ -2785,6 +2832,37 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                             {/* Edit buttons for upcoming matches */}
                             {match.status === 'upcoming' && (
                                 <div style={{ marginTop: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                    {match.pointsOverride != null && (
+                                        <div style={{
+                                            padding: '5px 12px', background: '#9c27b0', color: '#fff',
+                                            borderRadius: '15px', fontSize: '0.85em', fontWeight: '600',
+                                            display: 'flex', alignItems: 'center', gap: '6px'
+                                        }}>
+                                            🎯 Override: {match.pointsOverride} pts
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={() => {
+                                            const val = prompt(
+                                                `Установить фиксированные очки за победу в этом матче.\nТекущий override: ${match.pointsOverride != null ? match.pointsOverride : 'нет (авто по ММР)'}\n\nВведите количество очков (или оставьте пустым чтобы убрать override):`,
+                                                match.pointsOverride != null ? String(match.pointsOverride) : '50'
+                                            );
+                                            if (val === null) return;
+                                            const override = val.trim() === '' ? null : parseInt(val);
+                                            fetch(`${API_BASE}/api/admin/team-matches/${match.id}`, {
+                                                method: 'PUT',
+                                                headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId },
+                                                body: JSON.stringify({ pointsOverride: override })
+                                            }).then(() => onUpdate());
+                                        }}
+                                        style={{
+                                            padding: '8px 16px', borderRadius: '8px',
+                                            background: '#9c27b0', color: '#fff',
+                                            border: 'none', cursor: 'pointer', fontSize: '0.9em'
+                                        }}
+                                    >
+                                        🎯 {match.pointsOverride != null ? 'Изменить override' : 'Задать override очков'}
+                                    </button>
                                     <button
                                         onClick={() => {
                                             const date = prompt('Введите дату и время (ГГГГ-ММ-ДД ЧЧ:ММ):',
@@ -2883,7 +2961,8 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                             )}
                         </div>
                     );
-                })}
+                });
+                })()}
             </div>
         </div>
     );

@@ -541,32 +541,37 @@ router.put('/player-matches/:id/report', async (req, res) => {
             return res.status(403).json({ error: 'Only home player can report match result' });
         }
 
-        // If reporting winner, calculate points based on MMR
+        // If reporting winner, calculate points based on MMR (or use admin override)
         let points = 0;
         if (winnerId) {
-            // Get both players to compare MMR
-            const player1 = await Player.findById(match.player1Id);
-            const player2 = await Player.findById(match.player2Id);
-
-            if (player1 && player2) {
-                const winnerIsPlayer1 = winnerId === match.player1Id;
-                const winner = winnerIsPlayer1 ? player1 : player2;
-                const loser = winnerIsPlayer1 ? player2 : player1;
-
-                const winnerMmr = winner.currentMmr || 0;
-                const loserMmr = loser.currentMmr || 0;
-                const mmrDiff = winnerMmr - loserMmr;
-
-                // Calculate points based on MMR difference
-                if (mmrDiff >= 150) {
-                    points = 10; // Winner is much stronger
-                } else if (mmrDiff >= 100) {
-                    points = 20; // Winner is stronger
-                } else {
-                    points = 50; // Normal match
-                }
+            if (match.pointsOverride != null) {
+                // Admin has set a fixed points value for this match (e.g. off-race matches)
+                points = match.pointsOverride;
             } else {
-                points = 50; // Default if can't calculate
+                // Get both players to compare MMR
+                const player1 = await Player.findById(match.player1Id);
+                const player2 = await Player.findById(match.player2Id);
+
+                if (player1 && player2) {
+                    const winnerIsPlayer1 = winnerId === match.player1Id;
+                    const winner = winnerIsPlayer1 ? player1 : player2;
+                    const loser = winnerIsPlayer1 ? player2 : player1;
+
+                    const winnerMmr = winner.currentMmr || 0;
+                    const loserMmr = loser.currentMmr || 0;
+                    const mmrDiff = winnerMmr - loserMmr;
+
+                    // Calculate points based on MMR difference
+                    if (mmrDiff >= 150) {
+                        points = 10; // Winner is much stronger
+                    } else if (mmrDiff >= 100) {
+                        points = 20; // Winner is stronger
+                    } else {
+                        points = 50; // Normal match
+                    }
+                } else {
+                    points = 50; // Default if can't calculate
+                }
             }
         }
 
