@@ -805,9 +805,46 @@ router.post('/twitch/check-live', async (req, res) => {
 
 // ==================== PLAYER AUTHENTICATION ENDPOINTS ====================
 
-// Player registration (CLOSED)
+// Player registration
 router.post('/players/auth/register', async (req, res) => {
-    return res.status(403).json({ error: 'Регистрация закрыта. Набор участников завершен.' });
+    try {
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password are required' });
+        }
+
+        // Check if username already exists
+        const existingUser = await PlayerUser.findOne({ username });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Username already exists' });
+        }
+
+        // Hash password
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        // Create user
+        const playerUser = await PlayerUser.create({
+            username,
+            passwordHash
+        });
+
+        // Create session
+        const sessionId = crypto.randomBytes(32).toString('hex');
+        await PlayerSession.create({
+            sessionId,
+            playerUserId: playerUser.id
+        });
+
+        res.json({
+            success: true,
+            sessionId,
+            user: playerUser
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ error: 'Failed to register' });
+    }
 });
 
 // Player login

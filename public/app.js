@@ -4799,8 +4799,12 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                     setError(data.error || 'Ошибка при сбросе пароля');
                 }
             } else {
-                // Login only (registration closed)
-                const response = await fetch(`${API_BASE}/api/players/auth/login`, {
+                // Login or Register
+                const endpoint = mode === 'login'
+                    ? '/api/players/auth/login'
+                    : '/api/players/auth/register';
+
+                const response = await fetch(`${API_BASE}${endpoint}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
@@ -4891,44 +4895,6 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                     </div>
                 )}
 
-                {mode === 'register' && (
-                    <div style={{
-                        textAlign: 'center',
-                        padding: '30px 20px',
-                        marginBottom: '20px'
-                    }}>
-                        <div style={{ fontSize: '3em', marginBottom: '15px' }}>🔒</div>
-                        <div style={{
-                            fontSize: '1.3em',
-                            fontWeight: '700',
-                            color: '#f44336',
-                            marginBottom: '15px'
-                        }}>
-                            Регистрация закрыта
-                        </div>
-                        <div style={{
-                            fontSize: '0.95em',
-                            color: '#888',
-                            lineHeight: '1.6',
-                            marginBottom: '20px'
-                        }}>
-                            Набор участников в лигу BNL завершен. Следите за новостями — возможно, регистрация откроется в следующем сезоне!
-                        </div>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            style={{
-                                padding: '12px 30px', borderRadius: '8px',
-                                background: '#c9a961', color: '#000',
-                                border: 'none', cursor: 'pointer',
-                                fontWeight: '700', fontSize: '1em'
-                            }}
-                        >
-                            Понятно
-                        </button>
-                    </div>
-                )}
-
                 {(mode === 'reset' || mode === 'reset-confirm') && (
                     <div style={{ marginBottom: '20px', textAlign: 'center' }}>
                         <button
@@ -4953,7 +4919,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                     </div>
                 )}
 
-                {mode !== 'register' && <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit}>
                     {mode === 'admin' ? (
                         <>
                             <input
@@ -4998,7 +4964,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                                 autoFocus
                             />
 
-                            {mode === 'login' && (
+                            {(mode === 'login' || mode === 'register') && (
                                 <input
                                     type="password"
                                     value={password}
@@ -5102,6 +5068,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                         >
                             {loading ? '...' :
                              mode === 'login' ? 'Войти' :
+                             mode === 'register' ? 'Зарегистрироваться' :
                              mode === 'admin' ? '⚙️ Войти как Админ' :
                              mode === 'reset' ? 'Получить код' :
                              'Сбросить пароль'}
@@ -5118,7 +5085,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                             Отмена
                         </button>
                     </div>
-                </form>}
+                </form>
             </div>
         </div>
     );
