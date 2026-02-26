@@ -39,8 +39,8 @@ services:
   # Go stats processor
   stats-processor:
     build:
-      context: .
-      dockerfile: Dockerfile.go
+      context: ./src/stats-processor
+      dockerfile: Dockerfile
     ports:
       - "3001:3001"
     environment:
