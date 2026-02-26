@@ -3009,6 +3009,141 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                 </div>
             )}
 
+            {/* Schedule Summary Block */}
+            {subTab === 'schedule' && (() => {
+                const totalMatches = teamMatches.length;
+                const completedMatches = teamMatches.filter(m => m.status === 'completed').length;
+                const upcomingMatches = totalMatches - completedMatches;
+                const progressPercent = totalMatches > 0 ? (completedMatches / totalMatches) * 100 : 0;
+
+                // Per-team win/loss stats
+                const teamStatsMap = {};
+                teams.forEach(team => {
+                    const tid = team._id || team.id;
+                    teamStatsMap[tid] = { name: team.name, emoji: team.emoji, logo: team.logo, wins: 0, losses: 0, points: 0 };
+                });
+                teamMatches.filter(m => m.status === 'completed' && m.winnerId).forEach(match => {
+                    const winnerTeamId = match.winnerId === match.player1Id ? match.team1Id : match.team2Id;
+                    const loserTeamId = match.winnerId === match.player1Id ? match.team2Id : match.team1Id;
+                    if (teamStatsMap[winnerTeamId]) {
+                        teamStatsMap[winnerTeamId].wins += 1;
+                        teamStatsMap[winnerTeamId].points += match.points || 0;
+                    }
+                    if (teamStatsMap[loserTeamId]) {
+                        teamStatsMap[loserTeamId].losses += 1;
+                    }
+                });
+
+                const sortedTeams = Object.entries(teamStatsMap)
+                    .map(([id, s]) => ({ id, ...s }))
+                    .sort((a, b) => b.points - a.points);
+
+                // Scheduled today
+                const today = new Date().toISOString().split('T')[0];
+                const todayMatches = teamMatches.filter(m => {
+                    if (!m.scheduledDate) return false;
+                    const d = new Date(m.scheduledDate).toISOString().split('T')[0];
+                    return d === today;
+                });
+
+                return (
+                    <div style={{
+                        background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+                        borderRadius: '15px',
+                        border: '2px solid #c9a961',
+                        padding: '20px',
+                        marginBottom: '25px'
+                    }}>
+                        {/* Top row: key numbers */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-around',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '15px',
+                            marginBottom: '16px'
+                        }}>
+                            <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                                <div style={{ fontSize: '2em', fontWeight: '800', color: '#c9a961' }}>{totalMatches}</div>
+                                <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Всего матчей</div>
+                            </div>
+                            <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                                <div style={{ fontSize: '2em', fontWeight: '800', color: '#4caf50' }}>{completedMatches}</div>
+                                <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Сыграно</div>
+                            </div>
+                            <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                                <div style={{ fontSize: '2em', fontWeight: '800', color: '#ff9800' }}>{upcomingMatches}</div>
+                                <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Осталось</div>
+                            </div>
+                            {todayMatches.length > 0 && (
+                                <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                                    <div style={{ fontSize: '2em', fontWeight: '800', color: '#2196f3' }}>{todayMatches.length}</div>
+                                    <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Сегодня</div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Progress bar */}
+                        <div style={{ marginBottom: '16px' }}>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                marginBottom: '6px'
+                            }}>
+                                <span style={{ fontSize: '0.8em', color: '#888' }}>Прогресс турнира</span>
+                                <span style={{ fontSize: '0.8em', color: '#c9a961', fontWeight: '700' }}>{Math.round(progressPercent)}%</span>
+                            </div>
+                            <div style={{
+                                height: '8px',
+                                borderRadius: '4px',
+                                background: '#333',
+                                overflow: 'hidden'
+                            }}>
+                                <div style={{
+                                    height: '100%',
+                                    width: `${progressPercent}%`,
+                                    background: 'linear-gradient(90deg, #c9a961, #4caf50)',
+                                    borderRadius: '4px',
+                                    transition: 'width 0.5s ease'
+                                }} />
+                            </div>
+                        </div>
+
+                        {/* Per-team compact stats */}
+                        <div style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '8px',
+                            justifyContent: 'center'
+                        }}>
+                            {sortedTeams.map(team => (
+                                <div key={team.id} style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    background: '#1a1a1a',
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #333',
+                                    fontSize: '0.85em'
+                                }}>
+                                    {team.logo ? (
+                                        <img src={team.logo} alt="" style={{ width: '20px', height: '20px', borderRadius: '4px', objectFit: 'cover' }} />
+                                    ) : (
+                                        <span>{team.emoji}</span>
+                                    )}
+                                    <span style={{ color: '#fff', fontWeight: '600' }}>{team.name}</span>
+                                    <span style={{ color: '#4caf50', fontWeight: '700' }}>{team.wins}W</span>
+                                    <span style={{ color: '#888' }}>-</span>
+                                    <span style={{ color: '#f44336', fontWeight: '700' }}>{team.losses}L</span>
+                                    <span style={{ color: '#c9a961', fontWeight: '700', marginLeft: '4px' }}>{team.points}pts</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })()}
+
             {subTab === 'schedule' && Object.values(matchesByTeams)
                 .filter(matchup => {
                     // Filter by team
