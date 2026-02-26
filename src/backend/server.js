@@ -8,6 +8,7 @@ const multer = require('multer');
 const { Team, Player, TeamMatch, Portrait, Streamer, AdminSession } = require('./models');
 const routes = require('./routes');
 const { initializeScheduler } = require('./scheduler');
+const { checkAuth } = require('./middleware');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -39,9 +40,9 @@ const connectDB = async () => {
 // Start DB connection
 connectDB();
 
-// Admin credentials
-const ADMIN_LOGIN = 'admin2024';
-const ADMIN_PASSWORD = 'BNL@dmin2024!Secure';
+// Admin credentials (set via environment variables in production)
+const ADMIN_LOGIN = process.env.ADMIN_LOGIN || 'admin2024';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'BNL@dmin2024!Secure';
 
 // Multer configuration for file uploads (storing in memory for MongoDB)
 const storage = multer.memoryStorage();
@@ -86,32 +87,6 @@ try {
 console.log(`📁 Serving static files from: ${staticPath}`);
 app.use(express.static(staticPath));
 
-// Middleware to check admin authentication
-const checkAuth = async (req, res, next) => {
-    const sessionId = req.headers['x-session-id'];
-    if (!sessionId) {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
-    
-    try {
-        const session = await AdminSession.findOne({ sessionId });
-        if (!session || !session.isLoggedIn) {
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
-        
-        // Check if session expired (24 hours)
-        const sessionAge = Date.now() - session.timestamp;
-        if (sessionAge > 24 * 60 * 60 * 1000) {
-            await AdminSession.deleteOne({ sessionId });
-            return res.status(401).json({ error: 'Session expired' });
-        }
-        
-        next();
-    } catch (error) {
-        res.status(500).json({ error: 'Session check failed' });
-    }
-};
-
 // ==================== ADMIN AUTH ENDPOINTS ====================
 app.post('/api/admin/login', async (req, res) => {
     const { login, password } = req.body;
@@ -152,9 +127,8 @@ app.get('/api/admin/verify', async (req, res) => {
     }
 });
 
-// Use routes with checkAuth middleware
+// All routes (admin routes are protected via router.use('/admin', checkAuth) in routes.js)
 app.use('/api', routes);
-app.use('/api/admin', checkAuth, routes);
 
 // Serve uploaded match files
 const uploadsPath = path.resolve(__dirname, '../../uploads');

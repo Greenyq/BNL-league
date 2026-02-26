@@ -7,8 +7,12 @@ const fs = require('fs');
 const multer = require('multer');
 const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession, PasswordReset, PlayerCache, PlayerStats } = require('./models');
 const { recalculateAllPlayerStats } = require('./scheduler');
+const { checkAuth } = require('./middleware');
 
 const router = express.Router();
+
+// Protect all /admin/* routes
+router.use('/admin', checkAuth);
 
 // ==================== MULTER CONFIGURATION FOR FILE UPLOADS ====================
 const uploadsDir = path.join(__dirname, '../../uploads');
