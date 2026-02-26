@@ -3009,6 +3009,182 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                 </div>
             )}
 
+            {/* Player Stats Panel */}
+            {subTab === 'schedule' && (() => {
+                // Build per-player stats from teamMatches
+                const playerStatsMap = {};
+                teamMatches.forEach(match => {
+                    [match.player1Id, match.player2Id].forEach((pid, i) => {
+                        if (!pid) return;
+                        if (!playerStatsMap[pid]) {
+                            const player = getPlayer(pid);
+                            const teamId = i === 0 ? match.team1Id : match.team2Id;
+                            const team = teams.find(t => (t._id || t.id) === teamId);
+                            playerStatsMap[pid] = {
+                                id: pid,
+                                name: player?.name || 'Unknown',
+                                team: team,
+                                total: 0,
+                                played: 0,
+                                remaining: 0,
+                                wins: 0,
+                                losses: 0
+                            };
+                        }
+                        playerStatsMap[pid].total += 1;
+                        if (match.status === 'completed') {
+                            playerStatsMap[pid].played += 1;
+                            if (match.winnerId === pid) {
+                                playerStatsMap[pid].wins += 1;
+                            } else {
+                                playerStatsMap[pid].losses += 1;
+                            }
+                        } else {
+                            playerStatsMap[pid].remaining += 1;
+                        }
+                    });
+                });
+
+                let playerStatsList = Object.values(playerStatsMap).sort((a, b) => {
+                    const aWr = a.played > 0 ? a.wins / a.played : 0;
+                    const bWr = b.played > 0 ? b.wins / b.played : 0;
+                    return bWr - aWr || b.wins - a.wins;
+                });
+
+                // Filter by player name if active
+                if (filterPlayer && filterPlayer.trim()) {
+                    const searchLower = filterPlayer.toLowerCase().trim();
+                    playerStatsList = playerStatsList.filter(p =>
+                        p.name.toLowerCase().includes(searchLower)
+                    );
+                }
+
+                // Filter by team if active
+                if (filterTeam) {
+                    playerStatsList = playerStatsList.filter(p => {
+                        const tid = p.team?._id || p.team?.id;
+                        return tid === filterTeam;
+                    });
+                }
+
+                if (playerStatsList.length === 0) return null;
+
+                return (
+                    <div style={{
+                        background: '#1a1a1a',
+                        borderRadius: '12px',
+                        border: '1px solid #333',
+                        padding: '12px 16px',
+                        marginBottom: '20px'
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            marginBottom: '10px'
+                        }}>
+                            <span style={{ color: '#888', fontSize: '0.85em', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                Статистика игроков ({playerStatsList.length})
+                            </span>
+                        </div>
+                        <div style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '8px'
+                        }}>
+                            {playerStatsList.map(ps => {
+                                const winRate = ps.played > 0 ? Math.round((ps.wins / ps.played) * 100) : 0;
+                                const teamColor = getTeamColor(ps.team?._id || ps.team?.id);
+                                return (
+                                    <div key={ps.id} style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        background: '#2a2a2a',
+                                        padding: '8px 12px',
+                                        borderRadius: '10px',
+                                        border: `1px solid ${teamColor.primary}33`,
+                                        minWidth: '220px',
+                                        flex: '1 1 220px',
+                                        maxWidth: '320px'
+                                    }}>
+                                        {/* Team color indicator */}
+                                        <div style={{
+                                            width: '4px',
+                                            height: '36px',
+                                            borderRadius: '2px',
+                                            background: teamColor.primary,
+                                            flexShrink: 0
+                                        }} />
+                                        {/* Player info */}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                marginBottom: '3px'
+                                            }}>
+                                                <span style={{
+                                                    color: '#fff',
+                                                    fontWeight: '700',
+                                                    fontSize: '0.85em',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap'
+                                                }}>{ps.name}</span>
+                                                {ps.team && (
+                                                    <span style={{ fontSize: '0.7em', color: teamColor.primary, fontWeight: '600' }}>
+                                                        {ps.team.emoji || ''}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                fontSize: '0.75em'
+                                            }}>
+                                                <span style={{ color: '#4caf50', fontWeight: '700' }}>{ps.wins}W</span>
+                                                <span style={{ color: '#555' }}>-</span>
+                                                <span style={{ color: '#f44336', fontWeight: '700' }}>{ps.losses}L</span>
+                                                <span style={{ color: '#555' }}>|</span>
+                                                <span style={{ color: '#ff9800' }}>{ps.remaining} ост.</span>
+                                            </div>
+                                        </div>
+                                        {/* Win rate circle */}
+                                        <div style={{
+                                            width: '38px',
+                                            height: '38px',
+                                            borderRadius: '50%',
+                                            background: `conic-gradient(${winRate >= 50 ? '#4caf50' : '#f44336'} ${winRate * 3.6}deg, #333 0deg)`,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            flexShrink: 0
+                                        }}>
+                                            <div style={{
+                                                width: '30px',
+                                                height: '30px',
+                                                borderRadius: '50%',
+                                                background: '#2a2a2a',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '0.65em',
+                                                fontWeight: '800',
+                                                color: winRate >= 50 ? '#4caf50' : '#f44336'
+                                            }}>
+                                                {winRate}%
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            })()}
+
             {/* Schedule Summary Block */}
             {subTab === 'schedule' && (() => {
                 const totalMatches = teamMatches.length;
