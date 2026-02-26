@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
@@ -40,9 +41,13 @@ const connectDB = async () => {
 // Start DB connection
 connectDB();
 
-// Admin credentials (set via environment variables in production)
-const ADMIN_LOGIN = process.env.ADMIN_LOGIN || 'admin2024';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'BNL@dmin2024!Secure';
+// Admin credentials — MUST be set via environment variables
+const ADMIN_LOGIN = process.env.ADMIN_LOGIN;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_LOGIN || !ADMIN_PASSWORD) {
+    console.error('❌ ADMIN_LOGIN and ADMIN_PASSWORD environment variables must be set');
+    process.exit(1);
+}
 
 // Multer configuration for file uploads (storing in memory for MongoDB)
 const storage = multer.memoryStorage();
@@ -59,8 +64,22 @@ const upload = multer({
     }
 });
 
-// Enable CORS
-app.use(cors());
+// Enable CORS — restrict to known origins in production
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+    : null; // null = allow all (for dev/Docker where origin may vary)
+
+app.use(cors({
+    origin: allowedOrigins
+        ? (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        }
+        : true
+}));
 app.use(express.json());
 
 // Serve static files - handle both local and production paths correctly
@@ -101,7 +120,7 @@ app.post('/api/admin/login', async (req, res) => {
             res.json({ success: true, sessionId });
         } catch (error) {
             console.error('Login error:', error);
-            res.status(500).json({ error: 'Database error', details: error.message });
+            res.status(500).json({ error: 'Database error' });
         }
     } else {
         res.status(401).json({ error: 'Invalid credentials' });
@@ -169,7 +188,7 @@ app.get('/api/matches/:battleTag', async (req, res) => {
         res.json(response.data);
     } catch (error) {
         console.error('Error fetching matches:', error.message);
-        res.status(500).json({ error: 'Failed to fetch matches', details: error.message });
+        res.status(500).json({ error: 'Failed to fetch matches' });
     }
 });
 

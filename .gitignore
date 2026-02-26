@@ -5,8 +5,10 @@ node_modules/
 *.log
 npm-debug.log*
 
-# Environment variables (if you add sensitive data later)
-# .env
+# Environment variables — never commit
+.env
+.env.*
+!.env.example
 
 # Data files (keep structure, ignore content)
 data/teams.json
@@ -20,63 +22,3 @@ data/admin_session.json
 # Uploaded files (keep structure, ignore content)
 public/uploads/*
 !public/uploads/.gitkeep
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*

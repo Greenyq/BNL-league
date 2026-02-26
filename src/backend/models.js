@@ -153,7 +153,8 @@ playerUserSchema.set('toJSON', {
 const playerSessionSchema = new mongoose.Schema({
     sessionId: { type: String, unique: true },
     playerUserId: { type: String, required: true },
-    timestamp: { type: Date, default: Date.now }
+    timestamp: { type: Date, default: Date.now },
+    expiresAt: { type: Date, required: true, index: { expireAfterSeconds: 0 } } // MongoDB TTL auto-delete
 });
 
 // Password Reset Schema
