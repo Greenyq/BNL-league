@@ -525,6 +525,34 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
 // ==================== ADMIN PANEL ====================
 function AdminPanel({ teams, allPlayers, teamMatches, sessionId, onUpdate, onLogout }) {
     const [activeSection, setActiveSection] = React.useState('teams');
+    const [verified, setVerified] = React.useState(false);
+
+    React.useEffect(() => {
+        const verify = async () => {
+            if (!sessionId) {
+                onLogout();
+                return;
+            }
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/verify`, {
+                    headers: { 'x-session-id': sessionId }
+                });
+                const data = await response.json();
+                if (!data.isAuthenticated) {
+                    onLogout();
+                } else {
+                    setVerified(true);
+                }
+            } catch (error) {
+                onLogout();
+            }
+        };
+        verify();
+    }, []);
+
+    if (!verified) {
+        return null;
+    }
 
     return (
         <div>
