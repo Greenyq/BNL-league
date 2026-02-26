@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
+const rateLimit = require('express-rate-limit');
 const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession, PasswordReset, PlayerCache, PlayerStats } = require('./models');
 const { recalculateAllPlayerStats } = require('./scheduler');
 const { checkAuth } = require('./middleware');
@@ -13,6 +14,30 @@ const router = express.Router();
 
 // Protect all /admin/* routes
 router.use('/admin', checkAuth);
+
+// ==================== RATE LIMITERS ====================
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10,
+    message: { error: 'Too many attempts, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const resetLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 5,
+    message: { error: 'Too many reset attempts, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// ==================== INPUT HELPERS ====================
+// Escape special regex characters to prevent NoSQL injection via RegExp
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Validate BattleTag format: Name#XXXX (2-12 chars, hash, digits)
+const isValidBattleTag = (tag) => /^[a-zA-Z0-9_\u0400-\u04FF]{2,12}#\d+$/.test(tag) && tag.length <= 30;
 
 // ==================== MULTER CONFIGURATION FOR FILE UPLOADS ====================
 const uploadsDir = path.join(__dirname, '../../uploads');
@@ -33,12 +58,17 @@ const storage = multer.diskStorage({
     }
 });
 
+const ALLOWED_UPLOAD_EXTENSIONS = ['.w3g', '.w3m', '.w3x', '.zip', '.json', '.txt', '.log'];
 const upload = multer({
     storage: storage,
     limits: { fileSize: 700 * 1024 }, // 700 KB limit
     fileFilter: (req, file, cb) => {
-        // Allow any file type
-        cb(null, true);
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (ALLOWED_UPLOAD_EXTENSIONS.includes(ext)) {
+            cb(null, true);
+        } else {
+            cb(new Error(`File type not allowed. Allowed: ${ALLOWED_UPLOAD_EXTENSIONS.join(', ')}`));
+        }
     }
 });
 
@@ -54,7 +84,8 @@ router.get('/teams', async (req, res) => {
 
 router.post('/admin/teams', async (req, res) => {
     try {
-        const newTeam = await Team.create(req.body);
+        const { name, emoji, captainId, coaches } = req.body;
+        const newTeam = await Team.create({ name, emoji, captainId, coaches });
         res.json(newTeam);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create team' });
@@ -63,9 +94,10 @@ router.post('/admin/teams', async (req, res) => {
 
 router.put('/admin/teams/:id', async (req, res) => {
     try {
+        const { name, emoji, captainId, coaches } = req.body;
         const team = await Team.findByIdAndUpdate(
             req.params.id,
-            { ...req.body, updatedAt: Date.now() },
+            { name, emoji, captainId, coaches, updatedAt: Date.now() },
             { new: true }
         );
         if (!team) {
@@ -414,21 +446,25 @@ router.post('/admin/players/search', async (req, res) => {
             res.json({ found: false, message: 'No matches found for this player' });
         }
     } catch (error) {
-        res.status(500).json({ error: 'Failed to search player', details: error.message });
+        res.status(500).json({ error: 'Failed to search player' });
     }
 });
 
 router.post('/admin/players', async (req, res) => {
     try {
+        const { battleTag, name, race, mainRace, currentMmr, teamId, discordTag } = req.body;
+        if (!battleTag || !name) {
+            return res.status(400).json({ error: 'battleTag and name are required' });
+        }
         // Check if player already exists (case-insensitive)
         const existing = await Player.findOne({
-            battleTag: { $regex: new RegExp(`^${req.body.battleTag}$`, 'i') }
+            battleTag: { $regex: new RegExp(`^${escapeRegex(battleTag)}$`, 'i') }
         });
         if (existing) {
             return res.status(400).json({ error: 'Player already exists' });
         }
 
-        const newPlayer = await Player.create(req.body);
+        const newPlayer = await Player.create({ battleTag, name, race, mainRace, currentMmr, teamId, discordTag });
         res.json(newPlayer);
     } catch (error) {
         if (error.code === 11000) {
@@ -441,9 +477,10 @@ router.post('/admin/players', async (req, res) => {
 
 router.put('/admin/players/:id', async (req, res) => {
     try {
+        const { name, race, mainRace, currentMmr, teamId, discordTag } = req.body;
         const player = await Player.findByIdAndUpdate(
             req.params.id,
-            { ...req.body, updatedAt: Date.now() },
+            { name, race, mainRace, currentMmr, teamId, discordTag, updatedAt: Date.now() },
             { new: true }
         );
         if (!player) {
@@ -476,12 +513,12 @@ router.get('/team-matches', async (req, res) => {
 
 router.post('/admin/team-matches', async (req, res) => {
     try {
+        const { team1Id, team2Id, player1Id, player2Id, homePlayerId, winnerId, points, pointsOverride, notes, status, scheduledDate, scheduledTime, w3championsMatchId } = req.body;
         // Randomly assign home player if not provided
-        let matchData = { ...req.body };
-        if (!matchData.homePlayerId && matchData.player1Id && matchData.player2Id) {
-            matchData.homePlayerId = Math.random() < 0.5 ? matchData.player1Id : matchData.player2Id;
-        }
-        const newMatch = await TeamMatch.create(matchData);
+        const resolvedHomePlayerId = homePlayerId || (player1Id && player2Id
+            ? (Math.random() < 0.5 ? player1Id : player2Id)
+            : undefined);
+        const newMatch = await TeamMatch.create({ team1Id, team2Id, player1Id, player2Id, homePlayerId: resolvedHomePlayerId, winnerId, points, pointsOverride, notes, status, scheduledDate, scheduledTime, w3championsMatchId });
         res.json(newMatch);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create match' });
@@ -490,9 +527,10 @@ router.post('/admin/team-matches', async (req, res) => {
 
 router.put('/admin/team-matches/:id', async (req, res) => {
     try {
+        const { team1Id, team2Id, player1Id, player2Id, homePlayerId, winnerId, points, pointsOverride, notes, status, scheduledDate, scheduledTime, w3championsMatchId } = req.body;
         const match = await TeamMatch.findByIdAndUpdate(
             req.params.id,
-            { ...req.body, updatedAt: Date.now() },
+            { team1Id, team2Id, player1Id, player2Id, homePlayerId, winnerId, points, pointsOverride, notes, status, scheduledDate, scheduledTime, w3championsMatchId, updatedAt: Date.now() },
             { new: true }
         );
         if (!match) {
@@ -709,7 +747,8 @@ router.get('/portraits', async (req, res) => {
 
 router.post('/admin/portraits', async (req, res) => {
     try {
-        const newPortrait = await Portrait.create(req.body);
+        const { name, race, pointsRequired, imageUrl } = req.body;
+        const newPortrait = await Portrait.create({ name, race, pointsRequired, imageUrl });
         res.json(newPortrait);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create portrait' });
@@ -718,9 +757,10 @@ router.post('/admin/portraits', async (req, res) => {
 
 router.put('/admin/portraits/:id', async (req, res) => {
     try {
+        const { name, race, pointsRequired, imageUrl } = req.body;
         const portrait = await Portrait.findByIdAndUpdate(
             req.params.id,
-            { ...req.body, updatedAt: Date.now() },
+            { name, race, pointsRequired, imageUrl, updatedAt: Date.now() },
             { new: true }
         );
         if (!portrait) {
@@ -753,7 +793,8 @@ router.get('/streamers', async (req, res) => {
 
 router.post('/admin/streamers', async (req, res) => {
     try {
-        const newStreamer = await Streamer.create(req.body);
+        const { name, twitchUsername, avatarUrl, description } = req.body;
+        const newStreamer = await Streamer.create({ name, twitchUsername, avatarUrl, description });
         res.json(newStreamer);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create streamer' });
@@ -762,9 +803,10 @@ router.post('/admin/streamers', async (req, res) => {
 
 router.put('/admin/streamers/:id', async (req, res) => {
     try {
+        const { name, twitchUsername, avatarUrl, description } = req.body;
         const streamer = await Streamer.findByIdAndUpdate(
             req.params.id,
-            { ...req.body, updatedAt: Date.now() },
+            { name, twitchUsername, avatarUrl, description, updatedAt: Date.now() },
             { new: true }
         );
         if (!streamer) {
@@ -791,9 +833,16 @@ router.post('/twitch/check-live', async (req, res) => {
     try {
         const { usernames } = req.body;
 
+        if (!Array.isArray(usernames) || usernames.length === 0 || usernames.length > 20) {
+            return res.status(400).json({ error: 'usernames must be an array of 1-20 items' });
+        }
+
+        const validUsernamePattern = /^[a-zA-Z0-9_]{1,25}$/;
+        const safeUsernames = usernames.filter(u => typeof u === 'string' && validUsernamePattern.test(u));
+
         // This would require Twitch API credentials
         // For now, return mock data
-        const liveData = usernames.map(username => ({
+        const liveData = safeUsernames.map(username => ({
             username,
             isLive: Math.random() > 0.5, // Mock data
             viewerCount: Math.floor(Math.random() * 1000),
@@ -810,12 +859,20 @@ router.post('/twitch/check-live', async (req, res) => {
 // ==================== PLAYER AUTHENTICATION ENDPOINTS ====================
 
 // Player registration
-router.post('/players/auth/register', async (req, res) => {
+router.post('/players/auth/register', authLimiter, async (req, res) => {
     try {
         const { username, password } = req.body;
 
         if (!username || !password) {
             return res.status(400).json({ error: 'Username and password are required' });
+        }
+
+        if (typeof username !== 'string' || username.length < 3 || username.length > 30) {
+            return res.status(400).json({ error: 'Username must be 3-30 characters' });
+        }
+
+        if (typeof password !== 'string' || password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters' });
         }
 
         // Check if username already exists
@@ -837,13 +894,14 @@ router.post('/players/auth/register', async (req, res) => {
         const sessionId = crypto.randomBytes(32).toString('hex');
         await PlayerSession.create({
             sessionId,
-            playerUserId: playerUser.id
+            playerUserId: playerUser.id,
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
         });
 
         res.json({
             success: true,
             sessionId,
-            user: playerUser
+            user: { id: playerUser.id, username: playerUser.username, linkedBattleTag: playerUser.linkedBattleTag }
         });
     } catch (error) {
         console.error('Registration error:', error);
@@ -852,7 +910,7 @@ router.post('/players/auth/register', async (req, res) => {
 });
 
 // Player login
-router.post('/players/auth/login', async (req, res) => {
+router.post('/players/auth/login', authLimiter, async (req, res) => {
     try {
         const { username, password } = req.body;
 
@@ -873,22 +931,25 @@ router.post('/players/auth/login', async (req, res) => {
         }
 
         // Create or update session
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
         let session = await PlayerSession.findOne({ playerUserId: playerUser.id });
         if (session) {
             session.timestamp = Date.now();
+            session.expiresAt = expiresAt;
             await session.save();
         } else {
             const sessionId = crypto.randomBytes(32).toString('hex');
             session = await PlayerSession.create({
                 sessionId,
-                playerUserId: playerUser.id
+                playerUserId: playerUser.id,
+                expiresAt
             });
         }
 
         res.json({
             success: true,
             sessionId: session.sessionId,
-            user: playerUser
+            user: { id: playerUser.id, username: playerUser.username, linkedBattleTag: playerUser.linkedBattleTag }
         });
     } catch (error) {
         console.error('Login error:', error);
@@ -945,8 +1006,11 @@ router.put('/players/auth/link-battletag', async (req, res) => {
             return res.status(400).json({ error: 'BattleTag is required' });
         }
 
-        // Normalize battleTag: trim whitespace
+        // Normalize and validate battleTag
         battleTag = battleTag.trim();
+        if (!isValidBattleTag(battleTag)) {
+            return res.status(400).json({ error: 'Invalid BattleTag format. Expected: Name#1234' });
+        }
 
         const session = await PlayerSession.findOne({ sessionId });
         if (!session) {
@@ -955,7 +1019,7 @@ router.put('/players/auth/link-battletag', async (req, res) => {
 
         // Check if battleTag exists in players (case-insensitive search)
         let player = await Player.findOne({
-            battleTag: { $regex: new RegExp(`^${battleTag}$`, 'i') }
+            battleTag: { $regex: new RegExp(`^${escapeRegex(battleTag)}$`, 'i') }
         });
 
         // If player doesn't exist in our database, try to find in W3Champions and auto-create
@@ -1177,7 +1241,7 @@ router.post('/players/auth/logout', async (req, res) => {
 });
 
 // Request password reset
-router.post('/players/auth/request-reset', async (req, res) => {
+router.post('/players/auth/request-reset', resetLimiter, async (req, res) => {
     try {
         const { username } = req.body;
 
@@ -1185,15 +1249,14 @@ router.post('/players/auth/request-reset', async (req, res) => {
             return res.status(400).json({ error: 'Username is required' });
         }
 
-        // Check if user exists
+        // Always return success to prevent username enumeration
         const user = await PlayerUser.findOne({ username });
         if (!user) {
-            // Don't reveal if user exists or not for security
-            return res.json({ success: true, message: 'If account exists, reset code has been generated' });
+            return res.json({ success: true, message: 'If account exists, reset code has been sent' });
         }
 
-        // Generate 6-digit reset code
-        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+        // Generate cryptographically secure reset code (8 hex bytes = 16 chars)
+        const resetCode = crypto.randomBytes(8).toString('hex');
 
         // Delete any existing reset requests for this user
         await PasswordReset.deleteMany({ username });
@@ -1205,11 +1268,15 @@ router.post('/players/auth/request-reset', async (req, res) => {
             expiresAt: new Date(Date.now() + 15 * 60 * 1000)
         });
 
-        // In production, send code via email. For now, return it in response
+        // TODO: Send resetCode via email to user
+        // In development only, log to server console (never send to client)
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(`[DEV] Reset code for ${username}: ${resetCode}`);
+        }
+
         res.json({
             success: true,
-            resetCode: resetCode, // TODO: Remove in production, send via email instead
-            message: 'Reset code generated'
+            message: 'If account exists, reset code has been sent'
         });
     } catch (error) {
         console.error('Request reset error:', error);
@@ -1399,7 +1466,7 @@ router.post('/admin/recalculate-match-points', async (req, res) => {
         console.log(`✅ Recalculation complete: ${updatedCount}/${matches.length} matches updated`);
     } catch (error) {
         console.error('Error recalculating match points:', error);
-        res.status(500).json({ error: 'Failed to recalculate match points', details: error.message });
+        res.status(500).json({ error: 'Failed to recalculate match points' });
     }
 });
 
@@ -1498,7 +1565,7 @@ router.post('/admin/team-matches/smart-generate', async (req, res) => {
         });
     } catch (error) {
         console.error('Error generating smart matches:', error);
-        res.status(500).json({ error: 'Failed to generate smart matches', details: error.message });
+        res.status(500).json({ error: 'Failed to generate smart matches' });
     }
 });
 
@@ -1545,7 +1612,7 @@ router.post('/admin/team-matches/smart-generate/confirm', async (req, res) => {
         });
     } catch (error) {
         console.error('Error confirming smart matches:', error);
-        res.status(500).json({ error: 'Failed to create matches', details: error.message });
+        res.status(500).json({ error: 'Failed to create matches' });
     }
 });
 

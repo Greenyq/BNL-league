@@ -25,6 +25,9 @@ services:
       PORT: 3000
       MONGO_URL: mongodb://mongodb:27017/gnl_league
       GO_WORKER_URL: http://stats-processor:3001
+      ADMIN_LOGIN: ${ADMIN_LOGIN}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
     depends_on:
       mongodb:
         condition: service_healthy
