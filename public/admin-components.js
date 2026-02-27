@@ -3622,11 +3622,36 @@ function AdminPortraits({ sessionId, onUpdate }) {
 
 // ==================== ADMIN POINTS ====================
 function AdminPoints({ players, sessionId, onUpdate }) {
-    const [selectedPlayer, setSelectedPlayer] = React.useState(null);
+    const [selectedPlayer, setSelectedPlayer] = React.useState('');
     const [pointsAmount, setPointsAmount] = React.useState('');
     const [reason, setReason] = React.useState('');
     const [loading, setLoading] = React.useState(false);
     const [message, setMessage] = React.useState('');
+    const [history, setHistory] = React.useState([]);
+    const [historyLoading, setHistoryLoading] = React.useState(true);
+    const [searchQuery, setSearchQuery] = React.useState('');
+
+    // Load all manual points history
+    const loadHistory = async () => {
+        try {
+            setHistoryLoading(true);
+            const response = await fetch(`${API_BASE}/api/admin/manual-points`, {
+                headers: { 'x-session-id': sessionId }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setHistory(data);
+            }
+        } catch (error) {
+            console.error('Error loading points history:', error);
+        } finally {
+            setHistoryLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        loadHistory();
+    }, []);
 
     const handleAddPoints = async (e) => {
         e.preventDefault();
@@ -3650,14 +3675,17 @@ function AdminPoints({ players, sessionId, onUpdate }) {
             });
 
             if (response.ok) {
-                setMessage(`✅ ${pointsAmount} очков добавлено игроку`);
-                setSelectedPlayer(null);
+                const data = await response.json();
+                const player = players.find(p => p.id === selectedPlayer);
+                setMessage(`✅ ${pointsAmount > 0 ? '+' : ''}${pointsAmount} очков для ${player?.name || 'игрока'}${data.newPoints !== null ? ` (итого: ${data.newPoints})` : ''}`);
+                setSelectedPlayer('');
                 setPointsAmount('');
                 setReason('');
                 onUpdate();
+                loadHistory();
             } else {
                 const error = await response.json();
-                setMessage(`❌ Ошибка: ${error.message || 'Не удалось добавить очки'}`);
+                setMessage(`❌ Ошибка: ${error.error || 'Не удалось добавить очки'}`);
             }
         } catch (error) {
             setMessage(`❌ Ошибка подключения: ${error.message}`);
@@ -3665,6 +3693,41 @@ function AdminPoints({ players, sessionId, onUpdate }) {
             setLoading(false);
         }
     };
+
+    const handleDeleteAdjustment = async (adjustmentId) => {
+        if (!confirm('Удалить эту запись? Очки будут отменены.')) return;
+
+        try {
+            const response = await fetch(`${API_BASE}/api/admin/manual-points/${adjustmentId}`, {
+                method: 'DELETE',
+                headers: { 'x-session-id': sessionId }
+            });
+
+            if (response.ok) {
+                setMessage('✅ Запись удалена, очки отменены');
+                onUpdate();
+                loadHistory();
+            } else {
+                setMessage('❌ Не удалось удалить запись');
+            }
+        } catch (error) {
+            setMessage(`❌ Ошибка: ${error.message}`);
+        }
+    };
+
+    const getPlayerName = (battleTag) => {
+        const player = players.find(p => p.battleTag === battleTag);
+        return player ? player.name : battleTag;
+    };
+
+    const filteredPlayers = players ? players.filter(player => {
+        if (!searchQuery) return true;
+        const q = searchQuery.toLowerCase();
+        return (player.name && player.name.toLowerCase().includes(q)) ||
+               (player.battleTag && player.battleTag.toLowerCase().includes(q));
+    }) : [];
+
+    const totalManualPoints = history.reduce((sum, adj) => sum + adj.amount, 0);
 
     return (
         <div style={{
@@ -3675,98 +3738,180 @@ function AdminPoints({ players, sessionId, onUpdate }) {
                 💎 Добавление очков игрокам
             </h3>
 
-            <form onSubmit={handleAddPoints} style={{ maxWidth: '500px' }}>
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', color: '#fff', fontWeight: '600' }}>
-                        Выберите игрока
-                    </label>
-                    <select
-                        value={selectedPlayer || ''}
-                        onChange={(e) => setSelectedPlayer(e.target.value)}
+            <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
+                {/* Left: Form */}
+                <form onSubmit={handleAddPoints} style={{ flex: '1', minWidth: '320px', maxWidth: '500px' }}>
+                    <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#fff', fontWeight: '600' }}>
+                            Поиск игрока
+                        </label>
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Введите имя или BattleTag..."
+                            style={{
+                                width: '100%', padding: '10px 12px', borderRadius: '8px',
+                                border: '1px solid #444', background: '#2a2a2a',
+                                color: '#fff', fontSize: '14px', marginBottom: '8px'
+                            }}
+                        />
+                        <select
+                            value={selectedPlayer}
+                            onChange={(e) => setSelectedPlayer(e.target.value)}
+                            style={{
+                                width: '100%', padding: '12px', borderRadius: '8px',
+                                border: '1px solid #444', background: '#2a2a2a',
+                                color: '#fff', fontSize: '16px', cursor: 'pointer'
+                            }}
+                        >
+                            <option value="">-- Выберите игрока --</option>
+                            {filteredPlayers.map(player => (
+                                <option key={player.id} value={player.id}>
+                                    {player.name} ({player.battleTag}) — MMR: {player.currentMmr || 0}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#fff', fontWeight: '600' }}>
+                            Количество очков (отрицательное для снятия)
+                        </label>
+                        <input
+                            type="number"
+                            value={pointsAmount}
+                            onChange={(e) => setPointsAmount(e.target.value)}
+                            placeholder="Например: 50 или -30"
+                            style={{
+                                width: '100%', padding: '12px', borderRadius: '8px',
+                                border: '1px solid #444', background: '#2a2a2a',
+                                color: '#fff', fontSize: '16px'
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#fff', fontWeight: '600' }}>
+                            Причина
+                        </label>
+                        <input
+                            type="text"
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            placeholder="Например: Бонус за активность тренера"
+                            style={{
+                                width: '100%', padding: '12px', borderRadius: '8px',
+                                border: '1px solid #444', background: '#2a2a2a',
+                                color: '#fff', fontSize: '16px'
+                            }}
+                        />
+                    </div>
+
+                    {message && (
+                        <div style={{
+                            padding: '12px', background: message.includes('✅') ? '#2e7d32' : '#c62828',
+                            color: '#fff', borderRadius: '8px', marginBottom: '20px',
+                            textAlign: 'center', fontWeight: '600'
+                        }}>
+                            {message}
+                        </div>
+                    )}
+
+                    <button
+                        type="submit"
+                        disabled={loading}
                         style={{
                             width: '100%', padding: '12px', borderRadius: '8px',
-                            border: '1px solid #444', background: '#2a2a2a',
-                            color: '#fff', fontSize: '16px', cursor: 'pointer'
+                            background: loading ? '#666' : '#4caf50', color: '#fff',
+                            border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                            fontWeight: '600', fontSize: '16px'
                         }}
                     >
-                        <option value="">-- Выберите игрока --</option>
-                        {players && players.map(player => (
-                            <option key={player.id} value={player.id}>
-                                {player.w3_name} ({player.elo_rating} очков)
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                        {loading ? '⏳ Добавляю...' : '✅ Добавить очки'}
+                    </button>
 
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', color: '#fff', fontWeight: '600' }}>
-                        Количество очков
-                    </label>
-                    <input
-                        type="number"
-                        value={pointsAmount}
-                        onChange={(e) => setPointsAmount(e.target.value)}
-                        placeholder="Введите количество очков"
-                        style={{
-                            width: '100%', padding: '12px', borderRadius: '8px',
-                            border: '1px solid #444', background: '#2a2a2a',
-                            color: '#fff', fontSize: '16px'
-                        }}
-                    />
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', color: '#fff', fontWeight: '600' }}>
-                        Причина
-                    </label>
-                    <input
-                        type="text"
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        placeholder="Например: Победа по скриншоту, Бонус за активность тренера"
-                        style={{
-                            width: '100%', padding: '12px', borderRadius: '8px',
-                            border: '1px solid #444', background: '#2a2a2a',
-                            color: '#fff', fontSize: '16px'
-                        }}
-                    />
-                </div>
-
-                {message && (
                     <div style={{
-                        padding: '12px', background: message.includes('✅') ? '#4caf50' : '#f44336',
-                        color: '#fff', borderRadius: '8px', marginBottom: '20px',
-                        textAlign: 'center', fontWeight: '600'
+                        marginTop: '20px', padding: '15px', background: '#2a2a2a',
+                        borderRadius: '10px', border: '1px solid #444'
                     }}>
-                        {message}
+                        <h4 style={{ color: '#c9a961', marginBottom: '10px', fontSize: '0.95em' }}>ℹ️ Информация</h4>
+                        <ul style={{ color: '#e0e0e0', lineHeight: '1.8', fontSize: '0.9em', paddingLeft: '20px' }}>
+                            <li>Очки сохраняются при пересчёте статистики</li>
+                            <li>Используйте отрицательные значения для снятия</li>
+                            <li>Все изменения логируются с причиной</li>
+                            <li>Записи можно удалить — очки будут отменены</li>
+                        </ul>
                     </div>
-                )}
+                </form>
 
-                <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                        width: '100%', padding: '12px', borderRadius: '8px',
-                        background: loading ? '#666' : '#4caf50', color: '#fff',
-                        border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
-                        fontWeight: '600', fontSize: '16px'
-                    }}
-                >
-                    {loading ? '⏳ Добавляю...' : '✅ Добавить очки'}
-                </button>
-            </form>
+                {/* Right: History */}
+                <div style={{ flex: '1.5', minWidth: '400px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                        <h4 style={{ color: '#c9a961', margin: 0 }}>
+                            📋 История ({history.length} записей)
+                        </h4>
+                        {history.length > 0 && (
+                            <span style={{
+                                color: totalManualPoints >= 0 ? '#4caf50' : '#f44336',
+                                fontWeight: '600', fontSize: '0.95em'
+                            }}>
+                                Итого: {totalManualPoints > 0 ? '+' : ''}{totalManualPoints} очков
+                            </span>
+                        )}
+                    </div>
 
-            <div style={{
-                marginTop: '30px', padding: '20px', background: '#2a2a2a',
-                borderRadius: '10px', border: '1px solid #444'
-            }}>
-                <h4 style={{ color: '#c9a961', marginBottom: '15px' }}>ℹ️ Информация</h4>
-                <ul style={{ color: '#e0e0e0', lineHeight: '1.8' }}>
-                    <li>✅ Админ может добавить очки любому игроку</li>
-                    <li>✅ Очки добавляются к текущему счету игрока</li>
-                    <li>✅ Используйте для добавления бонусов тренерам и дополнительных очков</li>
-                    <li>✅ Все действия логируются в системе</li>
-                </ul>
+                    {historyLoading ? (
+                        <div style={{ color: '#888', textAlign: 'center', padding: '30px' }}>
+                            ⏳ Загрузка истории...
+                        </div>
+                    ) : history.length === 0 ? (
+                        <div style={{
+                            color: '#888', textAlign: 'center', padding: '30px',
+                            background: '#2a2a2a', borderRadius: '10px', border: '1px solid #333'
+                        }}>
+                            Нет записей о ручном добавлении очков
+                        </div>
+                    ) : (
+                        <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                            {history.map(adj => (
+                                <div key={adj.id} style={{
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    padding: '12px 15px', background: '#2a2a2a', borderRadius: '8px',
+                                    marginBottom: '8px', border: '1px solid #333'
+                                }}>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                                            <span style={{ color: '#fff', fontWeight: '600' }}>
+                                                {getPlayerName(adj.battleTag)}
+                                            </span>
+                                            <span style={{
+                                                color: adj.amount >= 0 ? '#4caf50' : '#f44336',
+                                                fontWeight: '700', fontSize: '1.1em'
+                                            }}>
+                                                {adj.amount > 0 ? '+' : ''}{adj.amount}
+                                            </span>
+                                        </div>
+                                        <div style={{ color: '#aaa', fontSize: '0.85em' }}>
+                                            {adj.reason} — {new Date(adj.createdAt).toLocaleString('ru-RU')}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleDeleteAdjustment(adj.id)}
+                                        style={{
+                                            padding: '6px 12px', borderRadius: '6px',
+                                            background: '#f44336', color: '#fff', border: 'none',
+                                            cursor: 'pointer', fontWeight: '600', fontSize: '0.85em',
+                                            marginLeft: '10px', whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        🗑️ Удалить
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

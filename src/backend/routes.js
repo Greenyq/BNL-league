@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const rateLimit = require('express-rate-limit');
-const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession, PasswordReset, PlayerCache, PlayerStats } = require('./models');
+const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession, PasswordReset, PlayerCache, PlayerStats, ManualPointsAdjustment } = require('./models');
 const { recalculateAllPlayerStats } = require('./scheduler');
 const { checkAuth } = require('./middleware');
 
@@ -824,6 +824,104 @@ router.delete('/admin/streamers/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete streamer' });
+    }
+});
+
+// ==================== MANUAL POINTS ENDPOINTS ====================
+// Add points to a player (creates audit record + updates PlayerStats immediately)
+router.post('/admin/players/:id/add-points', async (req, res) => {
+    try {
+        const { amount, reason } = req.body;
+
+        if (!amount || !reason) {
+            return res.status(400).json({ error: 'amount and reason are required' });
+        }
+
+        const parsedAmount = parseInt(amount);
+        if (isNaN(parsedAmount) || parsedAmount === 0) {
+            return res.status(400).json({ error: 'amount must be a non-zero number' });
+        }
+
+        if (typeof reason !== 'string' || reason.trim().length === 0 || reason.length > 500) {
+            return res.status(400).json({ error: 'reason must be a non-empty string (max 500 chars)' });
+        }
+
+        const player = await Player.findById(req.params.id);
+        if (!player) {
+            return res.status(404).json({ error: 'Player not found' });
+        }
+
+        // Create audit record
+        const adjustment = await ManualPointsAdjustment.create({
+            playerId: player.id,
+            battleTag: player.battleTag,
+            amount: parsedAmount,
+            reason: reason.trim()
+        });
+
+        // Update PlayerStats immediately so the change is visible right away
+        const stats = await PlayerStats.findOne({ battleTag: player.battleTag });
+        if (stats) {
+            stats.points = Math.max(0, stats.points + parsedAmount);
+            stats.updatedAt = new Date();
+            await stats.save();
+        }
+
+        res.json({ success: true, adjustment, newPoints: stats ? stats.points : null });
+    } catch (error) {
+        console.error('Error adding points:', error);
+        res.status(500).json({ error: 'Failed to add points' });
+    }
+});
+
+// Get manual points history for a player
+router.get('/admin/players/:id/manual-points', async (req, res) => {
+    try {
+        const player = await Player.findById(req.params.id);
+        if (!player) {
+            return res.status(404).json({ error: 'Player not found' });
+        }
+
+        const adjustments = await ManualPointsAdjustment.find({ playerId: player.id })
+            .sort({ createdAt: -1 });
+        res.json(adjustments);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch manual points' });
+    }
+});
+
+// Get all manual points adjustments
+router.get('/admin/manual-points', async (req, res) => {
+    try {
+        const adjustments = await ManualPointsAdjustment.find()
+            .sort({ createdAt: -1 });
+        res.json(adjustments);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch manual points' });
+    }
+});
+
+// Delete a manual points adjustment
+router.delete('/admin/manual-points/:id', async (req, res) => {
+    try {
+        const adjustment = await ManualPointsAdjustment.findById(req.params.id);
+        if (!adjustment) {
+            return res.status(404).json({ error: 'Adjustment not found' });
+        }
+
+        // Reverse the points in PlayerStats
+        const stats = await PlayerStats.findOne({ battleTag: adjustment.battleTag });
+        if (stats) {
+            stats.points = Math.max(0, stats.points - adjustment.amount);
+            stats.updatedAt = new Date();
+            await stats.save();
+        }
+
+        await ManualPointsAdjustment.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting manual points:', error);
+        res.status(500).json({ error: 'Failed to delete adjustment' });
     }
 });
 
