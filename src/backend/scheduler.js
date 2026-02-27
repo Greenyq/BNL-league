@@ -1,4 +1,4 @@
-const { Player, PlayerCache, PlayerStats } = require('./models');
+const { Player, PlayerCache, PlayerStats, ManualPointsAdjustment } = require('./models');
 const cron = require('node-cron');
 const axios = require('axios');
 
@@ -542,6 +542,14 @@ async function recalculateAllPlayerStats() {
                 const maxPointsAchieved = Math.max(overallPoints, previousMaxPoints);
                 const pointsFloor = maxPointsAchieved >= 500 ? 500 : 0;
                 overallPoints = Math.max(pointsFloor, overallPoints);
+
+                // Add manual points adjustments from admin
+                const manualAdjustments = await ManualPointsAdjustment.find({ battleTag: player.battleTag });
+                if (manualAdjustments.length > 0) {
+                    const manualTotal = manualAdjustments.reduce((sum, adj) => sum + adj.amount, 0);
+                    overallPoints = Math.max(0, overallPoints + manualTotal);
+                    console.log(`  💎 ${player.battleTag}: +${manualTotal} manual points (${manualAdjustments.length} adjustments)`);
+                }
 
                 // Save to PlayerStats collection
                 await PlayerStats.findOneAndUpdate(

@@ -225,6 +225,25 @@ playerStatsSchema.set('toJSON', {
     }
 });
 
+// Manual Points Adjustment Schema - for admin-added points that survive recalculation
+const manualPointsAdjustmentSchema = new mongoose.Schema({
+    playerId: { type: String, required: true, index: true },
+    battleTag: { type: String, required: true, index: true },
+    amount: { type: Number, required: true },
+    reason: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+
+// Transform _id to id for JSON responses
+manualPointsAdjustmentSchema.set('toJSON', {
+    virtuals: true,
+    versionKey: false,
+    transform: function (doc, ret) {
+        ret.id = ret._id.toString();
+        delete ret._id;
+    }
+});
+
 module.exports = {
     Team: mongoose.model('Team', teamSchema),
     Player: mongoose.model('Player', playerSchema),
@@ -236,5 +255,6 @@ module.exports = {
     PlayerSession: mongoose.model('PlayerSession', playerSessionSchema),
     PasswordReset: mongoose.model('PasswordReset', passwordResetSchema),
     PlayerCache: mongoose.model('PlayerCache', playerCacheSchema),
-    PlayerStats: mongoose.model('PlayerStats', playerStatsSchema)
+    PlayerStats: mongoose.model('PlayerStats', playerStatsSchema),
+    ManualPointsAdjustment: mongoose.model('ManualPointsAdjustment', manualPointsAdjustmentSchema)
 };
