@@ -1881,6 +1881,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
     const [formData, setFormData] = React.useState({
         team1Id: null, team2Id: null,
         player1Id: null, player2Id: null,
+        homePlayerId: null,
         winnerId: null, points: 50, notes: '',
         status: 'upcoming', scheduledDate: '',
         w3championsMatchId: ''
@@ -2086,6 +2087,7 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                 setFormData({
                     team1Id: null, team2Id: null,
                     player1Id: null, player2Id: null,
+                    homePlayerId: null,
                     winnerId: null, points: 50, notes: '',
                     status: 'upcoming', scheduledDate: '',
                     w3championsMatchId: ''
@@ -2549,6 +2551,33 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                             </div>
                         </div>
                         <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>🏠 Домашний игрок (организатор)</label>
+                            <select
+                                value={formData.homePlayerId || ''}
+                                onChange={(e) => setFormData({...formData, homePlayerId: e.target.value || null})}
+                                style={{
+                                    width: '100%', padding: '10px', borderRadius: '8px',
+                                    border: '1px solid #444', background: '#2a2a2a', color: '#fff'
+                                }}
+                                disabled={!formData.player1Id || !formData.player2Id}
+                            >
+                                <option value="">Случайный выбор</option>
+                                {formData.player1Id && (
+                                    <option value={formData.player1Id}>
+                                        {allPlayers.find(p => p.id === formData.player1Id)?.name || 'Игрок 1'}
+                                    </option>
+                                )}
+                                {formData.player2Id && (
+                                    <option value={formData.player2Id}>
+                                        {allPlayers.find(p => p.id === formData.player2Id)?.name || 'Игрок 2'}
+                                    </option>
+                                )}
+                            </select>
+                            <div style={{ fontSize: '0.85em', color: '#888', marginTop: '5px' }}>
+                                Домашний игрок создаёт лобби, назначает время и репортит результат. Если не выбран — назначится случайно.
+                            </div>
+                        </div>
+                        <div style={{ marginBottom: '15px' }}>
                             <label style={{ display: 'block', marginBottom: '8px', color: '#fff' }}>Статус матча</label>
                             <select
                                 value={formData.status}
@@ -2847,16 +2876,46 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                                     📝 {match.notes}
                                 </div>
                             )}
-                            {/* Home player indicator */}
-                            {match.homePlayerId && (
-                                <div style={{
-                                    marginTop: '10px', padding: '8px 12px', background: '#2a2a2a',
-                                    borderRadius: '8px', color: '#c9a961', fontSize: '0.85em',
-                                    display: 'inline-block'
-                                }}>
-                                    🏠 Домашний игрок: {allPlayers.find(p => p.id === match.homePlayerId)?.name || 'Не определён'}
-                                </div>
-                            )}
+                            {/* Home player indicator with change button */}
+                            <div style={{
+                                marginTop: '10px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap'
+                            }}>
+                                {match.homePlayerId && (
+                                    <div style={{
+                                        padding: '8px 12px', background: '#2a2a2a',
+                                        borderRadius: '8px', color: '#c9a961', fontSize: '0.85em',
+                                        display: 'inline-block'
+                                    }}>
+                                        🏠 Домашний игрок: {allPlayers.find(p => p.id === match.homePlayerId)?.name || 'Не определён'}
+                                    </div>
+                                )}
+                                <button
+                                    onClick={() => {
+                                        const p1Name = player1?.name || 'Игрок 1';
+                                        const p2Name = player2?.name || 'Игрок 2';
+                                        const currentHome = match.homePlayerId === match.player1Id ? '1' : match.homePlayerId === match.player2Id ? '2' : '?';
+                                        const choice = prompt(
+                                            `Сменить домашнего игрока:\n\n1 - ${p1Name}${currentHome === '1' ? ' (текущий 🏠)' : ''}\n2 - ${p2Name}${currentHome === '2' ? ' (текущий 🏠)' : ''}\n\nВведите 1 или 2:`
+                                        );
+                                        if (choice === '1' || choice === '2') {
+                                            const newHomePlayerId = choice === '1' ? match.player1Id : match.player2Id;
+                                            fetch(`${API_BASE}/api/admin/team-matches/${match.id}`, {
+                                                method: 'PUT',
+                                                headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId },
+                                                body: JSON.stringify({ homePlayerId: newHomePlayerId })
+                                            }).then(() => onUpdate());
+                                        }
+                                    }}
+                                    style={{
+                                        padding: '6px 14px', borderRadius: '8px',
+                                        background: '#c9a961', color: '#000',
+                                        border: 'none', cursor: 'pointer', fontSize: '0.85em',
+                                        fontWeight: '600'
+                                    }}
+                                >
+                                    🏠 Сменить домашнего
+                                </button>
+                            </div>
                             {/* Edit buttons for upcoming matches */}
                             {match.status === 'upcoming' && (
                                 <div style={{ marginTop: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
