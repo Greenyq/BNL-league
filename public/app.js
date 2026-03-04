@@ -2185,7 +2185,9 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                 const coaches = (team.coaches || []).map(coachId => {
                     return players.find(p => p.id === coachId) || allPlayers.find(p => p.id === coachId);
                 }).filter(Boolean);
-                const totalPoints = getTeamPointsFromMatches(team.id);
+                const matchPoints = getTeamPointsFromMatches(team.id);
+                const individualPoints = teamPlayers.reduce((sum, p) => sum + (p.points || 0), 0);
+                const totalPoints = matchPoints + individualPoints;
 
                 return (
                     <div key={team.id} className="team-card" onClick={() => setExpandedTeam(expandedTeam === team.id ? null : team.id)}>
