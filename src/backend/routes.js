@@ -863,6 +863,20 @@ router.post('/admin/players/:id/add-points', async (req, res) => {
         const stats = await PlayerStats.findOne({ battleTag: player.battleTag });
         if (stats) {
             stats.points = Math.max(0, stats.points + parsedAmount);
+
+            // Also update main race raceStats so points show in player profile and team display
+            if (stats.raceStats && stats.raceStats.length > 0) {
+                const mainRace = player.mainRace;
+                const raceIdx = stats.raceStats.findIndex(s => s.race === mainRace);
+                if (raceIdx >= 0) {
+                    stats.raceStats[raceIdx].points = Math.max(0, stats.raceStats[raceIdx].points + parsedAmount);
+                } else {
+                    // Fallback: add to first race
+                    stats.raceStats[0].points = Math.max(0, stats.raceStats[0].points + parsedAmount);
+                }
+                stats.markModified('raceStats');
+            }
+
             stats.updatedAt = new Date();
             await stats.save();
         }
@@ -913,6 +927,20 @@ router.delete('/admin/manual-points/:id', async (req, res) => {
         const stats = await PlayerStats.findOne({ battleTag: adjustment.battleTag });
         if (stats) {
             stats.points = Math.max(0, stats.points - adjustment.amount);
+
+            // Also reverse in main race raceStats
+            if (stats.raceStats && stats.raceStats.length > 0) {
+                const player = await Player.findOne({ battleTag: adjustment.battleTag });
+                const mainRace = player?.mainRace;
+                const raceIdx = mainRace != null ? stats.raceStats.findIndex(s => s.race === mainRace) : -1;
+                if (raceIdx >= 0) {
+                    stats.raceStats[raceIdx].points = Math.max(0, stats.raceStats[raceIdx].points - adjustment.amount);
+                } else if (stats.raceStats.length > 0) {
+                    stats.raceStats[0].points = Math.max(0, stats.raceStats[0].points - adjustment.amount);
+                }
+                stats.markModified('raceStats');
+            }
+
             stats.updatedAt = new Date();
             await stats.save();
         }

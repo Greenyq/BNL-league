@@ -415,7 +415,6 @@ function App() {
                             mainRace: player.mainRace, // Keep mainRace for sorting/display logic
                             mmr: raceStat.mmr || player.currentMmr || 0,
                             points: raceStat.points || 0,
-                            totalPoints: player.points || 0, // Overall points including manual adjustments
                             wins: raceStat.wins || 0,
                             losses: raceStat.losses || 0,
                             achievements: raceStat.achievements || [],
@@ -2108,7 +2107,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
 
     const getTeamLeader = (teamId) => {
         const teamPlayers = getTeamPlayers(teamId);
-        return teamPlayers.reduce((leader, player) => (player.totalPoints || player.points || 0) > (leader?.totalPoints || leader?.points || 0) ? player : leader, null);
+        return teamPlayers.reduce((leader, player) => (player.points || 0) > (leader?.points || 0) ? player : leader, null);
     };
 
     return (
@@ -2186,9 +2185,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                 const coaches = (team.coaches || []).map(coachId => {
                     return players.find(p => p.id === coachId) || allPlayers.find(p => p.id === coachId);
                 }).filter(Boolean);
-                const matchPoints = getTeamPointsFromMatches(team.id);
-                const individualPoints = teamPlayers.reduce((sum, p) => sum + (p.totalPoints || p.points || 0), 0);
-                const totalPoints = matchPoints + individualPoints;
+                const totalPoints = teamPlayers.reduce((sum, p) => sum + (p.points || 0), 0);
 
                 return (
                     <div key={team.id} className="team-card" onClick={() => setExpandedTeam(expandedTeam === team.id ? null : team.id)}>
