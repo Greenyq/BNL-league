@@ -548,16 +548,6 @@ async function recalculateAllPlayerStats() {
                 if (manualAdjustments.length > 0) {
                     const manualTotal = manualAdjustments.reduce((sum, adj) => sum + adj.amount, 0);
                     overallPoints = Math.max(0, overallPoints + manualTotal);
-
-                    // Also add manual points to the player's main race raceStats
-                    // so they are visible in team display and player profile
-                    const mainRaceStat = raceStats.find(s => s.race === player.mainRace);
-                    if (mainRaceStat) {
-                        mainRaceStat.points = Math.max(0, mainRaceStat.points + manualTotal);
-                    } else if (raceStats.length > 0) {
-                        raceStats[0].points = Math.max(0, raceStats[0].points + manualTotal);
-                    }
-
                     console.log(`  💎 ${player.battleTag}: +${manualTotal} manual points (${manualAdjustments.length} adjustments)`);
                 }
 
