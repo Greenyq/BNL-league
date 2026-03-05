@@ -415,6 +415,7 @@ function App() {
                             mainRace: player.mainRace, // Keep mainRace for sorting/display logic
                             mmr: raceStat.mmr || player.currentMmr || 0,
                             points: raceStat.points || 0,
+                            manualPoints: player.manualPoints || 0,
                             wins: raceStat.wins || 0,
                             losses: raceStat.losses || 0,
                             achievements: raceStat.achievements || [],
@@ -436,6 +437,7 @@ function App() {
                         mainRace: player.mainRace,
                         mmr: player.currentMmr || 0,
                         points: player.points || 0,
+                        manualPoints: player.manualPoints || 0,
                         wins: player.wins || 0,
                         losses: player.losses || 0,
                         achievements: [],
@@ -2107,7 +2109,11 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
 
     const getTeamLeader = (teamId) => {
         const teamPlayers = getTeamPlayers(teamId);
-        return teamPlayers.reduce((leader, player) => (player.points || 0) > (leader?.points || 0) ? player : leader, null);
+        return teamPlayers.reduce((leader, player) => {
+            const playerPts = getPlayerPointsFromSchedule(player.id) + (player.manualPoints || 0);
+            const leaderPts = leader ? getPlayerPointsFromSchedule(leader.id) + (leader.manualPoints || 0) : 0;
+            return playerPts > leaderPts ? player : leader;
+        }, null);
     };
 
     return (
@@ -2185,7 +2191,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                 const coaches = (team.coaches || []).map(coachId => {
                     return players.find(p => p.id === coachId) || allPlayers.find(p => p.id === coachId);
                 }).filter(Boolean);
-                const totalPoints = teamPlayers.reduce((sum, p) => sum + (p.points || 0), 0);
+                const totalPoints = teamPlayers.reduce((sum, p) => sum + getPlayerPointsFromSchedule(p.id) + (p.manualPoints || 0), 0);
 
                 return (
                     <div key={team.id} className="team-card" onClick={() => setExpandedTeam(expandedTeam === team.id ? null : team.id)}>
@@ -2235,7 +2241,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                                             <span className="member-role-badge">CAPTAIN</span>
                                             <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{captain.name}</span>
                                             <span style={{ color: '#888', marginLeft: '15px' }}>
-                                                {raceNames[captain.race] || 'Random'} • {captain.mmr} MMR • {getPlayerPointsFromSchedule(captain.id)} pts
+                                                {raceNames[captain.race] || 'Random'} • {captain.mmr} MMR • {getPlayerPointsFromSchedule(captain.id) + (captain.manualPoints || 0)} pts
                                             </span>
                                         </div>
                                     </div>
@@ -2261,7 +2267,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                                                 <span className="member-role-badge">COACH</span>
                                                 <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{coach.name}</span>
                                                 <span style={{ color: '#888', marginLeft: '15px' }}>
-                                                    {raceNames[coach.race] || 'Random'} • {coach.mmr} MMR • {getPlayerPointsFromSchedule(coach.id)} pts
+                                                    {raceNames[coach.race] || 'Random'} • {coach.mmr} MMR • {getPlayerPointsFromSchedule(coach.id) + (coach.manualPoints || 0)} pts
                                                 </span>
                                             </div>
                                         </div>
@@ -2288,7 +2294,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                                         <div>
                                             <span style={{ fontWeight: '700', fontSize: '1.1em' }}>{player.name}</span>
                                             <span style={{ color: '#888', marginLeft: '15px' }}>
-                                                {raceNames[player.race] || 'Random'} • {player.mmr} MMR • {getPlayerPointsFromSchedule(player.id)} pts
+                                                {raceNames[player.race] || 'Random'} • {player.mmr} MMR • {getPlayerPointsFromSchedule(player.id) + (player.manualPoints || 0)} pts
                                             </span>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2296,7 +2302,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                                                 <span className="leader-badge">👑 LEADER</span>
                                             )}
                                             <div style={{ color: '#c9a961', fontWeight: '700', fontSize: '1.1em', minWidth: '80px', textAlign: 'right' }}>
-                                                {getPlayerPointsFromSchedule(player.id)} pts
+                                                {getPlayerPointsFromSchedule(player.id) + (player.manualPoints || 0)} pts
                                             </div>
                                         </div>
                                     </div>
