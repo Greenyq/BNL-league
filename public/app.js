@@ -25,53 +25,52 @@ const raceImages = {
     8: '/images/undead.jpg', // Death Knight skulls and weapons
 };
 
-// Achievements (Достижения)
-const achievements = {
-    // Win Streaks (Серии побед)
-    winStreak3: { icon: "🔥", name: "В огне", desc: "3 победы подряд", points: 30 },
-    winStreak5: { icon: "🔥🔥", name: "Огненная серия", desc: "5 побед подряд", points: 50 },
-    winStreak10: { icon: "🔥🔥🔥", name: "Доминатор", desc: "10 побед подряд", points: 100 },
-    winStreak15: { icon: "👑", name: "Неудержимый", desc: "15 побед подряд", points: 150 },
-
-    // Loss Streaks (Серии поражений)
-    loseStreak3: { icon: "💪", name: "Не расстраивайся дави на газ", desc: "3 поражения подряд", points: 10 },
-    loseStreak10: { icon: "🛡️", name: "Выживший", desc: "Продолжать играть после 10 поражений подряд", points: 25 },
-
-    // MMR Challenges (MMR челленджи)
-    giantSlayer: { icon: "⚔️", name: "И кто тут папа?", desc: "Победа над соперником с +50 MMR", points: 25 },
-    titanSlayer: { icon: "⚡", name: "Убийца титанов", desc: "Победа над соперником с +100 MMR", points: 50 },
-    davidVsGoliath: { icon: "🏹", name: "Давид против Голиафа", desc: "Победа над соперником с +200 MMR", points: 100 },
-
-    // Total Wins (Всего побед)
-    warrior: { icon: "⚔️", name: "Воин", desc: "50 побед всего", points: 30 },
-    centurion: { icon: "💯", name: "Центурион", desc: "100 побед всего", points: 50 },
-    centurionSupreme: { icon: "👑💯", name: "Верховный центурион", desc: "200 побед всего", points: 80 },
-    noMercy: { icon: "😈", name: "Без пощады", desc: "50+ побед в этом сезоне", points: 40 },
-
-    // Weekly/Activity (Недельная активность)
-    gladiator: { icon: "🏛️", name: "Гладиатор", desc: "10+ побед на этой неделе", points: 20 },
-    perfectWeek: { icon: "✨", name: "Идеальная неделя", desc: "20+ побед на этой неделе", points: 50 },
-
-    // Points (Очки)
-    goldRush: { icon: "💰", name: "Золотая лихорадка", desc: "1000+ очков", points: 30 },
-    platinumRush: { icon: "💎", name: "Платиновая лихорадка", desc: "2000+ очков", points: 60 },
-
-    // Special (Специальные)
-    comeback: { icon: "↩️", name: "Возвращение", desc: "Победа после 3 поражений", points: 20 },
-    persistent: { icon: "🔄", name: "Упорный", desc: "5 побед после серии из 5 поражений", points: 40 },
-    veteran: { icon: "🎖️", name: "Ветеран", desc: "500+ игр всего", points: 35 },
-    marathonRunner: { icon: "🏃", name: "Марафонец", desc: "100+ игр в этом сезоне", points: 30 },
-
-    // MMR Milestones (MMR достижения)
-    mmrMillionaire: { icon: "💵", name: "MMR Миллионер", desc: "Достигнуть 2000+ MMR", points: 50 },
-    eliteWarrior: { icon: "👑", name: "Элитный воин", desc: "Достигнуть 2200+ MMR", points: 100 },
-
-    // BNL Specific Achievements (Достижения БНЛ)
-    bnlRobber: { icon: "🏴‍☠️", name: "Обокрал ПТС БНЛ", desc: "Победа над игроком БНЛ", points: 30 },
-    bnlVictim: { icon: "😢", name: "Отдал ПТС БНЛ", desc: "Поражение от игрока БНЛ", points: -10 },
-    bnlRivalry: { icon: "⚔️🎯", name: "Соперничество БНЛ", desc: "Сыграть 5+ матчей против игроков БНЛ", points: 25 },
-    bnlDominator: { icon: "👑🏴‍☠️", name: "Доминатор БНЛ", desc: "Выиграть 10+ матчей против игроков БНЛ", points: 60 },
+// Achievement icons and points (names/descriptions come from i18n)
+const achievementMeta = {
+    winStreak3: { icon: "🔥", points: 30 },
+    winStreak5: { icon: "🔥🔥", points: 50 },
+    winStreak10: { icon: "🔥🔥🔥", points: 100 },
+    winStreak15: { icon: "👑", points: 150 },
+    loseStreak3: { icon: "💪", points: 10 },
+    loseStreak10: { icon: "🛡️", points: 25 },
+    giantSlayer: { icon: "⚔️", points: 25 },
+    titanSlayer: { icon: "⚡", points: 50 },
+    davidVsGoliath: { icon: "🏹", points: 100 },
+    warrior: { icon: "⚔️", points: 30 },
+    centurion: { icon: "💯", points: 50 },
+    centurionSupreme: { icon: "👑💯", points: 80 },
+    noMercy: { icon: "😈", points: 40 },
+    gladiator: { icon: "🏛️", points: 20 },
+    perfectWeek: { icon: "✨", points: 50 },
+    goldRush: { icon: "💰", points: 30 },
+    platinumRush: { icon: "💎", points: 60 },
+    comeback: { icon: "↩️", points: 20 },
+    persistent: { icon: "🔄", points: 40 },
+    veteran: { icon: "🎖️", points: 35 },
+    marathonRunner: { icon: "🏃", points: 30 },
+    mmrMillionaire: { icon: "💵", points: 50 },
+    eliteWarrior: { icon: "👑", points: 100 },
+    bnlRobber: { icon: "🏴‍☠️", points: 30 },
+    bnlVictim: { icon: "😢", points: -10 },
+    bnlRivalry: { icon: "⚔️🎯", points: 25 },
+    bnlDominator: { icon: "👑🏴‍☠️", points: 60 },
 };
+
+// Dynamic achievements object that returns localized names/descriptions
+const achievements = new Proxy(achievementMeta, {
+    get(target, key) {
+        if (key in target) {
+            const meta = target[key];
+            return {
+                icon: meta.icon,
+                name: t(`ach.${key}.name`),
+                desc: t(`ach.${key}.desc`),
+                points: meta.points,
+            };
+        }
+        return undefined;
+    }
+});
 
 const API_BASE = '';
 
@@ -455,7 +454,7 @@ function App() {
             setPlayers(loadedPlayers);
         } catch (error) {
             console.error('❌ Error loading players:', error);
-            setError('Не удалось загрузить данные игроков');
+            setError(t('players.errorLoad'));
         } finally {
             setLoading(false);
         }
@@ -849,7 +848,7 @@ function App() {
                     setShowLoginModal={setShowLoginModal}
                 />
                 <div className="app">
-                    <div className="loading">⚔️ Загрузка матчей с W3Champions...<br />Подсчет очков с 27.11.2025...</div>
+                    <div className="loading">{t('players.loading')}<br />{t('players.loadingSubtext')}</div>
                 </div>
             </div>
         );
@@ -1024,31 +1023,41 @@ function Header({ activeTab }) {
 }
 
 function Nav({ activeTab, setActiveTab, isAdmin, setShowLoginModal, playerUser, setShowPlayerAuthModal }) {
+    const lang = useLang();
     return (
         <div className="nav">
             <div className="nav-container">
-                <button className={`nav-btn ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>🏠 Главная</button>
-                <button className={`nav-btn ${activeTab === 'players' ? 'active' : ''}`} onClick={() => setActiveTab('players')}>Игроки</button>
-                <button className={`nav-btn ${activeTab === 'teams' ? 'active' : ''}`} onClick={() => setActiveTab('teams')}>Команды</button>
-                <button className={`nav-btn ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => setActiveTab('schedule')}>Расписание</button>
-                <button className={`nav-btn ${activeTab === 'streamers' ? 'active' : ''}`} onClick={() => setActiveTab('streamers')}>📺 Стримеры</button>
+                <button className={`nav-btn ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>{t('nav.home')}</button>
+                <button className={`nav-btn ${activeTab === 'players' ? 'active' : ''}`} onClick={() => setActiveTab('players')}>{t('nav.players')}</button>
+                <button className={`nav-btn ${activeTab === 'teams' ? 'active' : ''}`} onClick={() => setActiveTab('teams')}>{t('nav.teams')}</button>
+                <button className={`nav-btn ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => setActiveTab('schedule')}>{t('nav.schedule')}</button>
+                <button className={`nav-btn ${activeTab === 'streamers' ? 'active' : ''}`} onClick={() => setActiveTab('streamers')}>{t('nav.streamers')}</button>
                 {isAdmin ? (
-                    <button className={`nav-btn ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>⚙️ Админка</button>
+                    <button className={`nav-btn ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>{t('nav.admin')}</button>
                 ) : playerUser ? (
                     <button className={`nav-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>👤 {playerUser.username}</button>
                 ) : (
-                    <button className="nav-btn" onClick={() => setShowPlayerAuthModal(true)}>🔐 Вход</button>
+                    <button className="nav-btn" onClick={() => setShowPlayerAuthModal(true)}>{t('nav.login')}</button>
                 )}
+                <button
+                    className="nav-btn"
+                    onClick={() => i18n.setLang(i18n.lang === 'ru' ? 'en' : 'ru')}
+                    style={{ minWidth: '50px', fontWeight: '700' }}
+                    title={i18n.lang === 'ru' ? 'Switch to English' : 'Переключить на русский'}
+                >
+                    {i18n.lang === 'ru' ? 'EN' : 'RU'}
+                </button>
             </div>
         </div>
     );
 }
 
 function Rules() {
+    const lang = useLang();
     return (
         <div>
             <h2 style={{ fontSize: '2.5em', marginBottom: '30px', color: '#c9a961', textAlign: 'center' }}>
-                📜 Правила Breaking New Limits
+                {t('rules.title')}
             </h2>
 
             <div style={{
@@ -1061,18 +1070,12 @@ function Rules() {
             }}>
                 <div style={{ marginBottom: '40px', padding: '25px', background: '#2a2a2a', borderRadius: '15px', border: '2px solid #4caf50' }}>
                     <h3 style={{ fontSize: '1.8em', color: '#4caf50', marginBottom: '20px', textAlign: 'center' }}>
-                        🎮 Добро пожаловать в BNL!
+                        {t('rules.welcome')}
                     </h3>
                     <div style={{ fontSize: '1.1em', lineHeight: '1.8', color: '#e0e0e0' }}>
-                        <p style={{ marginBottom: '15px' }}>
-                            <strong>Breaking New Limits</strong> — это лига Warcraft 3: Reforged для любителей варкрафта, где игроки со всего региона соревнуются за звание чемпиона.
-                        </p>
-                        <p style={{ marginBottom: '15px' }}>
-                            Лига начинается <strong>9 февраля</strong> и состоит из <strong>3 этапов</strong>. На каждом этапе игроки зарабатывают <strong>очки</strong>, которые определяют их продвижение. Очки рассчитываются автоматически на основе ваших побед в W3Champions и выполненных достижений. Если W3Champions недоступен или не отслеживает ваши игры, вы можете предоставить скриншот истории побед из Battle.net — наши администраторы проверят и добавят очки вручную.
-                        </p>
-                        <p style={{ marginBottom: '15px' }}>
-                            <strong>Первый этап</strong> нужен для того, чтобы мы могли оценить вашу активность в игре и отобрать самых заинтересованных участников!
-                        </p>
+                        <p style={{ marginBottom: '15px' }} dangerouslySetInnerHTML={{ __html: t('rules.intro') }} />
+                        <p style={{ marginBottom: '15px' }} dangerouslySetInnerHTML={{ __html: t('rules.leagueDesc') }} />
+                        <p style={{ marginBottom: '15px' }} dangerouslySetInnerHTML={{ __html: t('rules.stage1purpose') }} />
                         <div style={{
                             background: '#1a1a1a',
                             padding: '15px',
@@ -1081,44 +1084,40 @@ function Rules() {
                             borderLeft: '4px solid #4caf50'
                         }}>
                             <p style={{ marginBottom: '10px' }}>
-                                <strong>Как это работает:</strong>
+                                <strong>{t('rules.howItWorks')}</strong>
                             </p>
                             <ul style={{ marginLeft: '20px', marginBottom: '0' }}>
-                                <li style={{ marginBottom: '8px' }}>📊 Каждая победа в ладдере приносит вам очки</li>
-                                <li style={{ marginBottom: '8px' }}>🏅 Дополнительные очки дают достижения (ачивки)</li>
-                                <li style={{ marginBottom: '8px' }}>🖼️ Очки разблокируют уникальные портреты для вашей расы</li>
-                                <li style={{ marginBottom: '8px' }}>🏆 Показав активность играми, вы проходите на следующий этап</li>
+                                <li style={{ marginBottom: '8px' }}>{t('rules.howItem1')}</li>
+                                <li style={{ marginBottom: '8px' }}>{t('rules.howItem2')}</li>
+                                <li style={{ marginBottom: '8px' }}>{t('rules.howItem3')}</li>
+                                <li style={{ marginBottom: '8px' }}>{t('rules.howItem4')}</li>
                             </ul>
                         </div>
                         <p style={{ color: '#c9a961', fontWeight: 'bold', textAlign: 'center' }}>
-                            Начните играть в ладдер на W3Champions и следите за своим прогрессом на этой странице!
+                            {t('rules.startPlaying')}
                         </p>
                     </div>
                 </div>
 
                 <div style={{ marginBottom: '40px' }}>
                     <h3 style={{ fontSize: '1.8em', color: '#c9a961', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span>⚔️</span> Этап 1: Ладдерные игры (Individual Stage)
+                        <span>⚔️</span> {t('rules.stage1title').replace('⚔️ ', '')}
                     </h3>
                     <div style={{ fontSize: '1.1em', lineHeight: '1.8', color: '#e0e0e0' }}>
-                        <p style={{ marginBottom: '15px' }}>
-                            Первый этап — это индивидуальный отбор. Вы играете в ладдере на <strong>W3Champions</strong>, и все ваши победы и поражения автоматически отслеживаются и конвертируются в очки BNL.
-                        </p>
-                        <p style={{ marginBottom: '15px' }}>
-                            Система расчета очков учитывает <strong>разницу MMR</strong> между вами и вашим противником. Это означает, что победа над более сильным игроком приносит больше очков, чем победа над слабым:
-                        </p>
+                        <p style={{ marginBottom: '15px' }} dangerouslySetInnerHTML={{ __html: t('rules.stage1desc') }} />
+                        <p style={{ marginBottom: '15px' }} dangerouslySetInnerHTML={{ __html: t('rules.pointsSystem') }} />
                         <ul style={{ marginLeft: '20px', marginBottom: '15px' }}>
                             <li style={{ marginBottom: '10px' }}>
-                                <strong style={{ color: '#4caf50' }}>+70 очков</strong> — победа над сильным соперником (разница MMR +20 и выше)
+                                <strong style={{ color: '#4caf50' }}>{t('rules.points70')}</strong>{t('rules.points70desc')}
                             </li>
                             <li style={{ marginBottom: '10px' }}>
-                                <strong style={{ color: '#4caf50' }}>+50 очков</strong> — победа над равным соперником (разница MMR от -19 до +19)
+                                <strong style={{ color: '#4caf50' }}>{t('rules.points50')}</strong>{t('rules.points50desc')}
                             </li>
                             <li style={{ marginBottom: '10px' }}>
-                                <strong style={{ color: '#f44336' }}>-50 очков</strong> — поражение от равного соперника
+                                <strong style={{ color: '#f44336' }}>{t('rules.pointsm50')}</strong>{t('rules.pointsm50desc')}
                             </li>
                             <li style={{ marginBottom: '10px' }}>
-                                <strong style={{ color: '#f44336' }}>-70 очков</strong> — поражение от слабого соперника (разница MMR -20 и ниже)
+                                <strong style={{ color: '#f44336' }}>{t('rules.pointsm70')}</strong>{t('rules.pointsm70desc')}
                             </li>
                         </ul>
 
@@ -1130,69 +1129,69 @@ function Rules() {
                             marginBottom: '20px'
                         }}>
                             <h4 style={{ fontSize: '1.3em', color: '#c9a961', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <span>🏅</span> Ачивки — дополнительные очки
+                                <span>🏅</span> {t('rules.achievementsTitle').replace('🏅 ', '')}
                             </h4>
                             <p style={{ color: '#e0e0e0', marginBottom: '15px' }}>
-                                Выполняя особые достижения, вы получаете бонусные очки, которые добавляются к вашему счету:
+                                {t('rules.achievementsDesc')}
                             </p>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                 <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
                                     <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
-                                        🔥 <strong>On Fire</strong> — <span style={{ color: '#4caf50' }}>+30 очков</span>
+                                        🔥 <strong>{t('rules.achOnFire')}</strong> — <span style={{ color: '#4caf50' }}>+30 {t('detail.points').toLowerCase()}</span>
                                     </div>
-                                    <div style={{ fontSize: '0.9em', color: '#888' }}>3 победы подряд</div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>{t('rules.achOnFireDesc')}</div>
                                 </div>
                                 <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
                                     <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
-                                        🔥🔥 <strong>Hot Streak</strong> — <span style={{ color: '#4caf50' }}>+50 очков</span>
+                                        🔥🔥 <strong>{t('rules.achHotStreak')}</strong> — <span style={{ color: '#4caf50' }}>+50 {t('detail.points').toLowerCase()}</span>
                                     </div>
-                                    <div style={{ fontSize: '0.9em', color: '#888' }}>5 побед подряд</div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>{t('rules.achHotStreakDesc')}</div>
                                 </div>
                                 <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
                                     <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
-                                        ⚔️ <strong>И кто тут папа?</strong> — <span style={{ color: '#4caf50' }}>+25 очков</span>
+                                        ⚔️ <strong>{t('rules.achGiantSlayer')}</strong> — <span style={{ color: '#4caf50' }}>+25 {t('detail.points').toLowerCase()}</span>
                                     </div>
-                                    <div style={{ fontSize: '0.9em', color: '#888' }}>Победа над игроком с +50 MMR</div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>{t('rules.achGiantSlayerDesc')}</div>
                                 </div>
                                 <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
                                     <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
-                                        💪 <strong>Не расстраивайся</strong> — <span style={{ color: '#4caf50' }}>+10 очков</span>
+                                        💪 <strong>{t('rules.achDontGiveUp')}</strong> — <span style={{ color: '#4caf50' }}>+10 {t('detail.points').toLowerCase()}</span>
                                     </div>
-                                    <div style={{ fontSize: '0.9em', color: '#888' }}>3 поражения подряд (не сдавайся!)</div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>{t('rules.achDontGiveUpDesc')}</div>
                                 </div>
                                 <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
                                     <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
-                                        💯 <strong>Centurion</strong> — <span style={{ color: '#4caf50' }}>+50 очков</span>
+                                        💯 <strong>{t('rules.achCenturion')}</strong> — <span style={{ color: '#4caf50' }}>+50 {t('detail.points').toLowerCase()}</span>
                                     </div>
-                                    <div style={{ fontSize: '0.9em', color: '#888' }}>100 побед за все время</div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>{t('rules.achCenturionDesc')}</div>
                                 </div>
                                 <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
                                     <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
-                                        🏛️ <strong>Gladiator</strong> — <span style={{ color: '#4caf50' }}>+20 очков</span>
+                                        🏛️ <strong>{t('rules.achGladiator')}</strong> — <span style={{ color: '#4caf50' }}>+20 {t('detail.points').toLowerCase()}</span>
                                     </div>
-                                    <div style={{ fontSize: '0.9em', color: '#888' }}>10+ побед на этой неделе</div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>{t('rules.achGladiatorDesc')}</div>
                                 </div>
                                 <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
                                     <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
-                                        💰 <strong>Gold Rush</strong> — <span style={{ color: '#4caf50' }}>+30 очков</span>
+                                        💰 <strong>{t('rules.achGoldRush')}</strong> — <span style={{ color: '#4caf50' }}>+30 {t('detail.points').toLowerCase()}</span>
                                     </div>
-                                    <div style={{ fontSize: '0.9em', color: '#888' }}>Достигли 1000+ очков</div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>{t('rules.achGoldRushDesc')}</div>
                                 </div>
                                 <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
                                     <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
-                                        ↩️ <strong>Comeback</strong> — <span style={{ color: '#4caf50' }}>+20 очков</span>
+                                        ↩️ <strong>{t('rules.achComeback')}</strong> — <span style={{ color: '#4caf50' }}>+20 {t('detail.points').toLowerCase()}</span>
                                     </div>
-                                    <div style={{ fontSize: '0.9em', color: '#888' }}>Победа после 3 поражений</div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>{t('rules.achComebackDesc')}</div>
                                 </div>
                                 <div style={{ padding: '10px', background: '#1a1a1a', borderRadius: '8px' }}>
                                     <div style={{ fontSize: '1.1em', marginBottom: '5px' }}>
-                                        🎖️ <strong>Veteran</strong> — <span style={{ color: '#4caf50' }}>+35 очков</span>
+                                        🎖️ <strong>{t('rules.achVeteran')}</strong> — <span style={{ color: '#4caf50' }}>+35 {t('detail.points').toLowerCase()}</span>
                                     </div>
-                                    <div style={{ fontSize: '0.9em', color: '#888' }}>500+ игр за все время</div>
+                                    <div style={{ fontSize: '0.9em', color: '#888' }}>{t('rules.achVeteranDesc')}</div>
                                 </div>
                             </div>
                             <p style={{ fontSize: '0.9em', color: '#888', marginTop: '15px', fontStyle: 'italic' }}>
-                                💡 Ачивки могут быть выполнены несколько раз, каждый раз давая бонусные очки!
+                                {t('rules.achievementsNote')}
                             </p>
                         </div>
 
@@ -1204,30 +1203,22 @@ function Rules() {
                             border: '2px solid #c9a961'
                         }}>
                             <h4 style={{ fontSize: '1.3em', color: '#c9a961', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <span>🖼️</span> Портреты — визуальные награды за ваш прогресс
+                                <span>🖼️</span> {t('rules.portraitsTitle').replace('🖼️ ', '')}
                             </h4>
                             <p style={{ color: '#e0e0e0', lineHeight: '1.6', marginBottom: '15px' }}>
-                                Портреты — это уникальные визуальные награды, которые отражают ваш прогресс в лиге. По мере накопления очков вы разблокируете новые портреты для своей расы, которые будут отображаться на вашей карточке игрока на сайте.
+                                {t('rules.portraitsDesc')}
                             </p>
                             <p style={{ color: '#e0e0e0', lineHeight: '1.6', marginBottom: '15px' }}>
-                                Каждый портрет требует определенное количество очков для разблокировки. Больше очков = больше крутых портретов:
+                                {t('rules.portraitsReq')}
                             </p>
                             <ul style={{ marginLeft: '20px', marginBottom: '15px', color: '#e0e0e0' }}>
-                                <li style={{ marginBottom: '10px' }}>
-                                    Портреты доступны только для вашей расы (Human, Orc, Night Elf, Undead, Random)
-                                </li>
-                                <li style={{ marginBottom: '10px' }}>
-                                    Каждый портрет требует определенное количество очков (от 0 до 1000+)
-                                </li>
-                                <li style={{ marginBottom: '10px' }}>
-                                    Выберите портрет в своем профиле после привязки BattleTag
-                                </li>
-                                <li style={{ marginBottom: '10px' }}>
-                                    Портрет отображается на вашей карточке игрока
-                                </li>
+                                <li style={{ marginBottom: '10px' }}>{t('rules.portraitItem1')}</li>
+                                <li style={{ marginBottom: '10px' }}>{t('rules.portraitItem2')}</li>
+                                <li style={{ marginBottom: '10px' }}>{t('rules.portraitItem3')}</li>
+                                <li style={{ marginBottom: '10px' }}>{t('rules.portraitItem4')}</li>
                             </ul>
                             <p style={{ fontSize: '0.9em', color: '#c9a961', fontStyle: 'italic', marginTop: '15px' }}>
-                                🎨 Собирайте очки, чтобы открыть все портреты вашей расы!
+                                {t('rules.portraitsCollect')}
                             </p>
                         </div>
                         <div style={{
@@ -1238,13 +1229,13 @@ function Rules() {
                             marginTop: '20px'
                         }}>
                             <p style={{ fontSize: '1.2em', fontWeight: '700', color: '#c9a961', marginBottom: '10px' }}>
-                                🏆 Условие перехода во второй этап:
+                                {t('rules.stage1condition')}
                             </p>
                             <p style={{ fontSize: '1.3em', fontWeight: '800', color: '#4caf50' }}>
-                                Показать активность играми в ладдере
+                                {t('rules.stage1conditionText')}
                             </p>
                             <p style={{ fontSize: '0.95em', color: '#888', marginTop: '10px' }}>
-                                Играйте в ладдер, набирайте очки и выполняйте ачивки — мы оцениваем вашу активность и заинтересованность!
+                                {t('rules.stage1conditionHint')}
                             </p>
                         </div>
                     </div>
@@ -1252,26 +1243,20 @@ function Rules() {
 
                 <div style={{ marginBottom: '40px' }}>
                     <h3 style={{ fontSize: '1.8em', color: '#c9a961', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span>👥</span> Этап 2: Командный этап (Team Stage)
+                        <span>👥</span> {t('rules.stage2title').replace('👥 ', '')}
                     </h3>
                     <div style={{ fontSize: '1.1em', lineHeight: '1.8', color: '#e0e0e0' }}>
                         <p style={{ marginBottom: '15px' }}>
-                            Игроки, показавшие активность на первом этапе, попадают во второй этап командного соревнования. На этом этапе все участники разделяются на две команды, и начинается «война команд».
+                            {t('rules.stage2desc')}
                         </p>
                         <p style={{ marginBottom: '15px' }}>
-                            Каждую команду возглавляют и управляют:
+                            {t('rules.stage2teamLead')}
                         </p>
                         <ul style={{ marginLeft: '20px', marginBottom: '15px' }}>
-                            <li style={{ marginBottom: '10px' }}>
-                                <strong style={{ color: '#c9a961' }}>👨‍💼 Капитан</strong> — отвечает за организацию матчей, координацию команды и представление команды. Капитан выбирает лучшего игрока для финала.
-                            </li>
-                            <li style={{ marginBottom: '10px' }}>
-                                <strong style={{ color: '#c9a961' }}>👨‍🏫 Тренер</strong> — помогает команде с советами по стратегии, анализирует игры противников и помогает игрокам совершенствоваться. За каждую победу вашего ученика вы получаете <strong>дополнительные очки</strong>, которые добавляются к вашему счету!
-                            </li>
+                            <li style={{ marginBottom: '10px' }} dangerouslySetInnerHTML={{ __html: t('rules.stage2captain') }} />
+                            <li style={{ marginBottom: '10px' }} dangerouslySetInnerHTML={{ __html: t('rules.stage2coach') }} />
                         </ul>
-                        <p style={{ marginBottom: '15px' }}>
-                            <strong>Как это работает:</strong> В течение месяца каждый игрок из команды А играет против каждого игрока из команды Б. Очки со всех матчей суммируются. Команда с наибольшим количеством очков побеждает второй этап и получает преимущество в финале!
-                        </p>
+                        <p style={{ marginBottom: '15px' }} dangerouslySetInnerHTML={{ __html: t('rules.stage2howDetailed') }} />
                         <div style={{
                             background: '#2a2a2a',
                             padding: '15px',
@@ -1279,10 +1264,10 @@ function Rules() {
                             marginTop: '15px'
                         }}>
                             <p style={{ fontSize: '1.1em', color: '#888', marginBottom: '10px' }}>
-                                💡 Очки со второго этапа влияют на преимущества в финале
+                                {t('rules.stage2note1')}
                             </p>
                             <p style={{ fontSize: '1.1em', color: '#888' }}>
-                                💎 Администраторы могут добавлять дополнительные очки игрокам при необходимости (например, за альтернативные доказательства побед или вклад в развитие лиги)
+                                {t('rules.stage2note2')}
                             </p>
                         </div>
                     </div>
@@ -1290,25 +1275,17 @@ function Rules() {
 
                 <div>
                     <h3 style={{ fontSize: '1.8em', color: '#c9a961', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span>🏆</span> Этап 3: Супер Финал (Grand Finals)
+                        <span>🏆</span> {t('rules.stage3title').replace('🏆 ', '')}
                     </h3>
                     <div style={{ fontSize: '1.1em', lineHeight: '1.8', color: '#e0e0e0' }}>
                         <p style={{ marginBottom: '15px' }}>
-                            После завершения командного этапа два лучших игрока из каждой команды попадают в решающий финал, где определяется чемпион BNL!
+                            {t('rules.stage3desc')}
                         </p>
-                        <p style={{ marginBottom: '15px' }}>
-                            <strong>Преимущества команды-победителя:</strong>
-                        </p>
+                        <p style={{ marginBottom: '15px' }} dangerouslySetInnerHTML={{ __html: t('rules.stage3advantages') }} />
                         <ul style={{ marginLeft: '20px', marginBottom: '15px' }}>
-                            <li style={{ marginBottom: '10px' }}>
-                                🎯 Первое право банов (может забанить расу или карту) в первой игре
-                            </li>
-                            <li style={{ marginBottom: '10px' }}>
-                                🗺️ Право выбора первой карты
-                            </li>
-                            <li style={{ marginBottom: '10px' }}>
-                                💪 Психологическое преимущество как команда-фаворит
-                            </li>
+                            <li style={{ marginBottom: '10px' }}>{t('rules.stage3adv1')}</li>
+                            <li style={{ marginBottom: '10px' }}>{t('rules.stage3adv2')}</li>
+                            <li style={{ marginBottom: '10px' }}>{t('rules.stage3adv3')}</li>
                         </ul>
                         <div style={{
                             background: '#2a2a2a',
@@ -1318,17 +1295,17 @@ function Rules() {
                             borderLeft: '4px solid #c9a961'
                         }}>
                             <p style={{ marginBottom: '10px' }}>
-                                <strong>Формат Финала:</strong>
+                                <span dangerouslySetInnerHTML={{ __html: t('rules.stage3format') }} />
                             </p>
                             <ul style={{ marginLeft: '20px' }}>
-                                <li style={{ marginBottom: '8px' }}>📊 <strong>Best of 3 (BO3)</strong> — первый, кто выиграет 2 игры из 3</li>
-                                <li style={{ marginBottom: '8px' }}>🏅 Каждая игра — это 1v1 между выбранными игроками</li>
-                                <li style={{ marginBottom: '8px' }}>🎬 Финал проводится в прямом эфире со стриммерами и комментариями</li>
+                                <li style={{ marginBottom: '8px' }} dangerouslySetInnerHTML={{ __html: t('rules.stage3bo3') }} />
+                                <li style={{ marginBottom: '8px' }}>{t('rules.stage3game')}</li>
+                                <li style={{ marginBottom: '8px' }}>{t('rules.stage3stream')}</li>
                             </ul>
                         </div>
                         <ul style={{ marginLeft: '20px', marginBottom: '15px' }}>
                             <li style={{ marginBottom: '10px' }}>
-                                🥇 Победитель становится <strong style={{ color: '#ffd700' }}>ЧЕМПИОНОМ BNL сезона</strong>!
+                                <span dangerouslySetInnerHTML={{ __html: t('rules.stage3champion') }} />
                             </li>
                         </ul>
                         <div style={{
@@ -1339,7 +1316,7 @@ function Rules() {
                             textAlign: 'center'
                         }}>
                             <p style={{ fontSize: '1.4em', fontWeight: '800', color: '#000' }}>
-                                ⚔️ Да начнется битва! ⚔️
+                                {t('rules.stage3battleCry')}
                             </p>
                         </div>
                     </div>
@@ -1458,7 +1435,7 @@ function Players({ players }) {
         if (leaguePlayers.length === 0) {
             return (
                 <div style={{ textAlign: 'center', color: '#888', fontSize: '1.1em', padding: '40px' }}>
-                    Нет игроков в этой лиге
+                    {t('players.noPlayers')}
                 </div>
             );
         }
@@ -1500,7 +1477,7 @@ function Players({ players }) {
 
     return (
         <div>
-            <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961', textAlign: 'center' }}>Профили игроков</h2>
+            <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961', textAlign: 'center' }}>{t('players.title')}</h2>
 
             {/* League Toggle Tabs */}
             <div style={{
@@ -1539,7 +1516,7 @@ function Players({ players }) {
                         }
                     }}
                 >
-                    👑 Премьер Лига
+                    {t('players.premierLeague')}
                 </button>
                 <button
                     onClick={() => setSelectedLeague('league1')}
@@ -1570,7 +1547,7 @@ function Players({ players }) {
                         }
                     }}
                 >
-                    ⚔️ Лига 1
+                    {t('players.league1')}
                 </button>
             </div>
 
@@ -1626,7 +1603,7 @@ function Players({ players }) {
                             letterSpacing: '3px',
                             textShadow: '0 0 20px rgba(201, 169, 97, 0.5)'
                         }}>
-                            ПЕРВЫЙ ЭТАП ЗАКОНЧИЛСЯ!
+                            {t('players.stageEnded')}
                         </h2>
                         <div style={{
                             width: '80px',
@@ -1640,7 +1617,7 @@ function Players({ players }) {
                             lineHeight: '1.6',
                             marginBottom: '30px'
                         }}>
-                            Результаты первого этапа зафиксированы. Следите за обновлениями!
+                            {t('players.stageEndedDesc')}
                         </p>
                         <button
                             onClick={() => setShowStageModal(false)}
@@ -1666,7 +1643,7 @@ function Players({ players }) {
                                 e.target.style.boxShadow = '0 4px 15px rgba(201, 169, 97, 0.4)';
                             }}
                         >
-                            ПОНЯТНО
+                            {t('players.understood')}
                         </button>
                     </div>
                 </div>
@@ -1765,7 +1742,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                                         e.currentTarget.style.transform = 'scale(1)';
                                         e.currentTarget.style.boxShadow = '0 2px 8px rgba(201, 169, 97, 0.6)';
                                     }}
-                                    title="Переключить расу"
+                                    title={t('players.switchRace')}
                                 >
                                     ⇄
                                 </button>
@@ -1788,7 +1765,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                             <div className="battle-tag">{player.battleTag}</div>
                             {player.error && (
                                 <div style={{ color: '#f44336', fontSize: '0.7em', marginTop: '5px' }}>
-                                    ⚠️ Не удалось загрузить данные
+                                    ⚠️ {t('players.failedLoad')}
                                 </div>
                             )}
                         </div>
@@ -1934,7 +1911,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                                 e.currentTarget.style.background = '#5865F2';
                             }, 300);
                         }}
-                        title="Нажмите, чтобы скопировать Discord тег"
+                        title={t('players.copyDiscord')}
                     >
                         <svg width="18" height="18" viewBox="0 0 71 55" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <g clipPath="url(#clip0)">
@@ -1968,7 +1945,7 @@ function PlayerCard({ player, rank, onClick, hasMultipleRaces, onToggleRace, por
                             boxShadow: '0 -2px 10px rgba(201, 169, 97, 0.5)',
                             borderRadius: '0 0 12px 12px'
                         }}
-                        title="Поздравляем! Вы прошли во второй тур! Администратор скоро назначит вам команду."
+                        title={t('players.qualified')}
                     >
                         ✓ QUALIFIED
                     </div>
@@ -2118,7 +2095,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
 
     return (
         <div>
-            <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>Команды</h2>
+            <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>{t('teams.title')}</h2>
 
             {/* Sub-tabs Navigation */}
             <div style={{
@@ -2143,7 +2120,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                         borderBottom: subTeamsTab === 'team-list' ? '3px solid #c9a961' : 'none'
                     }}
                 >
-                    📋 Список команд
+                    {t('teams.teamList')}
                 </button>
                 <button
                     onClick={() => setSubTeamsTab('team-matches')}
@@ -2160,7 +2137,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                         borderBottom: subTeamsTab === 'team-matches' ? '3px solid #c9a961' : 'none'
                     }}
                 >
-                    ⚔️ Командные матчи
+                    {t('teams.teamMatches')}
                 </button>
                 <button
                     onClick={() => setSubTeamsTab('team-stats')}
@@ -2177,7 +2154,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                         borderBottom: subTeamsTab === 'team-stats' ? '3px solid #c9a961' : 'none'
                     }}
                 >
-                    📊 Статистика
+                    {t('teams.teamStats')}
                 </button>
             </div>
 
@@ -2217,7 +2194,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                                 <span className="team-emoji" style={{ display: team.logo ? 'none' : 'inline' }}>{team.emoji}</span>
                                 <div>
                                     <div className="team-name">{team.name}</div>
-                                    <div style={{ color: '#888', fontSize: '1em' }}>{teamPlayers.length} игроков</div>
+                                    <div style={{ color: '#888', fontSize: '1em' }}>{teamPlayers.length} {t('teams.players')}</div>
                                 </div>
                             </div>
                             <div className="team-points">{totalPoints} pts</div>
@@ -2226,7 +2203,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                         <div className={`team-members-list ${expandedTeam === team.id ? 'expanded' : ''}`}>
                             {captain && (
                                 <div className="member-section">
-                                    <div className="section-title">👥 Капитан</div>
+                                    <div className="section-title">{t('teams.captain')}</div>
                                     <div
                                         className="member-item"
                                         onClick={(e) => {
@@ -2250,7 +2227,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
 
                             {coaches.length > 0 && (
                                 <div className="member-section">
-                                    <div className="section-title">🎓 Тренеры</div>
+                                    <div className="section-title">{t('teams.coaches')}</div>
                                     {coaches.map(coach => (
                                         <div
                                             key={coach.id}
@@ -2276,7 +2253,7 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
                             )}
 
                             <div className="member-section">
-                                <div className="section-title">⚔️ Игроки</div>
+                                <div className="section-title">{t('teams.playersSection')}</div>
                                 {teamPlayers
                                     .sort((a, b) => getPlayerPointsFromSchedule(b.id) - getPlayerPointsFromSchedule(a.id)) // Sort by Schedule points descending
                                     .map(player => (
@@ -2732,7 +2709,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                     color: '#888',
                                     textAlign: 'center'
                                 }}>
-                                    {new Date(match.scheduledDate).toLocaleDateString('ru-RU')}
+                                    {new Date(match.scheduledDate).toLocaleDateString(i18n.lang === 'en' ? 'en-US' : 'ru-RU')}
                                 </div>
                             )}
                         </React.Fragment>
@@ -2772,7 +2749,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             }}
                             onMouseOver={(e) => e.target.style.transform = 'scale(1.1)'}
                             onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
-                            title="Установить дату и время"
+                            title={t('schedule.setDateTime')}
                         >
                             📅
                         </div>
@@ -2801,7 +2778,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             }}
                             onMouseOver={(e) => e.target.style.transform = 'scale(1.1)'}
                             onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
-                            title="Отметить победителя"
+                            title={t('schedule.markWinner')}
                         >
                             🏆
                         </div>
@@ -2828,7 +2805,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                 {match.matchFile.originalName}
                             </div>
                             <div style={{ color: '#888', fontSize: '0.8em' }}>
-                                {(match.matchFile.size / 1024).toFixed(1)} кб
+                                {(match.matchFile.size / 1024).toFixed(1)} {t('schedule.kb')}
                             </div>
                         </div>
                         <a
@@ -2848,7 +2825,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             onMouseOver={(e) => e.target.style.background = '#45a049'}
                             onMouseOut={(e) => e.target.style.background = '#4caf50'}
                         >
-                            ⬇️ Скачать
+                            {t('schedule.download')}
                         </a>
                     </div>
                 )}
@@ -2858,7 +2835,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
     
     return (
         <div>
-            <h2 style={{ fontSize: '2em', marginBottom: '20px', color: '#c9a961' }}>Расписание матчей</h2>
+            <h2 style={{ fontSize: '2em', marginBottom: '20px', color: '#c9a961' }}>{t('schedule.title')}</h2>
 
             {/* Sub-tabs */}
             <div style={{
@@ -2882,7 +2859,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                         transition: 'all 0.3s ease'
                     }}
                 >
-                    📅 Расписание
+                    {t('schedule.tab')}
                 </button>
                 <button
                     onClick={() => setSubTab('live')}
@@ -2936,7 +2913,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                     border: '1px solid #333'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ color: '#888', fontSize: '0.9em' }}>🏆 Команда:</span>
+                        <span style={{ color: '#888', fontSize: '0.9em' }}>{t('schedule.teamFilter')}</span>
                         <select
                             value={filterTeam}
                             onChange={(e) => setFilterTeam(e.target.value)}
@@ -2950,7 +2927,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                 minWidth: '180px'
                             }}
                         >
-                            <option value="">Все команды</option>
+                            <option value="">{t('schedule.allTeams')}</option>
                             {teams.map(team => (
                                 <option key={team.id || team._id} value={team.id || team._id}>
                                     {team.emoji} {team.name}
@@ -2959,10 +2936,10 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                         </select>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ color: '#888', fontSize: '0.9em' }}>👤 Игрок:</span>
+                        <span style={{ color: '#888', fontSize: '0.9em' }}>{t('schedule.playerFilter')}</span>
                         <input
                             type="text"
-                            placeholder="Поиск по имени..."
+                            placeholder={t('schedule.searchByName')}
                             value={filterPlayer}
                             onChange={(e) => setFilterPlayer(e.target.value)}
                             style={{
@@ -2977,7 +2954,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                         />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ color: '#888', fontSize: '0.9em' }}>📊 Статус:</span>
+                        <span style={{ color: '#888', fontSize: '0.9em' }}>{t('schedule.statusFilter')}</span>
                         <select
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
@@ -2991,9 +2968,9 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                 minWidth: '180px'
                             }}
                         >
-                            <option value="">Все матчи</option>
-                            <option value="completed">✅ Сыграны</option>
-                            <option value="pending">⏳ Ожидаются</option>
+                            <option value="">{t('schedule.allMatches')}</option>
+                            <option value="completed">{t('schedule.completed')}</option>
+                            <option value="pending">{t('schedule.pending')}</option>
                         </select>
                     </div>
                     {(filterTeam || filterPlayer || filterStatus) && (
@@ -3009,7 +2986,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                 fontSize: '0.9em'
                             }}
                         >
-                            ✕ Сбросить
+                            {t('schedule.reset')}
                         </button>
                     )}
                 </div>
@@ -3090,7 +3067,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             marginBottom: '10px'
                         }}>
                             <span style={{ color: '#888', fontSize: '0.85em', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                Статистика игроков ({playerStatsList.length})
+                                {t('schedule.playerStats')} ({playerStatsList.length})
                             </span>
                         </div>
                         <div style={{
@@ -3154,7 +3131,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                                 <span style={{ color: '#555' }}>-</span>
                                                 <span style={{ color: '#f44336', fontWeight: '700' }}>{ps.losses}L</span>
                                                 <span style={{ color: '#555' }}>|</span>
-                                                <span style={{ color: '#ff9800' }}>{ps.remaining} ост.</span>
+                                                <span style={{ color: '#ff9800' }}>{ps.remaining} {t('schedule.leftRemaining')}</span>
                                             </div>
                                         </div>
                                         {/* Win rate circle */}
@@ -3247,20 +3224,20 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                         }}>
                             <div style={{ textAlign: 'center', minWidth: '100px' }}>
                                 <div style={{ fontSize: '2em', fontWeight: '800', color: '#c9a961' }}>{totalMatches}</div>
-                                <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Всего матчей</div>
+                                <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('schedule.totalMatches')}</div>
                             </div>
                             <div style={{ textAlign: 'center', minWidth: '100px' }}>
                                 <div style={{ fontSize: '2em', fontWeight: '800', color: '#4caf50' }}>{completedMatches}</div>
-                                <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Сыграно</div>
+                                <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('schedule.played')}</div>
                             </div>
                             <div style={{ textAlign: 'center', minWidth: '100px' }}>
                                 <div style={{ fontSize: '2em', fontWeight: '800', color: '#ff9800' }}>{upcomingMatches}</div>
-                                <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Осталось</div>
+                                <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('schedule.remaining')}</div>
                             </div>
                             {todayMatches.length > 0 && (
                                 <div style={{ textAlign: 'center', minWidth: '100px' }}>
                                     <div style={{ fontSize: '2em', fontWeight: '800', color: '#2196f3' }}>{todayMatches.length}</div>
-                                    <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Сегодня</div>
+                                    <div style={{ fontSize: '0.8em', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('schedule.today')}</div>
                                 </div>
                             )}
                         </div>
@@ -3272,7 +3249,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                 justifyContent: 'space-between',
                                 marginBottom: '6px'
                             }}>
-                                <span style={{ fontSize: '0.8em', color: '#888' }}>Прогресс турнира</span>
+                                <span style={{ fontSize: '0.8em', color: '#888' }}>{t('schedule.tournamentProgress')}</span>
                                 <span style={{ fontSize: '0.8em', color: '#c9a961', fontWeight: '700' }}>{Math.round(progressPercent)}%</span>
                             </div>
                             <div style={{
@@ -3513,7 +3490,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                 alignItems: 'center',
                                 gap: '10px'
                             }}>
-                                🏆 Турнирная сетка матчей
+                                {t('schedule.matchBracket')}
                             </h3>
                             
                             {filteredMatchup.matches.map(match => (
@@ -3528,7 +3505,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                     padding: '40px',
                                     color: '#666'
                                 }}>
-                                    Матчи ещё не назначены
+                                    {t('schedule.noMatches')}
                                 </div>
                             )}
                         </div>
@@ -3547,7 +3524,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             border: '2px solid #c9a961'
                         }}>
                             <div style={{ fontSize: '3em', marginBottom: '20px' }}>⏳</div>
-                            <div style={{ color: '#c9a961', fontSize: '1.2em' }}>Загрузка live матчей...</div>
+                            <div style={{ color: '#c9a961', fontSize: '1.2em' }}>{t('schedule.loadingLive')}</div>
                         </div>
                     ) : liveMatches.length === 0 ? (
                         <div style={{
@@ -3559,10 +3536,10 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                         }}>
                             <div style={{ fontSize: '3em', marginBottom: '20px' }}>😴</div>
                             <div style={{ color: '#888', fontSize: '1.2em', marginBottom: '10px' }}>
-                                Сейчас никто из ваших игроков не играет
+                                {t('schedule.noLive')}
                             </div>
                             <div style={{ color: '#666', fontSize: '0.9em' }}>
-                                Обновление каждые 30 секунд
+                                {t('schedule.refreshEvery30')}
                             </div>
                         </div>
                     ) : (
@@ -3579,10 +3556,10 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             }}>
                                 <div>
                                     <div style={{ fontSize: '1.2em', fontWeight: '700' }}>
-                                        🔴 {liveMatches.length} {liveMatches.length === 1 ? 'матч' : 'матчей'} в эфире
+                                        🔴 {liveMatches.length} {liveMatches.length === 1 ? t('schedule.matchLive') : t('schedule.matchesLive')}
                                     </div>
                                     <div style={{ fontSize: '0.9em', opacity: 0.9 }}>
-                                        Обновляется автоматически каждые 30 секунд
+                                        {t('schedule.autoRefresh')}
                                     </div>
                                 </div>
                                 <button
@@ -3605,7 +3582,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                         e.target.style.background = 'rgba(255,255,255,0.2)';
                                     }}
                                 >
-                                    🔄 Обновить
+                                    {t('schedule.refresh')}
                                 </button>
                             </div>
 
@@ -3709,7 +3686,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                                     e.target.style.boxShadow = '0 4px 20px rgba(102, 126, 234, 0.5)';
                                                 }}
                                             >
-                                                📺 Смотреть профиль игрока
+                                                {t('schedule.watchProfile')}
                                             </a>
                                         )}
                                     </div>
@@ -3750,7 +3727,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             // BEFORE MATCH: Set date and time
                             <>
                                 <h3 style={{ color: '#c9a961', marginBottom: '20px', fontSize: '1.5em' }}>
-                                    📅 Установить время матча
+                                    {t('match.setTime')}
                                 </h3>
 
                                 {/* Match Info */}
@@ -3763,7 +3740,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                 {/* Date Input */}
                                 <div style={{ marginBottom: '20px' }}>
                                     <label style={{ display: 'block', color: '#c9a961', marginBottom: '8px', fontWeight: '600' }}>
-                                        📅 Дата матча
+                                        {t('match.matchDate')}
                                     </label>
                                     <input
                                         type="date"
@@ -3785,7 +3762,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                 {/* Time Input */}
                                 <div style={{ marginBottom: '20px' }}>
                                     <label style={{ display: 'block', color: '#c9a961', marginBottom: '8px', fontWeight: '600' }}>
-                                        🕐 Время матча
+                                        {t('match.matchTime')}
                                     </label>
                                     <input
                                         type="time"
@@ -3809,7 +3786,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                     <button
                                         onClick={async () => {
                                             if (!matchDate || !matchTime) {
-                                                alert('❌ Заполните дату и время!');
+                                                alert(t('match.fillDateTime'));
                                                 return;
                                             }
 
@@ -3830,15 +3807,15 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
 
                                                 const data = await response.json();
                                                 if (data.error) {
-                                                    alert(`❌ Ошибка: ${data.error}`);
+                                                    alert(`❌ ${t('common.error')}: ${data.error}`);
                                                 } else {
-                                                    alert(`✅ Дата и время установлены!`);
+                                                    alert(t('match.dateTimeSet'));
                                                     setShowMatchModal(false);
                                                     setMatchFile(null);
                                                     if (onUpdate) onUpdate();
                                                 }
                                             } catch (error) {
-                                                alert('Ошибка подключения к серверу');
+                                                alert(t('match.connectionError'));
                                             } finally {
                                                 setUploadingFile(false);
                                             }
@@ -3857,7 +3834,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                         }}
                                         disabled={uploadingFile}
                                     >
-                                        {uploadingFile ? '⏳ Сохранение...' : '✅ Установить время'}
+                                        {uploadingFile ? t('match.saving') : t('match.setTimeBtn')}
                                     </button>
                                     <button
                                         onClick={() => {
@@ -3875,7 +3852,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                             fontWeight: '600'
                                         }}
                                     >
-                                        ❌ Отмена
+                                        {t('match.cancel')}
                                     </button>
                                 </div>
                             </>
@@ -3883,7 +3860,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             // AFTER MATCH: Upload file
                             <>
                                 <h3 style={{ color: '#c9a961', marginBottom: '20px', fontSize: '1.5em' }}>
-                                    📁 Загрузить файл матча
+                                    {t('match.uploadFile')}
                                 </h3>
 
                                 {/* Match Info */}
@@ -3896,7 +3873,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                 {/* File Upload */}
                                 <div style={{ marginBottom: '20px' }}>
                                     <label style={{ display: 'block', color: '#c9a961', marginBottom: '8px', fontWeight: '600' }}>
-                                        📁 Файл игры (макс. 700 кб)
+                                        {t('match.fileLabel')}
                                     </label>
                                     <input
                                         type="file"
@@ -3904,7 +3881,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                             const file = e.target.files?.[0];
                                             if (file) {
                                                 if (file.size > 700 * 1024) {
-                                                    alert('❌ Файл больше 700 кб!');
+                                                    alert(t('match.fileTooLarge'));
                                                     return;
                                                 }
                                                 setMatchFile(file);
@@ -3923,7 +3900,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                     />
                                     {matchFile && (
                                         <div style={{ marginTop: '10px', color: '#4caf50', fontSize: '0.9em' }}>
-                                            ✓ Выбран: {matchFile.name}
+                                            {t('match.fileSelected')} {matchFile.name}
                                         </div>
                                     )}
                                 </div>
@@ -3947,18 +3924,18 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
 
                                                     const fileData = await fileResponse.json();
                                                     if (fileData.error) {
-                                                        alert(`❌ Ошибка загрузки: ${fileData.error}`);
+                                                        alert(`❌ ${t('common.error')}: ${fileData.error}`);
                                                     } else {
-                                                        alert(`✅ Файл загружен!`);
+                                                        alert(t('match.fileUploaded'));
                                                         setShowMatchModal(false);
                                                         setMatchFile(null);
                                                         if (onUpdate) onUpdate();
                                                     }
                                                 } else {
-                                                    alert('⚠️ Выберите файл');
+                                                    alert(t('match.selectFile'));
                                                 }
                                             } catch (error) {
-                                                alert('Ошибка подключения к серверу');
+                                                alert(t('match.connectionError'));
                                             } finally {
                                                 setUploadingFile(false);
                                             }
@@ -3977,7 +3954,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                         }}
                                         disabled={uploadingFile}
                                     >
-                                        {uploadingFile ? '⏳ Загрузка...' : '✅ Загрузить файл'}
+                                        {uploadingFile ? t('match.uploading') : t('match.uploadBtn')}
                                     </button>
                                     <button
                                         onClick={() => {
@@ -3995,7 +3972,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                             fontWeight: '600'
                                         }}
                                     >
-                                        ❌ Отмена
+                                        {t('match.cancel')}
                                     </button>
                                 </div>
                             </>
@@ -4032,7 +4009,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                             marginBottom: '30px',
                             fontSize: '1.5em'
                         }}>
-                            🏆 Кто победил?
+                            {t('match.whoWon')}
                         </h2>
 
                         <div style={{
@@ -4052,9 +4029,9 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                         body: JSON.stringify({ playerId: baseCurrentPlayerId, winnerId })
                                     }).then(res => res.json()).then(data => {
                                         if (data.error) {
-                                            alert(`❌ Ошибка: ${data.error}`);
+                                            alert(`❌ ${t('common.error')}: ${data.error}`);
                                         } else if (data.points) {
-                                            alert(`✅ Результат записан!\n\nОчки за победу: ${data.points}`);
+                                            alert(`${t('match.resultSaved')}\n\n${t('match.pointsForWin')} ${data.points}`);
                                         }
                                         if (onUpdate) onUpdate();
                                         setShowTrophySelector(false);
@@ -4096,9 +4073,9 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                         body: JSON.stringify({ playerId: baseCurrentPlayerId, winnerId })
                                     }).then(res => res.json()).then(data => {
                                         if (data.error) {
-                                            alert(`❌ Ошибка: ${data.error}`);
+                                            alert(`❌ ${t('common.error')}: ${data.error}`);
                                         } else if (data.points) {
-                                            alert(`✅ Результат записан!\n\nОчки за победу: ${data.points}`);
+                                            alert(`${t('match.resultSaved')}\n\n${t('match.pointsForWin')} ${data.points}`);
                                         }
                                         if (onUpdate) onUpdate();
                                         setShowTrophySelector(false);
@@ -4146,7 +4123,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                                 fontSize: '1em'
                             }}
                         >
-                            ❌ Отмена
+                            {t('match.cancel')}
                         </button>
                     </div>
                 </div>
@@ -4161,7 +4138,7 @@ function StatsAndMatches({ players, teams, teamMatches, allPlayers }) {
 
     return (
         <div>
-            <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>📊 Статистика</h2>
+            <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#c9a961' }}>{t('stats.title')}</h2>
 
             {/* Sub-navigation */}
             <div style={{
@@ -4186,7 +4163,7 @@ function StatsAndMatches({ players, teams, teamMatches, allPlayers }) {
                         borderBottom: subTab === 'team-points' ? '3px solid #c9a961' : 'none'
                     }}
                 >
-                    📈 Индивидуальные очки команд
+                    {t('stats.teamPointsTab')}
                 </button>
                 <button
                     onClick={() => setSubTab('team-matches')}
@@ -4203,7 +4180,7 @@ function StatsAndMatches({ players, teams, teamMatches, allPlayers }) {
                         borderBottom: subTab === 'team-matches' ? '3px solid #c9a961' : 'none'
                     }}
                 >
-                    ⚔️ Командные матчи
+                    {t('stats.teamMatchesTab')}
                 </button>
             </div>
 
@@ -4252,7 +4229,7 @@ function TeamMatches({ teamMatches = [], teams = [], allPlayers = [] }) {
     return (
         <div style={{ paddingBottom: '20px' }}>
             <div style={{ fontSize: '2em', fontWeight: '800', textAlign: 'center', marginBottom: '30px', background: 'linear-gradient(135deg, #f4e4b8 0%, #c9a961 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                ⚔️ КОМАНДНЫЕ МАТЧИ
+                {t('stats.teamMatchesTitle')}
             </div>
 
             {matchesByTeam.map((item, idx) => (
@@ -4296,7 +4273,7 @@ function TeamMatches({ teamMatches = [], teams = [], allPlayers = [] }) {
                                     #{idx + 1} {item.team.name}
                                 </div>
                                 <div style={{ color: '#888', fontSize: '0.95em' }}>
-                                    {item.matches.length} матчей
+                                    {item.matches.length} {t('stats.matches')}
                                 </div>
                             </div>
                         </div>
@@ -4305,7 +4282,7 @@ function TeamMatches({ teamMatches = [], teams = [], allPlayers = [] }) {
                                 {item.totalPoints} pts
                             </div>
                             <div style={{ color: '#888', fontSize: '0.8em', marginTop: '5px' }}>
-                                {expandedTeamId === item.team.id ? '▼ Скрыть' : '▶ Показать'}
+                                {expandedTeamId === item.team.id ? t('stats.hide') : t('stats.show')}
                             </div>
                         </div>
                     </div>
@@ -4351,7 +4328,7 @@ function TeamMatches({ teamMatches = [], teams = [], allPlayers = [] }) {
                                     >
                                         <div>
                                             <span style={{ color: isWinner ? '#4caf50' : '#f44336', fontWeight: '600' }}>
-                                                {isWinner ? '✅ Победа' : '❌ Поражение'}
+                                                {isWinner ? t('stats.win') : t('stats.loss')}
                                             </span>
                                             <span style={{ color: '#888', margin: '0 10px' }}>
                                                 {isP1TeamPlayer
@@ -4387,7 +4364,7 @@ function TeamMatches({ teamMatches = [], teams = [], allPlayers = [] }) {
                     fontSize: '1.1em'
                 }}>
                     <div style={{ marginBottom: '10px' }}>⚔️</div>
-                    Командные матчи ещё не сыграны
+                    {t('stats.noTeamMatches')}
                 </div>
             )}
         </div>
@@ -4568,7 +4545,7 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                             borderRadius: '15px',
                             textAlign: 'center'
                         }}>
-                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>Очки</div>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>{t('detail.points')}</div>
                             <div style={{ fontSize: '2em', fontWeight: '800', color: '#c9a961' }}>
                                 {player.points || 0}
                             </div>
@@ -4590,7 +4567,7 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                             borderRadius: '15px',
                             textAlign: 'center'
                         }}>
-                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>Винрейт</div>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>{t('detail.winrate')}</div>
                             <div style={{ fontSize: '2em', fontWeight: '800', color: '#2196f3' }}>
                                 {winRate}%
                             </div>
@@ -4601,7 +4578,7 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                             borderRadius: '15px',
                             textAlign: 'center'
                         }}>
-                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>Игр</div>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>{t('detail.games')}</div>
                             <div style={{ fontSize: '2em', fontWeight: '800', color: '#fff' }}>
                                 {totalGames}
                             </div>
@@ -4612,7 +4589,7 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                             borderRadius: '15px',
                             textAlign: 'center'
                         }}>
-                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>Побед</div>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>{t('detail.wins')}</div>
                             <div style={{ fontSize: '2em', fontWeight: '800', color: '#4caf50' }}>
                                 {player.wins || 0}
                             </div>
@@ -4623,7 +4600,7 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                             borderRadius: '15px',
                             textAlign: 'center'
                         }}>
-                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>Поражений</div>
+                            <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '8px' }}>{t('detail.losses')}</div>
                             <div style={{ fontSize: '2em', fontWeight: '800', color: '#f44336' }}>
                                 {player.losses || 0}
                             </div>
@@ -4638,7 +4615,7 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                         marginBottom: '30px'
                     }}>
                         <div style={{ fontSize: '1.2em', fontWeight: '700', marginBottom: '15px', color: '#c9a961' }}>
-                            🎮 Раса
+                            {t('detail.race')}
                         </div>
                         <div style={{ fontSize: '1.5em', fontWeight: '800', color: '#fff' }}>
                             {raceNames[player.race] || 'Unknown'}
@@ -4662,7 +4639,7 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                                 marginBottom: '30px'
                             }}>
                                 <div style={{ fontSize: '1.2em', fontWeight: '700', marginBottom: '15px', color: '#c9a961' }}>
-                                    🏆 Достижения
+                                    {t('detail.achievements')}
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
                                     {uniqueAchKeys.map(achKey => {
@@ -4726,7 +4703,7 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                                 borderRadius: '15px'
                             }}>
                                 <div style={{ fontSize: '1.2em', fontWeight: '700', marginBottom: '15px', color: '#c9a961' }}>
-                                    📜 История матчей (последние {Math.min(20, player.matchHistory.length)})
+                                    {t('detail.matchHistory')} {Math.min(20, player.matchHistory.length)})
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                     {player.matchHistory.slice(0, 20).map((match, idx) => {
@@ -4736,7 +4713,7 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                                         const primaryAch = matchAchs.length > 0 ? achievements[matchAchs[0]] : null;
                                         const achTitle = matchAchs.length > 0
                                             ? matchAchs.map(k => { const a = achievements[k]; return a ? `${a.name}: ${a.desc}` : ''; }).filter(Boolean).join('\n')
-                                            : `${match.result === 'win' ? 'Победа' : 'Поражение'} (${match.mmrDiff >= 0 ? '+' : ''}${match.mmrDiff} MMR)`;
+                                            : `${match.result === 'win' ? t('detail.winResult') : t('detail.lossResult')} (${match.mmrDiff >= 0 ? '+' : ''}${match.mmrDiff} MMR)`;
 
                                         return (
                                             <div
@@ -4833,7 +4810,7 @@ function Streamers() {
     return (
         <div>
             <h2 style={{ fontSize: '2.5em', marginBottom: '30px', color: '#c9a961', textAlign: 'center' }}>
-                📺 Наши стримеры
+                {t('streamers.title')}
             </h2>
 
             {streamers.length === 0 ? (
@@ -4841,7 +4818,7 @@ function Streamers() {
                     textAlign: 'center', padding: '60px 20px',
                     color: '#666', fontSize: '1.2em'
                 }}>
-                    Пока нет стримеров
+                    {t('streamers.noStreamers')}
                 </div>
             ) : (
                 <div style={{
@@ -4981,10 +4958,10 @@ function LoginModal({ onClose, onSuccess }) {
             if (response.ok && data.sessionId) {
                 onSuccess(data.sessionId);
             } else {
-                setError(data.error || 'Неверный пароль');
+                setError(data.error || t('login.wrongPassword'));
             }
         } catch (error) {
-            setError('Ошибка подключения к серверу');
+            setError(t('common.connectionError'));
         } finally {
             setLoading(false);
         }
@@ -5002,14 +4979,14 @@ function LoginModal({ onClose, onSuccess }) {
                 border: '2px solid #c9a961'
             }}>
                 <h2 style={{ color: '#c9a961', marginBottom: '20px', textAlign: 'center' }}>
-                    ⚙️ Вход в админку
+                    {t('login.title')}
                 </h2>
                 <form onSubmit={handleSubmit}>
                     <input
                         type="text"
                         value={login}
                         onChange={(e) => setLogin(e.target.value)}
-                        placeholder="Логин администратора"
+                        placeholder={t('login.loginPlaceholder')}
                         style={{
                             width: '100%', padding: '12px', borderRadius: '8px',
                             border: '1px solid #444', background: '#2a2a2a',
@@ -5022,7 +4999,7 @@ function LoginModal({ onClose, onSuccess }) {
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Пароль администратора"
+                        placeholder={t('login.passwordPlaceholder')}
                         style={{
                             width: '100%', padding: '12px', borderRadius: '8px',
                             border: '1px solid #444', background: '#2a2a2a',
@@ -5049,7 +5026,7 @@ function LoginModal({ onClose, onSuccess }) {
                                 fontWeight: '600'
                             }}
                         >
-                            {loading ? 'Вход...' : 'Войти'}
+                            {loading ? t('login.loggingIn') : t('login.loginBtn')}
                         </button>
                         <button
                             type="button"
@@ -5060,7 +5037,7 @@ function LoginModal({ onClose, onSuccess }) {
                                 border: 'none', cursor: 'pointer', fontWeight: '600'
                             }}
                         >
-                            Отмена
+                            {t('login.cancelBtn')}
                         </button>
                     </div>
                 </form>
@@ -5108,7 +5085,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                     localStorage.setItem('adminSessionId', data.sessionId);
                     window.location.reload(); // Reload to apply admin session
                 } else {
-                    setError(data.error || 'Неверные учетные данные');
+                    setError(data.error || t('auth.wrongCredentials'));
                 }
             } else if (mode === 'reset') {
                 // Request reset code
@@ -5123,9 +5100,9 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                 if (response.ok) {
                     setGeneratedCode(data.resetCode); // For dev/testing only
                     setMode('reset-confirm');
-                    setSuccess('Код сброса: ' + data.resetCode + ' (действителен 15 минут)');
+                    setSuccess(t('auth.resetCodeMsg') + data.resetCode + t('auth.resetCodeValid'));
                 } else {
-                    setError(data.error || 'Ошибка при запросе сброса');
+                    setError(data.error || t('auth.resetError'));
                 }
             } else if (mode === 'reset-confirm') {
                 // Reset password with code
@@ -5138,7 +5115,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                 const data = await response.json();
 
                 if (response.ok) {
-                    setSuccess('Пароль успешно изменен! Войдите с новым паролем.');
+                    setSuccess(t('auth.passwordChanged'));
                     setTimeout(() => {
                         setMode('login');
                         setPassword('');
@@ -5148,7 +5125,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                         setSuccess('');
                     }, 2000);
                 } else {
-                    setError(data.error || 'Ошибка при сбросе пароля');
+                    setError(data.error || t('auth.resetPasswordError'));
                 }
             } else {
                 // Login or Register
@@ -5168,11 +5145,11 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                     localStorage.setItem('playerSessionId', data.sessionId);
                     onSuccess(data.sessionId, data.user);
                 } else {
-                    setError(data.error || 'Ошибка при входе');
+                    setError(data.error || t('auth.loginError'));
                 }
             }
         } catch (error) {
-            setError('Ошибка подключения к серверу');
+            setError(t('common.connectionError'));
         } finally {
             setLoading(false);
         }
@@ -5190,11 +5167,11 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                 border: '2px solid #c9a961'
             }}>
                 <h2 style={{ color: '#c9a961', marginBottom: '20px', textAlign: 'center' }}>
-                    {mode === 'login' ? '🔐 Вход' :
-                     mode === 'register' ? '📝 Регистрация' :
-                     mode === 'admin' ? '⚙️ Админ' :
-                     mode === 'reset' ? '🔑 Сброс пароля' :
-                     '🔑 Подтверждение сброса'}
+                    {mode === 'login' ? t('auth.loginTitle') :
+                     mode === 'register' ? t('auth.registerTitle') :
+                     mode === 'admin' ? t('auth.adminTitle') :
+                     mode === 'reset' ? t('auth.resetTitle') :
+                     t('auth.resetConfirmTitle')}
                 </h2>
 
                 {(mode === 'login' || mode === 'register' || mode === 'admin') && (
@@ -5212,7 +5189,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                                 border: 'none', cursor: 'pointer', fontWeight: '600'
                             }}
                         >
-                            Вход
+                            {t('auth.loginTab')}
                         </button>
                         <button
                             onClick={() => {
@@ -5227,7 +5204,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                                 border: 'none', cursor: 'pointer', fontWeight: '600'
                             }}
                         >
-                            Регистрация
+                            {t('auth.registerTab')}
                         </button>
                         <button
                             onClick={() => {
@@ -5242,7 +5219,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                                 border: 'none', cursor: 'pointer', fontWeight: '600'
                             }}
                         >
-                            ⚙️ Админ
+                            {t('auth.adminTab')}
                         </button>
                     </div>
                 )}
@@ -5266,7 +5243,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                                 textDecoration: 'underline'
                             }}
                         >
-                            ← Вернуться к входу
+                            {t('auth.backToLogin')}
                         </button>
                     </div>
                 )}
@@ -5278,7 +5255,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                                 type="text"
                                 value={adminLogin}
                                 onChange={(e) => setAdminLogin(e.target.value)}
-                                placeholder="Логин администратора"
+                                placeholder={t('auth.adminLoginPlaceholder')}
                                 style={{
                                     width: '100%', padding: '12px', borderRadius: '8px',
                                     border: '1px solid #444', background: '#2a2a2a',
@@ -5291,7 +5268,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                                 type="password"
                                 value={adminPassword}
                                 onChange={(e) => setAdminPassword(e.target.value)}
-                                placeholder="Пароль администратора"
+                                placeholder={t('auth.adminPasswordPlaceholder')}
                                 style={{
                                     width: '100%', padding: '12px', borderRadius: '8px',
                                     border: '1px solid #444', background: '#2a2a2a',
@@ -5306,7 +5283,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                placeholder="Имя пользователя"
+                                placeholder={t('auth.usernamePlaceholder')}
                                 style={{
                                     width: '100%', padding: '12px', borderRadius: '8px',
                                     border: '1px solid #444', background: '#2a2a2a',
@@ -5321,7 +5298,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Пароль"
+                                    placeholder={t('auth.passwordPlaceholder')}
                                     style={{
                                         width: '100%', padding: '12px', borderRadius: '8px',
                                         border: '1px solid #444', background: '#2a2a2a',
@@ -5339,7 +5316,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                                 type="text"
                                 value={resetCode}
                                 onChange={(e) => setResetCode(e.target.value)}
-                                placeholder="Код сброса (6 цифр)"
+                                placeholder={t('auth.resetCodePlaceholder')}
                                 style={{
                                     width: '100%', padding: '12px', borderRadius: '8px',
                                     border: '1px solid #444', background: '#2a2a2a',
@@ -5352,7 +5329,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                                 type="password"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
-                                placeholder="Новый пароль"
+                                placeholder={t('auth.newPasswordPlaceholder')}
                                 style={{
                                     width: '100%', padding: '12px', borderRadius: '8px',
                                     border: '1px solid #444', background: '#2a2a2a',
@@ -5402,7 +5379,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                                     fontSize: '0.9em'
                                 }}
                             >
-                                Забыли пароль?
+                                {t('auth.forgotPassword')}
                             </button>
                         </div>
                     )}
@@ -5419,11 +5396,11 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                             }}
                         >
                             {loading ? '...' :
-                             mode === 'login' ? 'Войти' :
-                             mode === 'register' ? 'Зарегистрироваться' :
-                             mode === 'admin' ? '⚙️ Войти как Админ' :
-                             mode === 'reset' ? 'Получить код' :
-                             'Сбросить пароль'}
+                             mode === 'login' ? t('auth.loginBtn') :
+                             mode === 'register' ? t('auth.registerBtn') :
+                             mode === 'admin' ? t('auth.adminLoginBtn') :
+                             mode === 'reset' ? t('auth.getCodeBtn') :
+                             t('auth.resetPasswordBtn')}
                         </button>
                         <button
                             type="button"
@@ -5434,7 +5411,7 @@ function PlayerAuthModal({ onClose, onSuccess }) {
                                 border: 'none', cursor: 'pointer', fontWeight: '600'
                             }}
                         >
-                            Отмена
+                            {t('auth.cancelBtn')}
                         </button>
                     </div>
                 </form>
@@ -5447,6 +5424,7 @@ ReactDOM.render(<App />, document.getElementById('root'));
 
 // ==================== PLAYER PROFILE ====================
 function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLogout, teams = [], teamMatches = [] }) {
+    const lang = useLang();
     const [battleTag, setBattleTag] = React.useState('');
     const [linkError, setLinkError] = React.useState('');
     const [linkSuccess, setLinkSuccess] = React.useState('');
@@ -5562,22 +5540,22 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
             const data = await response.json();
 
             if (response.ok) {
-                setLinkSuccess('BattleTag успешно привязан!');
+                setLinkSuccess(t('profile.linkSuccess'));
                 setBattleTag('');
                 onUpdate();
                 fetchPlayerData();
             } else {
-                setLinkError(data.error || 'Ошибка привязки BattleTag');
+                setLinkError(data.error || t('profile.linkError'));
             }
         } catch (error) {
-            setLinkError('Ошибка подключения к серверу');
+            setLinkError(t('common.connectionError'));
         } finally {
             setLinkLoading(false);
         }
     };
 
     const handleUnlinkBattleTag = async () => {
-        if (!confirm('Вы уверены, что хотите отвязать свой BattleTag? Вы потеряете доступ к своей статистике.')) {
+        if (!confirm(t('profile.unlinkConfirm'))) {
             return;
         }
 
@@ -5596,14 +5574,14 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
             const data = await response.json();
 
             if (response.ok) {
-                setLinkSuccess('BattleTag успешно отвязан!');
+                setLinkSuccess(t('profile.unlinkSuccess'));
                 setPlayerData(null);
                 onUpdate();
             } else {
-                setLinkError(data.error || 'Ошибка отвязки BattleTag');
+                setLinkError(data.error || t('profile.unlinkError'));
             }
         } catch (error) {
-            setLinkError('Ошибка подключения к серверу');
+            setLinkError(t('common.connectionError'));
         } finally {
             setLinkLoading(false);
         }
@@ -5613,14 +5591,14 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
         // Find the portrait to check points requirement
         const portrait = portraits.find(p => p.id === portraitId);
         if (!portrait) {
-            alert('Портрет не найден');
+            alert(t('profile.portraitNotFound'));
             return;
         }
 
         // Check if player has enough points
         const playerPoints = playerData?.points || 0;
         if (playerPoints < portrait.pointsRequired) {
-            alert(`❌ Недостаточно очков!\n\nДля этого портрета требуется: ${portrait.pointsRequired} очков\nУ вас сейчас: ${playerPoints} очков\n\nЗаработайте еще ${portrait.pointsRequired - playerPoints} очков, чтобы разблокировать этот портрет!`);
+            alert(`${t('profile.notEnoughPoints')}\n\n${t('profile.portraitRequires')} ${portrait.pointsRequired} ${t('profile.pointsRequired')}\n${t('profile.youHave')} ${playerPoints} ${t('profile.pointsRequired')}\n\n${t('profile.earnMore')} ${portrait.pointsRequired - playerPoints} ${t('profile.toUnlock')}`);
             return;
         }
 
@@ -5641,21 +5619,21 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                 // Refresh player data in main app so portrait shows in Players tab
                 onUpdate();
                 fetchPlayerData();
-                alert('✅ Портрет успешно выбран!');
+                alert(t('profile.portraitSelected'));
             } else {
-                alert(data.error || 'Ошибка выбора портрета');
+                alert(data.error || t('profile.portraitError'));
             }
         } catch (error) {
-            alert('Ошибка подключения к серверу');
+            alert(t('common.connectionError'));
         }
     };
 
     const raceNames = {
-        0: '🎲 Рандом',
-        1: '👑 Хумы',
-        2: '⚔️ Орки',
-        4: '🌙 Эльфы',
-        8: '💀 Андеды'
+        0: t('race.random'),
+        1: t('race.human'),
+        2: t('race.orc'),
+        4: t('race.nightelf'),
+        8: t('race.undead')
     };
 
     const getAvailablePortraits = () => {
@@ -5682,7 +5660,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
     return (
         <div>
             <h2 style={{ fontSize: '2.5em', marginBottom: '30px', color: '#c9a961', textAlign: 'center' }}>
-                👤 Профиль игрока
+                {t('profile.title')}
             </h2>
 
             <div style={{
@@ -5698,7 +5676,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                         {playerUser.linkedBattleTag && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                 <div style={{ color: '#4caf50', fontSize: '1.1em' }}>
-                                    ✓ Привязан к {playerUser.linkedBattleTag}
+                                    {t('profile.linkedTo')} {playerUser.linkedBattleTag}
                                 </div>
                                 <button
                                     onClick={handleUnlinkBattleTag}
@@ -5713,7 +5691,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                     onMouseOver={(e) => e.target.style.background = '#f57c00'}
                                     onMouseOut={(e) => e.target.style.background = '#ff9800'}
                                 >
-                                    {linkLoading ? '⏳' : '🔓 Отвязать'}
+                                    {linkLoading ? '⏳' : t('profile.unlink')}
                                 </button>
                             </div>
                         )}
@@ -5726,7 +5704,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                             border: 'none', cursor: 'pointer', fontWeight: '600'
                         }}
                     >
-                        🚪 Выход
+                        {t('profile.logout')}
                     </button>
                 </div>
 
@@ -5747,10 +5725,10 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                         border: '1px solid #c9a961'
                     }}>
                         <h3 style={{ color: '#c9a961', marginBottom: '15px' }}>
-                            Привяжите свой BattleTag
+                            {t('profile.linkBattleTag')}
                         </h3>
                         <p style={{ color: '#e0e0e0', marginBottom: '20px' }}>
-                            Введите ваш BattleTag (например: PlayerName#1234), чтобы связать ваш профиль с вашим игроком в лиге.
+                            {t('profile.linkDesc')}
                         </p>
                         <form onSubmit={handleLinkBattleTag}>
                             <input
@@ -5785,7 +5763,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                     fontWeight: '600'
                                 }}
                             >
-                                {linkLoading ? 'Привязка...' : '🔗 Привязать BattleTag'}
+                                {linkLoading ? t('profile.linking') : t('profile.linkBtn')}
                             </button>
                         </form>
                     </div>
@@ -5795,16 +5773,16 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                             background: '#2a2a2a', padding: '20px', borderRadius: '12px',
                             marginBottom: '30px'
                         }}>
-                            <h3 style={{ color: '#c9a961', marginBottom: '15px' }}>Статистика</h3>
+                            <h3 style={{ color: '#c9a961', marginBottom: '15px' }}>{t('profile.stats')}</h3>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px' }}>
                                 <div>
-                                    <div style={{ color: '#888', fontSize: '0.9em' }}>Раса</div>
+                                    <div style={{ color: '#888', fontSize: '0.9em' }}>{t('profile.race')}</div>
                                     <div style={{ color: '#fff', fontSize: '1.3em', fontWeight: '700' }}>
-                                        {raceNames[playerData.race] || 'Неизвестно'}
+                                        {raceNames[playerData.race] || t('race.unknown')}
                                     </div>
                                 </div>
                                 <div>
-                                    <div style={{ color: '#888', fontSize: '0.9em' }}>Очки</div>
+                                    <div style={{ color: '#888', fontSize: '0.9em' }}>{t('profile.points')}</div>
                                     <div style={{ color: '#c9a961', fontSize: '1.3em', fontWeight: '700' }}>
                                         {playerData.points || 0}
                                     </div>
@@ -5816,7 +5794,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                     </div>
                                 </div>
                                 <div>
-                                    <div style={{ color: '#888', fontSize: '0.9em' }}>Побед/Поражений</div>
+                                    <div style={{ color: '#888', fontSize: '0.9em' }}>{t('profile.winsLosses')}</div>
                                     <div style={{ color: '#fff', fontSize: '1.3em', fontWeight: '700' }}>
                                         {playerData.wins || 0}/{playerData.losses || 0}
                                     </div>
@@ -5831,10 +5809,10 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                             border: '2px solid #c9a961'
                         }}>
                             <h3 style={{ color: '#c9a961', marginBottom: '15px', fontSize: '1.2em' }}>
-                                ⚔️ Меин раса (для подсчета статистики)
+                                {t('profile.mainRace')}
                             </h3>
                             <p style={{ color: '#888', marginBottom: '15px', fontSize: '0.9em' }}>
-                                Выберите расу, на которой вы играете больше всего. Статистика будет считаться только по матчам на этой расе.
+                                {t('profile.mainRaceDesc')}
                             </p>
                             <select
                                 value={playerData.mainRace !== undefined && playerData.mainRace !== null ? playerData.mainRace : ''}
@@ -5862,13 +5840,13 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                                     fetchPlayerData();
                                                 }, 100);
                                             }
-                                            alert('✅ Меин раса выбрана! Статистика и портреты обновлены.');
+                                            alert(t('profile.mainRaceSuccess'));
                                         } else {
-                                            alert(data.error || 'Ошибка выбора расы');
+                                            alert(data.error || t('profile.selectRaceError'));
                                         }
                                     } catch (error) {
                                         console.error('Error selecting main race:', error);
-                                        alert('Ошибка подключения к серверу');
+                                        alert(t('match.connectionError'));
                                     }
                                 }}
                                 style={{
@@ -5883,30 +5861,30 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                     cursor: 'pointer'
                                 }}
                             >
-                                <option value="">-- Выберите расу --</option>
-                                <option value="0">🎲 Рандом</option>
-                                <option value="1">👑 Хумы</option>
-                                <option value="2">⚔️ Орки</option>
-                                <option value="4">🌙 Эльфы</option>
-                                <option value="8">💀 Андеды</option>
+                                <option value="">{t('profile.selectRace')}</option>
+                                <option value="0">{t('race.random')}</option>
+                                <option value="1">{t('race.human')}</option>
+                                <option value="2">{t('race.orc')}</option>
+                                <option value="4">{t('race.nightelf')}</option>
+                                <option value="8">{t('race.undead')}</option>
                             </select>
                             {playerData.mainRace !== undefined && playerData.mainRace !== null && (
                                 <div style={{ color: '#4caf50', marginTop: '10px', fontSize: '0.9em', fontWeight: '600' }}>
-                                    ✓ Меин раса: {raceNames[playerData.mainRace]}
+                                    {t('profile.mainRaceSet')} {raceNames[playerData.mainRace]}
                                 </div>
                             )}
                         </div>
 
                         <div>
                             <h3 style={{ color: '#c9a961', marginBottom: '20px', fontSize: '1.5em' }}>
-                                🖼️ Выбор портрета
+                                {t('profile.portraitTitle')}
                             </h3>
                             {getAvailablePortraits().length === 0 ? (
                                 <div style={{
                                     background: '#2a2a2a', padding: '30px', borderRadius: '12px',
                                     textAlign: 'center', color: '#888'
                                 }}>
-                                    Нет доступных портретов. Зарабатывайте очки, чтобы разблокировать портреты!
+                                    {t('profile.noPortraits')}
                                 </div>
                             ) : (
                                 <div style={{
@@ -5991,7 +5969,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                                 fontSize: '0.75em',
                                                 textAlign: 'center'
                                             }}>
-                                                {portrait.pointsRequired} очков
+                                                {portrait.pointsRequired} {t('profile.pointsRequired')}
                                             </div>
                                             {isSelected && (
                                                 <div style={{
@@ -6001,7 +5979,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                                     marginTop: '5px',
                                                     fontWeight: '700'
                                                 }}>
-                                                    ✓ Выбран
+                                                    {t('profile.selected')}
                                                 </div>
                                             )}
                                         </div>
@@ -6016,7 +5994,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                         background: '#2a2a2a', padding: '30px', borderRadius: '12px',
                         textAlign: 'center', color: '#888'
                     }}>
-                        Загрузка данных игрока...
+                        {t('profile.loadingData')}
                     </div>
                 )}
             </div>
@@ -6029,7 +6007,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                     border: '2px solid #c9a961'
                 }}>
                     <h3 style={{ color: '#c9a961', marginBottom: '20px', fontSize: '1.5em' }}>
-                        ⚔️ Мои матчи
+                        {t('profile.myMatches')}
                     </h3>
                     
                     {/* Debug: Log home matches */}
@@ -6043,7 +6021,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                     {myMatches.filter(m => m.status === 'upcoming' && m.homePlayerId === playerData.id).length > 0 && (
                         <div style={{ marginBottom: '25px' }}>
                             <h4 style={{ color: '#4caf50', marginBottom: '15px', fontSize: '1.1em' }}>
-                                🏠 Домашние матчи (вы организатор)
+                                {t('profile.homeMatches')}
                             </h4>
                             {myMatches.filter(m => m.status === 'upcoming' && m.homePlayerId === playerData.id).map(match => {
                                 const isPlayer1 = match.player1Id === playerData.id;
@@ -6066,7 +6044,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                             </div>
                                             {match.scheduledDate && (
                                                 <div style={{ color: '#c9a961', fontSize: '0.9em' }}>
-                                                    📅 {new Date(match.scheduledDate).toLocaleString('ru-RU')}
+                                                    📅 {new Date(match.scheduledDate).toLocaleString(i18n.lang === 'en' ? 'en-US' : 'ru-RU')}
                                                 </div>
                                             )}
                                         </div>
@@ -6075,10 +6053,10 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                                 onClick={() => {
                                                     // Verify this is the home player
                                                     if (match.homePlayerId !== playerData.id) {
-                                                        alert('❌ Только организатор матча может установить время!');
+                                                        alert(t('profile.onlyOrganizerTime'));
                                                         return;
                                                     }
-                                                    const date = prompt('Введите дату и время (ГГГГ-ММ-ДД ЧЧ:ММ):',
+                                                    const date = prompt(t('profile.enterDateTime'),
                                                         match.scheduledDate ? new Date(match.scheduledDate).toISOString().slice(0, 16).replace('T', ' ') : '');
                                                     if (date) {
                                                         fetch(`${API_BASE}/api/player-matches/${match.id}/report`, {
@@ -6087,9 +6065,9 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                                             body: JSON.stringify({ playerId: playerData.id, scheduledDate: new Date(date.replace(' ', 'T')) })
                                                         }).then(res => res.json()).then(data => {
                                                             if (data.error) {
-                                                                alert(`❌ Ошибка: ${data.error}`);
+                                                                alert(`❌ ${t('common.error')}: ${data.error}`);
                                                             } else {
-                                                                alert('✅ Дата и время установлены!');
+                                                                alert(t('match.dateTimeSet'));
                                                             }
                                                             onUpdate();
                                                         });
@@ -6101,16 +6079,16 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                                     border: 'none', cursor: 'pointer', fontSize: '0.9em'
                                                 }}
                                             >
-                                                📅 Назначить время
+                                                {t('profile.setTimeBtn')}
                                             </button>
                                             <button
                                                 onClick={() => {
                                                     // Verify this is the home player
                                                     if (match.homePlayerId !== playerData.id) {
-                                                        alert('❌ Только организатор матча может отметить победителя!');
+                                                        alert(t('profile.onlyOrganizerWinner'));
                                                         return;
                                                     }
-                                                    const winner = confirm(`Кто победил?\n\nОК - Я победил (${playerData.name})\nОтмена - Победил соперник (${opponent?.name})`);
+                                                    const winner = confirm(`${t('profile.whoWonConfirm')}\n\nOK - ${playerData.name}\nCancel - ${opponent?.name}`);
                                                     const winnerId = winner ? (isPlayer1 ? match.player1Id : match.player2Id) : (isPlayer1 ? match.player2Id : match.player1Id);
 
                                                     fetch(`${API_BASE}/api/player-matches/${match.id}/report`, {
@@ -6119,9 +6097,9 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                                         body: JSON.stringify({ playerId: playerData.id, winnerId })
                                                     }).then(res => res.json()).then(data => {
                                                         if (data.error) {
-                                                            alert(`❌ Ошибка: ${data.error}`);
+                                                            alert(`❌ ${t('common.error')}: ${data.error}`);
                                                         } else if (data.points) {
-                                                            alert(`✅ Результат записан!\n\nОчки за победу: ${data.points}`);
+                                                            alert(`${t('match.resultSaved')}\n\n${t('match.pointsForWin')} ${data.points}`);
                                                         }
                                                         onUpdate();
                                                     });
@@ -6132,7 +6110,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                                     border: 'none', cursor: 'pointer', fontSize: '0.9em'
                                                 }}
                                             >
-                                                🏆 Отметить победителя
+                                                {t('profile.markWinnerBtn')}
                                             </button>
                                         </div>
                                     </div>
@@ -6145,7 +6123,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                     {myMatches.filter(m => m.status === 'upcoming' && m.homePlayerId !== playerData.id).length > 0 && (
                         <div style={{ marginBottom: '25px' }}>
                             <h4 style={{ color: '#2196f3', marginBottom: '15px', fontSize: '1.1em' }}>
-                                🎮 Предстоящие гостевые матчи
+                                {t('profile.awayMatches')}
                             </h4>
                             {myMatches.filter(m => m.status === 'upcoming' && m.homePlayerId !== playerData.id).map(match => {
                                 const isPlayer1 = match.player1Id === playerData.id;
@@ -6170,11 +6148,11 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                             <div style={{ textAlign: 'right' }}>
                                                 {match.scheduledDate && (
                                                     <div style={{ color: '#c9a961', fontSize: '0.9em' }}>
-                                                        📅 {new Date(match.scheduledDate).toLocaleString('ru-RU')}
+                                                        📅 {new Date(match.scheduledDate).toLocaleString(i18n.lang === 'en' ? 'en-US' : 'ru-RU')}
                                                     </div>
                                                 )}
                                                 <div style={{ color: '#888', fontSize: '0.8em', marginTop: '5px' }}>
-                                                    🏠 Организатор: {homePlayer?.name || 'Не определён'}
+                                                    {t('profile.organizer')} {homePlayer?.name || t('profile.organizerUnknown')}
                                                 </div>
                                             </div>
                                         </div>
@@ -6188,7 +6166,7 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                     {myMatches.filter(m => m.status === 'completed').length > 0 && (
                         <div>
                             <h4 style={{ color: '#888', marginBottom: '15px', fontSize: '1.1em' }}>
-                                ✅ Завершённые матчи
+                                {t('profile.completedMatches')}
                             </h4>
                             {myMatches.filter(m => m.status === 'completed').slice(0, 5).map(match => {
                                 const isPlayer1 = match.player1Id === playerData.id;
@@ -6203,9 +6181,9 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                     }}>
                                         <div>
                                             <span style={{ color: iWon ? '#4caf50' : '#f44336', fontWeight: '600' }}>
-                                                {iWon ? '✅ Победа' : '❌ Поражение'}
+                                                {iWon ? t('profile.win') : t('profile.loss')}
                                             </span>
-                                            <span style={{ color: '#888' }}> против </span>
+                                            <span style={{ color: '#888' }}> {t('profile.against')} </span>
                                             <span style={{ color: '#fff' }}>{opponent?.name}</span>
                                         </div>
                                         {iWon && match.points > 0 && (
