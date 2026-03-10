@@ -2164,9 +2164,15 @@ function Teams({ teams, players, allPlayers, teamMatches = [] }) {
             {teams.map(team => {
                 const teamPlayers = getTeamPlayers(team.id);
                 const leader = getTeamLeader(team.id);
-                const captain = players.find(p => p.id === team.captainId) || allPlayers.find(p => p.id === team.captainId);
+                const captain = teamPlayers.find(p => {
+                    const baseId = p.id.includes('_') ? p.id.split('_')[0] : p.id;
+                    return baseId === team.captainId;
+                }) || allPlayers.find(p => p.id === team.captainId);
                 const coaches = (team.coaches || []).map(coachId => {
-                    return players.find(p => p.id === coachId) || allPlayers.find(p => p.id === coachId);
+                    return teamPlayers.find(p => {
+                        const baseId = p.id.includes('_') ? p.id.split('_')[0] : p.id;
+                        return baseId === coachId;
+                    }) || allPlayers.find(p => p.id === coachId);
                 }).filter(Boolean);
                 const totalPoints = teamPlayers.reduce((sum, p) => sum + getPlayerPointsFromSchedule(p.id) + (p.manualPoints || 0), 0);
 
