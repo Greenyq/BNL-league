@@ -2153,6 +2153,33 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                 >
                     {showSmartMatchmaking ? '❌ Отмена' : '🧠 Smart Matchmaking (по MMR)'}
                 </button>
+                <button
+                    onClick={async () => {
+                        if (!confirm('Запустить починку матчей? Это восстановит статус у повреждённых матчей.')) return;
+                        try {
+                            const resp = await fetch(`${API_BASE}/api/admin/team-matches/repair`, {
+                                method: 'POST',
+                                headers: { 'x-session-id': sessionId }
+                            });
+                            const data = await resp.json();
+                            if (data.success) {
+                                alert(`Починено статусов: ${data.repairedStatus}\nМатчей с пустыми ID: ${data.matchesWithMissingIds}`);
+                                onUpdate();
+                            } else {
+                                alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                            }
+                        } catch (e) {
+                            alert('Ошибка запроса: ' + e.message);
+                        }
+                    }}
+                    style={{
+                        padding: '12px 24px', borderRadius: '8px',
+                        background: '#f44336', color: '#fff',
+                        border: 'none', cursor: 'pointer', fontWeight: '600'
+                    }}
+                >
+                    🔧 Починить матчи
+                </button>
             </div>
 
             {/* Grid Generator Form */}
