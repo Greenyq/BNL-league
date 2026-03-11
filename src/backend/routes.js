@@ -537,10 +537,17 @@ router.post('/admin/team-matches', async (req, res) => {
 
 router.put('/admin/team-matches/:id', async (req, res) => {
     try {
-        const { team1Id, team2Id, player1Id, player2Id, homePlayerId, winnerId, points, pointsOverride, notes, status, scheduledDate, scheduledTime, w3championsMatchId } = req.body;
+        // Only update fields that are actually provided in the request body
+        const allowedFields = ['team1Id', 'team2Id', 'player1Id', 'player2Id', 'homePlayerId', 'winnerId', 'points', 'pointsOverride', 'notes', 'status', 'scheduledDate', 'scheduledTime', 'w3championsMatchId'];
+        const updateData = { updatedAt: Date.now() };
+        for (const field of allowedFields) {
+            if (req.body[field] !== undefined) {
+                updateData[field] = req.body[field];
+            }
+        }
         const match = await TeamMatch.findByIdAndUpdate(
             req.params.id,
-            { team1Id, team2Id, player1Id, player2Id, homePlayerId, winnerId, points, pointsOverride, notes, status, scheduledDate, scheduledTime, w3championsMatchId, updatedAt: Date.now() },
+            updateData,
             { new: true }
         );
         if (!match) {
@@ -549,6 +556,37 @@ router.put('/admin/team-matches/:id', async (req, res) => {
         res.json(match);
     } catch (error) {
         res.status(500).json({ error: 'Failed to update match' });
+    }
+});
+
+// Repair corrupted matches: fix matches with missing status or team/player IDs
+router.post('/admin/team-matches/repair', async (req, res) => {
+    try {
+        // Find matches with missing or invalid status
+        const corruptedStatus = await TeamMatch.updateMany(
+            { $or: [{ status: { $exists: false } }, { status: null }, { status: '' }] },
+            { $set: { status: 'upcoming' } }
+        );
+
+        // Find matches with missing team or player IDs
+        const missingIds = await TeamMatch.find({
+            $or: [
+                { team1Id: { $in: [null, undefined, ''] } },
+                { team2Id: { $in: [null, undefined, ''] } },
+                { player1Id: { $in: [null, undefined, ''] } },
+                { player2Id: { $in: [null, undefined, ''] } }
+            ]
+        });
+
+        res.json({
+            success: true,
+            repairedStatus: corruptedStatus.modifiedCount,
+            matchesWithMissingIds: missingIds.length,
+            missingIdDetails: missingIds.map(m => ({ id: m._id, team1Id: m.team1Id, team2Id: m.team2Id, player1Id: m.player1Id, player2Id: m.player2Id }))
+        });
+    } catch (error) {
+        console.error('Error repairing matches:', error);
+        res.status(500).json({ error: 'Failed to repair matches' });
     }
 });
 
