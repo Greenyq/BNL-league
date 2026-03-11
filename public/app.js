@@ -3000,9 +3000,32 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
 
             {/* Player Stats Panel */}
             {subTab === 'schedule' && (() => {
-                // Build per-player stats from teamMatches
+                // Build per-player stats from teamMatches (filtered by active filters)
+                let filteredPlayerMatches = teamMatches;
+                if (filterTeam) {
+                    filteredPlayerMatches = filteredPlayerMatches.filter(m =>
+                        m.team1Id === filterTeam || m.team2Id === filterTeam
+                    );
+                }
+                if (filterPlayer && filterPlayer.trim()) {
+                    const searchLower = filterPlayer.toLowerCase().trim();
+                    filteredPlayerMatches = filteredPlayerMatches.filter(m => {
+                        const p1 = getPlayer(m.player1Id);
+                        const p2 = getPlayer(m.player2Id);
+                        const p1Name = p1?.name || '';
+                        const p2Name = p2?.name || '';
+                        return p1Name.toLowerCase().includes(searchLower) ||
+                               p2Name.toLowerCase().includes(searchLower);
+                    });
+                }
+                if (filterStatus) {
+                    const isCompleted = filterStatus === 'completed';
+                    filteredPlayerMatches = filteredPlayerMatches.filter(m =>
+                        isCompleted ? m.status === 'completed' : m.status !== 'completed'
+                    );
+                }
                 const playerStatsMap = {};
-                teamMatches.forEach(match => {
+                filteredPlayerMatches.forEach(match => {
                     [match.player1Id, match.player2Id].forEach((pid, i) => {
                         if (!pid) return;
                         if (!playerStatsMap[pid]) {
@@ -3176,9 +3199,34 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
 
             {/* Schedule Summary Block */}
             {subTab === 'schedule' && (() => {
-                const totalMatches = teamMatches.length;
-                const completedMatches = teamMatches.filter(m => m.status === 'completed').length;
-                const upcomingMatches = totalMatches - completedMatches;
+                // Apply the same filters as the match list to keep stats in sync
+                let filteredStatsMatches = teamMatches;
+                if (filterTeam) {
+                    filteredStatsMatches = filteredStatsMatches.filter(m => {
+                        return m.team1Id === filterTeam || m.team2Id === filterTeam;
+                    });
+                }
+                if (filterPlayer && filterPlayer.trim()) {
+                    const searchLower = filterPlayer.toLowerCase().trim();
+                    filteredStatsMatches = filteredStatsMatches.filter(m => {
+                        const p1 = getPlayer(m.player1Id);
+                        const p2 = getPlayer(m.player2Id);
+                        const p1Name = p1?.name || '';
+                        const p2Name = p2?.name || '';
+                        return p1Name.toLowerCase().includes(searchLower) ||
+                               p2Name.toLowerCase().includes(searchLower);
+                    });
+                }
+                if (filterStatus) {
+                    const isCompleted = filterStatus === 'completed';
+                    filteredStatsMatches = filteredStatsMatches.filter(m =>
+                        isCompleted ? m.status === 'completed' : m.status !== 'completed'
+                    );
+                }
+
+                const totalMatches = filteredStatsMatches.length;
+                const completedMatches = filteredStatsMatches.filter(m => m.status === 'completed').length;
+                const upcomingMatches = filteredStatsMatches.filter(m => m.status !== 'completed').length;
                 const progressPercent = totalMatches > 0 ? (completedMatches / totalMatches) * 100 : 0;
 
                 // Per-team win/loss stats
@@ -3187,7 +3235,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
                     const tid = team._id || team.id;
                     teamStatsMap[tid] = { name: team.name, emoji: team.emoji, logo: team.logo, wins: 0, losses: 0, points: 0 };
                 });
-                teamMatches.filter(m => m.status === 'completed' && m.winnerId).forEach(match => {
+                filteredStatsMatches.filter(m => m.status === 'completed' && m.winnerId).forEach(match => {
                     const winnerTeamId = match.winnerId === match.player1Id ? match.team1Id : match.team2Id;
                     const loserTeamId = match.winnerId === match.player1Id ? match.team2Id : match.team1Id;
                     if (teamStatsMap[winnerTeamId]) {
@@ -3205,7 +3253,7 @@ function Schedule({ schedule, teams, allPlayers, teamMatches, portraits = [], pl
 
                 // Scheduled today
                 const today = new Date().toISOString().split('T')[0];
-                const todayMatches = teamMatches.filter(m => {
+                const todayMatches = filteredStatsMatches.filter(m => {
                     if (!m.scheduledDate) return false;
                     const d = new Date(m.scheduledDate).toISOString().split('T')[0];
                     return d === today;
