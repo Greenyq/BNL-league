@@ -1888,6 +1888,38 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
     });
     const [matchFilter, setMatchFilter] = React.useState('');
     const [filterStatus, setFilterStatus] = React.useState('all');
+    const [deadline, setDeadline] = React.useState(null);
+    const [deadlineMinutes, setDeadlineMinutes] = React.useState(20);
+    const [deadlineRemaining, setDeadlineRemaining] = React.useState('');
+
+    // Fetch and track deadline
+    React.useEffect(() => {
+        const fetchDeadline = async () => {
+            try {
+                const resp = await fetch(`${API_BASE}/api/match-deadline`);
+                const data = await resp.json();
+                setDeadline(data.deadline ? new Date(data.deadline) : null);
+            } catch (e) {}
+        };
+        fetchDeadline();
+    }, []);
+
+    React.useEffect(() => {
+        if (!deadline) { setDeadlineRemaining(''); return; }
+        const tick = () => {
+            const diff = new Date(deadline) - new Date();
+            if (diff <= 0) {
+                setDeadlineRemaining('⏰ Время вышло!');
+                return;
+            }
+            const m = Math.floor(diff / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            setDeadlineRemaining(`${m}:${s.toString().padStart(2, '0')}`);
+        };
+        tick();
+        const interval = setInterval(tick, 1000);
+        return () => clearInterval(interval);
+    }, [deadline]);
 
     // Smart MMR matchmaking - generate preview
     const handleSmartPreview = async () => {
@@ -2180,6 +2212,78 @@ function AdminMatches({ teams, allPlayers, teamMatches, sessionId, onUpdate }) {
                 >
                     🔧 Починить матчи
                 </button>
+            </div>
+
+            {/* Deadline Timer Controls */}
+            <div style={{
+                background: deadline ? (deadlineRemaining === '⏰ Время вышло!' ? '#3a1a1a' : '#1a2a1a') : '#1a1a2a',
+                padding: '15px 20px', borderRadius: '12px', marginBottom: '20px',
+                border: `2px solid ${deadline ? (deadlineRemaining === '⏰ Время вышло!' ? '#f44336' : '#4caf50') : '#555'}`,
+                display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap'
+            }}>
+                <span style={{ color: '#c9a961', fontWeight: '600', fontSize: '1em' }}>⏱️ Дедлайн матчей:</span>
+                {deadline ? (
+                    React.createElement(React.Fragment, null,
+                        React.createElement('span', {
+                            style: {
+                                color: deadlineRemaining === '⏰ Время вышло!' ? '#f44336' : '#4caf50',
+                                fontWeight: '700', fontSize: '1.3em', fontFamily: 'monospace'
+                            }
+                        }, deadlineRemaining),
+                        React.createElement('button', {
+                            onClick: async () => {
+                                if (!confirm('Отменить дедлайн?')) return;
+                                await fetch(`${API_BASE}/api/admin/match-deadline`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId },
+                                    body: JSON.stringify({ clear: true })
+                                });
+                                setDeadline(null);
+                            },
+                            style: {
+                                padding: '8px 16px', borderRadius: '8px',
+                                background: '#f44336', color: '#fff',
+                                border: 'none', cursor: 'pointer', fontWeight: '600'
+                            }
+                        }, '❌ Отменить дедлайн')
+                    )
+                ) : (
+                    React.createElement(React.Fragment, null,
+                        React.createElement('input', {
+                            type: 'number', min: 1, max: 120, value: deadlineMinutes,
+                            onChange: (e) => setDeadlineMinutes(parseInt(e.target.value) || 20),
+                            style: {
+                                width: '60px', padding: '8px', borderRadius: '8px',
+                                background: '#2a2a2a', color: '#fff', border: '1px solid #555',
+                                textAlign: 'center', fontSize: '1em'
+                            }
+                        }),
+                        React.createElement('span', { style: { color: '#888' } }, 'мин'),
+                        React.createElement('button', {
+                            onClick: async () => {
+                                if (!confirm(`Запустить дедлайн на ${deadlineMinutes} минут? После истечения нельзя будет отправлять результаты.`)) return;
+                                try {
+                                    const resp = await fetch(`${API_BASE}/api/admin/match-deadline`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId },
+                                        body: JSON.stringify({ minutes: deadlineMinutes })
+                                    });
+                                    const data = await resp.json();
+                                    if (data.success) {
+                                        setDeadline(new Date(data.deadline));
+                                    }
+                                } catch (e) {
+                                    alert('Ошибка: ' + e.message);
+                                }
+                            },
+                            style: {
+                                padding: '8px 16px', borderRadius: '8px',
+                                background: '#4caf50', color: '#fff',
+                                border: 'none', cursor: 'pointer', fontWeight: '600'
+                            }
+                        }, '▶️ Запустить таймер')
+                    )
+                )}
             </div>
 
             {/* Grid Generator Form */}

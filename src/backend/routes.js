@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const rateLimit = require('express-rate-limit');
-const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession, PasswordReset, PlayerCache, PlayerStats, ManualPointsAdjustment } = require('./models');
+const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession, PasswordReset, PlayerCache, PlayerStats, ManualPointsAdjustment, SiteSettings } = require('./models');
 const { recalculateAllPlayerStats } = require('./scheduler');
 const { checkAuth } = require('./middleware');
 
@@ -537,6 +537,13 @@ router.post('/admin/team-matches', async (req, res) => {
 
 router.put('/admin/team-matches/:id', async (req, res) => {
     try {
+        // Check deadline if setting winner
+        if (req.body.winnerId && req.body.status === 'completed') {
+            const deadlineSetting = await SiteSettings.findOne({ key: 'matchDeadline' });
+            if (deadlineSetting && new Date(deadlineSetting.value) < new Date()) {
+                return res.status(403).json({ error: 'Дедлайн истёк! Результаты больше не принимаются.' });
+            }
+        }
         // Only update fields that are actually provided in the request body
         const allowedFields = ['team1Id', 'team2Id', 'player1Id', 'player2Id', 'homePlayerId', 'winnerId', 'points', 'pointsOverride', 'notes', 'status', 'scheduledDate', 'scheduledTime', 'w3championsMatchId'];
         const updateData = { updatedAt: Date.now() };
@@ -590,6 +597,35 @@ router.post('/admin/team-matches/repair', async (req, res) => {
     }
 });
 
+// Match deadline timer
+router.get('/match-deadline', async (req, res) => {
+    try {
+        const setting = await SiteSettings.findOne({ key: 'matchDeadline' });
+        res.json({ deadline: setting ? setting.value : null });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to get deadline' });
+    }
+});
+
+router.post('/admin/match-deadline', async (req, res) => {
+    try {
+        const { minutes, clear } = req.body;
+        if (clear) {
+            await SiteSettings.deleteOne({ key: 'matchDeadline' });
+            return res.json({ success: true, deadline: null });
+        }
+        const deadline = new Date(Date.now() + (minutes || 20) * 60 * 1000);
+        await SiteSettings.findOneAndUpdate(
+            { key: 'matchDeadline' },
+            { key: 'matchDeadline', value: deadline },
+            { upsert: true, new: true }
+        );
+        res.json({ success: true, deadline });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to set deadline' });
+    }
+});
+
 router.delete('/admin/team-matches/:id', async (req, res) => {
     try {
         await TeamMatch.findByIdAndDelete(req.params.id);
@@ -620,6 +656,15 @@ router.get('/player-matches/:playerId', async (req, res) => {
 router.put('/player-matches/:id/report', async (req, res) => {
     try {
         const { winnerId, scheduledDate, scheduledTime, playerId } = req.body;
+
+        // Check deadline if reporting winner
+        if (winnerId) {
+            const deadlineSetting = await SiteSettings.findOne({ key: 'matchDeadline' });
+            if (deadlineSetting && new Date(deadlineSetting.value) < new Date()) {
+                return res.status(403).json({ error: 'Дедлайн истёк! Результаты больше не принимаются.' });
+            }
+        }
+
         const match = await TeamMatch.findById(req.params.id);
 
         if (!match) {

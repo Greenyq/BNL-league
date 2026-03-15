@@ -256,5 +256,9 @@ module.exports = {
     PasswordReset: mongoose.model('PasswordReset', passwordResetSchema),
     PlayerCache: mongoose.model('PlayerCache', playerCacheSchema),
     PlayerStats: mongoose.model('PlayerStats', playerStatsSchema),
-    ManualPointsAdjustment: mongoose.model('ManualPointsAdjustment', manualPointsAdjustmentSchema)
+    ManualPointsAdjustment: mongoose.model('ManualPointsAdjustment', manualPointsAdjustmentSchema),
+    SiteSettings: mongoose.model('SiteSettings', new mongoose.Schema({
+        key: { type: String, required: true, unique: true },
+        value: { type: mongoose.Schema.Types.Mixed }
+    }))
 };
