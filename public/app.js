@@ -5488,6 +5488,41 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
     const [portraits, setPortraits] = React.useState([]);
     const [selectedPortrait, setSelectedPortrait] = React.useState(null);
     const [myMatches, setMyMatches] = React.useState([]);
+    const [matchDeadline, setMatchDeadline] = React.useState(null);
+    const [deadlineText, setDeadlineText] = React.useState('');
+    const [deadlineExpired, setDeadlineExpired] = React.useState(false);
+
+    React.useEffect(() => {
+        const fetchDeadline = async () => {
+            try {
+                const resp = await fetch(`${API_BASE}/api/match-deadline`);
+                const data = await resp.json();
+                setMatchDeadline(data.deadline ? new Date(data.deadline) : null);
+            } catch (e) {}
+        };
+        fetchDeadline();
+        const interval = setInterval(fetchDeadline, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
+    React.useEffect(() => {
+        if (!matchDeadline) { setDeadlineText(''); setDeadlineExpired(false); return; }
+        const tick = () => {
+            const diff = new Date(matchDeadline) - new Date();
+            if (diff <= 0) {
+                setDeadlineText('⏰ Время вышло!');
+                setDeadlineExpired(true);
+                return;
+            }
+            setDeadlineExpired(false);
+            const m = Math.floor(diff / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            setDeadlineText(`${m}:${s.toString().padStart(2, '0')}`);
+        };
+        tick();
+        const interval = setInterval(tick, 1000);
+        return () => clearInterval(interval);
+    }, [matchDeadline]);
 
     React.useEffect(() => {
         fetchPlayerData();
@@ -6063,7 +6098,27 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                     <h3 style={{ color: '#c9a961', marginBottom: '20px', fontSize: '1.5em' }}>
                         {t('profile.myMatches')}
                     </h3>
-                    
+
+                    {matchDeadline && (
+                        React.createElement('div', {
+                            style: {
+                                background: deadlineExpired ? '#3a1a1a' : '#1a2a1a',
+                                padding: '12px 20px', borderRadius: '10px', marginBottom: '15px',
+                                border: `2px solid ${deadlineExpired ? '#f44336' : '#4caf50'}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
+                            }
+                        },
+                            React.createElement('span', { style: { color: '#c9a961', fontWeight: '600' } }, '⏱️ Дедлайн:'),
+                            React.createElement('span', {
+                                style: {
+                                    color: deadlineExpired ? '#f44336' : '#4caf50',
+                                    fontWeight: '700', fontSize: '1.3em', fontFamily: 'monospace'
+                                }
+                            }, deadlineText),
+                            deadlineExpired && React.createElement('span', { style: { color: '#f44336', fontSize: '0.9em' } }, '— результаты больше не принимаются')
+                        )
+                    )}
+
                     {/* Debug: Log home matches */}
                     {myMatches.length > 0 && (
                         <div style={{ color: '#888', fontSize: '0.8em', marginBottom: '10px', padding: '10px', background: '#2a2a2a', borderRadius: '5px' }}>
@@ -6136,7 +6191,12 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                                 {t('profile.setTimeBtn')}
                                             </button>
                                             <button
+                                                disabled={deadlineExpired}
                                                 onClick={() => {
+                                                    if (deadlineExpired) {
+                                                        alert('⏰ Дедлайн истёк! Результаты больше не принимаются.');
+                                                        return;
+                                                    }
                                                     // Verify this is the home player
                                                     if (match.homePlayerId !== playerData.id) {
                                                         alert(t('profile.onlyOrganizerWinner'));
@@ -6160,11 +6220,12 @@ function PlayerProfile({ playerUser, playerSessionId, allPlayers, onUpdate, onLo
                                                 }}
                                                 style={{
                                                     padding: '8px 16px', borderRadius: '8px',
-                                                    background: '#4caf50', color: '#fff',
-                                                    border: 'none', cursor: 'pointer', fontSize: '0.9em'
+                                                    background: deadlineExpired ? '#555' : '#4caf50', color: '#fff',
+                                                    border: 'none', cursor: deadlineExpired ? 'not-allowed' : 'pointer', fontSize: '0.9em',
+                                                    opacity: deadlineExpired ? 0.6 : 1
                                                 }}
                                             >
-                                                {t('profile.markWinnerBtn')}
+                                                {deadlineExpired ? '⏰ Дедлайн истёк' : t('profile.markWinnerBtn')}
                                             </button>
                                         </div>
                                     </div>
