@@ -4847,103 +4847,217 @@ function Finals({ finalsMatches, teams, allPlayers }) {
 
     const qf = finalsMatches.filter(m => m.round === 'quarterfinal').sort((a, b) => a.matchIndex - b.matchIndex);
     const sf = finalsMatches.filter(m => m.round === 'semifinal').sort((a, b) => a.matchIndex - b.matchIndex);
-    const final = finalsMatches.filter(m => m.round === 'final');
+    const finalArr = finalsMatches.filter(m => m.round === 'final');
 
-    const renderMatchCard = (match, roundLabel) => {
-        if (!match) return React.createElement('div', { style: { width: '280px', height: '140px' } });
+    const renderPlayerRow = (playerId, teamId, isWinner, score, isCompleted) => {
+        const p = getPlayer(playerId);
+        const t = getTeam(teamId);
+        return React.createElement('div', {
+            style: {
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '8px 12px',
+                background: isWinner ? 'rgba(76,175,80,0.15)' : 'transparent'
+            }
+        },
+            React.createElement('div', {
+                style: { display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', flex: 1 }
+            },
+                t && React.createElement('span', { style: { fontSize: '0.85em', flexShrink: 0 } }, t.emoji || ''),
+                React.createElement('span', {
+                    style: {
+                        color: isWinner ? '#4caf50' : (p ? '#fff' : '#555'),
+                        fontWeight: isWinner ? '700' : '400',
+                        fontSize: '0.9em',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                    }
+                }, p ? p.name : (playerId ? '...' : 'TBD'))
+            ),
+            isCompleted && React.createElement('span', {
+                style: { color: isWinner ? '#4caf50' : '#555', fontWeight: '700', fontSize: '1em', flexShrink: 0, marginLeft: '8px' }
+            }, score)
+        );
+    };
 
-        const p1 = getPlayer(match.player1Id);
-        const p2 = getPlayer(match.player2Id);
-        const t1 = getTeam(match.player1TeamId);
-        const t2 = getTeam(match.player2TeamId);
+    const renderMatchCard = (match) => {
+        if (!match) return null;
         const isCompleted = match.status === 'completed';
-        const p1Won = match.winnerId === match.player1Id;
-        const p2Won = match.winnerId === match.player2Id;
+        const p1Won = match.winnerId && match.winnerId === match.player1Id;
+        const p2Won = match.winnerId && match.winnerId === match.player2Id;
 
         return React.createElement('div', {
             key: match.id || match._id,
             style: {
-                width: '280px',
                 background: '#1a1a1a',
-                borderRadius: '12px',
-                border: isCompleted ? '2px solid #c9a961' : '2px solid #333',
-                overflow: 'hidden'
+                borderRadius: '10px',
+                border: isCompleted ? '2px solid #c9a961' : '1px solid #333',
+                overflow: 'hidden',
+                width: '100%'
             }
         },
-            // Player 1
-            React.createElement('div', {
-                style: {
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '10px 14px',
-                    background: p1Won ? 'rgba(76,175,80,0.15)' : 'transparent',
-                    borderBottom: '1px solid #333'
-                }
-            },
-                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                    t1 && React.createElement('span', { style: { fontSize: '0.8em' } }, t1.emoji || ''),
-                    React.createElement('span', {
-                        style: { color: p1Won ? '#4caf50' : '#fff', fontWeight: p1Won ? '700' : '400', fontSize: '0.95em' }
-                    }, p1 ? p1.name : (match.player1Id ? '...' : 'TBD'))
-                ),
-                React.createElement('span', {
-                    style: { color: p1Won ? '#4caf50' : '#888', fontWeight: '700', fontSize: '1.1em' }
-                }, isCompleted ? match.score1 : '')
-            ),
-            // Player 2
-            React.createElement('div', {
-                style: {
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '10px 14px',
-                    background: p2Won ? 'rgba(76,175,80,0.15)' : 'transparent',
-                    borderBottom: (match.map1 || match.map2) ? '1px solid #333' : 'none'
-                }
-            },
-                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                    t2 && React.createElement('span', { style: { fontSize: '0.8em' } }, t2.emoji || ''),
-                    React.createElement('span', {
-                        style: { color: p2Won ? '#4caf50' : '#fff', fontWeight: p2Won ? '700' : '400', fontSize: '0.95em' }
-                    }, p2 ? p2.name : (match.player2Id ? '...' : 'TBD'))
-                ),
-                React.createElement('span', {
-                    style: { color: p2Won ? '#4caf50' : '#888', fontWeight: '700', fontSize: '1.1em' }
-                }, isCompleted ? match.score2 : '')
-            ),
-            // Maps
+            renderPlayerRow(match.player1Id, match.player1TeamId, p1Won, match.score1, isCompleted),
+            React.createElement('div', { style: { height: '1px', background: '#333' } }),
+            renderPlayerRow(match.player2Id, match.player2TeamId, p2Won, match.score2, isCompleted),
             (match.map1 || match.map2) && React.createElement('div', {
-                style: { padding: '8px 14px', background: '#111', display: 'flex', gap: '8px', flexWrap: 'wrap' }
+                style: { padding: '6px 10px', background: '#111', borderTop: '1px solid #282828', display: 'flex', gap: '6px', flexWrap: 'wrap' }
             },
                 match.map1 && React.createElement('span', {
-                    style: { color: '#c9a961', fontSize: '0.75em', background: '#2a2a1a', padding: '2px 8px', borderRadius: '4px' }
+                    style: { color: '#c9a961', fontSize: '0.7em', background: '#2a2a1a', padding: '2px 6px', borderRadius: '4px' }
                 }, '🗺️ ' + match.map1),
                 match.map2 && React.createElement('span', {
-                    style: { color: '#c9a961', fontSize: '0.75em', background: '#2a2a1a', padding: '2px 8px', borderRadius: '4px' }
+                    style: { color: '#c9a961', fontSize: '0.7em', background: '#2a2a1a', padding: '2px 6px', borderRadius: '4px' }
                 }, '🗺️ ' + match.map2)
             )
         );
     };
 
-    // Find the winner of the final
-    const champion = final.length > 0 && final[0].winnerId ? getPlayer(final[0].winnerId) : null;
-    const championTeam = final.length > 0 && final[0].winnerId
-        ? getTeam(final[0].player1Id === final[0].winnerId ? final[0].player1TeamId : final[0].player2TeamId)
+    const champion = finalArr.length > 0 && finalArr[0].winnerId ? getPlayer(finalArr[0].winnerId) : null;
+    const championTeam = finalArr.length > 0 && finalArr[0].winnerId
+        ? getTeam(finalArr[0].player1Id === finalArr[0].winnerId ? finalArr[0].player1TeamId : finalArr[0].player2TeamId)
         : null;
 
     if (finalsMatches.length === 0) {
-        return React.createElement('div', {
-            style: { textAlign: 'center', padding: '60px 20px' }
-        },
-            React.createElement('h2', { style: { color: '#c9a961', marginBottom: '20px' } }, '🏆 ' + (lang === 'en' ? 'Finals' : 'Финал')),
+        return React.createElement('div', { style: { textAlign: 'center', padding: '60px 20px' } },
+            React.createElement('h2', { style: { color: '#c9a961', marginBottom: '20px' } },
+                '🏆 ' + (lang === 'en' ? 'Finals' : 'Финал')),
             React.createElement('p', { style: { color: '#888', fontSize: '1.1em' } },
-                lang === 'en' ? 'The finals bracket has not been generated yet.' : 'Сетка финала ещё не сформирована.'
-            )
+                lang === 'en' ? 'The finals bracket has not been generated yet.' : 'Сетка финала ещё не сформирована.')
         );
     }
+
+    // Render round section
+    const renderRound = (title, matches, borderColor) => {
+        return React.createElement('div', { style: { marginBottom: '25px' } },
+            React.createElement('div', {
+                style: {
+                    color: borderColor, fontWeight: '700', fontSize: '1em',
+                    textAlign: 'center', marginBottom: '12px', textTransform: 'uppercase',
+                    letterSpacing: '1px'
+                }
+            }, title),
+            React.createElement('div', {
+                style: {
+                    display: 'grid',
+                    gridTemplateColumns: matches.length > 2 ? 'repeat(2, 1fr)' : matches.length === 2 ? 'repeat(2, 1fr)' : '1fr',
+                    gap: '10px',
+                    maxWidth: matches.length === 1 ? '300px' : '100%',
+                    margin: matches.length === 1 ? '0 auto' : undefined
+                }
+            }, ...matches.map(m => renderMatchCard(m)))
+        );
+    };
+
+    // SVG bracket lines for desktop
+    const renderBracketDesktop = () => {
+        const cardW = 220;
+        const cardH = 80;
+        const colGap = 60;
+        const rowGap = 15;
+        const pairGap = 40; // extra gap between pair 1-2 and pair 3-4
+
+        // Positions for QF cards
+        const qfX = 0;
+        const qfPositions = [];
+        let y = 0;
+        for (let i = 0; i < 4; i++) {
+            qfPositions.push({ x: qfX, y });
+            y += cardH + rowGap;
+            if (i === 1) y += pairGap; // gap between pairs
+        }
+
+        // SF column
+        const sfX = qfX + cardW + colGap;
+        const sfPositions = [
+            { x: sfX, y: (qfPositions[0].y + qfPositions[1].y) / 2 },
+            { x: sfX, y: (qfPositions[2].y + qfPositions[3].y) / 2 }
+        ];
+
+        // Final column
+        const fX = sfX + cardW + colGap;
+        const fY = (sfPositions[0].y + sfPositions[1].y) / 2;
+
+        const totalW = fX + cardW;
+        const totalH = qfPositions[3].y + cardH;
+
+        // Build connector lines
+        const lines = [];
+        // QF -> SF connectors
+        for (let pair = 0; pair < 2; pair++) {
+            const q1 = qfPositions[pair * 2];
+            const q2 = qfPositions[pair * 2 + 1];
+            const s = sfPositions[pair];
+            const midX = qfX + cardW + colGap / 2;
+
+            // top QF right edge to mid
+            lines.push({ x1: qfX + cardW, y1: q1.y + cardH / 2, x2: midX, y2: q1.y + cardH / 2 });
+            // bottom QF right edge to mid
+            lines.push({ x1: qfX + cardW, y1: q2.y + cardH / 2, x2: midX, y2: q2.y + cardH / 2 });
+            // vertical
+            lines.push({ x1: midX, y1: q1.y + cardH / 2, x2: midX, y2: q2.y + cardH / 2 });
+            // mid to SF
+            lines.push({ x1: midX, y1: s.y + cardH / 2, x2: sfX, y2: s.y + cardH / 2 });
+        }
+
+        // SF -> Final connectors
+        const sfMidX = sfX + cardW + colGap / 2;
+        lines.push({ x1: sfX + cardW, y1: sfPositions[0].y + cardH / 2, x2: sfMidX, y2: sfPositions[0].y + cardH / 2 });
+        lines.push({ x1: sfX + cardW, y1: sfPositions[1].y + cardH / 2, x2: sfMidX, y2: sfPositions[1].y + cardH / 2 });
+        lines.push({ x1: sfMidX, y1: sfPositions[0].y + cardH / 2, x2: sfMidX, y2: sfPositions[1].y + cardH / 2 });
+        lines.push({ x1: sfMidX, y1: fY + cardH / 2, x2: fX, y2: fY + cardH / 2 });
+
+        return React.createElement('div', {
+            style: { position: 'relative', width: totalW + 'px', height: totalH + 'px', margin: '0 auto' }
+        },
+            // SVG lines
+            React.createElement('svg', {
+                style: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }
+            },
+                ...lines.map((l, i) =>
+                    React.createElement('line', {
+                        key: i, x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2,
+                        stroke: '#444', strokeWidth: 2
+                    })
+                )
+            ),
+            // Round labels
+            React.createElement('div', {
+                style: { position: 'absolute', left: qfX + cardW / 2 + 'px', top: '-30px', transform: 'translateX(-50%)', color: '#888', fontWeight: '600', fontSize: '0.9em', whiteSpace: 'nowrap' }
+            }, lang === 'en' ? 'Quarterfinals' : 'Четвертьфинал'),
+            React.createElement('div', {
+                style: { position: 'absolute', left: sfX + cardW / 2 + 'px', top: '-30px', transform: 'translateX(-50%)', color: '#888', fontWeight: '600', fontSize: '0.9em', whiteSpace: 'nowrap' }
+            }, lang === 'en' ? 'Semifinals' : 'Полуфинал'),
+            React.createElement('div', {
+                style: { position: 'absolute', left: fX + cardW / 2 + 'px', top: '-30px', transform: 'translateX(-50%)', color: '#c9a961', fontWeight: '600', fontSize: '0.9em', whiteSpace: 'nowrap' }
+            }, lang === 'en' ? 'Final' : 'Финал'),
+            // QF cards
+            ...qfPositions.map((pos, i) => qf[i] && React.createElement('div', {
+                key: 'qf' + i,
+                style: { position: 'absolute', left: pos.x + 'px', top: pos.y + 'px', width: cardW + 'px' }
+            }, renderMatchCard(qf[i]))),
+            // SF cards
+            ...sfPositions.map((pos, i) => sf[i] && React.createElement('div', {
+                key: 'sf' + i,
+                style: { position: 'absolute', left: pos.x + 'px', top: pos.y + 'px', width: cardW + 'px' }
+            }, renderMatchCard(sf[i]))),
+            // Final card
+            finalArr[0] && React.createElement('div', {
+                style: { position: 'absolute', left: fX + 'px', top: fY + 'px', width: cardW + 'px' }
+            }, renderMatchCard(finalArr[0]))
+        );
+    };
+
+    // Check if mobile
+    const [isMobile, setIsMobile] = React.useState(window.innerWidth < 700);
+    React.useEffect(() => {
+        const handler = () => setIsMobile(window.innerWidth < 700);
+        window.addEventListener('resize', handler);
+        return () => window.removeEventListener('resize', handler);
+    }, []);
 
     return React.createElement('div', {
         style: { padding: '20px', maxWidth: '1200px', margin: '0 auto' }
     },
         React.createElement('h2', {
-            style: { color: '#c9a961', textAlign: 'center', marginBottom: '30px', fontSize: '2em' }
+            style: { color: '#c9a961', textAlign: 'center', marginBottom: '30px', fontSize: '1.8em' }
         }, '🏆 ' + (lang === 'en' ? 'Finals Bracket' : 'Сетка Финала')),
 
         // Champion banner
@@ -4959,55 +5073,22 @@ function Finals({ finalsMatches, teams, allPlayers }) {
             championTeam && React.createElement('div', { style: { color: '#888', marginTop: '5px' } }, championTeam.emoji + ' ' + championTeam.name)
         ),
 
-        // Bracket grid
-        React.createElement('div', {
-            style: {
-                display: 'flex', justifyContent: 'center', alignItems: 'center',
-                gap: '40px', overflowX: 'auto', padding: '20px 0'
-            }
-        },
-            // QF column
-            React.createElement('div', {
-                style: { display: 'flex', flexDirection: 'column', gap: '20px' }
-            },
-                React.createElement('h3', { style: { color: '#888', textAlign: 'center', marginBottom: '10px' } },
-                    lang === 'en' ? 'Quarterfinals' : 'Четвертьфинал'),
-                qf[0] && renderMatchCard(qf[0]),
-                qf[1] && renderMatchCard(qf[1]),
-                React.createElement('div', { style: { height: '40px' } }),
-                qf[2] && renderMatchCard(qf[2]),
-                qf[3] && renderMatchCard(qf[3])
-            ),
-
-            // Connector lines
-            React.createElement('div', {
-                style: { display: 'flex', flexDirection: 'column', gap: '20px', color: '#555', fontSize: '2em' }
-            }, '→', React.createElement('div', { style: { height: '180px' } }), '→'),
-
-            // SF column
-            React.createElement('div', {
-                style: { display: 'flex', flexDirection: 'column', gap: '80px', justifyContent: 'center' }
-            },
-                React.createElement('h3', { style: { color: '#888', textAlign: 'center', marginBottom: '10px' } },
-                    lang === 'en' ? 'Semifinals' : 'Полуфинал'),
-                sf[0] && renderMatchCard(sf[0]),
-                sf[1] && renderMatchCard(sf[1])
-            ),
-
-            // Connector
-            React.createElement('div', {
-                style: { color: '#555', fontSize: '2em', alignSelf: 'center' }
-            }, '→'),
-
-            // Final column
-            React.createElement('div', {
-                style: { display: 'flex', flexDirection: 'column', justifyContent: 'center' }
-            },
-                React.createElement('h3', { style: { color: '#c9a961', textAlign: 'center', marginBottom: '10px' } },
-                    lang === 'en' ? 'Final' : 'Финал'),
-                final[0] && renderMatchCard(final[0])
+        // Bracket
+        isMobile
+            ? React.createElement('div', null,
+                renderRound(lang === 'en' ? 'Quarterfinals' : 'Четвертьфинал', qf, '#888'),
+                React.createElement('div', {
+                    style: { textAlign: 'center', color: '#444', fontSize: '1.5em', margin: '5px 0' }
+                }, '▼'),
+                renderRound(lang === 'en' ? 'Semifinals' : 'Полуфинал', sf, '#888'),
+                React.createElement('div', {
+                    style: { textAlign: 'center', color: '#444', fontSize: '1.5em', margin: '5px 0' }
+                }, '▼'),
+                renderRound(lang === 'en' ? 'Final' : 'Финал', finalArr, '#c9a961')
             )
-        )
+            : React.createElement('div', {
+                style: { overflowX: 'auto', paddingTop: '40px', paddingBottom: '20px' }
+            }, renderBracketDesktop())
     );
 }
 
