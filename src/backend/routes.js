@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const rateLimit = require('express-rate-limit');
-const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession, PasswordReset, PlayerCache, PlayerStats, ManualPointsAdjustment, SiteSettings } = require('./models');
+const { Team, Player, TeamMatch, Portrait, Streamer, PlayerUser, PlayerSession, PasswordReset, PlayerCache, PlayerStats, ManualPointsAdjustment, SiteSettings, FinalsMatch } = require('./models');
 const { recalculateAllPlayerStats } = require('./scheduler');
 const { checkAuth } = require('./middleware');
 
@@ -825,6 +825,142 @@ router.get('/player-matches/:id/download-file', async (req, res) => {
     } catch (error) {
         console.error('Error downloading match file:', error);
         res.status(500).json({ error: 'Failed to download file' });
+    }
+});
+
+// ==================== FINALS ENDPOINTS ====================
+router.get('/finals', async (req, res) => {
+    try {
+        const matches = await FinalsMatch.find().sort({ round: 1, matchIndex: 1 });
+        res.json(matches);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch finals' });
+    }
+});
+
+router.post('/admin/finals/generate', async (req, res) => {
+    try {
+        // Get all teams and their players with team points from completed matches
+        const teams = await Team.find();
+        const allPlayers = await Player.find();
+        const completedMatches = await TeamMatch.find({ status: 'completed' });
+
+        // Calculate points per player per team
+        const playerPoints = {};
+        completedMatches.forEach(m => {
+            if (m.winnerId && m.points) {
+                if (!playerPoints[m.winnerId]) playerPoints[m.winnerId] = 0;
+                playerPoints[m.winnerId] += m.points;
+            }
+        });
+
+        // Get top 2 from each team
+        const teamFinalists = [];
+        for (const team of teams) {
+            const teamPlayers = allPlayers
+                .filter(p => p.teamId === team.id.toString() || p.teamId === team._id.toString())
+                .map(p => ({ ...p.toObject(), totalPoints: playerPoints[p._id.toString()] || 0 }))
+                .sort((a, b) => b.totalPoints - a.totalPoints)
+                .slice(0, 2);
+            if (teamPlayers.length >= 2) {
+                teamFinalists.push({ team, players: teamPlayers });
+            }
+        }
+
+        if (teamFinalists.length < 4) {
+            return res.status(400).json({ error: `Нужно минимум 4 команды с 2+ игроками. Найдено: ${teamFinalists.length}` });
+        }
+
+        // Sort teams by total points (sum of top 2)
+        teamFinalists.sort((a, b) => {
+            const aTotal = a.players[0].totalPoints + a.players[1].totalPoints;
+            const bTotal = b.players[0].totalPoints + b.players[1].totalPoints;
+            return bTotal - aTotal;
+        });
+
+        // Take top 4 teams: A(0), B(1), C(2), D(3)
+        // QF: A1 vs D2, B1 vs C2, C1 vs B2, D1 vs A2
+        const A = teamFinalists[0], B = teamFinalists[1], C = teamFinalists[2], D = teamFinalists[3];
+
+        await FinalsMatch.deleteMany({});
+
+        const qfMatches = [
+            { round: 'quarterfinal', matchIndex: 0, player1Id: A.players[0]._id.toString(), player2Id: D.players[1]._id.toString(), player1TeamId: A.team._id.toString(), player2TeamId: D.team._id.toString() },
+            { round: 'quarterfinal', matchIndex: 1, player1Id: B.players[0]._id.toString(), player2Id: C.players[1]._id.toString(), player1TeamId: B.team._id.toString(), player2TeamId: C.team._id.toString() },
+            { round: 'quarterfinal', matchIndex: 2, player1Id: C.players[0]._id.toString(), player2Id: B.players[1]._id.toString(), player1TeamId: C.team._id.toString(), player2TeamId: B.team._id.toString() },
+            { round: 'quarterfinal', matchIndex: 3, player1Id: D.players[0]._id.toString(), player2Id: A.players[1]._id.toString(), player1TeamId: D.team._id.toString(), player2TeamId: A.team._id.toString() },
+        ];
+
+        const sfMatches = [
+            { round: 'semifinal', matchIndex: 0 },
+            { round: 'semifinal', matchIndex: 1 },
+        ];
+
+        const finalMatch = [
+            { round: 'final', matchIndex: 0 },
+        ];
+
+        await FinalsMatch.insertMany([...qfMatches, ...sfMatches, ...finalMatch]);
+        const result = await FinalsMatch.find().sort({ round: 1, matchIndex: 1 });
+        res.json({ success: true, matches: result, teamFinalists: teamFinalists.slice(0, 4).map(tf => ({ team: tf.team.name, players: tf.players.map(p => ({ name: p.name, points: p.totalPoints })) })) });
+    } catch (error) {
+        console.error('Error generating finals:', error);
+        res.status(500).json({ error: 'Failed to generate finals bracket' });
+    }
+});
+
+router.put('/admin/finals/:id', async (req, res) => {
+    try {
+        const allowedFields = ['player1Id', 'player2Id', 'player1TeamId', 'player2TeamId', 'winnerId', 'map1', 'map2', 'score1', 'score2', 'status'];
+        const updateData = { updatedAt: Date.now() };
+        for (const field of allowedFields) {
+            if (req.body[field] !== undefined) {
+                updateData[field] = req.body[field];
+            }
+        }
+
+        const match = await FinalsMatch.findByIdAndUpdate(req.params.id, updateData, { new: true });
+        if (!match) return res.status(404).json({ error: 'Finals match not found' });
+
+        // If winner set and this is QF or SF, auto-advance winner to next round
+        if (updateData.winnerId && updateData.status === 'completed') {
+            const winnerPlayer = await Player.findById(updateData.winnerId);
+            const winnerTeamId = match.player1Id === updateData.winnerId ? match.player1TeamId : match.player2TeamId;
+
+            if (match.round === 'quarterfinal') {
+                const sfIndex = match.matchIndex < 2 ? 0 : 1;
+                const sfMatch = await FinalsMatch.findOne({ round: 'semifinal', matchIndex: sfIndex });
+                if (sfMatch) {
+                    const isFirstSlot = match.matchIndex === 0 || match.matchIndex === 2;
+                    const upd = isFirstSlot
+                        ? { player1Id: updateData.winnerId, player1TeamId: winnerTeamId }
+                        : { player2Id: updateData.winnerId, player2TeamId: winnerTeamId };
+                    await FinalsMatch.findByIdAndUpdate(sfMatch._id, upd);
+                }
+            } else if (match.round === 'semifinal') {
+                const finalMatch = await FinalsMatch.findOne({ round: 'final', matchIndex: 0 });
+                if (finalMatch) {
+                    const upd = match.matchIndex === 0
+                        ? { player1Id: updateData.winnerId, player1TeamId: winnerTeamId }
+                        : { player2Id: updateData.winnerId, player2TeamId: winnerTeamId };
+                    await FinalsMatch.findByIdAndUpdate(finalMatch._id, upd);
+                }
+            }
+        }
+
+        res.json(match);
+    } catch (error) {
+        console.error('Error updating finals match:', error);
+        res.status(500).json({ error: 'Failed to update finals match' });
+    }
+});
+
+router.delete('/admin/finals', async (req, res) => {
+    try {
+        await FinalsMatch.deleteMany({});
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to clear finals' });
     }
 });
 

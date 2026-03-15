@@ -523,7 +523,7 @@ function TeamMatches({ teamMatches, teams, allPlayers }) {
 }
 
 // ==================== ADMIN PANEL ====================
-function AdminPanel({ teams, allPlayers, teamMatches, sessionId, onUpdate, onLogout }) {
+function AdminPanel({ teams, allPlayers, teamMatches, finalsMatches, sessionId, onUpdate, onLogout }) {
     const [activeSection, setActiveSection] = React.useState('teams');
     const [verified, setVerified] = React.useState(false);
 
@@ -652,6 +652,17 @@ function AdminPanel({ teams, allPlayers, teamMatches, sessionId, onUpdate, onLog
                     >
                         🔄 Кэш
                     </button>
+                    <button
+                        onClick={() => setActiveSection('finals')}
+                        style={{
+                            padding: '12px 24px', borderRadius: '8px',
+                            background: activeSection === 'finals' ? '#c9a961' : '#2a2a2a',
+                            color: activeSection === 'finals' ? '#000' : '#fff',
+                            border: 'none', cursor: 'pointer', fontWeight: '600'
+                        }}
+                    >
+                        🏆 Финал
+                    </button>
                 </div>
             </div>
 
@@ -675,6 +686,9 @@ function AdminPanel({ teams, allPlayers, teamMatches, sessionId, onUpdate, onLog
             )}
             {activeSection === 'cache' && (
                 <AdminCache sessionId={sessionId} onUpdate={onUpdate} />
+            )}
+            {activeSection === 'finals' && (
+                <AdminFinals teams={teams} allPlayers={allPlayers} finalsMatches={finalsMatches} sessionId={sessionId} onUpdate={onUpdate} />
             )}
         </div>
     );
@@ -4104,5 +4118,321 @@ function AdminPoints({ players, sessionId, onUpdate }) {
                 </div>
             </div>
         </div>
+    );
+}
+
+// ==================== ADMIN FINALS ====================
+function AdminFinals({ teams, allPlayers, finalsMatches, sessionId, onUpdate }) {
+    const [editingMatch, setEditingMatch] = React.useState(null);
+    const [editForm, setEditForm] = React.useState({});
+
+    const getPlayer = (id) => allPlayers.find(p => p.id === id || p._id === id);
+    const getTeam = (id) => teams.find(t => t.id === id || t._id === id);
+
+    const roundNames = { quarterfinal: '🏅 Четвертьфинал', semifinal: '🥈 Полуфинал', final: '🏆 Финал' };
+
+    const w3cMaps = [
+        'Concealed Hill', 'Echo Isles', 'Northern Isles', 'Tidewaters',
+        'Amazonia', 'Last Refuge', 'Autumn Leaves', 'Terenas Stand',
+        'Twisted Meadows', 'Gnoll Wood', 'Shallow Grave', 'Turtle Rock',
+        'Secret Valley', 'Plunder Isle', 'Melting Valley', 'Sanctuary'
+    ];
+
+    const handleGenerate = async () => {
+        if (!confirm('Сгенерировать сетку финала из текущих результатов? Это удалит существующую сетку!')) return;
+        try {
+            const resp = await fetch(`${API_BASE}/api/admin/finals/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId }
+            });
+            const data = await resp.json();
+            if (data.success) {
+                let msg = 'Сетка сгенерирована!\n\nФиналисты:';
+                data.teamFinalists.forEach(tf => {
+                    msg += `\n${tf.team}: ${tf.players.map(p => `${p.name} (${p.points} очков)`).join(', ')}`;
+                });
+                alert(msg);
+                onUpdate();
+            } else {
+                alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+            }
+        } catch (e) {
+            alert('Ошибка: ' + e.message);
+        }
+    };
+
+    const handleClear = async () => {
+        if (!confirm('Удалить всю сетку финала?')) return;
+        await fetch(`${API_BASE}/api/admin/finals`, {
+            method: 'DELETE',
+            headers: { 'x-session-id': sessionId }
+        });
+        onUpdate();
+    };
+
+    const startEdit = (match) => {
+        setEditingMatch(match.id || match._id);
+        setEditForm({
+            player1Id: match.player1Id || '',
+            player2Id: match.player2Id || '',
+            player1TeamId: match.player1TeamId || '',
+            player2TeamId: match.player2TeamId || '',
+            winnerId: match.winnerId || '',
+            map1: match.map1 || '',
+            map2: match.map2 || '',
+            score1: match.score1 || 0,
+            score2: match.score2 || 0,
+            status: match.status || 'upcoming'
+        });
+    };
+
+    const saveEdit = async (matchId) => {
+        try {
+            await fetch(`${API_BASE}/api/admin/finals/${matchId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId },
+                body: JSON.stringify(editForm)
+            });
+            setEditingMatch(null);
+            onUpdate();
+        } catch (e) {
+            alert('Ошибка: ' + e.message);
+        }
+    };
+
+    const setWinner = async (match, winnerId) => {
+        const isP1 = winnerId === match.player1Id;
+        try {
+            await fetch(`${API_BASE}/api/admin/finals/${match.id || match._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId },
+                body: JSON.stringify({
+                    winnerId,
+                    status: 'completed',
+                    score1: isP1 ? (match.score1 || 0) + 1 : match.score1 || 0,
+                    score2: isP1 ? match.score2 || 0 : (match.score2 || 0) + 1
+                })
+            });
+            onUpdate();
+        } catch (e) {
+            alert('Ошибка: ' + e.message);
+        }
+    };
+
+    const resetMatch = async (match) => {
+        if (!confirm('Сбросить результат этого матча?')) return;
+        try {
+            await fetch(`${API_BASE}/api/admin/finals/${match.id || match._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId },
+                body: JSON.stringify({ winnerId: '', status: 'upcoming', score1: 0, score2: 0 })
+            });
+            onUpdate();
+        } catch (e) {
+            alert('Ошибка: ' + e.message);
+        }
+    };
+
+    const grouped = {
+        quarterfinal: finalsMatches.filter(m => m.round === 'quarterfinal').sort((a, b) => a.matchIndex - b.matchIndex),
+        semifinal: finalsMatches.filter(m => m.round === 'semifinal').sort((a, b) => a.matchIndex - b.matchIndex),
+        final: finalsMatches.filter(m => m.round === 'final')
+    };
+
+    return React.createElement('div', null,
+        React.createElement('h2', { style: { color: '#c9a961', marginBottom: '20px' } }, '🏆 Управление финалом'),
+
+        // Action buttons
+        React.createElement('div', { style: { display: 'flex', gap: '10px', marginBottom: '25px', flexWrap: 'wrap' } },
+            React.createElement('button', {
+                onClick: handleGenerate,
+                style: { padding: '12px 24px', borderRadius: '8px', background: '#4caf50', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: '600' }
+            }, '🎯 Сгенерировать сетку из результатов'),
+            finalsMatches.length > 0 && React.createElement('button', {
+                onClick: handleClear,
+                style: { padding: '12px 24px', borderRadius: '8px', background: '#f44336', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: '600' }
+            }, '🗑️ Удалить сетку')
+        ),
+
+        finalsMatches.length === 0
+            ? React.createElement('p', { style: { color: '#888', fontSize: '1.1em' } }, 'Сетка финала не создана. Нажмите "Сгенерировать" чтобы создать из текущих результатов.')
+            : Object.entries(grouped).map(([round, matches]) =>
+                matches.length > 0 && React.createElement('div', { key: round, style: { marginBottom: '30px' } },
+                    React.createElement('h3', { style: { color: '#c9a961', marginBottom: '15px', borderBottom: '1px solid #333', paddingBottom: '10px' } },
+                        roundNames[round] + ` (${matches.length} ${matches.length === 1 ? 'матч' : 'матчей'})`
+                    ),
+                    matches.map(match => {
+                        const matchId = match.id || match._id;
+                        const isEditing = editingMatch === matchId;
+                        const p1 = getPlayer(match.player1Id);
+                        const p2 = getPlayer(match.player2Id);
+                        const t1 = getTeam(match.player1TeamId);
+                        const t2 = getTeam(match.player2TeamId);
+                        const isCompleted = match.status === 'completed';
+
+                        if (isEditing) {
+                            return React.createElement('div', {
+                                key: matchId,
+                                style: { background: '#1a1a2a', padding: '20px', borderRadius: '12px', marginBottom: '15px', border: '2px solid #2196f3' }
+                            },
+                                React.createElement('h4', { style: { color: '#2196f3', marginBottom: '15px' } }, '✏️ Редактирование матча #' + (match.matchIndex + 1)),
+
+                                // Player 1
+                                React.createElement('div', { style: { display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap', alignItems: 'center' } },
+                                    React.createElement('label', { style: { color: '#888', minWidth: '80px' } }, 'Игрок 1:'),
+                                    React.createElement('select', {
+                                        value: editForm.player1Id,
+                                        onChange: (e) => {
+                                            const pl = allPlayers.find(p => (p.id || p._id) === e.target.value);
+                                            setEditForm({ ...editForm, player1Id: e.target.value, player1TeamId: pl ? pl.teamId : editForm.player1TeamId });
+                                        },
+                                        style: { padding: '8px', borderRadius: '6px', background: '#2a2a2a', color: '#fff', border: '1px solid #555', flex: 1 }
+                                    },
+                                        React.createElement('option', { value: '' }, '— Не выбран —'),
+                                        allPlayers.map(p => React.createElement('option', { key: p.id || p._id, value: p.id || p._id },
+                                            p.name + (getTeam(p.teamId) ? ` (${getTeam(p.teamId).name})` : '')
+                                        ))
+                                    )
+                                ),
+
+                                // Player 2
+                                React.createElement('div', { style: { display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap', alignItems: 'center' } },
+                                    React.createElement('label', { style: { color: '#888', minWidth: '80px' } }, 'Игрок 2:'),
+                                    React.createElement('select', {
+                                        value: editForm.player2Id,
+                                        onChange: (e) => {
+                                            const pl = allPlayers.find(p => (p.id || p._id) === e.target.value);
+                                            setEditForm({ ...editForm, player2Id: e.target.value, player2TeamId: pl ? pl.teamId : editForm.player2TeamId });
+                                        },
+                                        style: { padding: '8px', borderRadius: '6px', background: '#2a2a2a', color: '#fff', border: '1px solid #555', flex: 1 }
+                                    },
+                                        React.createElement('option', { value: '' }, '— Не выбран —'),
+                                        allPlayers.map(p => React.createElement('option', { key: p.id || p._id, value: p.id || p._id },
+                                            p.name + (getTeam(p.teamId) ? ` (${getTeam(p.teamId).name})` : '')
+                                        ))
+                                    )
+                                ),
+
+                                // Maps
+                                React.createElement('div', { style: { display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap', alignItems: 'center' } },
+                                    React.createElement('label', { style: { color: '#888', minWidth: '80px' } }, 'Карта 1:'),
+                                    React.createElement('select', {
+                                        value: editForm.map1,
+                                        onChange: (e) => setEditForm({ ...editForm, map1: e.target.value }),
+                                        style: { padding: '8px', borderRadius: '6px', background: '#2a2a2a', color: '#fff', border: '1px solid #555', flex: 1 }
+                                    },
+                                        React.createElement('option', { value: '' }, '— Не выбрана —'),
+                                        w3cMaps.map(m => React.createElement('option', { key: m, value: m }, m))
+                                    )
+                                ),
+                                React.createElement('div', { style: { display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap', alignItems: 'center' } },
+                                    React.createElement('label', { style: { color: '#888', minWidth: '80px' } }, 'Карта 2:'),
+                                    React.createElement('select', {
+                                        value: editForm.map2,
+                                        onChange: (e) => setEditForm({ ...editForm, map2: e.target.value }),
+                                        style: { padding: '8px', borderRadius: '6px', background: '#2a2a2a', color: '#fff', border: '1px solid #555', flex: 1 }
+                                    },
+                                        React.createElement('option', { value: '' }, '— Не выбрана —'),
+                                        w3cMaps.map(m => React.createElement('option', { key: m, value: m }, m))
+                                    )
+                                ),
+
+                                // Score
+                                React.createElement('div', { style: { display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap', alignItems: 'center' } },
+                                    React.createElement('label', { style: { color: '#888', minWidth: '80px' } }, 'Счёт:'),
+                                    React.createElement('input', {
+                                        type: 'number', min: 0, value: editForm.score1,
+                                        onChange: (e) => setEditForm({ ...editForm, score1: parseInt(e.target.value) || 0 }),
+                                        style: { width: '60px', padding: '8px', borderRadius: '6px', background: '#2a2a2a', color: '#fff', border: '1px solid #555', textAlign: 'center' }
+                                    }),
+                                    React.createElement('span', { style: { color: '#c9a961' } }, ':'),
+                                    React.createElement('input', {
+                                        type: 'number', min: 0, value: editForm.score2,
+                                        onChange: (e) => setEditForm({ ...editForm, score2: parseInt(e.target.value) || 0 }),
+                                        style: { width: '60px', padding: '8px', borderRadius: '6px', background: '#2a2a2a', color: '#fff', border: '1px solid #555', textAlign: 'center' }
+                                    })
+                                ),
+
+                                // Winner
+                                React.createElement('div', { style: { display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap', alignItems: 'center' } },
+                                    React.createElement('label', { style: { color: '#888', minWidth: '80px' } }, 'Победитель:'),
+                                    React.createElement('select', {
+                                        value: editForm.winnerId,
+                                        onChange: (e) => setEditForm({ ...editForm, winnerId: e.target.value, status: e.target.value ? 'completed' : 'upcoming' }),
+                                        style: { padding: '8px', borderRadius: '6px', background: '#2a2a2a', color: '#fff', border: '1px solid #555', flex: 1 }
+                                    },
+                                        React.createElement('option', { value: '' }, '— Не определён —'),
+                                        editForm.player1Id && React.createElement('option', { value: editForm.player1Id },
+                                            (getPlayer(editForm.player1Id) || {}).name || 'Игрок 1'),
+                                        editForm.player2Id && React.createElement('option', { value: editForm.player2Id },
+                                            (getPlayer(editForm.player2Id) || {}).name || 'Игрок 2')
+                                    )
+                                ),
+
+                                // Buttons
+                                React.createElement('div', { style: { display: 'flex', gap: '10px' } },
+                                    React.createElement('button', {
+                                        onClick: () => saveEdit(matchId),
+                                        style: { padding: '10px 20px', borderRadius: '8px', background: '#4caf50', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: '600' }
+                                    }, '💾 Сохранить'),
+                                    React.createElement('button', {
+                                        onClick: () => setEditingMatch(null),
+                                        style: { padding: '10px 20px', borderRadius: '8px', background: '#666', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: '600' }
+                                    }, '❌ Отмена')
+                                )
+                            );
+                        }
+
+                        // Normal display mode
+                        return React.createElement('div', {
+                            key: matchId,
+                            style: {
+                                background: isCompleted ? '#1a2a1a' : '#1a1a1a',
+                                padding: '15px 20px', borderRadius: '12px', marginBottom: '10px',
+                                border: isCompleted ? '2px solid #4caf50' : '2px solid #333',
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px'
+                            }
+                        },
+                            // Match info
+                            React.createElement('div', { style: { flex: 1, minWidth: '200px' } },
+                                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' } },
+                                    React.createElement('span', {
+                                        style: { color: match.winnerId === match.player1Id ? '#4caf50' : '#fff', fontWeight: match.winnerId === match.player1Id ? '700' : '400' }
+                                    }, (t1 ? t1.emoji + ' ' : '') + (p1 ? p1.name : (match.player1Id ? '...' : 'TBD'))),
+                                    React.createElement('span', { style: { color: '#c9a961', fontWeight: '700' } },
+                                        isCompleted ? `${match.score1} : ${match.score2}` : 'VS'
+                                    ),
+                                    React.createElement('span', {
+                                        style: { color: match.winnerId === match.player2Id ? '#4caf50' : '#fff', fontWeight: match.winnerId === match.player2Id ? '700' : '400' }
+                                    }, (t2 ? t2.emoji + ' ' : '') + (p2 ? p2.name : (match.player2Id ? '...' : 'TBD')))
+                                ),
+                                (match.map1 || match.map2) && React.createElement('div', { style: { color: '#888', fontSize: '0.85em' } },
+                                    '🗺️ ' + [match.map1, match.map2].filter(Boolean).join(', ')
+                                )
+                            ),
+
+                            // Action buttons
+                            React.createElement('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
+                                !isCompleted && p1 && React.createElement('button', {
+                                    onClick: () => setWinner(match, match.player1Id),
+                                    style: { padding: '6px 12px', borderRadius: '6px', background: '#4caf50', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.85em' }
+                                }, '🏆 ' + p1.name),
+                                !isCompleted && p2 && React.createElement('button', {
+                                    onClick: () => setWinner(match, match.player2Id),
+                                    style: { padding: '6px 12px', borderRadius: '6px', background: '#4caf50', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.85em' }
+                                }, '🏆 ' + p2.name),
+                                React.createElement('button', {
+                                    onClick: () => startEdit(match),
+                                    style: { padding: '6px 12px', borderRadius: '6px', background: '#2196f3', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.85em' }
+                                }, '✏️ Изменить'),
+                                isCompleted && React.createElement('button', {
+                                    onClick: () => resetMatch(match),
+                                    style: { padding: '6px 12px', borderRadius: '6px', background: '#f44336', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.85em' }
+                                }, '🔄 Сбросить')
+                            )
+                        );
+                    })
+                )
+            )
     );
 }

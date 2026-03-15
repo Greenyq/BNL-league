@@ -260,5 +260,21 @@ module.exports = {
     SiteSettings: mongoose.model('SiteSettings', new mongoose.Schema({
         key: { type: String, required: true, unique: true },
         value: { type: mongoose.Schema.Types.Mixed }
+    })),
+    FinalsMatch: mongoose.model('FinalsMatch', new mongoose.Schema({
+        round: { type: String, enum: ['quarterfinal', 'semifinal', 'final'], required: true },
+        matchIndex: { type: Number, required: true }, // 0-3 for QF, 0-1 for SF, 0 for Final
+        player1Id: { type: String },
+        player2Id: { type: String },
+        player1TeamId: { type: String },
+        player2TeamId: { type: String },
+        winnerId: { type: String },
+        map1: { type: String, default: '' },
+        map2: { type: String, default: '' },
+        score1: { type: Number, default: 0 },
+        score2: { type: Number, default: 0 },
+        status: { type: String, enum: ['upcoming', 'completed'], default: 'upcoming' },
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now }
     }))
 };

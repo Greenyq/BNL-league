@@ -228,7 +228,7 @@ function App() {
     // Initialize activeTab from URL
     const getTabFromPath = () => {
         const path = window.location.pathname;
-        const validTabs = ['home', 'players', 'teams', 'schedule', 'stats', 'streamers', 'profile', 'admin'];
+        const validTabs = ['home', 'players', 'teams', 'schedule', 'finals', 'stats', 'streamers', 'profile', 'admin'];
         const tabFromPath = path.substring(1) || 'home'; // Remove leading slash
         return validTabs.includes(tabFromPath) ? tabFromPath : 'home';
     };
@@ -274,6 +274,7 @@ function App() {
     const [teams, setTeams] = useState([]);
     const [allPlayers, setAllPlayers] = useState([]);
     const [teamMatches, setTeamMatches] = useState([]);
+    const [finalsMatches, setFinalsMatches] = useState([]);
     const [portraits, setPortraits] = useState([]);
 
     const [schedule] = useState([
@@ -286,6 +287,7 @@ function App() {
         loadTeams();
         loadAllPlayers();
         loadTeamMatches();
+        loadFinalsMatches();
         loadPortraits();
         if (sessionId) {
             verifySession();
@@ -371,6 +373,16 @@ function App() {
             setTeamMatches(data);
         } catch (error) {
             console.error('Error loading team matches:', error);
+        }
+    };
+
+    const loadFinalsMatches = async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/finals`);
+            const data = await response.json();
+            setFinalsMatches(data);
+        } catch (error) {
+            console.error('Error loading finals:', error);
         }
     };
 
@@ -884,6 +896,7 @@ function App() {
                         }}
                     />
                 )}
+                {activeTab === 'finals' && <Finals finalsMatches={finalsMatches} teams={teams} allPlayers={allPlayers} />}
                 {activeTab === 'streamers' && <Streamers />}
                 {activeTab === 'profile' && playerUser && (
                     <PlayerProfile
@@ -911,11 +924,13 @@ function App() {
                         teams={teams}
                         allPlayers={allPlayers}
                         teamMatches={teamMatches}
+                        finalsMatches={finalsMatches}
                         sessionId={sessionId}
                         onUpdate={() => {
                             loadTeams();
                             loadAllPlayers();
                             loadTeamMatches();
+                            loadFinalsMatches();
                         }}
                         onLogout={() => {
                             localStorage.removeItem('adminSessionId');
@@ -1031,6 +1046,7 @@ function Nav({ activeTab, setActiveTab, isAdmin, setShowLoginModal, playerUser, 
                 <button className={`nav-btn ${activeTab === 'players' ? 'active' : ''}`} onClick={() => setActiveTab('players')}>{t('nav.players')}</button>
                 <button className={`nav-btn ${activeTab === 'teams' ? 'active' : ''}`} onClick={() => setActiveTab('teams')}>{t('nav.teams')}</button>
                 <button className={`nav-btn ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => setActiveTab('schedule')}>{t('nav.schedule')}</button>
+                <button className={`nav-btn ${activeTab === 'finals' ? 'active' : ''}`} onClick={() => setActiveTab('finals')}>{t('nav.finals')}</button>
                 <button className={`nav-btn ${activeTab === 'streamers' ? 'active' : ''}`} onClick={() => setActiveTab('streamers')}>{t('nav.streamers')}</button>
                 {isAdmin ? (
                     <button className={`nav-btn ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>{t('nav.admin')}</button>
@@ -4819,6 +4835,179 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
                 </div>
             </div>
         </div>
+    );
+}
+
+// ==================== FINALS BRACKET ====================
+function Finals({ finalsMatches, teams, allPlayers }) {
+    const lang = useLang();
+
+    const getPlayer = (id) => allPlayers.find(p => p.id === id || p._id === id);
+    const getTeam = (id) => teams.find(t => t.id === id || t._id === id);
+
+    const qf = finalsMatches.filter(m => m.round === 'quarterfinal').sort((a, b) => a.matchIndex - b.matchIndex);
+    const sf = finalsMatches.filter(m => m.round === 'semifinal').sort((a, b) => a.matchIndex - b.matchIndex);
+    const final = finalsMatches.filter(m => m.round === 'final');
+
+    const renderMatchCard = (match, roundLabel) => {
+        if (!match) return React.createElement('div', { style: { width: '280px', height: '140px' } });
+
+        const p1 = getPlayer(match.player1Id);
+        const p2 = getPlayer(match.player2Id);
+        const t1 = getTeam(match.player1TeamId);
+        const t2 = getTeam(match.player2TeamId);
+        const isCompleted = match.status === 'completed';
+        const p1Won = match.winnerId === match.player1Id;
+        const p2Won = match.winnerId === match.player2Id;
+
+        return React.createElement('div', {
+            key: match.id || match._id,
+            style: {
+                width: '280px',
+                background: '#1a1a1a',
+                borderRadius: '12px',
+                border: isCompleted ? '2px solid #c9a961' : '2px solid #333',
+                overflow: 'hidden'
+            }
+        },
+            // Player 1
+            React.createElement('div', {
+                style: {
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '10px 14px',
+                    background: p1Won ? 'rgba(76,175,80,0.15)' : 'transparent',
+                    borderBottom: '1px solid #333'
+                }
+            },
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                    t1 && React.createElement('span', { style: { fontSize: '0.8em' } }, t1.emoji || ''),
+                    React.createElement('span', {
+                        style: { color: p1Won ? '#4caf50' : '#fff', fontWeight: p1Won ? '700' : '400', fontSize: '0.95em' }
+                    }, p1 ? p1.name : (match.player1Id ? '...' : 'TBD'))
+                ),
+                React.createElement('span', {
+                    style: { color: p1Won ? '#4caf50' : '#888', fontWeight: '700', fontSize: '1.1em' }
+                }, isCompleted ? match.score1 : '')
+            ),
+            // Player 2
+            React.createElement('div', {
+                style: {
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '10px 14px',
+                    background: p2Won ? 'rgba(76,175,80,0.15)' : 'transparent',
+                    borderBottom: (match.map1 || match.map2) ? '1px solid #333' : 'none'
+                }
+            },
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                    t2 && React.createElement('span', { style: { fontSize: '0.8em' } }, t2.emoji || ''),
+                    React.createElement('span', {
+                        style: { color: p2Won ? '#4caf50' : '#fff', fontWeight: p2Won ? '700' : '400', fontSize: '0.95em' }
+                    }, p2 ? p2.name : (match.player2Id ? '...' : 'TBD'))
+                ),
+                React.createElement('span', {
+                    style: { color: p2Won ? '#4caf50' : '#888', fontWeight: '700', fontSize: '1.1em' }
+                }, isCompleted ? match.score2 : '')
+            ),
+            // Maps
+            (match.map1 || match.map2) && React.createElement('div', {
+                style: { padding: '8px 14px', background: '#111', display: 'flex', gap: '8px', flexWrap: 'wrap' }
+            },
+                match.map1 && React.createElement('span', {
+                    style: { color: '#c9a961', fontSize: '0.75em', background: '#2a2a1a', padding: '2px 8px', borderRadius: '4px' }
+                }, '🗺️ ' + match.map1),
+                match.map2 && React.createElement('span', {
+                    style: { color: '#c9a961', fontSize: '0.75em', background: '#2a2a1a', padding: '2px 8px', borderRadius: '4px' }
+                }, '🗺️ ' + match.map2)
+            )
+        );
+    };
+
+    // Find the winner of the final
+    const champion = final.length > 0 && final[0].winnerId ? getPlayer(final[0].winnerId) : null;
+    const championTeam = final.length > 0 && final[0].winnerId
+        ? getTeam(final[0].player1Id === final[0].winnerId ? final[0].player1TeamId : final[0].player2TeamId)
+        : null;
+
+    if (finalsMatches.length === 0) {
+        return React.createElement('div', {
+            style: { textAlign: 'center', padding: '60px 20px' }
+        },
+            React.createElement('h2', { style: { color: '#c9a961', marginBottom: '20px' } }, '🏆 ' + (lang === 'en' ? 'Finals' : 'Финал')),
+            React.createElement('p', { style: { color: '#888', fontSize: '1.1em' } },
+                lang === 'en' ? 'The finals bracket has not been generated yet.' : 'Сетка финала ещё не сформирована.'
+            )
+        );
+    }
+
+    return React.createElement('div', {
+        style: { padding: '20px', maxWidth: '1200px', margin: '0 auto' }
+    },
+        React.createElement('h2', {
+            style: { color: '#c9a961', textAlign: 'center', marginBottom: '30px', fontSize: '2em' }
+        }, '🏆 ' + (lang === 'en' ? 'Finals Bracket' : 'Сетка Финала')),
+
+        // Champion banner
+        champion && React.createElement('div', {
+            style: {
+                textAlign: 'center', marginBottom: '30px', padding: '20px',
+                background: 'linear-gradient(135deg, #2a2a1a, #1a1a1a)',
+                borderRadius: '15px', border: '2px solid #c9a961'
+            }
+        },
+            React.createElement('div', { style: { fontSize: '2em', marginBottom: '5px' } }, '👑'),
+            React.createElement('div', { style: { color: '#c9a961', fontSize: '1.5em', fontWeight: '700' } }, champion.name),
+            championTeam && React.createElement('div', { style: { color: '#888', marginTop: '5px' } }, championTeam.emoji + ' ' + championTeam.name)
+        ),
+
+        // Bracket grid
+        React.createElement('div', {
+            style: {
+                display: 'flex', justifyContent: 'center', alignItems: 'center',
+                gap: '40px', overflowX: 'auto', padding: '20px 0'
+            }
+        },
+            // QF column
+            React.createElement('div', {
+                style: { display: 'flex', flexDirection: 'column', gap: '20px' }
+            },
+                React.createElement('h3', { style: { color: '#888', textAlign: 'center', marginBottom: '10px' } },
+                    lang === 'en' ? 'Quarterfinals' : 'Четвертьфинал'),
+                qf[0] && renderMatchCard(qf[0]),
+                qf[1] && renderMatchCard(qf[1]),
+                React.createElement('div', { style: { height: '40px' } }),
+                qf[2] && renderMatchCard(qf[2]),
+                qf[3] && renderMatchCard(qf[3])
+            ),
+
+            // Connector lines
+            React.createElement('div', {
+                style: { display: 'flex', flexDirection: 'column', gap: '20px', color: '#555', fontSize: '2em' }
+            }, '→', React.createElement('div', { style: { height: '180px' } }), '→'),
+
+            // SF column
+            React.createElement('div', {
+                style: { display: 'flex', flexDirection: 'column', gap: '80px', justifyContent: 'center' }
+            },
+                React.createElement('h3', { style: { color: '#888', textAlign: 'center', marginBottom: '10px' } },
+                    lang === 'en' ? 'Semifinals' : 'Полуфинал'),
+                sf[0] && renderMatchCard(sf[0]),
+                sf[1] && renderMatchCard(sf[1])
+            ),
+
+            // Connector
+            React.createElement('div', {
+                style: { color: '#555', fontSize: '2em', alignSelf: 'center' }
+            }, '→'),
+
+            // Final column
+            React.createElement('div', {
+                style: { display: 'flex', flexDirection: 'column', justifyContent: 'center' }
+            },
+                React.createElement('h3', { style: { color: '#c9a961', textAlign: 'center', marginBottom: '10px' } },
+                    lang === 'en' ? 'Final' : 'Финал'),
+                final[0] && renderMatchCard(final[0])
+            )
+        )
     );
 }
 
