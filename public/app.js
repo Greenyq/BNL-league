@@ -896,7 +896,7 @@ function App() {
                         }}
                     />
                 )}
-                {activeTab === 'finals' && <Finals finalsMatches={finalsMatches} teams={teams} allPlayers={allPlayers} />}
+                {activeTab === 'finals' && <Finals finalsMatches={finalsMatches} teams={teams} allPlayers={allPlayers} portraits={portraits} />}
                 {activeTab === 'streamers' && <Streamers />}
                 {activeTab === 'profile' && playerUser && (
                     <PlayerProfile
@@ -4839,7 +4839,7 @@ function PlayerDetailModal({ player, portraits = [], onClose }) {
 }
 
 // ==================== FINALS BRACKET ====================
-function Finals({ finalsMatches, teams, allPlayers }) {
+function Finals({ finalsMatches, teams, allPlayers, portraits = [] }) {
     const lang = useLang();
 
     const getPlayer = (id) => allPlayers.find(p => p.id === id || p._id === id);
@@ -4849,20 +4849,45 @@ function Finals({ finalsMatches, teams, allPlayers }) {
     const sf = finalsMatches.filter(m => m.round === 'semifinal').sort((a, b) => a.matchIndex - b.matchIndex);
     const finalArr = finalsMatches.filter(m => m.round === 'final');
 
+    const getPlayerAvatar = (player) => {
+        if (!player) return null;
+        const selectedPortrait = player.selectedPortraitId
+            ? portraits.find(pt => pt.id === player.selectedPortraitId)
+            : null;
+        return selectedPortrait ? selectedPortrait.imageUrl : raceImages[player.race] || null;
+    };
+
     const renderPlayerRow = (playerId, teamId, isWinner, score, isCompleted) => {
         const p = getPlayer(playerId);
         const t = getTeam(teamId);
+        const avatarUrl = getPlayerAvatar(p);
         return React.createElement('div', {
             style: {
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '8px 12px',
+                padding: '8px 10px',
                 background: isWinner ? 'rgba(76,175,80,0.15)' : 'transparent'
             }
         },
             React.createElement('div', {
-                style: { display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', flex: 1 }
+                style: { display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }
             },
-                t && React.createElement('span', { style: { fontSize: '0.85em', flexShrink: 0 } }, t.emoji || ''),
+                // Avatar
+                avatarUrl
+                    ? React.createElement('img', {
+                        src: avatarUrl,
+                        style: {
+                            width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover',
+                            flexShrink: 0, border: isWinner ? '2px solid #4caf50' : '2px solid #444'
+                        }
+                    })
+                    : React.createElement('div', {
+                        style: {
+                            width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
+                            background: '#333', border: '2px solid #444',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '0.7em', color: '#666'
+                        }
+                    }, t ? (t.emoji || '?') : '?'),
                 React.createElement('span', {
                     style: {
                         color: isWinner ? '#4caf50' : (p ? '#fff' : '#555'),
