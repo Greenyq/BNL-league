@@ -4922,7 +4922,9 @@ function Finals({ finalsMatches, teams, allPlayers, portraits = [] }) {
                 border: isCompleted ? '2px solid #c9a961' : '1px solid #333',
                 overflow: 'hidden',
                 width: '100%',
-                cursor: hasMaps ? 'pointer' : 'default'
+                cursor: hasMaps ? 'pointer' : 'default',
+                position: 'relative',
+                zIndex: showMaps ? 10 : 1
             },
             onClick: hasMaps ? () => setShowMaps(prev => !prev) : undefined
         },
