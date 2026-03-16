@@ -4946,7 +4946,6 @@ function Finals({ finalsMatches, teams, allPlayers, portraits = [] }) {
             )
         );
     }
-    };
 
     const champion = finalArr.length > 0 && finalArr[0].winnerId ? getPlayer(finalArr[0].winnerId) : null;
     const championTeam = finalArr.length > 0 && finalArr[0].winnerId
