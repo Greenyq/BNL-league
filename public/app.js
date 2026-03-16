@@ -4905,24 +4905,36 @@ function Finals({ finalsMatches, teams, allPlayers, portraits = [] }) {
 
     const renderMatchCard = (match) => {
         if (!match) return null;
+        return React.createElement(MatchCard, { key: match.id || match._id, match, renderPlayerRow });
+    };
+
+    function MatchCard({ match, renderPlayerRow }) {
+        const [showMaps, setShowMaps] = React.useState(false);
         const isCompleted = match.status === 'completed';
         const p1Won = match.winnerId && match.winnerId === match.player1Id;
         const p2Won = match.winnerId && match.winnerId === match.player2Id;
+        const hasMaps = match.map1 || match.map2;
 
         return React.createElement('div', {
-            key: match.id || match._id,
             style: {
                 background: '#1a1a1a',
                 borderRadius: '10px',
                 border: isCompleted ? '2px solid #c9a961' : '1px solid #333',
                 overflow: 'hidden',
-                width: '100%'
-            }
+                width: '100%',
+                cursor: hasMaps ? 'pointer' : 'default'
+            },
+            onClick: hasMaps ? () => setShowMaps(prev => !prev) : undefined
         },
             renderPlayerRow(match.player1Id, match.player1TeamId, p1Won, match.score1, isCompleted),
             React.createElement('div', { style: { height: '1px', background: '#333' } }),
             renderPlayerRow(match.player2Id, match.player2TeamId, p2Won, match.score2, isCompleted),
-            (match.map1 || match.map2) && React.createElement('div', {
+            // Maps indicator (small dot/icon to hint there are maps)
+            hasMaps && !showMaps && React.createElement('div', {
+                style: { textAlign: 'center', padding: '3px 0', background: '#111', borderTop: '1px solid #282828', fontSize: '0.6em', color: '#555' }
+            }, '🗺️ ' + (lang === 'en' ? 'tap to show maps' : 'нажми для карт')),
+            // Maps expanded
+            hasMaps && showMaps && React.createElement('div', {
                 style: { padding: '6px 10px', background: '#111', borderTop: '1px solid #282828', display: 'flex', gap: '6px', flexWrap: 'wrap' }
             },
                 match.map1 && React.createElement('span', {
@@ -4933,6 +4945,7 @@ function Finals({ finalsMatches, teams, allPlayers, portraits = [] }) {
                 }, '🗺️ ' + match.map2)
             )
         );
+    }
     };
 
     const champion = finalArr.length > 0 && finalArr[0].winnerId ? getPlayer(finalArr[0].winnerId) : null;
