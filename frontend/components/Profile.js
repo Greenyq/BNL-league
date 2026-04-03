@@ -153,7 +153,7 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
         } catch (err) { flash(err.message, 'err'); }
     };
 
-    const playerPoints = playerData?.stats?.totalPoints ?? playerData?.totalPoints ?? 0;
+    const playerPoints = playerData?.stats?.points ?? 0;
     const availablePortraits = allPortraits.filter(p =>
         (p.race === 0 || p.race === selectedRace) && p.pointsRequired <= playerPoints
     );
@@ -330,7 +330,11 @@ function Profile() {
         if (!sid) { setChecking(false); return; }
         playerFetch('/api/players/auth/me')
             .then(d => { setUser(d.user); setPlayerData(d.playerData); })
-            .catch(() => clearPlayerSession())
+            .catch(err => {
+                // Only clear session on explicit auth rejection, not network/server errors
+                const msg = err.message || '';
+                if (msg === 'Not authenticated' || msg === 'User not found') clearPlayerSession();
+            })
             .finally(() => setChecking(false));
     }, []);
 

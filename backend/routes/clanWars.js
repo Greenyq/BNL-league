@@ -73,6 +73,16 @@ router.put('/:id/matches/:matchId', async (req, res) => {
     }
 });
 
+// DELETE /api/clan-wars/:id — delete clan war
+router.delete('/:id', async (req, res) => {
+    try {
+        await ClanWar.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // PUT /api/clan-wars/:id — update top-level fields (status, date, teams, etc.)
 router.put('/:id', async (req, res) => {
     try {

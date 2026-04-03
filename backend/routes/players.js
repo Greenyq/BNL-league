@@ -14,6 +14,15 @@ const SESSION_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days
 const escapeRegex = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const isValidBattleTag = t => /^[a-zA-Z0-9_\u0400-\u04FF]{2,12}#\d+$/.test(t) && t.length <= 30;
 
+// Returns player doc merged with stats (or null)
+async function playerWithStats(battleTag) {
+    if (!battleTag) return null;
+    const player = await Player.findOne({ battleTag });
+    if (!player) return null;
+    const stats  = await PlayerStats.findOne({ battleTag });
+    return { ...player.toJSON(), stats: stats ? stats.toJSON() : null };
+}
+
 async function getPlayerSession(req) {
     const sessionId = req.headers['x-player-session-id'];
     if (!sessionId) return null;
@@ -92,10 +101,7 @@ router.post('/auth/login', async (req, res) => {
             session = await PlayerSession.create({ sessionId, playerUserId: playerUser.id, expiresAt });
         }
 
-        let playerData = null;
-        if (playerUser.linkedBattleTag)
-            playerData = await Player.findOne({ battleTag: playerUser.linkedBattleTag });
-
+        const playerData = await playerWithStats(playerUser.linkedBattleTag);
         res.json({ success: true, sessionId: session.sessionId, user: playerUser, playerData });
     } catch (err) {
         res.status(500).json({ error: 'Login failed' });
@@ -111,10 +117,7 @@ router.get('/auth/me', async (req, res) => {
         const playerUser = await PlayerUser.findById(session.playerUserId);
         if (!playerUser) return res.status(401).json({ error: 'User not found' });
 
-        let playerData = null;
-        if (playerUser.linkedBattleTag)
-            playerData = await Player.findOne({ battleTag: playerUser.linkedBattleTag });
-
+        const playerData = await playerWithStats(playerUser.linkedBattleTag);
         res.json({ user: playerUser, playerData });
     } catch (err) {
         res.status(500).json({ error: 'Failed to get user' });
@@ -168,7 +171,8 @@ router.put('/auth/link-battletag', async (req, res) => {
             { linkedBattleTag: player.battleTag, updatedAt: Date.now() },
             { new: true }
         );
-        res.json({ success: true, user: playerUser, linkedPlayer: player });
+        const linkedPlayer = await playerWithStats(player.battleTag);
+        res.json({ success: true, user: playerUser, linkedPlayer });
     } catch (err) {
         res.status(500).json({ error: 'Failed to link BattleTag' });
     }
