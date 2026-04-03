@@ -14,12 +14,14 @@ const SESSION_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days
 const escapeRegex = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const isValidBattleTag = t => /^[a-zA-Z0-9_\u0400-\u04FF]{2,12}#\d+$/.test(t) && t.length <= 30;
 
-// Returns player doc merged with stats (or null)
+// Returns player doc merged with stats (or null). Case-insensitive battleTag lookup.
 async function playerWithStats(battleTag) {
     if (!battleTag) return null;
-    const player = await Player.findOne({ battleTag });
+    const player = await Player.findOne({
+        battleTag: { $regex: new RegExp(`^${escapeRegex(battleTag.trim())}$`, 'i') }
+    });
     if (!player) return null;
-    const stats  = await PlayerStats.findOne({ battleTag });
+    const stats = await PlayerStats.findOne({ battleTag: player.battleTag });
     return { ...player.toJSON(), stats: stats ? stats.toJSON() : null };
 }
 
@@ -166,6 +168,7 @@ router.put('/auth/link-battletag', async (req, res) => {
         if (existing && existing.id !== session.playerUserId.toString())
             return res.status(400).json({ error: 'BattleTag already linked to another account' });
 
+        // Store player.battleTag (canonical casing from DB) not what user typed
         const playerUser = await PlayerUser.findByIdAndUpdate(
             session.playerUserId,
             { linkedBattleTag: player.battleTag, updatedAt: Date.now() },
