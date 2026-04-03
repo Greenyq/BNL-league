@@ -16,6 +16,7 @@ const playerSchema = new mongoose.Schema({
     teamId:            { type: String },
     discordTag:        { type: String },
     selectedPortraitId:{ type: String },
+    selectedPortrait:  { type: String }, // URL of selected portrait image
     createdAt:         { type: Date, default: Date.now },
     updatedAt:         { type: Date, default: Date.now }
 });

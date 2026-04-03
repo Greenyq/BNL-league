@@ -20,7 +20,18 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Single player
+// W3Champions player lookup — must be before /:battleTag to avoid shadowing
+router.get('/w3c/search/:battleTag', async (req, res) => {
+    try {
+        const data = await searchPlayer(decodeURIComponent(req.params.battleTag));
+        if (!data) return res.status(404).json({ error: 'Not found on W3Champions' });
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: 'W3Champions lookup failed' });
+    }
+});
+
+// Single player by battleTag
 router.get('/:battleTag', async (req, res) => {
     try {
         const player = await Player.findOne({ battleTag: decodeURIComponent(req.params.battleTag) });
@@ -32,14 +43,20 @@ router.get('/:battleTag', async (req, res) => {
     }
 });
 
-// W3Champions player lookup (for admin "add player" flow)
-router.get('/w3c/search/:battleTag', async (req, res) => {
+// Portrait selection — public (any player can set their own portrait by id)
+router.put('/:id/portrait', async (req, res) => {
     try {
-        const data = await searchPlayer(decodeURIComponent(req.params.battleTag));
-        if (!data) return res.status(404).json({ error: 'Not found on W3Champions' });
-        res.json(data);
+        const { portrait } = req.body;
+        if (!portrait) return res.status(400).json({ error: 'portrait is required' });
+        const player = await Player.findByIdAndUpdate(
+            req.params.id,
+            { selectedPortrait: portrait, updatedAt: Date.now() },
+            { new: true }
+        );
+        if (!player) return res.status(404).json({ error: 'Player not found' });
+        res.json({ success: true, selectedPortrait: player.selectedPortrait });
     } catch (err) {
-        res.status(500).json({ error: 'W3Champions lookup failed' });
+        res.status(500).json({ error: err.message });
     }
 });
 
