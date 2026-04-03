@@ -367,6 +367,37 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
 // ── Вкладка Клан-вары ─────────────────────────────────────────────────────────
 const CW_STATUS_LABELS = { upcoming: '📅 Предстоит', ongoing: '⚔ Идёт', completed: '✅ Завершён' };
 const CW_STATUS_COLORS = { upcoming: 'var(--color-accent-secondary)', ongoing: 'var(--color-success)', completed: 'var(--color-text-muted)' };
+
+// Dropdown picker for N players (1 for 1v1, 2 for 2v2, 3 for 3v3)
+function PlayerPicker({ value, onChange, count, players }) {
+    // Parse "Name1 + Name2" → ['Name1', 'Name2']
+    const parts = React.useMemo(() => {
+        const arr = (value || '').split(' + ').map(s => s.trim());
+        while (arr.length < count) arr.push('');
+        return arr.slice(0, count);
+    }, [value, count]);
+
+    const update = (idx, val) => {
+        const next = [...parts];
+        next[idx] = val;
+        onChange(next.filter(Boolean).join(' + '));
+    };
+
+    const selStyle = { background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '6px 8px', fontSize: '0.88em', width: '100%' };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {Array.from({ length: count }).map((_, i) => (
+                <select key={i} value={parts[i] || ''} onChange={e => update(i, e.target.value)} style={selStyle}>
+                    <option value="">— Игрок {i + 1} —</option>
+                    {players.map(p => (
+                        <option key={p.id} value={p.name}>{p.name} · {p.battleTag}</option>
+                    ))}
+                </select>
+            ))}
+        </div>
+    );
+}
 const DEFAULT_MATCHES = [
     { order: 1, format: '1v1', label: 'Дуэль I' },
     { order: 2, format: '1v1', label: 'Дуэль II' },
@@ -375,7 +406,7 @@ const DEFAULT_MATCHES = [
     { order: 5, format: '1v1', label: 'Тайм-брейк' },
 ].map(m => ({ ...m, playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] }));
 
-function ClanWarTab({ showMsg }) {
+function ClanWarTab({ showMsg, players }) {
     useLang();
     const [wars,       setWars]       = React.useState([]);
     const [selected,   setSelected]   = React.useState(null); // ClanWar object for detail view
@@ -519,49 +550,55 @@ function ClanWarTab({ showMsg }) {
                             </div>
 
                             {/* Игроки и счёт */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 'var(--spacing-md)', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
-                                {/* Сторона A */}
-                                <div>
-                                    <div style={{ fontSize: '0.75em', color: 'var(--color-text-muted)', marginBottom: 4 }}>{cw.teamA?.name || 'Команда A'}</div>
-                                    <input
-                                        value={match.playerA || ''}
-                                        onChange={e => updateField(`matches.${idx}.playerA`, e.target.value)}
-                                        placeholder="Игрок(и)"
-                                        style={{ width: '100%', padding: '6px 10px' }}
-                                    />
-                                </div>
+                            {(() => {
+                                const fmt = match.format || '1v1';
+                                const playerCount = fmt === '3v3' ? 3 : fmt === '2v2' ? 2 : 1;
+                                return (
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 'var(--spacing-md)', alignItems: 'start', marginBottom: 'var(--spacing-md)' }}>
+                                        {/* Сторона A */}
+                                        <div>
+                                            <div style={{ fontSize: '0.75em', color: 'var(--color-text-muted)', marginBottom: 4 }}>{cw.teamA?.name || 'Команда A'}</div>
+                                            <PlayerPicker
+                                                value={match.playerA || ''}
+                                                onChange={val => updateField(`matches.${idx}.playerA`, val)}
+                                                count={playerCount}
+                                                players={players || []}
+                                            />
+                                        </div>
 
-                                {/* Счёт */}
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: '0.75em', color: 'var(--color-text-muted)', marginBottom: 4 }}>Счёт BO3</div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <input
-                                            type="number" min="0" max="2"
-                                            value={match.score?.a ?? 0}
-                                            onChange={e => updateField(`matches.${idx}.score.a`, parseInt(e.target.value) || 0)}
-                                            style={{ width: 52, textAlign: 'center', padding: '6px 4px' }}
-                                        />
-                                        <span style={{ color: 'var(--color-text-muted)' }}>:</span>
-                                        <input
-                                            type="number" min="0" max="2"
-                                            value={match.score?.b ?? 0}
-                                            onChange={e => updateField(`matches.${idx}.score.b`, parseInt(e.target.value) || 0)}
-                                            style={{ width: 52, textAlign: 'center', padding: '6px 4px' }}
-                                        />
+                                        {/* Счёт */}
+                                        <div style={{ textAlign: 'center', paddingTop: 18 }}>
+                                            <div style={{ fontSize: '0.75em', color: 'var(--color-text-muted)', marginBottom: 4 }}>BO3</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <input
+                                                    type="number" min="0" max="2"
+                                                    value={match.score?.a ?? 0}
+                                                    onChange={e => updateField(`matches.${idx}.score.a`, parseInt(e.target.value) || 0)}
+                                                    style={{ width: 50, textAlign: 'center', padding: '6px 4px' }}
+                                                />
+                                                <span style={{ color: 'var(--color-text-muted)' }}>:</span>
+                                                <input
+                                                    type="number" min="0" max="2"
+                                                    value={match.score?.b ?? 0}
+                                                    onChange={e => updateField(`matches.${idx}.score.b`, parseInt(e.target.value) || 0)}
+                                                    style={{ width: 50, textAlign: 'center', padding: '6px 4px' }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Сторона B */}
+                                        <div>
+                                            <div style={{ fontSize: '0.75em', color: 'var(--color-text-muted)', marginBottom: 4 }}>{cw.teamB?.name || 'Команда B'}</div>
+                                            <PlayerPicker
+                                                value={match.playerB || ''}
+                                                onChange={val => updateField(`matches.${idx}.playerB`, val)}
+                                                count={playerCount}
+                                                players={players || []}
+                                            />
+                                        </div>
                                     </div>
-                                </div>
-
-                                {/* Сторона B */}
-                                <div>
-                                    <div style={{ fontSize: '0.75em', color: 'var(--color-text-muted)', marginBottom: 4 }}>{cw.teamB?.name || 'Команда B'}</div>
-                                    <input
-                                        value={match.playerB || ''}
-                                        onChange={e => updateField(`matches.${idx}.playerB`, e.target.value)}
-                                        placeholder="Игрок(и)"
-                                        style={{ width: '100%', padding: '6px 10px' }}
-                                    />
-                                </div>
-                            </div>
+                                );
+                            })()}
 
                             {/* Победитель */}
                             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -929,7 +966,7 @@ function AdminPanel({ onLogout }) {
 
             {tab === 'players'   && <PlayersTab  players={players} teams={teams} onRefresh={load} showMsg={showMsg} />}
             {tab === 'teams'     && <TeamsTab    teams={teams}   players={players} onRefresh={load} showMsg={showMsg} />}
-            {tab === 'clanwars'  && <ClanWarTab  showMsg={showMsg} />}
+            {tab === 'clanwars'  && <ClanWarTab  players={players} showMsg={showMsg} />}
             {tab === 'portraits' && <PortraitsTab showMsg={showMsg} />}
             {tab === 'tools'   && (
                 <div>

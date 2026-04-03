@@ -153,14 +153,16 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
         } catch (err) { flash(err.message, 'err'); }
     };
 
-    const playerPoints = playerData?.stats?.points ?? 0;
-    const availablePortraits = allPortraits.filter(p =>
-        (p.race === 0 || p.race === selectedRace) && p.pointsRequired <= playerPoints
-    );
-    const lockedPortraits = allPortraits.filter(p =>
-        (p.race === 0 || p.race === selectedRace) && p.pointsRequired > playerPoints
-    );
+    // Use linkedBattleTag from user object as fallback when playerData hasn't loaded yet
+    const linkedTag = playerData?.battleTag || user?.linkedBattleTag || null;
     const currentPortrait = selectedPort || null;
+    // Group all portraits by race — all are free to select
+    const PORTRAIT_RACE_ORDER = [0, 1, 2, 4, 8];
+    const portraitsByRace = allPortraits.reduce((acc, p) => {
+        if (!acc[p.race]) acc[p.race] = [];
+        acc[p.race].push(p);
+        return acc;
+    }, {});
 
     return (
         <div className="animate-fade-in" style={{ maxWidth: 600, margin: '0 auto' }}>
@@ -174,10 +176,10 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                 )}
                 <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '1.3em', fontWeight: 800, color: 'var(--color-text-primary)' }}>{user.username}</div>
-                    {playerData ? (
+                    {linkedTag ? (
                         <div style={{ color: 'var(--color-accent-primary)', fontWeight: 600, fontSize: '0.95em', marginTop: 4 }}>
-                            ⚔ {playerData.battleTag}
-                            {playerData.currentMmr && <span style={{ color: 'var(--color-accent-secondary)', marginLeft: 10 }}>MMR {playerData.currentMmr}</span>}
+                            ⚔ {linkedTag}
+                            {playerData?.currentMmr && <span style={{ color: 'var(--color-accent-secondary)', marginLeft: 10 }}>MMR {playerData.currentMmr}</span>}
                         </div>
                     ) : (
                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.9em', marginTop: 4 }}>{t('profile.noLink')}</div>
@@ -196,10 +198,10 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
             {/* Привязка BattleTag */}
             <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-lg)' }}>
                 <h4 style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-accent-primary)' }}>🔗 {t('profile.linkTitle')}</h4>
-                {playerData ? (
+                {linkedTag ? (
                     <div>
                         <p style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--spacing-md)' }}>
-                            {t('profile.linkedAs')} <strong style={{ color: 'var(--color-text-primary)' }}>{playerData.battleTag}</strong>
+                            {t('profile.linkedAs')} <strong style={{ color: 'var(--color-text-primary)' }}>{linkedTag}</strong>
                         </p>
                         <button className="btn btn-secondary" onClick={unlinkBattleTag} style={{ padding: '8px 16px', fontSize: '0.9em', color: 'var(--color-error)', borderColor: 'var(--color-error)' }}>
                             {t('profile.unlink')}
@@ -227,8 +229,8 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                 )}
             </div>
 
-            {/* Выбор расы — только если привязан */}
-            {playerData && (
+            {/* Выбор расы — только если BattleTag привязан */}
+            {linkedTag && (
                 <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-lg)' }}>
                     <h4 style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-accent-primary)' }}>⚔ {t('profile.raceTitle')}</h4>
                     <div style={{ display: 'flex', gap: 'var(--spacing-lg)', flexWrap: 'wrap' }}>
@@ -250,26 +252,26 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                 </div>
             )}
 
-            {/* Выбор портрета — только если привязан */}
-            {playerData && (
+            {/* Выбор портрета — только если BattleTag привязан */}
+            {linkedTag && (
                 <div className="card-elevated" style={{ padding: 'var(--spacing-xl)' }}>
                     <h4 style={{ marginBottom: 8, color: 'var(--color-accent-primary)' }}>🖼 {t('profile.portraitTitle')}</h4>
                     <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', marginBottom: 'var(--spacing-lg)' }}>
-                        {t('profile.portraitDesc')} · {playerPoints} очков
+                        {t('profile.portraitDesc')}
                     </p>
 
                     {allPortraits.length === 0 && (
                         <p style={{ color: 'var(--color-text-muted)' }}>Портреты ещё не добавлены администратором</p>
                     )}
 
-                    {/* Доступные портреты */}
-                    {availablePortraits.length > 0 && (
-                        <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 'var(--spacing-sm)', textTransform: 'uppercase', letterSpacing: 1 }}>
-                                Доступно ({availablePortraits.length})
+                    {/* Все портреты по расам, без замков */}
+                    {PORTRAIT_RACE_ORDER.filter(r => portraitsByRace[r]?.length).map(r => (
+                        <div key={r} style={{ marginBottom: 'var(--spacing-lg)' }}>
+                            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.78em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 'var(--spacing-sm)' }}>
+                                {PORTRAIT_RACE_LABELS[r]}
                             </div>
                             <div style={{ display: 'flex', gap: 'var(--spacing-md)', flexWrap: 'wrap' }}>
-                                {availablePortraits.map(p => (
+                                {portraitsByRace[r].map(p => (
                                     <div key={p.id} onClick={() => savePortrait(p.imageUrl)} style={{ cursor: 'pointer', textAlign: 'center' }}>
                                         <img src={p.imageUrl} alt={p.name} style={{
                                             width: 80, height: 80, borderRadius: '50%', objectFit: 'cover',
@@ -285,33 +287,7 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                                 ))}
                             </div>
                         </div>
-                    )}
-
-                    {/* Заблокированные портреты */}
-                    {lockedPortraits.length > 0 && (
-                        <div>
-                            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 'var(--spacing-sm)', textTransform: 'uppercase', letterSpacing: 1 }}>
-                                Заблокировано ({lockedPortraits.length})
-                            </div>
-                            <div style={{ display: 'flex', gap: 'var(--spacing-md)', flexWrap: 'wrap' }}>
-                                {lockedPortraits.map(p => (
-                                    <div key={p.id} title={`Нужно ${p.pointsRequired} очков`} style={{ textAlign: 'center', opacity: 0.4, cursor: 'not-allowed' }}>
-                                        <div style={{ position: 'relative', display: 'inline-block' }}>
-                                            <img src={p.imageUrl} alt={p.name} style={{
-                                                width: 80, height: 80, borderRadius: '50%', objectFit: 'cover',
-                                                border: '3px solid rgba(255,255,255,0.08)',
-                                                filter: 'grayscale(1)',
-                                            }} />
-                                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: '1.4em' }}>🔒</div>
-                                        </div>
-                                        <div style={{ fontSize: '0.78em', marginTop: 5, color: 'var(--color-text-muted)' }}>
-                                            {p.pointsRequired} очков
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    ))}
                 </div>
             )}
         </div>
