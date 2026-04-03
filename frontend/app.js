@@ -1,15 +1,14 @@
 // BNL League — main app entry point (React via CDN, no build step)
 // Loaded by pages/index.html after React, ReactDOM, and component scripts.
 
-const { useState, useEffect } = React;
 
 // ── Route map ─────────────────────────────────────────────────────────────────
 // Simple hash-based router so the CDN React setup needs no build tooling.
 
 function App() {
-    const [page, setPage] = useState(window.location.hash || '#standings');
+    const [page, setPage] = React.useState(window.location.hash || '#standings');
 
-    useEffect(() => {
+    React.useEffect(() => {
         const onHash = () => setPage(window.location.hash || '#standings');
         window.addEventListener('hashchange', onHash);
         return () => window.removeEventListener('hashchange', onHash);

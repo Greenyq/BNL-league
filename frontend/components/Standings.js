@@ -1,18 +1,17 @@
 // Standings component — shows league table sorted by points
 // Ported from legacy/public/app.js (Standings section)
 
-const { useState, useEffect } = React;
 
 const RACE_NAMES = { 0: 'Random', 1: 'Human', 2: 'Orc', 4: 'Night Elf', 8: 'Undead' };
 const RACE_FILTERS = [0, 1, 2, 4, 8];
 
 function Standings() {
-    const [players, setPlayers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error,   setError]   = useState(null);
-    const [raceFilter, setRaceFilter] = useState(null); // null = all races
+    const [players, setPlayers] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error,   setError]   = React.useState(null);
+    const [raceFilter, setRaceFilter] = React.useState(null); // null = all races
 
-    useEffect(() => {
+    React.useEffect(() => {
         fetch('/api/players')
             .then(r => r.json())
             .then(data => { setPlayers(data); setLoading(false); })

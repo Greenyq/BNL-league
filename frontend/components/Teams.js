@@ -1,14 +1,13 @@
 // Teams component — shows all teams and their rosters
 
-const { useState, useEffect } = React;
 
 function Teams() {
-    const [teams,   setTeams]   = useState([]);
-    const [players, setPlayers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error,   setError]   = useState(null);
+    const [teams,   setTeams]   = React.useState([]);
+    const [players, setPlayers] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error,   setError]   = React.useState(null);
 
-    useEffect(() => {
+    React.useEffect(() => {
         Promise.all([fetch('/api/teams').then(r => r.json()), fetch('/api/players').then(r => r.json())])
             .then(([t, p]) => { setTeams(t); setPlayers(p); setLoading(false); })
             .catch(err => { setError(err.message); setLoading(false); });

@@ -1,7 +1,6 @@
 // Admin component — login-gated panel for managing players, teams, matches
 // All write operations require x-session-id header (set after login).
 
-const { useState, useEffect, useCallback } = React;
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 const SESSION_KEY = 'bnl_admin_session';
@@ -19,9 +18,9 @@ async function apiFetch(url, options = {}) {
 
 // ── Login form ────────────────────────────────────────────────────────────────
 function LoginForm({ onLogin }) {
-    const [login, setLogin]       = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError]       = useState(null);
+    const [login, setLogin]       = React.useState('');
+    const [password, setPassword] = React.useState('');
+    const [error, setError]       = React.useState(null);
 
     const submit = async (e) => {
         e.preventDefault();
@@ -46,17 +45,17 @@ function LoginForm({ onLogin }) {
 
 // ── Admin panel (authenticated) ───────────────────────────────────────────────
 function AdminPanel({ onLogout }) {
-    const [tab, setTab]         = useState('players');
-    const [players, setPlayers] = useState([]);
-    const [teams,   setTeams]   = useState([]);
-    const [msg,     setMsg]     = useState(null);
+    const [tab, setTab]         = React.useState('players');
+    const [players, setPlayers] = React.useState([]);
+    const [teams,   setTeams]   = React.useState([]);
+    const [msg,     setMsg]     = React.useState(null);
 
-    const load = useCallback(async () => {
+    const load = React.useCallback(async () => {
         const [p, t] = await Promise.all([apiFetch('/api/players'), apiFetch('/api/teams')]);
         setPlayers(p); setTeams(t);
     }, []);
 
-    useEffect(() => { load(); }, [load]);
+    React.useEffect(() => { load(); }, [load]);
 
     const logout = async () => {
         try { await apiFetch('/api/admin/logout', { method: 'POST' }); } catch {}
@@ -146,10 +145,10 @@ function AdminPanel({ onLogout }) {
 
 // ── Admin (top-level) ─────────────────────────────────────────────────────────
 function Admin() {
-    const [authed, setAuthed] = useState(false);
-    const [checking, setChecking] = useState(true);
+    const [authed, setAuthed] = React.useState(false);
+    const [checking, setChecking] = React.useState(true);
 
-    useEffect(() => {
+    React.useEffect(() => {
         const sessionId = getSession();
         if (!sessionId) { setChecking(false); return; }
         fetch('/api/admin/verify', { headers: { 'x-session-id': sessionId } })
