@@ -1,122 +1,120 @@
-# BNL - Battle Newbie League | Warcraft 3
+# BNL League — Battle Newbie League | Warcraft III
 
-Сайт лиги по Warcraft 3: Reforged с интеграцией W3Champions API, подсчетом очков по MMR и админ-панелью для управления командными турнирами.
+Warcraft III league management system.
+Stack: **Node.js + Express + MongoDB + React (CDN) + Go microservice**
 
-## Структура проекта
+---
+
+## Project Structure
 
 ```
 BNL-league/
-├── src/
-│   ├── backend/            # Node.js API сервер
-│   │   ├── server.js       # Точка входа
-│   │   ├── routes.js       # API endpoints
-│   │   ├── models.js       # MongoDB модели
-│   │   ├── middleware.js    # Middleware (auth, CORS)
-│   │   └── scheduler.js    # Фоновые задачи
-│   ├── migrations/         # Миграции БД
-│   └── stats-processor/    # Go микросервис для статистики
-│       ├── main.go         # Go stats processor
-│       ├── go.mod
-│       ├── go.sum
-│       └── Dockerfile
-├── public/                 # Фронтенд (React CDN)
-│   ├── index.html
-│   ├── app.js
-│   ├── admin-components.js
-│   ├── admin-cache.js
-│   └── styles.css
-├── scripts/                # Утилиты
-├── data/                   # JSON хранилище
+├── backend/
+│   ├── models/         Mongoose schemas (Player, Team, Match, ClanWar)
+│   ├── routes/         Express routers  (players, teams, matches, clanWars)
+│   ├── services/       Business logic   (w3champions.js, scoring.js)
+│   ├── middleware/     auth.js, cors.js
+│   └── server.js       Entry point
+│
+├── frontend/           React via CDN (no build tools)
+│   ├── components/     Standings, Teams, ClanWar, Admin
+│   ├── pages/          index.html, standings.html, clan-war.html
+│   ├── styles/         main.css
+│   └── app.js          Hash-router + root render
+│
+├── services/
+│   └── stats-processor/  Go microservice — parallel stats (port 3001)
+│
+├── docs/
+│   ├── api.md             All API endpoints
+│   └── clan-war-rules.md  Clan war format rules
+│
+├── legacy/             v1 archive — see legacy/ARCHIVE.md
+│
 ├── docker-compose.yml
-└── package.json
+├── .env.example
+└── README.md
 ```
 
-## Запуск
+---
 
-### Docker (рекомендуется)
+## Quick Start
 
 ```bash
+# 1. Copy and fill in environment variables
 cp .env.example .env
-# Заполните .env своими значениями
+
+# 2. Start all services
 docker-compose up -d
+
+# 3. Open http://localhost:3000
 ```
 
-Сервисы:
-- **Node.js API**: http://localhost:3000
-- **Go Stats Processor**: http://localhost:3001
-- **MongoDB**: localhost:27017
-
-### Локальная разработка
+Or run locally without Docker:
 
 ```bash
 npm install
-npm start
-# http://localhost:3000
+MONGO_URL=mongodb://localhost:27017/gnl_league \
+ADMIN_LOGIN=admin ADMIN_PASSWORD=secret \
+node backend/server.js
 ```
 
-Go stats processor (опционально):
+Go stats processor (optional, for parallel computation):
+
 ```bash
-cd src/stats-processor
+cd services/stats-processor
 go mod download
-export MONGO_URL=mongodb://localhost:27017/gnl_league
-go run main.go
+MONGO_URL=mongodb://localhost:27017/gnl_league go run main.go
 ```
 
-## Система очков
+---
 
-### W3Champions Points (автоматически)
+## Scoring System
 
-Очки начисляются на основе разницы MMR:
-- Победа vs сильный противник (+20 MMR): 30 очков
-- Победа vs равный (+-20 MMR): 50 очков
-- Победа vs слабый (-20 MMR): 70 очков
-- Поражение: -20 до -40 очков (минимум 0)
+Points are calculated automatically every 10 minutes from W3Champions match data.
 
-Бонусы за достижения: Centurion (100 побед), Warrior (50 побед), Gold Rush (1000+ очков).
+| Result | MMR diff | Points |
+|--------|----------|--------|
+| Win vs stronger | opp MMR > +20 | +30 |
+| Win vs equal | ±20 MMR | +50 |
+| Win vs weaker | opp MMR < −20 | +70 |
+| Loss to stronger | opp MMR > +20 | −20 |
+| Loss to equal | ±20 MMR | −30 |
+| Loss to weaker | opp MMR < −20 | −40 |
 
-### Custom Points (ручное управление)
+Minimum points per race: 0 (or 500 once reached).
+Achievement bonuses stack on top (see `backend/services/scoring.js`).
 
-Админ создает командные матчи, назначает победителя и количество очков. Отдельный рейтинг для специальных турниров.
+---
 
-## Админ-панель
+## Clan Wars
 
-Вход через UI с логином/паролем (задаются в `.env`).
+Team vs team, first to **3 wins**. Each internal match is BO3.
+See [`docs/clan-war-rules.md`](docs/clan-war-rules.md) for full format.
 
-Возможности:
-- Управление командами (название, логотип, капитан)
-- Добавление игроков через поиск W3Champions
-- Создание командных матчей с назначением очков
-- Управление рейтингом команд
+---
 
 ## API
 
-| Endpoint | Метод | Описание |
-|----------|-------|----------|
-| `/api/matches/:battleTag` | GET | Матчи игрока из W3Champions |
-| `/api/players/with-cache` | GET | Статистика игроков (с кэшем) |
-| `/health` (порт 3001) | GET | Health check Go процессора |
-| `/compute-stats` (порт 3001) | POST | Расчет статистики (Go) |
+See [`docs/api.md`](docs/api.md) for the full endpoint reference.
 
-## Переменные окружения
+---
+
+## Environment Variables
 
 ```bash
-ADMIN_LOGIN=your_login
-ADMIN_PASSWORD=your_password
+ADMIN_LOGIN=            # Required
+ADMIN_PASSWORD=         # Required
 MONGO_URL=mongodb://localhost:27017/gnl_league
-GO_WORKER_URL=http://localhost:3001  # или http://stats-processor:3001 в Docker
 PORT=3000
 NODE_ENV=production
-ALLOWED_ORIGINS=https://yourdomain.com
+ALLOWED_ORIGINS=        # Comma-separated (empty = allow all, dev only)
+GO_WORKER_URL=http://localhost:3001
 ```
 
-## Технологии
+---
 
-- **Backend**: Node.js + Express + MongoDB (Mongoose)
-- **Frontend**: React (CDN) + Custom CSS
-- **Stats Processor**: Go + goroutines (параллельная обработка 100+ игроков)
-- **API**: W3Champions Matches API
-- **Инфраструктура**: Docker Compose
+## Legacy / v1
 
-## Лицензия
-
-MIT
+The original v1 source is archived under [`legacy/`](legacy/ARCHIVE.md)
+and permanently tagged as `v1-legacy` in git.
