@@ -15,7 +15,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Node.js backend API
   api:
     build: .
     ports:
@@ -32,14 +31,13 @@ services:
       mongodb:
         condition: service_healthy
     volumes:
-      - ./public:/app/public
-      - ./data:/app/data
+      - ./frontend:/app/frontend    # serve static files
+      - ./uploads:/app/uploads      # match file uploads
     restart: unless-stopped
 
-  # Go stats processor
   stats-processor:
     build:
-      context: ./src/stats-processor
+      context: ./services/stats-processor
       dockerfile: Dockerfile
     ports:
       - "3001:3001"
