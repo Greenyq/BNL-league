@@ -447,15 +447,13 @@ const DEFAULT_MATCHES = [
     { order: 5, format: '1v1', label: 'Тайм-брейк' },
 ].map(m => ({ ...m, playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] }));
 
-function ClanWarTab({ showMsg, players }) {
+function ClanWarTab({ showMsg, players, teams }) {
     useLang();
     const [wars,       setWars]       = React.useState([]);
-    const [selected,   setSelected]   = React.useState(null); // ClanWar object for detail view
+    const [selected,   setSelected]   = React.useState(null);
     const [showCreate, setShowCreate] = React.useState(false);
     const [form,       setForm]       = React.useState({
-        season: '', date: '', status: 'upcoming',
-        teamA: { name: '', captain: '' },
-        teamB: { name: '', captain: '' },
+        season: '', date: '', teamAId: '', teamBId: '',
     });
 
     const load = async () => {
@@ -464,18 +462,35 @@ function ClanWarTab({ showMsg, players }) {
 
     React.useEffect(() => { load(); }, []);
 
+    // Build teamA / teamB objects from selected IDs
+    const getTeamPayload = (teamId, players) => {
+        const team = (teams || []).find(t => t.id === teamId);
+        if (!team) return { name: '', captain: '' };
+        const captain = players.find(p => p.id === team.captainId);
+        return {
+            name:    team.name,
+            captain: captain ? captain.name : (team.captainId || ''),
+            players: players.filter(p => p.teamId === team.id).map(p => p.name),
+        };
+    };
+
     const createWar = async (e) => {
         e.preventDefault();
+        if (!form.teamAId || !form.teamBId) return showMsg('❌ Выберите обе команды', 'error');
+        if (form.teamAId === form.teamBId) return showMsg('❌ Команды должны быть разными', 'error');
         try {
             const body = {
-                ...form,
-                date: form.date || undefined,
+                season: form.season,
+                date:   form.date || undefined,
+                status: 'upcoming',
+                teamA:  getTeamPayload(form.teamAId, players),
+                teamB:  getTeamPayload(form.teamBId, players),
                 matches: DEFAULT_MATCHES,
             };
             const cw = await apiFetch('/api/clan-wars', { method: 'POST', body: JSON.stringify(body) });
             showMsg('✅ Клан-вар создан');
             setShowCreate(false);
-            setForm({ season: '', date: '', status: 'upcoming', teamA: { name: '', captain: '' }, teamB: { name: '', captain: '' } });
+            setForm({ season: '', date: '', teamAId: '', teamBId: '' });
             setSelected(cw);
             load();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
@@ -699,27 +714,52 @@ function ClanWarTab({ showMsg, players }) {
                                 onChange={e => setForm({ ...form, date: e.target.value })}
                                 style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '2px solid var(--color-bg-lighter)', borderRadius: 'var(--radius-md)', padding: '10px 14px', fontSize: '1em' }} />
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-md)' }}>
-                            <div>
-                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 4 }}>Команда A</div>
-                                <input type="text" placeholder="Название" value={form.teamA.name}
-                                    onChange={e => setForm({ ...form, teamA: { ...form.teamA, name: e.target.value } })} style={{ width: '100%', marginBottom: 6 }} />
-                                <input type="text" placeholder="Капитан" value={form.teamA.captain}
-                                    onChange={e => setForm({ ...form, teamA: { ...form.teamA, captain: e.target.value } })} style={{ width: '100%' }} />
+
+                        {(!teams || teams.length < 2) ? (
+                            <div style={{ color: 'var(--color-error)', padding: 'var(--spacing-md)', background: 'rgba(244,67,54,0.08)', borderRadius: 'var(--radius-sm)', fontSize: '0.9em' }}>
+                                ⚠ Сначала создайте минимум 2 команды во вкладке «Команды»
                             </div>
-                            <div>
-                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 4 }}>Команда B</div>
-                                <input type="text" placeholder="Название" value={form.teamB.name}
-                                    onChange={e => setForm({ ...form, teamB: { ...form.teamB, name: e.target.value } })} style={{ width: '100%', marginBottom: 6 }} />
-                                <input type="text" placeholder="Капитан" value={form.teamB.captain}
-                                    onChange={e => setForm({ ...form, teamB: { ...form.teamB, captain: e.target.value } })} style={{ width: '100%' }} />
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-md)' }}>
+                                {[
+                                    { key: 'teamAId', label: 'Команда A' },
+                                    { key: 'teamBId', label: 'Команда B' },
+                                ].map(({ key, label }) => {
+                                    const selTeam = (teams || []).find(t => t.id === form[key]);
+                                    const captain = selTeam && players.find(p => p.id === selTeam.captainId);
+                                    return (
+                                        <div key={key}>
+                                            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>{label}</div>
+                                            <select
+                                                value={form[key]}
+                                                onChange={e => setForm({ ...form, [key]: e.target.value })}
+                                                style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '2px solid var(--color-bg-lighter)', borderRadius: 'var(--radius-md)', padding: '10px 14px', fontSize: '1em', width: '100%' }}
+                                                required
+                                            >
+                                                <option value="">— Выбрать команду —</option>
+                                                {(teams || []).map(tm => (
+                                                    <option key={tm.id} value={tm.id}>{tm.emoji} {tm.name}</option>
+                                                ))}
+                                            </select>
+                                            {selTeam && (
+                                                <div style={{ marginTop: 6, fontSize: '0.8em', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    {selTeam.logo && <img src={selTeam.logo} alt="" style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'contain' }} />}
+                                                    👑 {captain ? captain.name : (selTeam.captainId || '—')}
+                                                    &nbsp;·&nbsp;
+                                                    {players.filter(p => p.teamId === selTeam.id).length} игроков
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        </div>
+                        )}
+
                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.82em' }}>
                             Автоматически создаются 5 матчей: Дуэль I · Дуэль II · 2 на 2 · Дуэль III · Тайм-брейк
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
-                            <button type="submit" className="btn btn-primary">Создать</button>
+                            <button type="submit" className="btn btn-primary" disabled={!form.teamAId || !form.teamBId}>Создать</button>
                             <button type="button" className="btn btn-secondary" onClick={() => setShowCreate(false)}>{t('admin.cancel')}</button>
                         </div>
                     </form>
@@ -1007,7 +1047,7 @@ function AdminPanel({ onLogout }) {
 
             {tab === 'players'   && <PlayersTab  players={players} teams={teams} onRefresh={load} showMsg={showMsg} />}
             {tab === 'teams'     && <TeamsTab    teams={teams}   players={players} onRefresh={load} showMsg={showMsg} />}
-            {tab === 'clanwars'  && <ClanWarTab  players={players} showMsg={showMsg} />}
+            {tab === 'clanwars'  && <ClanWarTab  players={players} teams={teams} showMsg={showMsg} />}
             {tab === 'portraits' && <PortraitsTab showMsg={showMsg} />}
             {tab === 'tools'   && (
                 <div>
