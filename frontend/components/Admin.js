@@ -364,6 +364,170 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
     );
 }
 
+// ── Вкладка Портреты ──────────────────────────────────────────────────────────
+const RACE_NAMES = { 0: '🎲 Все расы', 1: '👑 Люди', 2: '⚔️ Орки', 4: '🌙 Ночные эльфы', 8: '💀 Нежить' };
+const EMPTY_FORM = { name: '', race: 0, pointsRequired: 0, imageUrl: '' };
+
+function PortraitsTab({ showMsg }) {
+    useLang();
+    const [portraits,  setPortraits]  = React.useState([]);
+    const [showForm,   setShowForm]   = React.useState(false);
+    const [form,       setForm]       = React.useState(EMPTY_FORM);
+    const [editingId,  setEditingId]  = React.useState(null);
+    const [saving,     setSaving]     = React.useState(false);
+
+    const load = async () => {
+        try {
+            const data = await apiFetch('/api/portraits');
+            setPortraits(data);
+        } catch {}
+    };
+
+    React.useEffect(() => { load(); }, []);
+
+    const openAdd = () => { setForm(EMPTY_FORM); setEditingId(null); setShowForm(true); };
+    const openEdit = (p) => {
+        setForm({ name: p.name, race: p.race, pointsRequired: p.pointsRequired, imageUrl: p.imageUrl });
+        setEditingId(p.id);
+        setShowForm(true);
+    };
+    const cancel = () => { setShowForm(false); setForm(EMPTY_FORM); setEditingId(null); };
+
+    const submit = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            const body = { ...form, race: parseInt(form.race), pointsRequired: parseInt(form.pointsRequired) };
+            if (editingId) {
+                await apiFetch(`/api/portraits/${editingId}`, { method: 'PUT', body: JSON.stringify(body) });
+                showMsg('✅ Портрет обновлён');
+            } else {
+                await apiFetch('/api/portraits', { method: 'POST', body: JSON.stringify(body) });
+                showMsg('✅ Портрет добавлен');
+            }
+            cancel();
+            load();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+        setSaving(false);
+    };
+
+    const del = async (id, name) => {
+        if (!confirm(`Удалить портрет "${name}"?`)) return;
+        try {
+            await apiFetch(`/api/portraits/${id}`, { method: 'DELETE' });
+            showMsg('✅ Портрет удалён');
+            load();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+
+    // Group by race
+    const byRace = portraits.reduce((acc, p) => {
+        if (!acc[p.race]) acc[p.race] = [];
+        acc[p.race].push(p);
+        return acc;
+    }, {});
+    const raceOrder = [0, 1, 2, 4, 8];
+
+    return (
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)', flexWrap: 'wrap', gap: 8 }}>
+                <h3 style={{ margin: 0 }}>🖼 Портреты ({portraits.length})</h3>
+                <button className="btn btn-primary" style={{ padding: '8px 18px' }} onClick={openAdd}>
+                    + Добавить портрет
+                </button>
+            </div>
+
+            {/* Инфо-карточка */}
+            <div className="card-elevated" style={{ padding: 'var(--spacing-md) var(--spacing-xl)', marginBottom: 'var(--spacing-xl)', borderColor: 'var(--color-accent-primary)' }}>
+                <p style={{ color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.7, fontSize: '0.9em' }}>
+                    Рекомендуемый размер: <strong>128×128 px</strong> · PNG или JPG · Портреты разблокируются при достижении указанного кол-ва очков · Раса 0 = доступен всем
+                </p>
+            </div>
+
+            {/* Форма добавления/редактирования */}
+            {showForm && (
+                <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-xl)' }}>
+                    <h4 style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-accent-primary)' }}>
+                        {editingId ? '✏️ Редактировать портрет' : '➕ Добавить портрет'}
+                    </h4>
+                    <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)', maxWidth: 480 }}>
+                        <input
+                            type="text" placeholder="Название портрета" required
+                            value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                        />
+                        <select
+                            value={form.race} onChange={e => setForm({ ...form, race: e.target.value })}
+                            style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '2px solid var(--color-bg-lighter)', borderRadius: 'var(--radius-md)', padding: '10px 14px', fontSize: '1em' }}
+                        >
+                            {raceOrder.map(r => <option key={r} value={r}>{RACE_NAMES[r]}</option>)}
+                        </select>
+                        <input
+                            type="number" placeholder="Очков для разблокировки (0 = бесплатно)" min="0" required
+                            value={form.pointsRequired} onChange={e => setForm({ ...form, pointsRequired: e.target.value })}
+                        />
+                        <input
+                            type="text" placeholder="URL изображения" required
+                            value={form.imageUrl} onChange={e => setForm({ ...form, imageUrl: e.target.value })}
+                        />
+                        {form.imageUrl && (
+                            <img src={form.imageUrl} alt="preview" onError={e => e.target.style.display='none'}
+                                style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 8, border: '2px solid var(--color-accent-primary)' }} />
+                        )}
+                        <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
+                            <button type="submit" className="btn btn-primary" disabled={saving}>
+                                {saving ? '...' : (editingId ? '💾 Сохранить' : '➕ Добавить')}
+                            </button>
+                            <button type="button" className="btn btn-secondary" onClick={cancel}>{t('admin.cancel')}</button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* Список по расам */}
+            {portraits.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--color-text-muted)' }}>
+                    Нет портретов. Нажмите «+ Добавить портрет»
+                </div>
+            ) : (
+                raceOrder.filter(r => byRace[r]?.length).map(r => (
+                    <div key={r} style={{ marginBottom: 'var(--spacing-xxl)' }}>
+                        <h3 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-lg)' }}>
+                            {RACE_NAMES[r]}
+                            <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75em', fontWeight: 400, marginLeft: 8 }}>
+                                ({byRace[r].length} портретов)
+                            </span>
+                        </h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 'var(--spacing-md)' }}>
+                            {byRace[r].sort((a, b) => a.pointsRequired - b.pointsRequired).map(p => (
+                                <div key={p.id} className="card-elevated" style={{ padding: 'var(--spacing-md)' }}>
+                                    <div style={{ display: 'flex', gap: 'var(--spacing-md)', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
+                                        <img src={p.imageUrl} alt={p.name}
+                                            style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '2px solid var(--color-accent-primary)', flexShrink: 0 }} />
+                                        <div>
+                                            <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 4 }}>{p.name}</div>
+                                            <div style={{ color: 'var(--color-accent-secondary)', fontWeight: 600, fontSize: '0.9em' }}>
+                                                {p.pointsRequired === 0 ? '🆓 Бесплатно' : `🔒 ${p.pointsRequired} очков`}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <button onClick={() => openEdit(p)} style={{ flex: 1, background: 'rgba(33,150,243,0.15)', color: '#2196f3', border: '1px solid rgba(33,150,243,0.3)', padding: '6px 10px', borderRadius: 'var(--radius-sm)', fontSize: '0.85em', cursor: 'pointer' }}>
+                                            ✏️ Изменить
+                                        </button>
+                                        <button onClick={() => del(p.id, p.name)} style={{ flex: 1, background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', padding: '6px 10px', borderRadius: 'var(--radius-sm)', fontSize: '0.85em', cursor: 'pointer' }}>
+                                            🗑️ Удалить
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))
+            )}
+        </div>
+    );
+}
+
 // ── Панель ────────────────────────────────────────────────────────────────────
 function AdminPanel({ onLogout }) {
     useLang();
@@ -399,9 +563,10 @@ function AdminPanel({ onLogout }) {
     };
 
     const TABS_ADMIN = [
-        { id: 'players', key: 'admin.tab.players' },
-        { id: 'teams',   key: 'admin.tab.teams' },
-        { id: 'tools',   key: 'admin.tab.tools' },
+        { id: 'players',   key: 'admin.tab.players' },
+        { id: 'teams',     key: 'admin.tab.teams' },
+        { id: 'portraits', key: 'admin.tab.portraits' },
+        { id: 'tools',     key: 'admin.tab.tools' },
     ];
 
     return (
@@ -431,8 +596,9 @@ function AdminPanel({ onLogout }) {
                 ))}
             </div>
 
-            {tab === 'players' && <PlayersTab players={players} teams={teams} onRefresh={load} showMsg={showMsg} />}
-            {tab === 'teams'   && <TeamsTab   teams={teams}   players={players} onRefresh={load} showMsg={showMsg} />}
+            {tab === 'players'   && <PlayersTab players={players} teams={teams} onRefresh={load} showMsg={showMsg} />}
+            {tab === 'teams'     && <TeamsTab   teams={teams}   players={players} onRefresh={load} showMsg={showMsg} />}
+            {tab === 'portraits' && <PortraitsTab showMsg={showMsg} />}
             {tab === 'tools'   && (
                 <div>
                     <h3 style={{ marginBottom: 'var(--spacing-lg)' }}>{t('admin.tab.tools')}</h3>

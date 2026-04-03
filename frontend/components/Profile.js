@@ -12,12 +12,8 @@ const RACE_OPTIONS = [
     { value: 8, label: 'Undead',     img: '/images/undead.jpg' },
 ];
 
-const PORTRAIT_OPTIONS = [
-    { id: 'human',    label: 'Human',     src: '/images/human.jpg' },
-    { id: 'orc',      label: 'Orc',       src: '/images/orc.jpg' },
-    { id: 'nightelf', label: 'Night Elf', src: '/images/nightelf.jpg' },
-    { id: 'undead',   label: 'Undead',    src: '/images/undead.jpg' },
-];
+// Portraits are loaded dynamically from /api/portraits
+const PORTRAIT_RACE_LABELS = { 0: 'Все', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
 
 async function playerFetch(url, options = {}) {
     const sid = getPlayerSession();
@@ -100,6 +96,11 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
     const [msgType,      setMsgType]      = React.useState('ok');
     const [selectedRace, setSelectedRace] = React.useState(initPlayerData?.race || initPlayerData?.mainRace || null);
     const [selectedPort, setSelectedPort] = React.useState(initPlayerData?.selectedPortrait || null);
+    const [allPortraits, setAllPortraits] = React.useState([]);
+
+    React.useEffect(() => {
+        fetch('/api/portraits').then(r => r.json()).then(data => setAllPortraits(Array.isArray(data) ? data : [])).catch(() => {});
+    }, []);
 
     const flash = (text, type = 'ok') => {
         setMsg(text); setMsgType(type);
@@ -152,10 +153,14 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
         } catch (err) { flash(err.message, 'err'); }
     };
 
-    const currentPortrait = selectedPort || PORTRAIT_OPTIONS.find(p => {
-        const racePortrait = { 1: 'human', 2: 'orc', 4: 'nightelf', 8: 'undead' }[selectedRace];
-        return p.id === racePortrait;
-    })?.src;
+    const playerPoints = playerData?.stats?.totalPoints ?? playerData?.totalPoints ?? 0;
+    const availablePortraits = allPortraits.filter(p =>
+        (p.race === 0 || p.race === selectedRace) && p.pointsRequired <= playerPoints
+    );
+    const lockedPortraits = allPortraits.filter(p =>
+        (p.race === 0 || p.race === selectedRace) && p.pointsRequired > playerPoints
+    );
+    const currentPortrait = selectedPort || null;
 
     return (
         <div className="animate-fade-in" style={{ maxWidth: 600, margin: '0 auto' }}>
@@ -250,24 +255,63 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                 <div className="card-elevated" style={{ padding: 'var(--spacing-xl)' }}>
                     <h4 style={{ marginBottom: 8, color: 'var(--color-accent-primary)' }}>🖼 {t('profile.portraitTitle')}</h4>
                     <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', marginBottom: 'var(--spacing-lg)' }}>
-                        {t('profile.portraitDesc')}
+                        {t('profile.portraitDesc')} · {playerPoints} очков
                     </p>
-                    <div style={{ display: 'flex', gap: 'var(--spacing-lg)', flexWrap: 'wrap' }}>
-                        {PORTRAIT_OPTIONS.map(p => (
-                            <div key={p.id} onClick={() => savePortrait(p.src)} style={{ cursor: 'pointer', textAlign: 'center' }}>
-                                <img src={p.src} alt={p.label} style={{
-                                    width: 80, height: 80, borderRadius: '50%', objectFit: 'cover',
-                                    border: selectedPort === p.src ? '3px solid var(--color-accent-primary)' : '3px solid rgba(255,255,255,0.08)',
-                                    boxShadow: selectedPort === p.src ? '0 0 24px rgba(212,175,55,0.7)' : 'none',
-                                    transform: selectedPort === p.src ? 'scale(1.1)' : 'scale(1)',
-                                    transition: 'all 0.2s',
-                                }} />
-                                <div style={{ fontSize: '0.8em', marginTop: 6, color: selectedPort === p.src ? 'var(--color-accent-primary)' : 'var(--color-text-muted)', fontWeight: selectedPort === p.src ? 700 : 400 }}>
-                                    {p.label}
-                                </div>
+
+                    {allPortraits.length === 0 && (
+                        <p style={{ color: 'var(--color-text-muted)' }}>Портреты ещё не добавлены администратором</p>
+                    )}
+
+                    {/* Доступные портреты */}
+                    {availablePortraits.length > 0 && (
+                        <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+                            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 'var(--spacing-sm)', textTransform: 'uppercase', letterSpacing: 1 }}>
+                                Доступно ({availablePortraits.length})
                             </div>
-                        ))}
-                    </div>
+                            <div style={{ display: 'flex', gap: 'var(--spacing-md)', flexWrap: 'wrap' }}>
+                                {availablePortraits.map(p => (
+                                    <div key={p.id} onClick={() => savePortrait(p.imageUrl)} style={{ cursor: 'pointer', textAlign: 'center' }}>
+                                        <img src={p.imageUrl} alt={p.name} style={{
+                                            width: 80, height: 80, borderRadius: '50%', objectFit: 'cover',
+                                            border: selectedPort === p.imageUrl ? '3px solid var(--color-accent-primary)' : '3px solid rgba(255,255,255,0.08)',
+                                            boxShadow: selectedPort === p.imageUrl ? '0 0 24px rgba(212,175,55,0.7)' : 'none',
+                                            transform: selectedPort === p.imageUrl ? 'scale(1.1)' : 'scale(1)',
+                                            transition: 'all 0.2s',
+                                        }} />
+                                        <div style={{ fontSize: '0.78em', marginTop: 5, color: selectedPort === p.imageUrl ? 'var(--color-accent-primary)' : 'var(--color-text-muted)', fontWeight: selectedPort === p.imageUrl ? 700 : 400 }}>
+                                            {p.name}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Заблокированные портреты */}
+                    {lockedPortraits.length > 0 && (
+                        <div>
+                            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 'var(--spacing-sm)', textTransform: 'uppercase', letterSpacing: 1 }}>
+                                Заблокировано ({lockedPortraits.length})
+                            </div>
+                            <div style={{ display: 'flex', gap: 'var(--spacing-md)', flexWrap: 'wrap' }}>
+                                {lockedPortraits.map(p => (
+                                    <div key={p.id} title={`Нужно ${p.pointsRequired} очков`} style={{ textAlign: 'center', opacity: 0.4, cursor: 'not-allowed' }}>
+                                        <div style={{ position: 'relative', display: 'inline-block' }}>
+                                            <img src={p.imageUrl} alt={p.name} style={{
+                                                width: 80, height: 80, borderRadius: '50%', objectFit: 'cover',
+                                                border: '3px solid rgba(255,255,255,0.08)',
+                                                filter: 'grayscale(1)',
+                                            }} />
+                                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: '1.4em' }}>🔒</div>
+                                        </div>
+                                        <div style={{ fontSize: '0.78em', marginTop: 5, color: 'var(--color-text-muted)' }}>
+                                            {p.pointsRequired} очков
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
