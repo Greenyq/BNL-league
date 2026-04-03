@@ -270,6 +270,7 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
     const [emoji,    setEmoji]    = React.useState('🛡');
     const [captainId,setCaptain]  = React.useState('');
     const [saving,   setSaving]   = React.useState(false);
+    const [uploading,setUploading]= React.useState(null); // teamId being uploaded
 
     const createTeam = async () => {
         if (!name.trim()) return;
@@ -290,6 +291,28 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
             showMsg('✅ Команда удалена');
             onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+
+    const uploadLogo = async (teamId, file) => {
+        if (!file) return;
+        setUploading(teamId);
+        try {
+            const form = new FormData();
+            form.append('logo', file);
+            const sid = getSession();
+            const res = await fetch(`/api/admin/teams/${teamId}/upload-logo`, {
+                method: 'POST',
+                headers: { 'x-session-id': sid },
+                body: form,
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || 'Upload failed');
+            }
+            showMsg('✅ Логотип загружен');
+            onRefresh();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+        setUploading(null);
     };
 
     const playerMap = Object.fromEntries(players.map(p => [p.id, p]));
@@ -331,35 +354,53 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
                 </div>
             )}
 
-            <div className="standings-table-wrap">
-                <table className="standings-table">
-                    <thead>
-                        <tr>
-                            <th>Команда</th>
-                            <th>Капитан</th>
-                            <th>Игроков</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {teams.map(tm => (
-                            <tr key={tm.id}>
-                                <td className="col-name">{tm.emoji} {tm.name}</td>
-                                <td>{playerMap[tm.captainId]?.name || tm.captainId || '—'}</td>
-                                <td>{players.filter(p => p.teamId === tm.id).length}</td>
-                                <td>
-                                    <button onClick={() => deleteTeam(tm.id, tm.name)} style={{ background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', padding: '4px 10px', fontSize: '0.8em', borderRadius: 'var(--radius-sm)' }}>
-                                        {t('admin.delete')}
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                        {teams.length === 0 && (
-                            <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 32 }}>Нет команд</td></tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            {/* Карточки команд с логотипом */}
+            {teams.length === 0 ? (
+                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 32 }}>Нет команд</p>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+                    {teams.map(tm => (
+                        <div key={tm.id} className="card-elevated" style={{ padding: 'var(--spacing-lg)', display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)', flexWrap: 'wrap' }}>
+                            {/* Логотип + загрузка */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                {tm.logo ? (
+                                    <img src={tm.logo} alt={tm.name} style={{ width: 64, height: 64, objectFit: 'contain', borderRadius: 'var(--radius-md)', border: '2px solid rgba(212,175,55,0.35)' }} />
+                                ) : (
+                                    <div style={{ width: 64, height: 64, borderRadius: 'var(--radius-md)', background: 'rgba(212,175,55,0.08)', border: '2px dashed rgba(212,175,55,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8em' }}>
+                                        {tm.emoji || '🛡'}
+                                    </div>
+                                )}
+                                <label style={{ cursor: 'pointer', fontSize: '0.72em', color: 'var(--color-accent-primary)', whiteSpace: 'nowrap' }}>
+                                    {uploading === tm.id ? '⏳ Загрузка...' : '🖼 Загрузить'}
+                                    <input
+                                        type="file" accept="image/jpeg,image/png,image/webp"
+                                        style={{ display: 'none' }}
+                                        disabled={uploading === tm.id}
+                                        onChange={e => uploadLogo(tm.id, e.target.files[0])}
+                                    />
+                                </label>
+                            </div>
+
+                            {/* Инфо */}
+                            <div style={{ flex: 1, minWidth: 120 }}>
+                                <div style={{ fontWeight: 700, fontSize: '1.1em', color: 'var(--color-text-primary)', marginBottom: 4 }}>
+                                    {tm.emoji} {tm.name}
+                                </div>
+                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>
+                                    👑 {playerMap[tm.captainId]?.name || tm.captainId || '—'}
+                                    &nbsp;·&nbsp;
+                                    {players.filter(p => p.teamId === tm.id).length} игроков
+                                </div>
+                            </div>
+
+                            {/* Удалить */}
+                            <button onClick={() => deleteTeam(tm.id, tm.name)} style={{ background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', padding: '6px 14px', fontSize: '0.85em', borderRadius: 'var(--radius-sm)', flexShrink: 0 }}>
+                                {t('admin.delete')}
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
