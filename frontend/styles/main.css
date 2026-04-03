@@ -1827,6 +1827,148 @@ input[type="datetime-local"] {
     font-size: 0.8em;
 }
 
+/* ==================== TEAMS V2 ==================== */
+.teams-grid-v2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: var(--spacing-xl);
+}
+
+.team-card-v2 {
+    background: linear-gradient(135deg, rgba(42,42,42,0.85) 0%, rgba(26,26,26,0.95) 100%);
+    border: 2px solid rgba(212,175,55,0.2);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    transition: all var(--transition-normal);
+    animation: fadeInUp 0.5s ease forwards;
+}
+.team-card-v2:hover {
+    border-color: rgba(212,175,55,0.55);
+    box-shadow: var(--shadow-accent);
+    transform: translateY(-3px);
+}
+
+.team-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg);
+}
+
+.team-logo-v2 {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    border-radius: var(--radius-md);
+    border: 2px solid rgba(212,175,55,0.35);
+    flex-shrink: 0;
+}
+
+.team-logo-placeholder {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-md);
+    background: rgba(212,175,55,0.08);
+    border: 2px solid rgba(212,175,55,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em;
+    flex-shrink: 0;
+}
+
+.team-name-v2 {
+    font-size: 1.25em;
+    font-weight: 800;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.team-summary {
+    display: flex;
+    gap: var(--spacing-md);
+    flex-shrink: 0;
+}
+
+.team-summary-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+}
+
+.team-summary-label {
+    font-size: 0.62em;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.team-summary-val {
+    font-size: 1em;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+}
+
+.team-roster {
+    padding: var(--spacing-sm) var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.team-player-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 8px var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    transition: background var(--transition-fast);
+}
+.team-player-row:hover {
+    background: rgba(212,175,55,0.06);
+}
+
+.team-player-stats {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.team-stat-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 28px;
+}
+
+.team-stat-label {
+    font-size: 0.6em;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.team-stat-val {
+    font-size: 0.85em;
+    font-weight: 700;
+}
+
+.team-cw-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.82em;
+}
+.team-cw-row:last-child {
+    border-bottom: none;
+}
+
 /* ==================== STANDINGS SECTION ==================== */
 .standings-header {
     display: flex;
