@@ -1,15 +1,13 @@
-// Standings component — shows league table sorted by points
-// Ported from legacy/public/app.js (Standings section)
+// Standings — таблица рейтинга
 
-
-const RACE_NAMES = { 0: 'Random', 1: 'Human', 2: 'Orc', 4: 'Night Elf', 8: 'Undead' };
-const RACE_FILTERS = [0, 1, 2, 4, 8];
+const RACE_NAMES   = { 0: 'Все расы', 1: 'Люди', 2: 'Орки', 4: 'Ночные эльфы', 8: 'Нежить' };
+const RACE_FILTERS = [null, 1, 2, 4, 8];
 
 function Standings() {
-    const [players, setPlayers] = React.useState([]);
-    const [loading, setLoading] = React.useState(true);
-    const [error,   setError]   = React.useState(null);
-    const [raceFilter, setRaceFilter] = React.useState(null); // null = all races
+    const [players,    setPlayers]    = React.useState([]);
+    const [loading,    setLoading]    = React.useState(true);
+    const [error,      setError]      = React.useState(null);
+    const [raceFilter, setRaceFilter] = React.useState(null);
 
     React.useEffect(() => {
         fetch('/api/players')
@@ -18,60 +16,93 @@ function Standings() {
             .catch(err  => { setError(err.message); setLoading(false); });
     }, []);
 
-    if (loading) return React.createElement('p', null, 'Loading standings…');
-    if (error)   return React.createElement('p', { className: 'error' }, error);
+    if (loading) return (
+        <div className="app">
+            <div className="skeleton skeleton-banner" style={{ height: 60, marginBottom: 16 }} />
+            {[1,2,3,4,5].map(i => (
+                <div key={i} className="skeleton skeleton-card" style={{ height: 48, marginBottom: 8 }} />
+            ))}
+        </div>
+    );
 
-    // Build rows: if a race filter is active, expand per-race stats
-    const rows = players.flatMap(player => {
-        const stats = player.stats;
-        if (!stats) return [];
+    if (error) return (
+        <div style={{ padding: 32, color: 'var(--color-error)', textAlign: 'center' }}>
+            ⚠ Ошибка загрузки: {error}
+        </div>
+    );
 
+    // Build rows
+    const rows = players.flatMap(p => {
+        const s = p.stats;
+        if (!s) return [];
         if (raceFilter !== null) {
-            const rs = (stats.raceStats || []).find(s => s.race === raceFilter);
+            const rs = (s.raceStats || []).find(r => r.race === raceFilter);
             if (!rs) return [];
-            return [{ player, race: raceFilter, wins: rs.wins, losses: rs.losses, points: rs.points, mmr: rs.mmr }];
+            return [{ player: p, race: raceFilter, wins: rs.wins, losses: rs.losses, points: rs.points, mmr: rs.mmr }];
         }
-
-        return [{ player, race: null, wins: stats.wins, losses: stats.losses, points: stats.points, mmr: stats.mmr }];
+        return [{ player: p, race: null, wins: s.wins, losses: s.losses, points: s.points, mmr: s.mmr }];
     }).sort((a, b) => b.points - a.points);
 
-    return React.createElement('div', { className: 'standings' },
-        React.createElement('h2', null, 'Standings'),
+    const rankClass = (i) => i === 0 ? 'top-1' : i === 1 ? 'top-2' : i === 2 ? 'top-3' : '';
 
-        // Race filter buttons
-        React.createElement('div', { className: 'race-filters' },
-            React.createElement('button', { className: raceFilter === null ? 'active' : '', onClick: () => setRaceFilter(null) }, 'All'),
-            RACE_FILTERS.map(r =>
-                React.createElement('button', { key: r, className: raceFilter === r ? 'active' : '', onClick: () => setRaceFilter(r) }, RACE_NAMES[r])
-            )
-        ),
+    return (
+        <div className="animate-fade-in">
+            <div className="standings-header">
+                <h2 style={{ margin: 0 }}>🏆 Рейтинг</h2>
+                <div className="race-filter-bar">
+                    {RACE_FILTERS.map(r => (
+                        <button
+                            key={r}
+                            className={`nav-btn${raceFilter === r ? ' active' : ''}`}
+                            style={{ padding: '8px 18px', fontSize: '0.85em' }}
+                            onClick={() => setRaceFilter(r)}
+                        >
+                            <span>{RACE_NAMES[r] || 'Все расы'}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
 
-        // Table
-        React.createElement('table', { className: 'standings-table' },
-            React.createElement('thead', null,
-                React.createElement('tr', null,
-                    React.createElement('th', null, '#'),
-                    React.createElement('th', null, 'Player'),
-                    React.createElement('th', null, 'Race'),
-                    React.createElement('th', null, 'MMR'),
-                    React.createElement('th', null, 'W'),
-                    React.createElement('th', null, 'L'),
-                    React.createElement('th', null, 'Points'),
-                )
-            ),
-            React.createElement('tbody', null,
-                rows.map((row, i) =>
-                    React.createElement('tr', { key: `${row.player.battleTag}-${row.race}` },
-                        React.createElement('td', null, i + 1),
-                        React.createElement('td', null, row.player.name || row.player.battleTag),
-                        React.createElement('td', null, row.race !== null ? RACE_NAMES[row.race] : '—'),
-                        React.createElement('td', null, row.mmr || '—'),
-                        React.createElement('td', null, row.wins),
-                        React.createElement('td', null, row.losses),
-                        React.createElement('td', { className: 'points' }, row.points),
-                    )
-                )
-            )
-        )
+            {rows.length === 0 ? (
+                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
+                    Нет данных для отображения
+                </p>
+            ) : (
+                <div className="standings-table-wrap">
+                    <table className="standings-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Игрок</th>
+                                <th>Раса</th>
+                                <th>MMR</th>
+                                <th>Победы</th>
+                                <th>Поражения</th>
+                                <th>Очки</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows.map((row, i) => (
+                                <tr key={`${row.player.battleTag}-${row.race}`}>
+                                    <td className={`col-rank ${rankClass(i)}`}>
+                                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                                    </td>
+                                    <td className="col-name">{row.player.name || row.player.battleTag}</td>
+                                    <td style={{ color: 'var(--color-text-muted)' }}>
+                                        {row.race !== null ? RACE_NAMES[row.race] : '—'}
+                                    </td>
+                                    <td style={{ color: 'var(--color-accent-secondary)' }}>
+                                        {row.mmr || '—'}
+                                    </td>
+                                    <td className="col-wins">{row.wins}</td>
+                                    <td className="col-losses">{row.losses}</td>
+                                    <td className="col-points">{row.points}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
     );
 }

@@ -1,37 +1,51 @@
-// BNL League — main app entry point (React via CDN, no build step)
-// Loaded by pages/index.html after React, ReactDOM, and component scripts.
+// BNL League — app entry point (JSX via Babel CDN)
 
-
-// ── Route map ─────────────────────────────────────────────────────────────────
-// Simple hash-based router so the CDN React setup needs no build tooling.
+const TABS = [
+    { id: 'standings', label: 'Рейтинг' },
+    { id: 'teams',     label: 'Команды' },
+    { id: 'clanwar',   label: 'Клан-вар' },
+    { id: 'admin',     label: 'Админ' },
+];
 
 function App() {
-    const [page, setPage] = React.useState(window.location.hash || '#standings');
+    const [tab, setTab] = React.useState('standings');
 
-    React.useEffect(() => {
-        const onHash = () => setPage(window.location.hash || '#standings');
-        window.addEventListener('hashchange', onHash);
-        return () => window.removeEventListener('hashchange', onHash);
-    }, []);
+    return (
+        <div>
+            {/* Header */}
+            <div className="header">
+                <div className="header-content">
+                    <h1 className="league-title">⚔ BNL LEAGUE ⚔</h1>
+                    <p style={{ color: 'var(--color-text-muted)', marginTop: 8 }}>
+                        Breaking New Limits · Warcraft III
+                    </p>
+                </div>
+            </div>
 
-    const nav = (hash) => (e) => { e.preventDefault(); window.location.hash = hash; };
+            {/* Nav */}
+            <nav className="nav">
+                <div className="nav-container">
+                    {TABS.map(t => (
+                        <button
+                            key={t.id}
+                            className={`nav-btn${tab === t.id ? ' active' : ''}`}
+                            onClick={() => setTab(t.id)}
+                        >
+                            <span>{t.label}</span>
+                        </button>
+                    ))}
+                </div>
+            </nav>
 
-    return React.createElement('div', { className: 'app' },
-        // ── Navigation ────────────────────────────────────────────────────────
-        React.createElement('nav', { className: 'nav' },
-            React.createElement('a', { href: '#standings', onClick: nav('#standings'), className: page === '#standings' ? 'active' : '' }, 'Standings'),
-            React.createElement('a', { href: '#teams',     onClick: nav('#teams'),     className: page === '#teams'     ? 'active' : '' }, 'Teams'),
-            React.createElement('a', { href: '#clan-war',  onClick: nav('#clan-war'),  className: page === '#clan-war'  ? 'active' : '' }, 'Clan War'),
-            React.createElement('a', { href: '#admin',     onClick: nav('#admin'),     className: page === '#admin'     ? 'active' : '' }, 'Admin'),
-        ),
-        // ── Page content ──────────────────────────────────────────────────────
-        React.createElement('main', { className: 'main' },
-            page === '#standings' && React.createElement(Standings),
-            page === '#teams'     && React.createElement(Teams),
-            page === '#clan-war'  && React.createElement(ClanWar),
-            page === '#admin'     && React.createElement(Admin),
-        )
+            {/* Content */}
+            <div className="app">
+                {tab === 'standings' && <Standings />}
+                {tab === 'teams'     && <Teams />}
+                {tab === 'clanwar'   && <ClanWar />}
+                {tab === 'admin'     && <Admin />}
+            </div>
+        </div>
     );
 }
 
-ReactDOM.render(React.createElement(App), document.getElementById('root'));
+ReactDOM.render(<App />, document.getElementById('root'));

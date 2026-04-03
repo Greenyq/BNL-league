@@ -1,33 +1,60 @@
-// ClanWar component — displays clan war results and live score
-// Format: first to 3 wins. Each internal match is BO3.
-
-
-const FORMAT_LABELS = { '1v1': '1v1', '2v2': '2v2', '3v3': '3v3' };
+// ClanWar — клан-вары (первый до 3 побед, BO3 каждый матч)
 
 function ClanWarCard({ cw }) {
     const [open, setOpen] = React.useState(false);
-    const statusClass = { upcoming: 'status-upcoming', ongoing: 'status-ongoing', completed: 'status-completed' }[cw.status] || '';
 
-    return React.createElement('div', { className: 'cw-card' },
-        React.createElement('div', { className: 'cw-header', onClick: () => setOpen(!open) },
-            React.createElement('span', { className: `cw-status ${statusClass}` }, cw.status),
-            React.createElement('span', { className: 'cw-teams' }, `${cw.teamA?.name || 'Team A'} vs ${cw.teamB?.name || 'Team B'}`),
-            React.createElement('span', { className: 'cw-score' }, `${cw.clanWarScore?.a ?? 0} — ${cw.clanWarScore?.b ?? 0}`),
-            cw.winner && React.createElement('span', { className: 'cw-winner' }, `Winner: ${cw.winner === 'a' ? cw.teamA?.name : cw.teamB?.name}`),
-            React.createElement('span', { className: 'cw-toggle' }, open ? '▲' : '▼'),
-        ),
+    const statusClass = {
+        upcoming:  'status-upcoming',
+        ongoing:   'status-ongoing',
+        completed: 'status-completed',
+    }[cw.status] || '';
 
-        open && React.createElement('div', { className: 'cw-matches' },
-            (cw.matches || []).map((m, i) =>
-                React.createElement('div', { key: m._id || i, className: `cw-match ${m.winner ? 'cw-match--done' : ''}` },
-                    React.createElement('span', { className: 'cw-match-label' }, m.label || `Match ${m.order}`),
-                    React.createElement('span', { className: 'cw-match-format' }, FORMAT_LABELS[m.format] || m.format),
-                    React.createElement('span', { className: 'cw-match-players' }, `${m.playerA || '?'} vs ${m.playerB || '?'}`),
-                    React.createElement('span', { className: 'cw-match-score' }, `${m.score?.a ?? 0}:${m.score?.b ?? 0}`),
-                    m.winner && React.createElement('span', { className: 'cw-match-winner' }, m.winner === 'a' ? '✓ A' : '✓ B'),
-                )
-            )
-        )
+    const statusLabel = {
+        upcoming:  'Предстоит',
+        ongoing:   'Идёт',
+        completed: 'Завершён',
+    }[cw.status] || cw.status;
+
+    return (
+        <div className="cw-card">
+            <div className="cw-header" onClick={() => setOpen(!open)}>
+                <span className={`cw-status ${statusClass}`}>{statusLabel}</span>
+                <span className="cw-teams">
+                    {cw.teamA?.name || 'Команда A'} &nbsp;vs&nbsp; {cw.teamB?.name || 'Команда B'}
+                </span>
+                <span className="cw-score-display">
+                    {cw.clanWarScore?.a ?? 0} — {cw.clanWarScore?.b ?? 0}
+                </span>
+                {cw.winner && (
+                    <span className="cw-winner-badge">
+                        🏆 {cw.winner === 'a' ? cw.teamA?.name : cw.teamB?.name}
+                    </span>
+                )}
+                <span className="cw-toggle">{open ? '▲' : '▼'}</span>
+            </div>
+
+            {open && (
+                <div className="cw-matches-list">
+                    {(cw.matches || []).length === 0 ? (
+                        <p style={{ color: 'var(--color-text-muted)', padding: 8 }}>Матчи не добавлены</p>
+                    ) : (cw.matches || []).map((m, i) => (
+                        <div key={m._id || i} className={`cw-match-row${m.winner ? ' done' : ''}`}>
+                            <span className="cw-match-label">{m.label || `Матч ${m.order}`}</span>
+                            <span className="cw-match-fmt">{m.format}</span>
+                            <span className="cw-match-players">
+                                {m.playerA || '?'} <span style={{ color: 'var(--color-text-muted)' }}>vs</span> {m.playerB || '?'}
+                            </span>
+                            <span className="cw-match-score">{m.score?.a ?? 0} : {m.score?.b ?? 0}</span>
+                            {m.winner && (
+                                <span className="cw-match-winner-badge">
+                                    ✓ {m.winner === 'a' ? cw.teamA?.name : cw.teamB?.name}
+                                </span>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -35,32 +62,65 @@ function ClanWar() {
     const [wars,    setWars]    = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [error,   setError]   = React.useState(null);
-    const [filter,  setFilter]  = React.useState('all'); // 'all' | 'upcoming' | 'ongoing' | 'completed'
+    const [filter,  setFilter]  = React.useState('all');
 
     React.useEffect(() => {
-        const query = filter !== 'all' ? `?status=${filter}` : '';
-        fetch(`/api/clan-wars${query}`)
+        const q = filter !== 'all' ? `?status=${filter}` : '';
+        fetch(`/api/clan-wars${q}`)
             .then(r => r.json())
             .then(data => { setWars(data); setLoading(false); })
             .catch(err  => { setError(err.message); setLoading(false); });
     }, [filter]);
 
-    if (loading) return React.createElement('p', null, 'Loading clan wars…');
-    if (error)   return React.createElement('p', { className: 'error' }, error);
+    const filters = [
+        { id: 'all',       label: 'Все' },
+        { id: 'upcoming',  label: 'Предстоят' },
+        { id: 'ongoing',   label: 'Идут' },
+        { id: 'completed', label: 'Завершены' },
+    ];
 
-    return React.createElement('div', { className: 'clan-war' },
-        React.createElement('h2', null, 'Clan Wars'),
+    if (loading) return (
+        <div className="cw-list">
+            {[1,2,3].map(i => (
+                <div key={i} className="skeleton skeleton-card" style={{ height: 64 }} />
+            ))}
+        </div>
+    );
 
-        React.createElement('div', { className: 'cw-filters' },
-            ['all', 'upcoming', 'ongoing', 'completed'].map(f =>
-                React.createElement('button', { key: f, className: filter === f ? 'active' : '', onClick: () => setFilter(f) },
-                    f.charAt(0).toUpperCase() + f.slice(1)
-                )
-            )
-        ),
+    if (error) return (
+        <div style={{ padding: 32, color: 'var(--color-error)', textAlign: 'center' }}>
+            ⚠ Ошибка: {error}
+        </div>
+    );
 
-        wars.length === 0
-            ? React.createElement('p', null, 'No clan wars found.')
-            : wars.map(cw => React.createElement(ClanWarCard, { key: cw.id || cw._id, cw }))
+    return (
+        <div className="animate-fade-in">
+            <h2 style={{ marginBottom: 'var(--spacing-xl)' }}>⚔ Клан-вары</h2>
+
+            <div className="cw-filters">
+                {filters.map(f => (
+                    <button
+                        key={f.id}
+                        className={`nav-btn${filter === f.id ? ' active' : ''}`}
+                        style={{ padding: '8px 18px', fontSize: '0.85em' }}
+                        onClick={() => { setLoading(true); setFilter(f.id); }}
+                    >
+                        <span>{f.label}</span>
+                    </button>
+                ))}
+            </div>
+
+            {wars.length === 0 ? (
+                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
+                    Клан-варов нет
+                </p>
+            ) : (
+                <div className="cw-list">
+                    {wars.map(cw => (
+                        <ClanWarCard key={cw.id || cw._id} cw={cw} />
+                    ))}
+                </div>
+            )}
+        </div>
     );
 }
