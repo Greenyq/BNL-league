@@ -25,6 +25,11 @@ async function playerWithStats(battleTag) {
     return { ...player.toJSON(), stats: stats ? stats.toJSON() : null };
 }
 
+// Case-insensitive query for Player by battleTag
+function playerQ(battleTag) {
+    return { battleTag: { $regex: new RegExp(`^${escapeRegex(battleTag.trim())}$`, 'i') } };
+}
+
 async function getPlayerSession(req) {
     const sessionId = req.headers['x-player-session-id'];
     if (!sessionId) return null;
@@ -190,7 +195,7 @@ router.delete('/auth/unlink-battletag', async (req, res) => {
         const playerUser = await PlayerUser.findById(session.playerUserId);
         if (!playerUser?.linkedBattleTag) return res.status(400).json({ error: 'No BattleTag linked' });
 
-        await Player.findOneAndUpdate({ battleTag: playerUser.linkedBattleTag }, { selectedPortrait: null, selectedPortraitId: null });
+        await Player.findOneAndUpdate(playerQ(playerUser.linkedBattleTag), { selectedPortrait: null, selectedPortraitId: null });
         const updated = await PlayerUser.findByIdAndUpdate(session.playerUserId, { linkedBattleTag: null }, { new: true });
         res.json({ success: true, user: updated });
     } catch (err) {
@@ -210,10 +215,12 @@ router.put('/auth/select-portrait', async (req, res) => {
         const playerUser = await PlayerUser.findById(session.playerUserId);
         if (!playerUser?.linkedBattleTag) return res.status(400).json({ error: 'Must link BattleTag first' });
 
-        await Player.findOneAndUpdate(
-            { battleTag: playerUser.linkedBattleTag },
-            { selectedPortrait: portrait, updatedAt: Date.now() }
+        const updated = await Player.findOneAndUpdate(
+            playerQ(playerUser.linkedBattleTag),
+            { selectedPortrait: portrait, updatedAt: Date.now() },
+            { new: true }
         );
+        if (!updated) return res.status(404).json({ error: 'Player not found — re-link your BattleTag' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to select portrait' });
@@ -232,10 +239,12 @@ router.put('/auth/select-race', async (req, res) => {
         const playerUser = await PlayerUser.findById(session.playerUserId);
         if (!playerUser?.linkedBattleTag) return res.status(400).json({ error: 'Must link BattleTag first' });
 
-        await Player.findOneAndUpdate(
-            { battleTag: playerUser.linkedBattleTag },
-            { mainRace: Number(race), race: Number(race), updatedAt: Date.now() }
+        const updated = await Player.findOneAndUpdate(
+            playerQ(playerUser.linkedBattleTag),
+            { mainRace: Number(race), race: Number(race), updatedAt: Date.now() },
+            { new: true }
         );
+        if (!updated) return res.status(404).json({ error: 'Player not found — re-link your BattleTag' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to select race' });

@@ -156,9 +156,12 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
     // Use linkedBattleTag from user object as fallback when playerData hasn't loaded yet
     const linkedTag = playerData?.battleTag || user?.linkedBattleTag || null;
     const currentPortrait = selectedPort || null;
-    // Group all portraits by race — all are free to select
+    // Portraits filtered by selected race (+ race=0 which is universal)
+    const visiblePortraits = selectedRace
+        ? allPortraits.filter(p => p.race === 0 || p.race === selectedRace)
+        : allPortraits;
     const PORTRAIT_RACE_ORDER = [0, 1, 2, 4, 8];
-    const portraitsByRace = allPortraits.reduce((acc, p) => {
+    const portraitsByRace = visiblePortraits.reduce((acc, p) => {
         if (!acc[p.race]) acc[p.race] = [];
         acc[p.race].push(p);
         return acc;
@@ -258,6 +261,9 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                     <h4 style={{ marginBottom: 8, color: 'var(--color-accent-primary)' }}>🖼 {t('profile.portraitTitle')}</h4>
                     <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', marginBottom: 'var(--spacing-lg)' }}>
                         {t('profile.portraitDesc')}
+                        {selectedRace && <span style={{ color: 'var(--color-accent-secondary)', marginLeft: 6 }}>
+                            · {t(`race.${selectedRace}`)} + {t('race.0')}
+                        </span>}
                     </p>
 
                     {allPortraits.length === 0 && (
