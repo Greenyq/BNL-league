@@ -1,12 +1,11 @@
 // ClanWar component — displays clan war results and live score
 // Format: first to 3 wins. Each internal match is BO3.
 
-const { useState, useEffect } = React;
 
 const FORMAT_LABELS = { '1v1': '1v1', '2v2': '2v2', '3v3': '3v3' };
 
 function ClanWarCard({ cw }) {
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] = React.useState(false);
     const statusClass = { upcoming: 'status-upcoming', ongoing: 'status-ongoing', completed: 'status-completed' }[cw.status] || '';
 
     return React.createElement('div', { className: 'cw-card' },
@@ -33,12 +32,12 @@ function ClanWarCard({ cw }) {
 }
 
 function ClanWar() {
-    const [wars,    setWars]    = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error,   setError]   = useState(null);
-    const [filter,  setFilter]  = useState('all'); // 'all' | 'upcoming' | 'ongoing' | 'completed'
+    const [wars,    setWars]    = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error,   setError]   = React.useState(null);
+    const [filter,  setFilter]  = React.useState('all'); // 'all' | 'upcoming' | 'ongoing' | 'completed'
 
-    useEffect(() => {
+    React.useEffect(() => {
         const query = filter !== 'all' ? `?status=${filter}` : '';
         fetch(`/api/clan-wars${query}`)
             .then(r => r.json())
