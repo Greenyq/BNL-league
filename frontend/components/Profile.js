@@ -94,9 +94,11 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
     const [linkError,    setLinkError]    = React.useState(null);
     const [msg,          setMsg]          = React.useState(null);
     const [msgType,      setMsgType]      = React.useState('ok');
-    const [selectedRace, setSelectedRace] = React.useState(initPlayerData?.race || initPlayerData?.mainRace || null);
-    const [selectedPort, setSelectedPort] = React.useState(initPlayerData?.selectedPortrait || null);
-    const [allPortraits, setAllPortraits] = React.useState([]);
+    const [selectedRace,   setSelectedRace]   = React.useState(initPlayerData?.race || initPlayerData?.mainRace || null);
+    const [selectedPort,   setSelectedPort]   = React.useState(initPlayerData?.selectedPortrait || null);
+    const [allPortraits,   setAllPortraits]   = React.useState([]);
+    const [draftAvailable, setDraftAvailable] = React.useState(initPlayerData?.draftAvailable || false);
+    const [draftLoading,   setDraftLoading]   = React.useState(false);
 
     React.useEffect(() => {
         fetch('/api/portraits').then(r => r.json()).then(data => setAllPortraits(Array.isArray(data) ? data : [])).catch(() => {});
@@ -135,6 +137,16 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
             setPlayerData(null); setSelectedRace(null); setSelectedPort(null);
             flash(t('profile.unlinked'));
         } catch (err) { flash(err.message, 'err'); }
+    };
+
+    const toggleDraft = async () => {
+        setDraftLoading(true);
+        try {
+            const data = await playerFetch('/api/players/auth/toggle-draft', { method: 'PUT' });
+            setDraftAvailable(data.draftAvailable);
+            flash(t('profile.draftSaved'));
+        } catch (err) { flash(err.message, 'err'); }
+        setDraftLoading(false);
     };
 
     const saveRace = async (race) => {
@@ -231,6 +243,42 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                     </form>
                 )}
             </div>
+
+            {/* Драфт — только если BattleTag привязан */}
+            {linkedTag && (
+                <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-lg)' }}>
+                    <h4 style={{ marginBottom: 'var(--spacing-sm)', color: 'var(--color-accent-primary)' }}>
+                        {t('profile.draftTitle')}
+                    </h4>
+                    <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', marginBottom: 'var(--spacing-md)' }}>
+                        {t('profile.draftHint')}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', flexWrap: 'wrap' }}>
+                        <button
+                            onClick={toggleDraft}
+                            disabled={draftLoading}
+                            className="draft-toggle-btn"
+                            style={{
+                                padding: '8px 22px',
+                                borderRadius: 'var(--radius-sm)',
+                                fontWeight: 700,
+                                fontSize: '0.92em',
+                                border: `2px solid ${draftAvailable ? 'var(--color-success)' : 'rgba(255,255,255,0.15)'}`,
+                                background: draftAvailable ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.05)',
+                                color: draftAvailable ? 'var(--color-success)' : 'var(--color-text-muted)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                letterSpacing: 0.5,
+                            }}
+                        >
+                            {draftLoading ? '...' : (draftAvailable ? `✔ ${t('profile.draftOn')}` : `✗ ${t('profile.draftOff')}`)}
+                        </button>
+                        <span style={{ color: 'var(--color-text-muted)', fontSize: '0.82em' }}>
+                            {t('profile.draftDesc')}
+                        </span>
+                    </div>
+                </div>
+            )}
 
             {/* Выбор расы — только если BattleTag привязан */}
             {linkedTag && (
