@@ -154,7 +154,7 @@ function TeamCard({ team, players, clanWars, onOpenDraft }) {
                 ) : (
                     <div className="team-logo-placeholder">{team.emoji || '🛡'}</div>
                 )}
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ flex: 1, minWidth: 80 }}>
                     <div className="team-name-v2">{team.emoji && !team.logo ? '' : (team.emoji || '')} {team.name}</div>
                     {captain && (
                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', marginTop: 2 }}>

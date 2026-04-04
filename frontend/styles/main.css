@@ -1854,6 +1854,7 @@ input[type="datetime-local"] {
     align-items: center;
     gap: var(--spacing-md);
     padding: var(--spacing-lg);
+    flex-wrap: wrap;
 }
 
 .team-logo-v2 {
@@ -1882,9 +1883,6 @@ input[type="datetime-local"] {
     font-size: 1.25em;
     font-weight: 800;
     color: var(--color-text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .team-summary {
