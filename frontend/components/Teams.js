@@ -135,7 +135,6 @@ function TeamCard({ team, players, clanWars, onOpenDraft }) {
         || teamCWs[0] || null;
 
     const draftStatus = draftCw?.draft?.status || 'pending';
-
     const cwWins   = teamCWs.filter(cw => cw.status === 'completed' && (
         (cw.teamA?.name?.toLowerCase() === team.name.toLowerCase() && cw.winner === 'a') ||
         (cw.teamB?.name?.toLowerCase() === team.name.toLowerCase() && cw.winner === 'b')
@@ -185,19 +184,17 @@ function TeamCard({ team, players, clanWars, onOpenDraft }) {
                     )}
                 </div>
 
-                {/* Кнопка драфта — если есть клан-вар для этой команды */}
-                {draftCw && (
-                    <button
-                        className="btn btn-primary"
-                        style={{ padding: '6px 14px', fontSize: '0.82em', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}
-                        onClick={() => onOpenDraft(draftCw.id || draftCw._id)}
-                    >
-                        ⚔ Набор
-                        {draftStatus === 'drafting' && (
-                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--color-success)', display: 'inline-block', flexShrink: 0 }} />
-                        )}
-                    </button>
-                )}
+                {/* Кнопка набора — всегда доступна */}
+                <button
+                    className="btn btn-primary"
+                    style={{ padding: '6px 14px', fontSize: '0.82em', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}
+                    onClick={() => onOpenDraft({ teamId: team.id, teamName: team.name, clanWarId: draftCw?.id || draftCw?._id || null })}
+                >
+                    ⚔ Набор
+                    {draftStatus === 'drafting' && (
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--color-success)', display: 'inline-block', flexShrink: 0 }} />
+                    )}
+                </button>
             </div>
 
             {/* Разделитель */}
