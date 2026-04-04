@@ -140,6 +140,17 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
 
     const teamMap = Object.fromEntries(teams.map(t => [t.id, t]));
 
+    const toggleDraft = async (p) => {
+        try {
+            await apiFetch(`/api/players/${p.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ draftAvailable: !p.draftAvailable }),
+            });
+            showMsg(`✅ Драфт: ${p.name} → ${!p.draftAvailable ? 'доступен' : 'недоступен'}`);
+            onRefresh();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)', flexWrap: 'wrap', gap: 8 }}>
@@ -213,6 +224,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                             <th>{t('standings.player')}</th>
                             <th>MMR</th>
                             <th>{t('admin.assign_team')}</th>
+                            <th>⚔ Драфт</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -245,6 +257,21 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                                         </span>
                                     )}
                                 </td>
+                                {/* Колонка Драфт */}
+                                <td>
+                                    <button
+                                        onClick={() => toggleDraft(p)}
+                                        style={{
+                                            padding: '3px 10px', fontSize: '0.78em', borderRadius: 4, cursor: 'pointer', fontWeight: 700,
+                                            background: p.draftAvailable ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.04)',
+                                            color: p.draftAvailable ? 'var(--color-success)' : 'var(--color-text-muted)',
+                                            border: `1px solid ${p.draftAvailable ? 'var(--color-success)' : 'rgba(255,255,255,0.12)'}`,
+                                            minWidth: 64,
+                                        }}
+                                    >
+                                        {p.draftAvailable ? '✔ Да' : '✗ Нет'}
+                                    </button>
+                                </td>
                                 <td>
                                     <button onClick={() => deletePlayer(p.id, p.name)} style={{ background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', padding: '4px 10px', fontSize: '0.8em', borderRadius: 'var(--radius-sm)' }}>
                                         {t('admin.delete')}
@@ -253,7 +280,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                             </tr>
                         ))}
                         {players.length === 0 && (
-                            <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 32 }}>Нет игроков</td></tr>
+                            <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 32 }}>Нет игроков</td></tr>
                         )}
                     </tbody>
                 </table>

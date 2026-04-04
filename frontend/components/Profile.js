@@ -248,37 +248,26 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                 )}
             </div>
 
-            {/* Драфт — только если BattleTag привязан */}
+            {/* Драфт — статус (только чтение, меняет только администратор) */}
             {linkedTag && (
                 <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-lg)' }}>
                     <h4 style={{ marginBottom: 'var(--spacing-sm)', color: 'var(--color-accent-primary)' }}>
                         {t('profile.draftTitle')}
                     </h4>
-                    <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', marginBottom: 'var(--spacing-md)' }}>
-                        {t('profile.draftHint')}
-                    </p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', flexWrap: 'wrap' }}>
-                        <button
-                            onClick={toggleDraft}
-                            disabled={draftLoading}
-                            className="draft-toggle-btn"
-                            style={{
-                                padding: '8px 22px',
-                                borderRadius: 'var(--radius-sm)',
-                                fontWeight: 700,
-                                fontSize: '0.92em',
-                                border: `2px solid ${draftAvailable ? 'var(--color-success)' : 'rgba(255,255,255,0.15)'}`,
-                                background: draftAvailable ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.05)',
-                                color: draftAvailable ? 'var(--color-success)' : 'var(--color-text-muted)',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                letterSpacing: 0.5,
-                            }}
-                        >
-                            {draftLoading ? '...' : (draftAvailable ? `✔ ${t('profile.draftOn')}` : `✗ ${t('profile.draftOff')}`)}
-                        </button>
+                        <span style={{
+                            padding: '7px 18px',
+                            borderRadius: 'var(--radius-sm)',
+                            fontWeight: 700,
+                            fontSize: '0.9em',
+                            border: `2px solid ${draftAvailable ? 'var(--color-success)' : 'rgba(255,255,255,0.12)'}`,
+                            background: draftAvailable ? 'rgba(76,175,80,0.12)' : 'rgba(255,255,255,0.03)',
+                            color: draftAvailable ? 'var(--color-success)' : 'var(--color-text-muted)',
+                        }}>
+                            {draftAvailable ? `✔ ${t('profile.draftOn')}` : `✗ ${t('profile.draftOff')}`}
+                        </span>
                         <span style={{ color: 'var(--color-text-muted)', fontSize: '0.82em' }}>
-                            {t('profile.draftDesc')}
+                            {t('profile.draftDesc')} · управляет администратор
                         </span>
                     </div>
                 </div>
