@@ -1,4 +1,4 @@
-// Draft — система драфта клан-вара (пулл игроков по тирам, выбор капитанами)
+// Draft — система набора игроков: TeamRecruitView (набор в команду) + DraftView (клан-вар)
 
 // ── Карточка игрока в пуле ────────────────────────────────────────────────────
 function DraftPlayerCard({ player, isPicked, isMyTurn, onPick, picking }) {
@@ -401,6 +401,234 @@ function DraftView({ clanWarId, onBack }) {
                             picking={picking}
                         />
                     ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TeamRecruitView — набор игроков в команду (не привязан к клан-вару)
+// ══════════════════════════════════════════════════════════════════════════════
+function TeamRecruitView({ teamId, teamName, clanWarId, onBack }) {
+    useLang();
+    const [allPlayers, setAllPlayers] = React.useState([]);
+    const [loading,    setLoading]    = React.useState(true);
+    const [assigning,  setAssigning]  = React.useState(null); // playerId being assigned
+    const [removing,   setRemoving]   = React.useState(null); // playerId being removed
+    const [error,      setError]      = React.useState(null);
+
+    const isAdmin = !!localStorage.getItem('bnl_admin_session');
+    const adminSid = localStorage.getItem('bnl_admin_session');
+
+    const raceColor = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
+    const raceAbbr  = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
+    const raceImg   = { 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
+
+    const load = () => {
+        fetch('/api/players')
+            .then(r => r.json())
+            .then(pl => { setAllPlayers(Array.isArray(pl) ? pl : []); setLoading(false); })
+            .catch(err => { setError(err.message); setLoading(false); });
+    };
+
+    React.useEffect(() => { load(); }, []);
+
+    const adminFetch = (url, options = {}) =>
+        fetch(url, {
+            ...options,
+            headers: { 'Content-Type': 'application/json', 'x-session-id': adminSid || '', ...(options.headers || {}) },
+        }).then(async r => {
+            const data = await r.json();
+            if (!r.ok) throw new Error(data.error || r.statusText);
+            return data;
+        });
+
+    const assignPlayer = async (playerId) => {
+        setAssigning(playerId);
+        try {
+            await adminFetch(`/api/players/${playerId}`, { method: 'PUT', body: JSON.stringify({ teamId }) });
+            load();
+        } catch (err) { setError(err.message); }
+        setAssigning(null);
+    };
+
+    const removePlayer = async (playerId) => {
+        setRemoving(playerId);
+        try {
+            await adminFetch(`/api/players/${playerId}`, { method: 'PUT', body: JSON.stringify({ teamId: null }) });
+            load();
+        } catch (err) { setError(err.message); }
+        setRemoving(null);
+    };
+
+    // Split players: roster (in this team) vs pool (draftAvailable + not in any team)
+    const roster = allPlayers.filter(p => p.teamId === teamId);
+    const pool   = allPlayers.filter(p => p.draftAvailable && !p.teamId);
+
+    // Group pool by tier using stats.mmr or currentMmr
+    const mmrOf = p => p.stats?.mmr || p.currentMmr || 0;
+    const tiers = {
+        1: pool.filter(p => { const m = mmrOf(p); return m >= 1000 && m < 1300; }),
+        2: pool.filter(p => { const m = mmrOf(p); return m >= 1300 && m < 1600; }),
+        3: pool.filter(p => mmrOf(p) >= 1600),
+        0: pool.filter(p => mmrOf(p) < 1000 || mmrOf(p) === 0),
+    };
+    const tierLabels = { 0: 'Без тира (<1000)', 1: 'Тир 1 · 1000–1300', 2: 'Тир 2 · 1300–1600', 3: 'Тир 3 · 1600+' };
+
+    const PlayerMini = ({ p, action, actionLabel, busy }) => {
+        const race = p.mainRace || p.race;
+        const portrait = p.selectedPortrait;
+        const stats = p.stats;
+        return (
+            <div className="draft-player-card" style={{ opacity: busy ? 0.6 : 1 }}>
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                    {portrait
+                        ? <img src={portrait} alt="" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-accent-primary)' }} />
+                        : <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--color-bg-lighter)', border: '2px solid rgba(212,175,55,0.2)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {race && raceImg[race]
+                                ? <img src={raceImg[race]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.75 }} />
+                                : <span style={{ fontSize: '1em', color: 'var(--color-text-muted)' }}>👤</span>}
+                          </div>
+                    }
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '0.9em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.name || p.battleTag?.split('#')[0]}
+                    </div>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.battleTag}
+                        {race && raceAbbr[race] && <span style={{ marginLeft: 5, color: raceColor[race] }}>· {raceAbbr[race]}</span>}
+                    </div>
+                </div>
+                <div className="team-player-stats" style={{ flexShrink: 0 }}>
+                    <div className="team-stat-cell">
+                        <span className="team-stat-label">MMR</span>
+                        <span className="team-stat-val" style={{ color: 'var(--color-accent-secondary)' }}>{mmrOf(p) || '—'}</span>
+                    </div>
+                    {stats && <>
+                        <div className="team-stat-cell">
+                            <span className="team-stat-label">W</span>
+                            <span className="team-stat-val" style={{ color: 'var(--color-success)' }}>{stats.wins}</span>
+                        </div>
+                        <div className="team-stat-cell">
+                            <span className="team-stat-label">L</span>
+                            <span className="team-stat-val" style={{ color: 'var(--color-error)' }}>{stats.losses}</span>
+                        </div>
+                    </>}
+                </div>
+                {isAdmin && (
+                    <button
+                        onClick={action}
+                        disabled={busy}
+                        style={{
+                            padding: '4px 12px', fontSize: '0.8em', borderRadius: 4, cursor: 'pointer', fontWeight: 700, flexShrink: 0,
+                            background: actionLabel === '+ Добавить' ? 'rgba(76,175,80,0.15)' : 'rgba(244,67,54,0.12)',
+                            color: actionLabel === '+ Добавить' ? 'var(--color-success)' : 'var(--color-error)',
+                            border: `1px solid ${actionLabel === '+ Добавить' ? 'var(--color-success)' : 'rgba(244,67,54,0.4)'}`,
+                        }}
+                    >
+                        {busy ? '...' : actionLabel}
+                    </button>
+                )}
+            </div>
+        );
+    };
+
+    if (loading) return (
+        <div style={{ padding: 40 }}>
+            {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 56, marginBottom: 10, borderRadius: 8 }} />)}
+        </div>
+    );
+
+    return (
+        <div className="animate-fade-in">
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)', marginBottom: 'var(--spacing-xl)', flexWrap: 'wrap' }}>
+                <button className="btn btn-secondary" style={{ padding: '7px 16px', fontSize: '0.9em' }} onClick={onBack}>
+                    ← Назад
+                </button>
+                <h2 style={{ margin: 0 }}>
+                    ⚔ Набор &nbsp;<span style={{ color: 'var(--color-text-muted)', fontSize: '0.75em' }}>{teamName}</span>
+                </h2>
+                {!isAdmin && (
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>
+                        Только администратор может добавлять игроков
+                    </span>
+                )}
+            </div>
+
+            {error && (
+                <div style={{ background: 'rgba(244,67,54,0.1)', border: '1px solid var(--color-error)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', color: 'var(--color-error)', marginBottom: 'var(--spacing-lg)', fontSize: '0.9em' }}>
+                    ⚠ {error} <button onClick={() => setError(null)} style={{ marginLeft: 8, background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>✕</button>
+                </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-xl)' }}>
+
+                {/* ── Текущий состав ── */}
+                <div>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 'var(--spacing-md)' }}>
+                        🛡 Состав команды ({roster.length})
+                    </div>
+                    <div className="draft-tier-col" style={{ padding: 'var(--spacing-sm)' }}>
+                        {roster.length === 0
+                            ? <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', textAlign: 'center', padding: 16 }}>Нет игроков</p>
+                            : roster.map(p => (
+                                <PlayerMini
+                                    key={p.id}
+                                    p={p}
+                                    action={() => removePlayer(p.id)}
+                                    actionLabel="− Убрать"
+                                    busy={removing === p.id}
+                                />
+                            ))
+                        }
+                    </div>
+                </div>
+
+                {/* ── Пул доступных игроков ── */}
+                <div>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 'var(--spacing-md)' }}>
+                        👥 Доступны для набора ({pool.length})
+                    </div>
+                    {pool.length === 0 ? (
+                        <div className="draft-tier-col" style={{ padding: 'var(--spacing-lg)', textAlign: 'center' }}>
+                            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88em' }}>
+                                Нет доступных игроков.<br />
+                                Включите игрокам «⚔ Драфт» в&nbsp;<strong>Админ → Игроки</strong>.
+                            </p>
+                        </div>
+                    ) : (
+                        [3, 2, 1, 0].filter(tier => tiers[tier].length > 0).map(tier => (
+                            <div key={tier} style={{ marginBottom: 'var(--spacing-md)' }}>
+                                <div style={{ fontSize: '0.78em', color: 'var(--color-accent-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
+                                    {tierLabels[tier]}
+                                </div>
+                                <div className="draft-tier-col" style={{ padding: 'var(--spacing-xs)' }}>
+                                    {tiers[tier].map(p => (
+                                        <PlayerMini
+                                            key={p.id}
+                                            p={p}
+                                            action={() => assignPlayer(p.id)}
+                                            actionLabel="+ Добавить"
+                                            busy={assigning === p.id}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+
+            {/* Clan war draft section (if available) */}
+            {clanWarId && (
+                <div style={{ marginTop: 'var(--spacing-xxl)', borderTop: '1px solid rgba(212,175,55,0.15)', paddingTop: 'var(--spacing-xl)' }}>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 'var(--spacing-md)' }}>
+                        ⚔ Драфт клан-вара
+                    </div>
+                    <DraftView clanWarId={clanWarId} onBack={onBack} embedded={true} />
                 </div>
             )}
         </div>
