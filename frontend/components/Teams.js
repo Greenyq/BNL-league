@@ -119,7 +119,7 @@ function TeamClanWarRow({ cw, teamName }) {
 }
 
 // ── Полная карточка команды ───────────────────────────────────────────────────
-function TeamCard({ team, players, clanWars }) {
+function TeamCard({ team, players, clanWars, onOpenDraft }) {
     useLang();
     const roster   = players.filter(p => p.teamId === team.id);
     const captain  = players.find(p => p.id === team.captainId);
@@ -127,6 +127,14 @@ function TeamCard({ team, players, clanWars }) {
         cw.teamA?.name?.toLowerCase() === team.name.toLowerCase() ||
         cw.teamB?.name?.toLowerCase() === team.name.toLowerCase()
     ).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+    // Find the most relevant clan war for draft: drafting > upcoming > ongoing > latest
+    const draftCw = teamCWs.find(cw => cw.draft?.status === 'drafting')
+        || teamCWs.find(cw => cw.status === 'upcoming')
+        || teamCWs.find(cw => cw.status === 'ongoing')
+        || teamCWs[0] || null;
+
+    const draftStatus = draftCw?.draft?.status || 'pending';
 
     const cwWins   = teamCWs.filter(cw => cw.status === 'completed' && (
         (cw.teamA?.name?.toLowerCase() === team.name.toLowerCase() && cw.winner === 'a') ||
@@ -176,6 +184,20 @@ function TeamCard({ team, players, clanWars }) {
                         </div>
                     )}
                 </div>
+
+                {/* Кнопка драфта — если есть клан-вар для этой команды */}
+                {draftCw && (
+                    <button
+                        className="btn btn-primary"
+                        style={{ padding: '6px 14px', fontSize: '0.82em', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}
+                        onClick={() => onOpenDraft(draftCw.id || draftCw._id)}
+                    >
+                        ⚔ Набор
+                        {draftStatus === 'drafting' && (
+                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--color-success)', display: 'inline-block', flexShrink: 0 }} />
+                        )}
+                    </button>
+                )}
             </div>
 
             {/* Разделитель */}
@@ -213,7 +235,7 @@ function TeamCard({ team, players, clanWars }) {
 }
 
 // ── Точка входа ───────────────────────────────────────────────────────────────
-function Teams() {
+function Teams({ onOpenDraft }) {
     useLang();
     const [teams,     setTeams]     = React.useState([]);
     const [players,   setPlayers]   = React.useState([]);
@@ -251,7 +273,7 @@ function Teams() {
             ) : (
                 <div className="teams-grid-v2">
                     {teams.map(team => (
-                        <TeamCard key={team.id} team={team} players={players} clanWars={clanWars} />
+                        <TeamCard key={team.id} team={team} players={players} clanWars={clanWars} onOpenDraft={onOpenDraft} />
                     ))}
                 </div>
             )}

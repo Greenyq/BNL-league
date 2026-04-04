@@ -65,7 +65,7 @@ function CwPlayerRow({ player, isCaptain }) {
 }
 
 // ── Карточка клан-вара ─────────────────────────────────────────────────────────
-function ClanWarCard({ cw, players, teams, onOpenDraft }) {
+function ClanWarCard({ cw, players, teams }) {
     useLang();
     const [open, setOpen] = React.useState(false);
 
@@ -113,20 +113,12 @@ function ClanWarCard({ cw, players, teams, onOpenDraft }) {
                         🏆 {cw.winner === 'a' ? nameA : nameB}
                     </span>
                 )}
-                {/* Draft badge */}
+                {/* Draft status badge (informational only) */}
                 {hasDraft && draftStatus !== 'pending' && (
                     <span className={`cw-draft-badge ${draftStatus === 'drafting' ? 'draft-badge-active' : 'draft-badge-done'}`}>
                         ⚔ {t(`draft.status_${draftStatus}`)}
                     </span>
                 )}
-                {/* Draft button always visible - stops propagation so it doesn't toggle card */}
-                <span
-                    className="btn btn-primary"
-                    style={{ padding: '4px 12px', fontSize: '0.78em', fontWeight: 700, borderRadius: 'var(--radius-sm)', cursor: 'pointer', flexShrink: 0 }}
-                    onClick={e => { e.stopPropagation(); onOpenDraft(cw.id || cw._id); }}
-                >
-                    ⚔ {t('draft.open_btn')}
-                </span>
                 <span className="cw-toggle">{open ? '▲' : '▼'}</span>
             </div>
 
@@ -205,7 +197,7 @@ function ClanWarCard({ cw, players, teams, onOpenDraft }) {
     );
 }
 
-function ClanWar({ onOpenDraft }) {
+function ClanWar() {
     useLang();
     const [wars,    setWars]    = React.useState([]);
     const [players, setPlayers] = React.useState([]);
@@ -276,7 +268,6 @@ function ClanWar({ onOpenDraft }) {
                             cw={cw}
                             players={players}
                             teams={teams}
-                            onOpenDraft={onOpenDraft}
                         />
                     ))}
                 </div>

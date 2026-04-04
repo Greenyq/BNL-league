@@ -139,12 +139,12 @@ function App() {
             <div className="app">
                 {tab === 'home'      && <HomePage />}
                 {tab === 'standings' && <Standings />}
-                {tab === 'teams'     && <Teams />}
-                {tab === 'clanwar'   && (
+                {tab === 'teams'     && (
                     draftCwId
                         ? <DraftView clanWarId={draftCwId} onBack={closeDraft} />
-                        : <ClanWar onOpenDraft={openDraft} />
+                        : <Teams onOpenDraft={openDraft} />
                 )}
+                {tab === 'clanwar'   && <ClanWar />}
                 {tab === 'profile'   && <Profile />}
                 {tab === 'admin'     && <Admin />}
             </div>
