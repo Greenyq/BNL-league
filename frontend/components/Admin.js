@@ -265,12 +265,41 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
 // ── Вкладка Команды ───────────────────────────────────────────────────────────
 function TeamsTab({ teams, players, onRefresh, showMsg }) {
     useLang();
-    const [showForm, setShowForm] = React.useState(false);
-    const [name,     setName]     = React.useState('');
-    const [emoji,    setEmoji]    = React.useState('🛡');
-    const [captainId,setCaptain]  = React.useState('');
-    const [saving,   setSaving]   = React.useState(false);
-    const [uploading,setUploading]= React.useState(null); // teamId being uploaded
+    const [showForm,   setShowForm]   = React.useState(false);
+    const [name,       setName]       = React.useState('');
+    const [emoji,      setEmoji]      = React.useState('🛡');
+    const [captainId,  setCaptain]    = React.useState('');
+    const [saving,     setSaving]     = React.useState(false);
+    const [uploading,  setUploading]  = React.useState(null); // teamId being uploaded
+    // Edit state
+    const [editId,     setEditId]     = React.useState(null);
+    const [editName,   setEditName]   = React.useState('');
+    const [editEmoji,  setEditEmoji]  = React.useState('');
+    const [editCap,    setEditCap]    = React.useState('');
+    const [editSaving, setEditSaving] = React.useState(false);
+
+    const startEdit = (tm) => {
+        setEditId(tm.id);
+        setEditName(tm.name);
+        setEditEmoji(tm.emoji || '🛡');
+        setEditCap(tm.captainId || '');
+    };
+
+    const cancelEdit = () => { setEditId(null); };
+
+    const saveEdit = async (id) => {
+        setEditSaving(true);
+        try {
+            await apiFetch(`/api/teams/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ name: editName.trim(), emoji: editEmoji, captainId: editCap || null }),
+            });
+            showMsg('✅ Команда обновлена');
+            setEditId(null);
+            onRefresh();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+        setEditSaving(false);
+    };
 
     const createTeam = async () => {
         if (!name.trim()) return;
@@ -360,43 +389,85 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
                     {teams.map(tm => (
-                        <div key={tm.id} className="card-elevated" style={{ padding: 'var(--spacing-lg)', display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)', flexWrap: 'wrap' }}>
-                            {/* Логотип + загрузка */}
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                                {tm.logo ? (
-                                    <img src={tm.logo} alt={tm.name} style={{ width: 64, height: 64, objectFit: 'contain', borderRadius: 'var(--radius-md)', border: '2px solid rgba(212,175,55,0.35)' }} />
-                                ) : (
-                                    <div style={{ width: 64, height: 64, borderRadius: 'var(--radius-md)', background: 'rgba(212,175,55,0.08)', border: '2px dashed rgba(212,175,55,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8em' }}>
-                                        {tm.emoji || '🛡'}
+                        <div key={tm.id} className="card-elevated" style={{ padding: 'var(--spacing-lg)' }}>
+                            {/* Основная строка */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)', flexWrap: 'wrap' }}>
+                                {/* Логотип + загрузка */}
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                    {tm.logo ? (
+                                        <img src={tm.logo} alt={tm.name} style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 'var(--radius-md)', border: '2px solid rgba(212,175,55,0.35)' }} />
+                                    ) : (
+                                        <div style={{ width: 56, height: 56, borderRadius: 'var(--radius-md)', background: 'rgba(212,175,55,0.08)', border: '2px dashed rgba(212,175,55,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6em' }}>
+                                            {tm.emoji || '🛡'}
+                                        </div>
+                                    )}
+                                    <label style={{ cursor: 'pointer', fontSize: '0.68em', color: 'var(--color-accent-primary)', whiteSpace: 'nowrap' }}>
+                                        {uploading === tm.id ? '⏳...' : '🖼 Лого'}
+                                        <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} disabled={uploading === tm.id} onChange={e => uploadLogo(tm.id, e.target.files[0])} />
+                                    </label>
+                                </div>
+
+                                {/* Инфо */}
+                                <div style={{ flex: 1, minWidth: 120 }}>
+                                    <div style={{ fontWeight: 700, fontSize: '1.05em', color: 'var(--color-text-primary)', marginBottom: 3 }}>
+                                        {tm.emoji} {tm.name}
                                     </div>
-                                )}
-                                <label style={{ cursor: 'pointer', fontSize: '0.72em', color: 'var(--color-accent-primary)', whiteSpace: 'nowrap' }}>
-                                    {uploading === tm.id ? '⏳ Загрузка...' : '🖼 Загрузить'}
-                                    <input
-                                        type="file" accept="image/jpeg,image/png,image/webp"
-                                        style={{ display: 'none' }}
-                                        disabled={uploading === tm.id}
-                                        onChange={e => uploadLogo(tm.id, e.target.files[0])}
-                                    />
-                                </label>
-                            </div>
-
-                            {/* Инфо */}
-                            <div style={{ flex: 1, minWidth: 120 }}>
-                                <div style={{ fontWeight: 700, fontSize: '1.1em', color: 'var(--color-text-primary)', marginBottom: 4 }}>
-                                    {tm.emoji} {tm.name}
+                                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.83em' }}>
+                                        👑 {playerMap[tm.captainId]?.name || (tm.captainId ? tm.captainId : '— капитан не назначен')}
+                                        &nbsp;·&nbsp;
+                                        {players.filter(p => p.teamId === tm.id).length} игроков
+                                    </div>
                                 </div>
-                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>
-                                    👑 {playerMap[tm.captainId]?.name || tm.captainId || '—'}
-                                    &nbsp;·&nbsp;
-                                    {players.filter(p => p.teamId === tm.id).length} игроков
+
+                                {/* Кнопки */}
+                                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                                    <button
+                                        onClick={() => editId === tm.id ? cancelEdit() : startEdit(tm)}
+                                        style={{ background: editId === tm.id ? 'rgba(0,212,255,0.1)' : 'rgba(212,175,55,0.1)', color: editId === tm.id ? 'var(--color-accent-secondary)' : 'var(--color-accent-primary)', border: `1px solid ${editId === tm.id ? 'var(--color-accent-secondary)' : 'rgba(212,175,55,0.4)'}`, padding: '6px 14px', fontSize: '0.82em', borderRadius: 'var(--radius-sm)' }}
+                                    >
+                                        {editId === tm.id ? '✕ Отмена' : '✏ Изменить'}
+                                    </button>
+                                    <button onClick={() => deleteTeam(tm.id, tm.name)} style={{ background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', padding: '6px 14px', fontSize: '0.82em', borderRadius: 'var(--radius-sm)' }}>
+                                        {t('admin.delete')}
+                                    </button>
                                 </div>
                             </div>
 
-                            {/* Удалить */}
-                            <button onClick={() => deleteTeam(tm.id, tm.name)} style={{ background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', padding: '6px 14px', fontSize: '0.85em', borderRadius: 'var(--radius-sm)', flexShrink: 0 }}>
-                                {t('admin.delete')}
-                            </button>
+                            {/* Форма редактирования */}
+                            {editId === tm.id && (
+                                <div style={{ marginTop: 'var(--spacing-md)', padding: 'var(--spacing-md)', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(0,212,255,0.2)' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
+                                        {/* Название и эмодзи */}
+                                        <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
+                                            <input type="text" placeholder="Emoji" value={editEmoji} onChange={e => setEditEmoji(e.target.value)} style={{ width: 60 }} />
+                                            <input type="text" placeholder="Название команды" value={editName} onChange={e => setEditName(e.target.value)} style={{ flex: 1 }} />
+                                        </div>
+                                        {/* Капитан */}
+                                        <div>
+                                            <div style={{ fontSize: '0.8em', color: 'var(--color-text-muted)', marginBottom: 4 }}>👑 Капитан</div>
+                                            <select
+                                                value={editCap}
+                                                onChange={e => setEditCap(e.target.value)}
+                                                style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '2px solid var(--color-bg-lighter)', borderRadius: 'var(--radius-md)', padding: '9px 12px', fontSize: '0.95em', width: '100%' }}
+                                            >
+                                                <option value="">— без капитана —</option>
+                                                {players.map(p => (
+                                                    <option key={p.id} value={p.id}>
+                                                        {p.name} ({p.battleTag}) {p.teamId === tm.id ? '· в команде' : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        {/* Сохранить */}
+                                        <div style={{ display: 'flex', gap: 8 }}>
+                                            <button className="btn btn-primary" onClick={() => saveEdit(tm.id)} disabled={editSaving || !editName.trim()} style={{ padding: '7px 18px' }}>
+                                                {editSaving ? '...' : '💾 Сохранить'}
+                                            </button>
+                                            <button className="btn btn-secondary" onClick={cancelEdit} style={{ padding: '7px 14px' }}>Отмена</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>

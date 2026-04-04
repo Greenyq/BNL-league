@@ -94,10 +94,11 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
     const [linkError,    setLinkError]    = React.useState(null);
     const [msg,          setMsg]          = React.useState(null);
     const [msgType,      setMsgType]      = React.useState('ok');
-    const [selectedRace,   setSelectedRace]   = React.useState(initPlayerData?.race || initPlayerData?.mainRace || null);
-    const [selectedPort,   setSelectedPort]   = React.useState(initPlayerData?.selectedPortrait || null);
+    // Use ?? (not ||) so that race=0 (Random) is preserved as 0, not replaced by null
+    const [selectedRace,   setSelectedRace]   = React.useState(initPlayerData?.mainRace ?? initPlayerData?.race ?? null);
+    const [selectedPort,   setSelectedPort]   = React.useState(initPlayerData?.selectedPortrait ?? null);
     const [allPortraits,   setAllPortraits]   = React.useState([]);
-    const [draftAvailable, setDraftAvailable] = React.useState(initPlayerData?.draftAvailable || false);
+    const [draftAvailable, setDraftAvailable] = React.useState(initPlayerData?.draftAvailable ?? false);
     const [draftLoading,   setDraftLoading]   = React.useState(false);
 
     React.useEffect(() => {
@@ -122,8 +123,9 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                 method: 'PUT', body: JSON.stringify({ battleTag: linkTag.trim() }),
             });
             setPlayerData(data.linkedPlayer);
-            setSelectedRace(data.linkedPlayer?.race || null);
-            setSelectedPort(data.linkedPlayer?.selectedPortrait || null);
+            setSelectedRace(data.linkedPlayer?.mainRace ?? data.linkedPlayer?.race ?? null);
+            setSelectedPort(data.linkedPlayer?.selectedPortrait ?? null);
+            setDraftAvailable(data.linkedPlayer?.draftAvailable ?? false);
             setLinkTag('');
             flash(t('profile.linked'));
         } catch (err) { setLinkError(err.message); }
@@ -168,8 +170,10 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
     // Use linkedBattleTag from user object as fallback when playerData hasn't loaded yet
     const linkedTag = playerData?.battleTag || user?.linkedBattleTag || null;
     const currentPortrait = selectedPort || null;
-    // Portraits filtered by selected race (+ race=0 which is universal)
-    const visiblePortraits = selectedRace
+    // Portraits filtered by selected race (+ race=0 which is universal).
+    // selectedRace===null means no race chosen → show all.
+    // selectedRace===0 (Random) means show all as well.
+    const visiblePortraits = (selectedRace !== null && selectedRace !== 0)
         ? allPortraits.filter(p => p.race === 0 || p.race === selectedRace)
         : allPortraits;
     const PORTRAIT_RACE_ORDER = [0, 1, 2, 4, 8];
@@ -309,7 +313,7 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                     <h4 style={{ marginBottom: 8, color: 'var(--color-accent-primary)' }}>🖼 {t('profile.portraitTitle')}</h4>
                     <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', marginBottom: 'var(--spacing-lg)' }}>
                         {t('profile.portraitDesc')}
-                        {selectedRace && <span style={{ color: 'var(--color-accent-secondary)', marginLeft: 6 }}>
+                        {(selectedRace !== null && selectedRace !== 0) && <span style={{ color: 'var(--color-accent-secondary)', marginLeft: 6 }}>
                             · {t(`race.${selectedRace}`)} + {t('race.0')}
                         </span>}
                     </p>

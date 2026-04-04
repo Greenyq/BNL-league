@@ -116,9 +116,17 @@ function ClanWarCard({ cw, players, teams, onOpenDraft }) {
                 {/* Draft badge */}
                 {hasDraft && draftStatus !== 'pending' && (
                     <span className={`cw-draft-badge ${draftStatus === 'drafting' ? 'draft-badge-active' : 'draft-badge-done'}`}>
-                        ⚔ Драфт: {t(`draft.status_${draftStatus}`)}
+                        ⚔ {t(`draft.status_${draftStatus}`)}
                     </span>
                 )}
+                {/* Draft button always visible - stops propagation so it doesn't toggle card */}
+                <span
+                    className="btn btn-primary"
+                    style={{ padding: '4px 12px', fontSize: '0.78em', fontWeight: 700, borderRadius: 'var(--radius-sm)', cursor: 'pointer', flexShrink: 0 }}
+                    onClick={e => { e.stopPropagation(); onOpenDraft(cw.id || cw._id); }}
+                >
+                    ⚔ {t('draft.open_btn')}
+                </span>
                 <span className="cw-toggle">{open ? '▲' : '▼'}</span>
             </div>
 
@@ -191,17 +199,6 @@ function ClanWarCard({ cw, players, teams, onOpenDraft }) {
                         }
                     </div>
 
-                    {/* Draft button */}
-                    <div style={{ padding: 'var(--spacing-md) var(--spacing-lg)', borderTop: '1px solid rgba(212,175,55,0.1)' }}>
-                        <button
-                            className="btn btn-primary"
-                            style={{ padding: '8px 20px', fontSize: '0.88em' }}
-                            onClick={() => onOpenDraft(cw.id || cw._id)}
-                        >
-                            ⚔ {t('draft.open_btn')}
-                            {draftStatus === 'drafting' && <span style={{ marginLeft: 6, fontSize: '0.8em', color: 'var(--color-success)' }}>● Live</span>}
-                        </button>
-                    </div>
                 </div>
             )}
         </div>
