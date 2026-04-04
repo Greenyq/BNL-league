@@ -40,7 +40,25 @@ const clanWarSchema = new mongoose.Schema(
             }]
         }],
 
-        winner: { type: String, enum: ['a', 'b', null], default: null }
+        winner: { type: String, enum: ['a', 'b', null], default: null },
+
+        draft: {
+            status: { type: String, enum: ['pending', 'drafting', 'complete'], default: 'pending' },
+            currentTier: { type: Number, default: 1 },
+            currentTeamTurn: { type: String, enum: ['a', 'b'], default: 'a' },
+            tierOrder: {
+                tier1: { type: [String], default: ['a', 'b'] },
+                tier2: { type: [String], default: ['b', 'a'] },
+                tier3: { type: [String], default: ['a', 'b'] }
+            },
+            picks: [{
+                team:            { type: String },          // 'a' or 'b'
+                playerId:        { type: mongoose.Schema.Types.ObjectId },
+                playerBattleTag: { type: String },
+                tier:            { type: Number },
+                pickedAt:        { type: Date, default: Date.now }
+            }]
+        }
     },
     { timestamps: true }
 );

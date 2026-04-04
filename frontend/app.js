@@ -69,12 +69,16 @@ function HomePage() {
 
 // ── App ───────────────────────────────────────────────────────────────────────
 function App() {
-    const [tab, setTab] = React.useState(getTabFromHash);
+    const [tab,         setTab]         = React.useState(getTabFromHash);
+    const [draftCwId,   setDraftCwId]   = React.useState(null); // active draft clan war id
     useLang(); // подписка на смену языка
 
     // Синхронизация хэша с табом
     React.useEffect(() => {
-        const onHash = () => setTab(getTabFromHash());
+        const onHash = () => {
+            setTab(getTabFromHash());
+            setDraftCwId(null); // reset draft view on nav change
+        };
         window.addEventListener('hashchange', onHash);
         return () => window.removeEventListener('hashchange', onHash);
     }, []);
@@ -82,6 +86,15 @@ function App() {
     const navigate = (id) => {
         window.location.hash = id;
         setTab(id);
+        setDraftCwId(null);
+    };
+
+    const openDraft = (cwId) => {
+        setDraftCwId(cwId);
+    };
+
+    const closeDraft = () => {
+        setDraftCwId(null);
     };
 
     const toggleLang = () => setLang(getLang() === 'ru' ? 'en' : 'ru');
@@ -127,7 +140,11 @@ function App() {
                 {tab === 'home'      && <HomePage />}
                 {tab === 'standings' && <Standings />}
                 {tab === 'teams'     && <Teams />}
-                {tab === 'clanwar'   && <ClanWar />}
+                {tab === 'clanwar'   && (
+                    draftCwId
+                        ? <DraftView clanWarId={draftCwId} onBack={closeDraft} />
+                        : <ClanWar onOpenDraft={openDraft} />
+                )}
                 {tab === 'profile'   && <Profile />}
                 {tab === 'admin'     && <Admin />}
             </div>

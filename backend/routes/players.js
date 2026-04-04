@@ -227,6 +227,29 @@ router.put('/auth/select-portrait', async (req, res) => {
     }
 });
 
+// Toggle draft availability (requires linked BattleTag)
+router.put('/auth/toggle-draft', async (req, res) => {
+    try {
+        const session = await getPlayerSession(req);
+        if (!session) return res.status(401).json({ error: 'Not authenticated' });
+
+        const playerUser = await PlayerUser.findById(session.playerUserId);
+        if (!playerUser?.linkedBattleTag) return res.status(400).json({ error: 'Must link BattleTag first' });
+
+        const player = await Player.findOne(playerQ(playerUser.linkedBattleTag));
+        if (!player) return res.status(404).json({ error: 'Player not found' });
+
+        const updated = await Player.findByIdAndUpdate(
+            player._id,
+            { draftAvailable: !player.draftAvailable, draftAvailableUpdatedAt: new Date() },
+            { new: true }
+        );
+        res.json({ success: true, draftAvailable: updated.draftAvailable });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to toggle draft availability' });
+    }
+});
+
 // Select main race (requires linked BattleTag)
 router.put('/auth/select-race', async (req, res) => {
     try {

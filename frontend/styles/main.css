@@ -2050,3 +2050,193 @@ input[type="datetime-local"] {
     gap: var(--spacing-xs);
     flex-wrap: wrap;
 }
+
+/* ==================== DRAFT SYSTEM ==================== */
+
+/* Draft tier grid — 3 columns on desktop, stacked on mobile */
+.draft-tiers-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-lg);
+}
+
+@media (max-width: 768px) {
+    .draft-tiers-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Tier column */
+.draft-tier-col {
+    background: var(--color-bg-light);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.draft-tier-header {
+    background: rgba(212, 175, 55, 0.08);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+    padding: var(--spacing-md) var(--spacing-lg);
+    text-align: center;
+}
+
+.draft-tier-players {
+    padding: var(--spacing-sm);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Draft player card */
+.draft-player-card {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 8px 10px;
+    background: var(--color-bg-base);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-md);
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.draft-player-card.draft-pickable:hover {
+    border-color: rgba(212, 175, 55, 0.4);
+    background: rgba(212, 175, 55, 0.05);
+}
+
+.draft-player-card.draft-picked {
+    border-color: rgba(255, 255, 255, 0.04);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* Picked badge */
+.draft-picked-badge {
+    font-size: 0.72em;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-text-muted);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-sm);
+    padding: 3px 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Teams picks row above columns */
+.draft-teams-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+@media (max-width: 600px) {
+    .draft-teams-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.draft-team-picks {
+    background: var(--color-bg-light);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.draft-team-picks-header {
+    font-weight: 800;
+    font-size: 1em;
+    margin-bottom: var(--spacing-sm);
+}
+
+/* Individual pick slot */
+.draft-pick-slot {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    min-width: 100px;
+    font-size: 0.82em;
+    vertical-align: middle;
+}
+
+.draft-pick-slot--empty {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+}
+
+.draft-pick-slot--filled {
+    background: rgba(212, 175, 55, 0.1);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+}
+
+/* Slide-up + fade animation for new picks */
+@keyframes pickSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.draft-pick-anim {
+    animation: pickSlideIn 0.3s ease forwards;
+}
+
+/* ClanWar teams section (expanded) */
+.cw-teams-section {
+    padding: 0 0 var(--spacing-sm);
+}
+
+.cw-teams-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+    padding: 0 var(--spacing-lg) var(--spacing-md);
+}
+
+@media (max-width: 600px) {
+    .cw-teams-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.cw-team-col {
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+}
+
+.cw-team-col-title {
+    font-weight: 800;
+    font-size: 0.92em;
+    margin-bottom: var(--spacing-sm);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+/* Draft badge on ClanWar header */
+.cw-draft-badge {
+    font-size: 0.75em;
+    padding: 3px 9px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    border: 1px solid;
+}
+
+.draft-badge-active {
+    background: rgba(76, 175, 80, 0.15);
+    border-color: var(--color-success);
+    color: var(--color-success);
+}
+
+.draft-badge-done {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: rgba(212, 175, 55, 0.4);
+    color: var(--color-accent-primary);
+}

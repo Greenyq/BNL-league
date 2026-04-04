@@ -15,10 +15,12 @@ const playerSchema = new mongoose.Schema({
     currentMmr:        { type: Number },
     teamId:            { type: String },
     discordTag:        { type: String },
-    selectedPortraitId:{ type: String },
-    selectedPortrait:  { type: String }, // URL of selected portrait image
-    createdAt:         { type: Date, default: Date.now },
-    updatedAt:         { type: Date, default: Date.now }
+    selectedPortraitId:       { type: String },
+    selectedPortrait:         { type: String }, // URL of selected portrait image
+    draftAvailable:           { type: Boolean, default: false },
+    draftAvailableUpdatedAt:  { type: Date },
+    createdAt:                { type: Date, default: Date.now },
+    updatedAt:                { type: Date, default: Date.now }
 });
 playerSchema.set('toJSON', toJSON);
 

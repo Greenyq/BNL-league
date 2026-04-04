@@ -1,6 +1,71 @@
-// ClanWar — клан-вары (первый до 3 побед, BO3 каждый матч)
+// ClanWar — клан-вары (первый до 3 побед, BO3 каждый матч) + интеграция с командами
 
-function ClanWarCard({ cw }) {
+// ── Вспомогательные константы расы ───────────────────────────────────────────
+const CW_RACE_IMG   = { 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
+const CW_RACE_COLOR = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
+const CW_RACE_ABBR  = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
+
+// ── Мини-строка игрока (для расширенного вида клан-вара) ──────────────────────
+function CwPlayerRow({ player, isCaptain }) {
+    const race    = player.mainRace || player.race;
+    const stats   = player.stats;
+    const portrait = player.selectedPortrait;
+
+    return (
+        <div className="team-player-row" style={{ padding: '6px 0' }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+                {portrait ? (
+                    <img src={portrait} alt={player.name} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-accent-primary)' }} />
+                ) : (
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--color-bg-lighter)', border: '2px solid rgba(212,175,55,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                        {race && CW_RACE_IMG[race]
+                            ? <img src={CW_RACE_IMG[race]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.75 }} />
+                            : <span style={{ fontSize: '1em', color: 'var(--color-text-muted)' }}>👤</span>}
+                    </div>
+                )}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '0.88em' }}>
+                        {player.name || player.battleTag?.split('#')[0]}
+                    </span>
+                    {isCaptain && (
+                        <span style={{ fontSize: '0.62em', background: 'rgba(212,175,55,0.2)', color: 'var(--color-accent-primary)', border: '1px solid rgba(212,175,55,0.4)', borderRadius: 4, padding: '1px 5px', fontWeight: 700 }}>
+                            👑
+                        </span>
+                    )}
+                </div>
+                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em' }}>
+                    {player.battleTag}
+                    {race && CW_RACE_ABBR[race] && (
+                        <span style={{ marginLeft: 5, color: CW_RACE_COLOR[race] }}>· {CW_RACE_ABBR[race]}</span>
+                    )}
+                </div>
+            </div>
+            {stats ? (
+                <div className="team-player-stats" style={{ fontSize: '0.82em' }}>
+                    <div className="team-stat-cell">
+                        <span className="team-stat-label">MMR</span>
+                        <span className="team-stat-val" style={{ color: 'var(--color-accent-secondary)' }}>{stats.mmr || player.currentMmr || '—'}</span>
+                    </div>
+                    <div className="team-stat-cell">
+                        <span className="team-stat-label">W</span>
+                        <span className="team-stat-val" style={{ color: 'var(--color-success)' }}>{stats.wins}</span>
+                    </div>
+                    <div className="team-stat-cell">
+                        <span className="team-stat-label">L</span>
+                        <span className="team-stat-val" style={{ color: 'var(--color-error)' }}>{stats.losses}</span>
+                    </div>
+                </div>
+            ) : (
+                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75em' }}>MMR {player.currentMmr || '—'}</div>
+            )}
+        </div>
+    );
+}
+
+// ── Карточка клан-вара ─────────────────────────────────────────────────────────
+function ClanWarCard({ cw, players, teams, onOpenDraft }) {
     useLang();
     const [open, setOpen] = React.useState(false);
 
@@ -9,6 +74,31 @@ function ClanWarCard({ cw }) {
 
     const nameA = cw.teamA?.name || 'Team A';
     const nameB = cw.teamB?.name || 'Team B';
+
+    // Find team objects by name for roster display
+    const teamObjA = teams.find(t => t.name?.toLowerCase() === nameA.toLowerCase());
+    const teamObjB = teams.find(t => t.name?.toLowerCase() === nameB.toLowerCase());
+
+    // Roster players — from teams page or from clanWar.teamA.players (battleTags)
+    const getRoster = (teamObj, cwTeam) => {
+        if (teamObj) {
+            return players.filter(p => p.teamId === teamObj.id);
+        }
+        // Fallback: match by captain battletag
+        if (cwTeam?.players?.length) {
+            return players.filter(p => cwTeam.players.includes(p.battleTag));
+        }
+        return [];
+    };
+
+    const rosterA = getRoster(teamObjA, cw.teamA);
+    const rosterB = getRoster(teamObjB, cw.teamB);
+
+    const captainA = teamObjA?.captainId ? players.find(p => p.id === teamObjA.captainId) : null;
+    const captainB = teamObjB?.captainId ? players.find(p => p.id === teamObjB.captainId) : null;
+
+    const hasDraft = !!(cw.draft?.status);
+    const draftStatus = cw.draft?.status || 'pending';
 
     return (
         <div className="cw-card">
@@ -23,41 +113,122 @@ function ClanWarCard({ cw }) {
                         🏆 {cw.winner === 'a' ? nameA : nameB}
                     </span>
                 )}
+                {/* Draft badge */}
+                {hasDraft && draftStatus !== 'pending' && (
+                    <span className={`cw-draft-badge ${draftStatus === 'drafting' ? 'draft-badge-active' : 'draft-badge-done'}`}>
+                        ⚔ Драфт: {t(`draft.status_${draftStatus}`)}
+                    </span>
+                )}
                 <span className="cw-toggle">{open ? '▲' : '▼'}</span>
             </div>
 
             {open && (
-                <div className="cw-matches-list">
-                    {(cw.matches || []).length === 0
-                        ? <p style={{ color: 'var(--color-text-muted)', padding: 8 }}>—</p>
-                        : (cw.matches || []).map((m, i) => (
-                            <div key={m._id || i} className={`cw-match-row${m.winner ? ' done' : ''}`}>
-                                <span className="cw-match-label">{m.label || `${t('cw.match_fmt')} ${m.order}`}</span>
-                                <span className="cw-match-fmt">{m.format}</span>
-                                <span className="cw-match-players">
-                                    {m.playerA || '?'} <span style={{ color: 'var(--color-text-muted)' }}>vs</span> {m.playerB || '?'}
-                                </span>
-                                <span className="cw-match-score">{m.score?.a ?? 0} : {m.score?.b ?? 0}</span>
-                                {m.winner && (
-                                    <span className="cw-match-winner-badge">
-                                        ✓ {m.winner === 'a' ? nameA : nameB}
-                                    </span>
-                                )}
+                <div>
+                    {/* Team rosters */}
+                    {(rosterA.length > 0 || rosterB.length > 0) && (
+                        <div className="cw-teams-section">
+                            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em', textTransform: 'uppercase', letterSpacing: 1, padding: '12px var(--spacing-lg) 8px' }}>
+                                ⚔ {t('draft.teams_title')}
                             </div>
-                        ))
-                    }
+                            <div className="cw-teams-grid">
+                                {/* Team A */}
+                                <div className="cw-team-col">
+                                    <div className="cw-team-col-title" style={{ color: 'var(--color-success)' }}>
+                                        {teamObjA?.logo
+                                            ? <img src={teamObjA.logo} alt={nameA} style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', verticalAlign: 'middle', marginRight: 6 }} />
+                                            : <span style={{ marginRight: 4 }}>{teamObjA?.emoji || '🛡'}</span>
+                                        }
+                                        {nameA}
+                                        {cw.teamA?.captain && <span style={{ marginLeft: 6, color: 'var(--color-text-muted)', fontSize: '0.82em' }}>👑 {cw.teamA.captain}</span>}
+                                    </div>
+                                    {rosterA.map(p => (
+                                        <CwPlayerRow key={p.id} player={p} isCaptain={p.id === teamObjA?.captainId} />
+                                    ))}
+                                    {rosterA.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', padding: '6px 0' }}>Нет игроков</p>}
+                                </div>
+
+                                {/* Team B */}
+                                <div className="cw-team-col">
+                                    <div className="cw-team-col-title" style={{ color: 'var(--color-accent-secondary)' }}>
+                                        {teamObjB?.logo
+                                            ? <img src={teamObjB.logo} alt={nameB} style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', verticalAlign: 'middle', marginRight: 6 }} />
+                                            : <span style={{ marginRight: 4 }}>{teamObjB?.emoji || '🛡'}</span>
+                                        }
+                                        {nameB}
+                                        {cw.teamB?.captain && <span style={{ marginLeft: 6, color: 'var(--color-text-muted)', fontSize: '0.82em' }}>👑 {cw.teamB.captain}</span>}
+                                    </div>
+                                    {rosterB.map(p => (
+                                        <CwPlayerRow key={p.id} player={p} isCaptain={p.id === teamObjB?.captainId} />
+                                    ))}
+                                    {rosterB.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', padding: '6px 0' }}>Нет игроков</p>}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Divider */}
+                    <div style={{ height: 1, background: 'rgba(212,175,55,0.1)', margin: '0 var(--spacing-lg)' }} />
+
+                    {/* Matches list */}
+                    <div className="cw-matches-list">
+                        {(cw.matches || []).length === 0
+                            ? <p style={{ color: 'var(--color-text-muted)', padding: 8 }}>—</p>
+                            : (cw.matches || []).map((m, i) => (
+                                <div key={m._id || i} className={`cw-match-row${m.winner ? ' done' : ''}`}>
+                                    <span className="cw-match-label">{m.label || `${t('cw.match_fmt')} ${m.order}`}</span>
+                                    <span className="cw-match-fmt">{m.format}</span>
+                                    <span className="cw-match-players">
+                                        {m.playerA || '?'} <span style={{ color: 'var(--color-text-muted)' }}>vs</span> {m.playerB || '?'}
+                                    </span>
+                                    <span className="cw-match-score">{m.score?.a ?? 0} : {m.score?.b ?? 0}</span>
+                                    {m.winner && (
+                                        <span className="cw-match-winner-badge">
+                                            ✓ {m.winner === 'a' ? nameA : nameB}
+                                        </span>
+                                    )}
+                                </div>
+                            ))
+                        }
+                    </div>
+
+                    {/* Draft button */}
+                    <div style={{ padding: 'var(--spacing-md) var(--spacing-lg)', borderTop: '1px solid rgba(212,175,55,0.1)' }}>
+                        <button
+                            className="btn btn-primary"
+                            style={{ padding: '8px 20px', fontSize: '0.88em' }}
+                            onClick={() => onOpenDraft(cw.id || cw._id)}
+                        >
+                            ⚔ {t('draft.open_btn')}
+                            {draftStatus === 'drafting' && <span style={{ marginLeft: 6, fontSize: '0.8em', color: 'var(--color-success)' }}>● Live</span>}
+                        </button>
+                    </div>
                 </div>
             )}
         </div>
     );
 }
 
-function ClanWar() {
+function ClanWar({ onOpenDraft }) {
     useLang();
     const [wars,    setWars]    = React.useState([]);
+    const [players, setPlayers] = React.useState([]);
+    const [teams,   setTeams]   = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [error,   setError]   = React.useState(null);
     const [filter,  setFilter]  = React.useState('all');
+
+    React.useEffect(() => {
+        // Load teams and players once
+        Promise.all([
+            fetch('/api/players').then(r => r.json()),
+            fetch('/api/teams').then(r => r.json()),
+        ])
+            .then(([pl, tm]) => {
+                setPlayers(Array.isArray(pl) ? pl : []);
+                setTeams(Array.isArray(tm) ? tm : []);
+            })
+            .catch(() => {});
+    }, []);
 
     React.useEffect(() => {
         setLoading(true);
@@ -102,7 +273,15 @@ function ClanWar() {
                 <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>{t('cw.empty')}</p>
             ) : (
                 <div className="cw-list">
-                    {wars.map(cw => <ClanWarCard key={cw.id || cw._id} cw={cw} />)}
+                    {wars.map(cw => (
+                        <ClanWarCard
+                            key={cw.id || cw._id}
+                            cw={cw}
+                            players={players}
+                            teams={teams}
+                            onOpenDraft={onOpenDraft}
+                        />
+                    ))}
                 </div>
             )}
         </div>
