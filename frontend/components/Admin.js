@@ -140,6 +140,28 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
 
     const teamMap = Object.fromEntries(teams.map(t => [t.id, t]));
 
+    const setTierOverride = async (p, tier) => {
+        try {
+            await apiFetch(`/api/players/${p.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ tierOverride: tier }),
+            });
+            const tierName = { 1: 'B', 2: 'A', 3: 'S' }[tier] || 'Авто';
+            showMsg(`✅ Тир: ${p.name} → ${tierName}`);
+            onRefresh();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+
+    // Calculate auto tier from MMR
+    const autoTier = (p) => {
+        const mmr = p.stats?.mmr || p.currentMmr || 0;
+        if (mmr >= 1700) return 3;
+        if (mmr >= 1400) return 2;
+        if (mmr >= 1000) return 1;
+        return null;
+    };
+    const tierLabel = (num) => ({ 1: 'B', 2: 'A', 3: 'S' }[num] || '—');
+
     const toggleDraft = async (p) => {
         try {
             await apiFetch(`/api/players/${p.id}`, {
@@ -223,6 +245,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                             <th>BattleTag</th>
                             <th>{t('standings.player')}</th>
                             <th>MMR</th>
+                            <th>Тир</th>
                             <th>{t('admin.assign_team')}</th>
                             <th>⚔ Драфт</th>
                             <th></th>
@@ -234,6 +257,23 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                                 <td style={{ color: 'var(--color-text-muted)', fontSize: '0.82em' }}>{p.battleTag}</td>
                                 <td className="col-name">{p.name}</td>
                                 <td style={{ color: 'var(--color-accent-secondary)' }}>{p.currentMmr || '—'}</td>
+                                <td>
+                                    <select
+                                        value={p.tierOverride || ''}
+                                        onChange={e => setTierOverride(p, e.target.value ? Number(e.target.value) : null)}
+                                        style={{
+                                            background: p.tierOverride ? 'rgba(212,175,55,0.15)' : 'var(--color-bg-lighter)',
+                                            color: p.tierOverride ? 'var(--color-accent-primary)' : 'var(--color-text-muted)',
+                                            border: `1px solid ${p.tierOverride ? 'rgba(212,175,55,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                                            borderRadius: 4, padding: '3px 6px', fontSize: '0.82em', fontWeight: 700,
+                                        }}
+                                    >
+                                        <option value="">Авто ({tierLabel(autoTier(p))})</option>
+                                        <option value="3">S (1700+)</option>
+                                        <option value="2">A (1400–1700)</option>
+                                        <option value="1">B (1000–1400)</option>
+                                    </select>
+                                </td>
                                 <td>
                                     {editId === p.id ? (
                                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -280,7 +320,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                             </tr>
                         ))}
                         {players.length === 0 && (
-                            <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 32 }}>Нет игроков</td></tr>
+                            <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 32 }}>Нет игроков</td></tr>
                         )}
                     </tbody>
                 </table>
@@ -640,6 +680,16 @@ function ClanWarTab({ showMsg, players, teams }) {
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
 
+    const autoAssign = async () => {
+        if (!selected) return;
+        try {
+            const result = await apiFetch(`/api/clan-wars/${selected.id}/auto-assign`, { method: 'POST' });
+            setSelected(result.clanWar); load();
+            const count = result.assignments?.length || 0;
+            showMsg(`✅ Авто-назначение: ${count} матчей по тирам`);
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+
     // ── Detail view ────────────────────────────────────────────────────────────
     if (selected) {
         const cw = selected;
@@ -671,6 +721,12 @@ function ClanWarTab({ showMsg, players, teams }) {
                         {cw.status === 'upcoming'  && <button className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.9em' }} onClick={() => changeStatus('ongoing')}>▶ Начать</button>}
                         {cw.status === 'ongoing'   && <button className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.9em' }} onClick={() => changeStatus('completed')}>✅ Завершить</button>}
                         {cw.status === 'completed' && <button className="btn btn-secondary" style={{ padding: '6px 14px', fontSize: '0.9em' }} onClick={() => changeStatus('ongoing')}>↩ Возобновить</button>}
+                        <button
+                            onClick={autoAssign}
+                            style={{ padding: '6px 14px', fontSize: '0.9em', background: 'rgba(0,212,255,0.1)', color: 'var(--color-accent-secondary)', border: '1px solid rgba(0,212,255,0.4)', borderRadius: 'var(--radius-sm)', fontWeight: 700 }}
+                        >
+                            🎯 Авто-назначение по тирам
+                        </button>
                         <button onClick={() => deleteWar(cw.id)} style={{ padding: '6px 14px', fontSize: '0.9em', background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', borderRadius: 'var(--radius-sm)' }}>
                             🗑️ Удалить
                         </button>
