@@ -65,13 +65,32 @@ router.get('/:clanWarId', async (req, res) => {
 
         // All draft-available players
         const players  = await Player.find({ draftAvailable: true });
-        const statsArr = await PlayerStats.find({ battleTag: { $in: players.map(p => p.battleTag) } });
+        const allPlayers = await Player.find(); // for captain lookup
+        const statsArr = await PlayerStats.find();
         const statsMap = Object.fromEntries(statsArr.map(s => [s.battleTag, s.toJSON()]));
 
-        // Captains are excluded from the pool
-        const captainTags = [cw.teamA?.captain, cw.teamB?.captain]
-            .filter(Boolean)
-            .map(t => t.toLowerCase());
+        // Resolve captains: stored as names, need to match to Player objects
+        const captainNames = [cw.teamA?.captain, cw.teamB?.captain].filter(Boolean);
+        const captainIds = new Set();
+        const captainsData = { a: null, b: null };
+
+        for (const capName of captainNames) {
+            const capPlayer = allPlayers.find(p =>
+                p.name === capName || p.battleTag?.split('#')[0] === capName || p.battleTag === capName
+            );
+            if (capPlayer) {
+                captainIds.add(capPlayer._id.toString());
+                const capStats = statsMap[capPlayer.battleTag] || null;
+                const capData = {
+                    ...capPlayer.toJSON(),
+                    stats: capStats,
+                    mmr: capStats?.mmr || capPlayer.currentMmr || 0,
+                    tier: getEffectiveTier({ ...capPlayer.toJSON(), stats: capStats, mmr: capStats?.mmr || capPlayer.currentMmr || 0 }),
+                };
+                if (capName === cw.teamA?.captain) captainsData.a = capData;
+                if (capName === cw.teamB?.captain) captainsData.b = capData;
+            }
+        }
 
         // Already-picked IDs
         const pickedIds = new Set((cw.draft?.picks || []).map(p => p.playerId?.toString()));
@@ -83,7 +102,7 @@ router.get('/:clanWarId', async (req, res) => {
 
         // Available pool: not a captain, not already picked
         const available = playersWithStats.filter(p =>
-            !captainTags.includes(p.battleTag?.toLowerCase()) &&
+            !captainIds.has(p.id?.toString()) &&
             !pickedIds.has(p.id?.toString())
         );
 
@@ -96,7 +115,7 @@ router.get('/:clanWarId', async (req, res) => {
         const draft       = cw.draft || { status: 'pending', picks: [] };
         const currentTurn = getCurrentPickState(draft);
 
-        res.json({ clanWar: cw, draft, pool, currentTurn });
+        res.json({ clanWar: cw, draft, pool, currentTurn, captains: captainsData });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -116,10 +135,15 @@ router.post('/:clanWarId/pick', async (req, res) => {
         if (!cw.draft || cw.draft.status !== 'drafting')
             return res.status(400).json({ error: 'Draft is not active' });
 
-        // Identify captain's team
-        const captainBt = playerUser.linkedBattleTag.toLowerCase();
-        const isCapA    = cw.teamA?.captain?.toLowerCase() === captainBt;
-        const isCapB    = cw.teamB?.captain?.toLowerCase() === captainBt;
+        // Identify captain's team — captain is stored as name, match via Player lookup
+        const linkedTag = playerUser.linkedBattleTag;
+        const linkedPlayer = await Player.findOne({
+            battleTag: { $regex: new RegExp(`^${linkedTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+        });
+        const linkedName = linkedPlayer?.name || linkedTag.split('#')[0];
+
+        const isCapA = cw.teamA?.captain === linkedName || cw.teamA?.captain === linkedTag;
+        const isCapB = cw.teamB?.captain === linkedName || cw.teamB?.captain === linkedTag;
         if (!isCapA && !isCapB)
             return res.status(403).json({ error: 'You are not a captain in this clan war' });
 
