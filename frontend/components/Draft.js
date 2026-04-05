@@ -173,7 +173,7 @@ function PickSlot({ pick, allPlayers }) {
             )}
             <span style={{ fontWeight: 600, fontSize: '0.82em', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {name}
-                <span style={{ color: 'var(--color-text-muted)', marginLeft: 4, fontSize: '0.85em' }}>Т{pick.tier}</span>
+                <span style={{ color: 'var(--color-text-muted)', marginLeft: 4, fontSize: '0.85em' }}>{{ 1: 'B', 2: 'A', 3: 'S' }[pick.tier] || pick.tier}</span>
             </span>
         </div>
     );
@@ -468,13 +468,22 @@ function TeamRecruitView({ teamId, teamName, clanWarId, onBack }) {
 
     // Group pool by tier using stats.mmr or currentMmr
     const mmrOf = p => p.stats?.mmr || p.currentMmr || 0;
-    const tiers = {
-        1: pool.filter(p => { const m = mmrOf(p); return m >= 1000 && m < 1300; }),
-        2: pool.filter(p => { const m = mmrOf(p); return m >= 1300 && m < 1600; }),
-        3: pool.filter(p => mmrOf(p) >= 1600),
-        0: pool.filter(p => mmrOf(p) < 1000 || mmrOf(p) === 0),
+    // Use tierOverride if set, otherwise MMR-based tier
+    const effectiveTier = p => {
+        if (p.tierOverride) return p.tierOverride;
+        const m = mmrOf(p);
+        if (m >= 1700) return 3;
+        if (m >= 1400) return 2;
+        if (m >= 1000) return 1;
+        return 0;
     };
-    const tierLabels = { 0: 'Без тира (<1000)', 1: 'Тир 1 · 1000–1300', 2: 'Тир 2 · 1300–1600', 3: 'Тир 3 · 1600+' };
+    const tiers = {
+        1: pool.filter(p => effectiveTier(p) === 1),
+        2: pool.filter(p => effectiveTier(p) === 2),
+        3: pool.filter(p => effectiveTier(p) === 3),
+        0: pool.filter(p => effectiveTier(p) === 0),
+    };
+    const tierLabels = { 0: 'Без тира (<1000)', 1: 'Тир B · 1000–1400', 2: 'Тир A · 1400–1700', 3: 'Тир S · 1700+' };
 
     const PlayerMini = ({ p, action, actionLabel, busy }) => {
         const race = p.mainRace || p.race;

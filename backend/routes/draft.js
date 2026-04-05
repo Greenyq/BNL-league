@@ -14,11 +14,19 @@ async function getPlayerSession(req) {
     return session;
 }
 
+// Tier S = 1700+, Tier A = 1400–1700, Tier B = 1000–1400
 function getPlayerTier(mmr) {
-    if (mmr >= 1600) return 3;
-    if (mmr >= 1300) return 2;
-    if (mmr >= 1000) return 1;
+    if (mmr >= 1700) return 3; // S
+    if (mmr >= 1400) return 2; // A
+    if (mmr >= 1000) return 1; // B
     return null;
+}
+
+// Resolve effective tier: tierOverride takes priority over MMR-based tier
+function getEffectiveTier(player) {
+    if (player.tierOverride) return player.tierOverride;
+    const mmr = player.stats?.mmr || player.currentMmr || player.mmr || 0;
+    return getPlayerTier(mmr);
 }
 
 // Determine whose turn it is and which tier based on draft.picks
@@ -80,9 +88,9 @@ router.get('/:clanWarId', async (req, res) => {
         );
 
         const pool = {
-            tier1: available.filter(p => p.mmr >= 1000 && p.mmr < 1300),
-            tier2: available.filter(p => p.mmr >= 1300 && p.mmr < 1600),
-            tier3: available.filter(p => p.mmr >= 1600),
+            tier1: available.filter(p => getEffectiveTier(p) === 1),
+            tier2: available.filter(p => getEffectiveTier(p) === 2),
+            tier3: available.filter(p => getEffectiveTier(p) === 3),
         };
 
         const draft       = cw.draft || { status: 'pending', picks: [] };
@@ -134,10 +142,10 @@ router.post('/:clanWarId/pick', async (req, res) => {
         if (cw.draft.picks.some(p => p.playerId?.toString() === playerId))
             return res.status(400).json({ error: 'Player already picked' });
 
-        // Verify player belongs to current tier
+        // Verify player belongs to current tier (tierOverride takes priority)
         const stats     = await PlayerStats.findOne({ battleTag: player.battleTag });
         const mmr       = stats?.mmr || player.currentMmr || 0;
-        const playerTier = getPlayerTier(mmr);
+        const playerTier = player.tierOverride || getPlayerTier(mmr);
         if (playerTier !== currentState.tier)
             return res.status(400).json({ error: `Player MMR ${mmr} does not belong to tier ${currentState.tier}` });
 

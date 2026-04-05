@@ -17,6 +17,7 @@ const playerSchema = new mongoose.Schema({
     discordTag:        { type: String },
     selectedPortraitId:       { type: String },
     selectedPortrait:         { type: String }, // URL of selected portrait image
+    tierOverride:             { type: Number, default: null }, // null=auto, 1=B, 2=A, 3=S
     draftAvailable:           { type: Boolean, default: false },
     draftAvailableUpdatedAt:  { type: Date },
     createdAt:                { type: Date, default: Date.now },
