@@ -11,6 +11,12 @@ function CwPlayerRow({ player, isCaptain }) {
     const stats   = player.stats;
     const portrait = player.selectedPortrait;
 
+    // Calculate tier
+    const mmr = stats?.mmr || player.currentMmr || 0;
+    const tier = player.tierOverride || (mmr >= 1700 ? 3 : mmr >= 1400 ? 2 : mmr >= 1000 ? 1 : null);
+    const tierName = { 1: 'B', 2: 'A', 3: 'S' }[tier] || '—';
+    const tierColor = { 3: '#ffd700', 2: '#00d4ff', 1: '#b0b0b0' }[tier] || 'var(--color-text-muted)';
+
     return (
         <div className="team-player-row" style={{ padding: '6px 0' }}>
             <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -34,6 +40,9 @@ function CwPlayerRow({ player, isCaptain }) {
                             👑
                         </span>
                     )}
+                    <span style={{ fontSize: '0.65em', background: `${tierColor}22`, color: tierColor, border: `1px solid ${tierColor}66`, borderRadius: 4, padding: '1px 6px', fontWeight: 800, letterSpacing: 0.5 }}>
+                        {tierName}
+                    </span>
                 </div>
                 <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em' }}>
                     {player.battleTag}
@@ -79,16 +88,37 @@ function ClanWarCard({ cw, players, teams }) {
     const teamObjA = teams.find(t => t.name?.toLowerCase() === nameA.toLowerCase());
     const teamObjB = teams.find(t => t.name?.toLowerCase() === nameB.toLowerCase());
 
-    // Roster players — from teams page or from clanWar.teamA.players (battleTags)
+    // Roster players — from teams page or from clanWar.teamA.players (names)
     const getRoster = (teamObj, cwTeam) => {
+        const roster = [];
+        const addedIds = new Set();
+
+        // Add players assigned to the team via teamId
         if (teamObj) {
-            return players.filter(p => p.teamId === teamObj.id);
+            for (const p of players.filter(pl => pl.teamId === teamObj.id)) {
+                roster.push(p);
+                addedIds.add(p.id);
+            }
         }
-        // Fallback: match by captain battletag
+
+        // Add captain if not already in roster (by name match from cwTeam.captain)
+        if (cwTeam?.captain) {
+            const cap = players.find(p =>
+                !addedIds.has(p.id) &&
+                (p.name === cwTeam.captain || p.battleTag?.split('#')[0] === cwTeam.captain || p.battleTag === cwTeam.captain)
+            );
+            if (cap) { roster.unshift(cap); addedIds.add(cap.id); }
+        }
+
+        // Fallback: add players listed in cwTeam.players (by name)
         if (cwTeam?.players?.length) {
-            return players.filter(p => cwTeam.players.includes(p.battleTag));
+            for (const name of cwTeam.players) {
+                const p = players.find(pl => !addedIds.has(pl.id) && (pl.name === name || pl.battleTag === name));
+                if (p) { roster.push(p); addedIds.add(p.id); }
+            }
         }
-        return [];
+
+        return roster;
     };
 
     const rosterA = getRoster(teamObjA, cw.teamA);
@@ -96,6 +126,10 @@ function ClanWarCard({ cw, players, teams }) {
 
     const captainA = teamObjA?.captainId ? players.find(p => p.id === teamObjA.captainId) : null;
     const captainB = teamObjB?.captainId ? players.find(p => p.id === teamObjB.captainId) : null;
+
+    // Also determine captain by name for isCaptain check
+    const isCaptainA = (p) => p.id === teamObjA?.captainId || p.name === cw.teamA?.captain || p.battleTag?.split('#')[0] === cw.teamA?.captain;
+    const isCaptainB = (p) => p.id === teamObjB?.captainId || p.name === cw.teamB?.captain || p.battleTag?.split('#')[0] === cw.teamB?.captain;
 
     const hasDraft = !!(cw.draft?.status);
     const draftStatus = cw.draft?.status || 'pending';
@@ -142,7 +176,7 @@ function ClanWarCard({ cw, players, teams }) {
                                         {cw.teamA?.captain && <span style={{ marginLeft: 6, color: 'var(--color-text-muted)', fontSize: '0.82em' }}>👑 {cw.teamA.captain}</span>}
                                     </div>
                                     {rosterA.map(p => (
-                                        <CwPlayerRow key={p.id} player={p} isCaptain={p.id === teamObjA?.captainId} />
+                                        <CwPlayerRow key={p.id} player={p} isCaptain={isCaptainA(p)} />
                                     ))}
                                     {rosterA.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', padding: '6px 0' }}>Нет игроков</p>}
                                 </div>
@@ -158,7 +192,7 @@ function ClanWarCard({ cw, players, teams }) {
                                         {cw.teamB?.captain && <span style={{ marginLeft: 6, color: 'var(--color-text-muted)', fontSize: '0.82em' }}>👑 {cw.teamB.captain}</span>}
                                     </div>
                                     {rosterB.map(p => (
-                                        <CwPlayerRow key={p.id} player={p} isCaptain={p.id === teamObjB?.captainId} />
+                                        <CwPlayerRow key={p.id} player={p} isCaptain={isCaptainB(p)} />
                                     ))}
                                     {rosterB.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', padding: '6px 0' }}>Нет игроков</p>}
                                 </div>

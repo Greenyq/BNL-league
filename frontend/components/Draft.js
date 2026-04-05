@@ -147,6 +147,37 @@ function TierColumn({ tierNum, players, pickedIds, isMyTurn, onPick, picking }) 
     );
 }
 
+// ── Слот капитана в шапке команды ─────────────────────────────────────────────
+function CaptainSlot({ captain }) {
+    if (!captain) return null;
+    const raceImg = { 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
+    const raceAbbr = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
+    const race = captain.mainRace || captain.race;
+    const portrait = captain.selectedPortrait;
+    const mmr = captain.stats?.mmr || captain.currentMmr || captain.mmr || 0;
+    const tierName = { 1: 'B', 2: 'A', 3: 'S' }[captain.tier] || '—';
+
+    return (
+        <div className="draft-pick-slot draft-pick-slot--filled" style={{
+            background: 'rgba(212,175,55,0.1)',
+            border: '1px solid rgba(212,175,55,0.35)',
+        }}>
+            {portrait ? (
+                <img src={portrait} alt={captain.name} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            ) : race && raceImg[race] ? (
+                <img src={raceImg[race]} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', opacity: 0.8, flexShrink: 0 }} />
+            ) : (
+                <span style={{ fontSize: '1.1em', flexShrink: 0 }}>👤</span>
+            )}
+            <span style={{ fontWeight: 600, fontSize: '0.82em', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                👑 {captain.name || captain.battleTag?.split('#')[0]}
+                <span style={{ color: 'var(--color-accent-secondary)', marginLeft: 4, fontSize: '0.85em' }}>{tierName}</span>
+                <span style={{ color: 'var(--color-text-muted)', marginLeft: 4, fontSize: '0.8em' }}>{mmr}</span>
+            </span>
+        </div>
+    );
+}
+
 // ── Слот выбранного игрока в шапке ────────────────────────────────────────────
 function PickSlot({ pick, allPlayers }) {
     if (!pick) {
@@ -261,7 +292,7 @@ function DraftView({ clanWarId, onBack }) {
     if (error) return <div style={{ color: 'var(--color-error)', padding: 32 }}>⚠ {error}</div>;
     if (!data)  return null;
 
-    const { clanWar, draft, pool, currentTurn } = data;
+    const { clanWar, draft, pool, currentTurn, captains } = data;
     const nameA = clanWar.teamA?.name || 'Team A';
     const nameB = clanWar.teamB?.name || 'Team B';
 
@@ -352,6 +383,7 @@ function DraftView({ clanWarId, onBack }) {
                         {nameA}
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <CaptainSlot captain={captains?.a} />
                         {[0,1,2].map(i => (
                             <PickSlot key={i} pick={picksA[i] || null} allPlayers={allPlayers} />
                         ))}
@@ -364,6 +396,7 @@ function DraftView({ clanWarId, onBack }) {
                         {nameB}
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <CaptainSlot captain={captains?.b} />
                         {[0,1,2].map(i => (
                             <PickSlot key={i} pick={picksB[i] || null} allPlayers={allPlayers} />
                         ))}
