@@ -28,44 +28,82 @@ async function playerFetch(url, options = {}) {
     return data;
 }
 
-// ── Форма входа / регистрации ─────────────────────────────────────────────────
+// ── Форма входа / регистрации / восстановления пароля ─────────────────────────
 function AuthForm({ onAuth }) {
     useLang();
-    const [mode,     setMode]     = React.useState('login'); // 'login' | 'register'
+    const [mode,     setMode]     = React.useState('login'); // 'login' | 'register' | 'forgot' | 'reset'
     const [username, setUsername] = React.useState('');
     const [password, setPassword] = React.useState('');
+    const [confirmPw, setConfirmPw] = React.useState('');
+    const [resetCode, setResetCode] = React.useState('');
     const [error,    setError]    = React.useState(null);
+    const [success,  setSuccess]  = React.useState(null);
     const [loading,  setLoading]  = React.useState(false);
+
+    const switchMode = (m) => { setMode(m); setError(null); setSuccess(null); };
 
     const submit = async (e) => {
         e.preventDefault();
-        setError(null); setLoading(true);
+        setError(null); setSuccess(null); setLoading(true);
         try {
-            const data = await playerFetch(`/api/players/auth/${mode}`, {
-                method: 'POST',
-                body: JSON.stringify({ username, password }),
-            });
-            setPlayerSession(data.sessionId);
-            onAuth(data.user, data.playerData || null);
+            if (mode === 'login' || mode === 'register') {
+                const data = await playerFetch(`/api/players/auth/${mode}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ username, password }),
+                });
+                setPlayerSession(data.sessionId);
+                onAuth(data.user, data.playerData || null);
+            } else if (mode === 'forgot') {
+                await playerFetch('/api/players/auth/request-reset', {
+                    method: 'POST',
+                    body: JSON.stringify({ username }),
+                });
+                setSuccess(t('profile.resetRequested'));
+                // Auto-switch to code entry form
+                setTimeout(() => switchMode('reset'), 2000);
+            } else if (mode === 'reset') {
+                if (password !== confirmPw) { setError(t('profile.resetMismatch')); setLoading(false); return; }
+                await playerFetch('/api/players/auth/reset-password', {
+                    method: 'POST',
+                    body: JSON.stringify({ username, resetCode: resetCode.trim(), newPassword: password }),
+                });
+                setSuccess(t('profile.resetDone'));
+                setPassword(''); setConfirmPw(''); setResetCode('');
+                setTimeout(() => switchMode('login'), 2000);
+            }
         } catch (err) { setError(err.message); }
         setLoading(false);
     };
+
+    const modeTitle = { login: t('profile.login'), register: t('profile.register'), forgot: t('profile.forgotTitle'), reset: t('profile.resetTitle') };
 
     return (
         <div style={{ maxWidth: 400, margin: '40px auto' }}>
             <div className="card-elevated" style={{ padding: 'var(--spacing-xxl)' }}>
                 <h3 style={{ textAlign: 'center', marginBottom: 'var(--spacing-lg)', color: 'var(--color-accent-primary)' }}>
-                    {mode === 'login' ? t('profile.login') : t('profile.register')}
+                    {modeTitle[mode]}
                 </h3>
 
                 {/* Переключатель режима */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 'var(--spacing-xl)' }}>
-                    {['login', 'register'].map(m => (
-                        <button key={m} className={`nav-btn${mode === m ? ' active' : ''}`} style={{ flex: 1, padding: '8px 0' }} onClick={() => { setMode(m); setError(null); }}>
-                            <span>{m === 'login' ? t('profile.login') : t('profile.register')}</span>
-                        </button>
-                    ))}
-                </div>
+                {(mode === 'login' || mode === 'register') && (
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 'var(--spacing-xl)' }}>
+                        {['login', 'register'].map(m => (
+                            <button key={m} className={`nav-btn${mode === m ? ' active' : ''}`} style={{ flex: 1, padding: '8px 0' }} onClick={() => switchMode(m)}>
+                                <span>{m === 'login' ? t('profile.login') : t('profile.register')}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {/* Кнопка «назад» из режима восстановления */}
+                {(mode === 'forgot' || mode === 'reset') && (
+                    <button
+                        onClick={() => switchMode('login')}
+                        style={{ background: 'none', border: 'none', color: 'var(--color-accent-primary)', cursor: 'pointer', padding: 0, marginBottom: 'var(--spacing-lg)', fontSize: '0.9em', fontWeight: 600 }}
+                    >
+                        ← {t('profile.backToLogin')}
+                    </button>
+                )}
 
                 {error && (
                     <div style={{ background: 'rgba(244,67,54,0.1)', border: '1px solid var(--color-error)', borderRadius: 'var(--radius-sm)', padding: 'var(--spacing-md)', color: 'var(--color-error)', marginBottom: 'var(--spacing-lg)', fontSize: '0.9em' }}>
@@ -73,13 +111,61 @@ function AuthForm({ onAuth }) {
                     </div>
                 )}
 
+                {success && (
+                    <div style={{ background: 'rgba(76,175,80,0.1)', border: '1px solid var(--color-success)', borderRadius: 'var(--radius-sm)', padding: 'var(--spacing-md)', color: 'var(--color-success)', marginBottom: 'var(--spacing-lg)', fontSize: '0.9em', fontWeight: 600 }}>
+                        {success}
+                    </div>
+                )}
+
                 <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-                    <input type="text"     placeholder={t('profile.username')} value={username} onChange={e => setUsername(e.target.value)} style={{ width: '100%' }} />
-                    <input type="password" placeholder={t('profile.password')} value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%' }} />
-                    <button type="submit" className="btn btn-primary" disabled={loading || !username || !password} style={{ width: '100%' }}>
-                        {loading ? '...' : mode === 'login' ? t('profile.loginBtn') : t('profile.registerBtn')}
+                    <input type="text" placeholder={t('profile.username')} value={username} onChange={e => setUsername(e.target.value)} style={{ width: '100%' }} />
+
+                    {(mode === 'login' || mode === 'register') && (
+                        <input type="password" placeholder={t('profile.password')} value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%' }} />
+                    )}
+
+                    {mode === 'forgot' && (
+                        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', margin: 0 }}>
+                            {t('profile.forgotHint')}
+                        </p>
+                    )}
+
+                    {mode === 'reset' && (
+                        <React.Fragment>
+                            <input type="text" placeholder={t('profile.resetCodePlaceholder')} value={resetCode} onChange={e => setResetCode(e.target.value)} style={{ width: '100%', letterSpacing: 4, textAlign: 'center', fontWeight: 700, fontSize: '1.2em' }} maxLength={6} />
+                            <input type="password" placeholder={t('profile.newPassword')} value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%' }} />
+                            <input type="password" placeholder={t('profile.confirmPassword')} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} style={{ width: '100%' }} />
+                        </React.Fragment>
+                    )}
+
+                    <button type="submit" className="btn btn-primary" disabled={loading || !username || (mode === 'login' && !password) || (mode === 'register' && !password) || (mode === 'reset' && (!resetCode || !password || !confirmPw))} style={{ width: '100%' }}>
+                        {loading ? '...' : mode === 'login' ? t('profile.loginBtn') : mode === 'register' ? t('profile.registerBtn') : mode === 'forgot' ? t('profile.forgotBtn') : t('profile.resetBtn')}
                     </button>
                 </form>
+
+                {/* Ссылка «Забыли пароль?» */}
+                {mode === 'login' && (
+                    <div style={{ textAlign: 'center', marginTop: 'var(--spacing-lg)' }}>
+                        <button
+                            onClick={() => switchMode('forgot')}
+                            style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: 0, fontSize: '0.85em', textDecoration: 'underline' }}
+                        >
+                            {t('profile.forgotLink')}
+                        </button>
+                    </div>
+                )}
+
+                {/* Ссылка «У меня есть код» из режима forgot */}
+                {mode === 'forgot' && (
+                    <div style={{ textAlign: 'center', marginTop: 'var(--spacing-lg)' }}>
+                        <button
+                            onClick={() => switchMode('reset')}
+                            style={{ background: 'none', border: 'none', color: 'var(--color-accent-secondary)', cursor: 'pointer', padding: 0, fontSize: '0.85em', textDecoration: 'underline' }}
+                        >
+                            {t('profile.haveCode')}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

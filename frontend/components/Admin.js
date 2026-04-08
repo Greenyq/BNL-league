@@ -1130,6 +1130,99 @@ function PortraitsTab({ showMsg }) {
     );
 }
 
+// ── Запросы сброса пароля ─────────────────────────────────────────────────────
+function PendingResetsSection({ showMsg }) {
+    useLang();
+    const [resets, setResets] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+
+    const loadResets = React.useCallback(async () => {
+        try {
+            const data = await apiFetch('/api/players/admin/pending-resets');
+            setResets(Array.isArray(data) ? data : []);
+        } catch { setResets([]); }
+        setLoading(false);
+    }, []);
+
+    React.useEffect(() => { loadResets(); }, [loadResets]);
+
+    const deleteReset = async (id) => {
+        try {
+            await apiFetch(`/api/players/admin/pending-resets/${id}`, { method: 'DELETE' });
+            showMsg(t('admin.resetDeleted'));
+            loadResets();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+
+    const fmtTime = (d) => {
+        const dt = new Date(d);
+        return dt.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    };
+
+    const isExpired = (d) => new Date(d) < new Date();
+
+    return (
+        <div>
+            <h4 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-md)' }}>
+                🔑 {t('admin.resetTitle')}
+            </h4>
+            {loading ? (
+                <p style={{ color: 'var(--color-text-muted)' }}>...</p>
+            ) : resets.length === 0 ? (
+                <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', maxWidth: 420 }}>
+                    <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{t('admin.resetEmpty')}</p>
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)', maxWidth: 500 }}>
+                    {resets.map(r => (
+                        <div key={r.id || r._id} className="card-elevated" style={{
+                            padding: 'var(--spacing-lg)',
+                            opacity: isExpired(r.expiresAt) ? 0.5 : 1,
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-sm)' }}>
+                                <span style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '1.05em' }}>
+                                    {r.username}
+                                </span>
+                                {isExpired(r.expiresAt) && (
+                                    <span style={{ color: 'var(--color-error)', fontSize: '0.8em', fontWeight: 600 }}>
+                                        {t('admin.resetExpired')}
+                                    </span>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-sm)' }}>
+                                <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>{t('admin.resetCode')}:</span>
+                                <span style={{
+                                    fontFamily: 'monospace', fontSize: '1.4em', fontWeight: 800,
+                                    letterSpacing: 4, color: 'var(--color-accent-secondary)',
+                                    background: 'rgba(0,0,0,0.3)', padding: '4px 12px', borderRadius: 'var(--radius-sm)',
+                                    userSelect: 'all',
+                                }}>
+                                    {r.resetCode}
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>
+                                    {fmtTime(r.createdAt)} → {fmtTime(r.expiresAt)}
+                                </span>
+                                <button
+                                    onClick={() => deleteReset(r.id || r._id)}
+                                    style={{
+                                        background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)',
+                                        border: '1px solid rgba(244,67,54,0.3)', padding: '4px 12px',
+                                        borderRadius: 'var(--radius-sm)', fontSize: '0.82em', cursor: 'pointer',
+                                    }}
+                                >
+                                    {t('admin.delete')}
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ── Панель ────────────────────────────────────────────────────────────────────
 function AdminPanel({ onLogout }) {
     useLang();
@@ -1206,12 +1299,13 @@ function AdminPanel({ onLogout }) {
             {tab === 'tools'   && (
                 <div>
                     <h3 style={{ marginBottom: 'var(--spacing-lg)' }}>{t('admin.tab.tools')}</h3>
-                    <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', maxWidth: 420 }}>
+                    <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', maxWidth: 420, marginBottom: 'var(--spacing-xl)' }}>
                         <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-md)' }}>
                             Принудительный пересчёт очков всех игроков по данным W3Champions
                         </p>
                         <button className="btn btn-primary" onClick={recalc}>{t('admin.recalc')}</button>
                     </div>
+                    <PendingResetsSection showMsg={showMsg} />
                 </div>
             )}
         </div>
