@@ -182,6 +182,11 @@ const LANGS = {
         'admin.resetCode':  'Код',
         'admin.resetExpired':'Истёк',
         'admin.resetDeleted':'Запрос удалён',
+        'admin.accountsTitle':       'Аккаунты игроков',
+        'admin.accountsEmpty':       'Нет аккаунтов',
+        'admin.accountCreated':      'Создан',
+        'admin.accountDeleteConfirm':'Полностью удалить аккаунт',
+        'admin.accountDeleted':      'Аккаунт удалён',
     },
 
     en: {
@@ -363,6 +368,11 @@ const LANGS = {
         'admin.resetCode':  'Code',
         'admin.resetExpired':'Expired',
         'admin.resetDeleted':'Request deleted',
+        'admin.accountsTitle':       'Player Accounts',
+        'admin.accountsEmpty':       'No accounts',
+        'admin.accountCreated':      'Created',
+        'admin.accountDeleteConfirm':'Completely delete account',
+        'admin.accountDeleted':      'Account deleted',
     }
 };
 

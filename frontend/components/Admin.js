@@ -673,6 +673,7 @@ function ClanWarTab({ showMsg, players, teams }) {
                     score:   match.score,
                     winner:  match.winner,
                     label:   match.label,
+                    format:  match.format,
                 }),
             });
             setSelected(cw); load();
@@ -1130,6 +1131,85 @@ function PortraitsTab({ showMsg }) {
     );
 }
 
+// ── Управление аккаунтами игроков (PlayerUser) ───────────────────────────────
+function AccountsSection({ showMsg }) {
+    useLang();
+    const [accounts, setAccounts] = React.useState([]);
+    const [loading, setLoading]   = React.useState(true);
+
+    const loadAccounts = React.useCallback(async () => {
+        try {
+            const data = await apiFetch('/api/players/admin/accounts');
+            setAccounts(Array.isArray(data) ? data : []);
+        } catch { setAccounts([]); }
+        setLoading(false);
+    }, []);
+
+    React.useEffect(() => { loadAccounts(); }, [loadAccounts]);
+
+    const deleteAccount = async (acc) => {
+        if (!confirm(`${t('admin.accountDeleteConfirm')} "${acc.username}"?`)) return;
+        try {
+            await apiFetch(`/api/players/admin/accounts/${acc.id}`, { method: 'DELETE' });
+            showMsg(`✅ ${t('admin.accountDeleted')}: ${acc.username}`);
+            loadAccounts();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+
+    return (
+        <div>
+            <h4 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-md)' }}>
+                👤 {t('admin.accountsTitle')}
+            </h4>
+            {loading ? (
+                <p style={{ color: 'var(--color-text-muted)' }}>...</p>
+            ) : accounts.length === 0 ? (
+                <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', maxWidth: 500 }}>
+                    <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{t('admin.accountsEmpty')}</p>
+                </div>
+            ) : (
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
+                        <thead>
+                            <tr style={{ borderBottom: '2px solid var(--color-bg-lighter)' }}>
+                                <th style={{ textAlign: 'left', padding: '8px 12px', color: 'var(--color-text-muted)' }}>{t('profile.username')}</th>
+                                <th style={{ textAlign: 'left', padding: '8px 12px', color: 'var(--color-text-muted)' }}>BattleTag</th>
+                                <th style={{ textAlign: 'left', padding: '8px 12px', color: 'var(--color-text-muted)' }}>{t('admin.accountCreated')}</th>
+                                <th style={{ textAlign: 'center', padding: '8px 12px', color: 'var(--color-text-muted)' }}></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {accounts.map(acc => (
+                                <tr key={acc.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{acc.username}</td>
+                                    <td style={{ padding: '8px 12px', color: acc.linkedBattleTag ? 'var(--color-accent-secondary)' : 'var(--color-text-muted)' }}>
+                                        {acc.linkedBattleTag || '—'}
+                                    </td>
+                                    <td style={{ padding: '8px 12px', color: 'var(--color-text-muted)' }}>{fmtDate(acc.createdAt)}</td>
+                                    <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                                        <button
+                                            onClick={() => deleteAccount(acc)}
+                                            style={{
+                                                background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)',
+                                                border: '1px solid rgba(244,67,54,0.3)', padding: '4px 12px',
+                                                borderRadius: 'var(--radius-sm)', fontSize: '0.82em', cursor: 'pointer',
+                                            }}
+                                        >
+                                            🗑️ {t('admin.delete')}
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ── Запросы сброса пароля ─────────────────────────────────────────────────────
 function PendingResetsSection({ showMsg }) {
     useLang();
@@ -1306,6 +1386,9 @@ function AdminPanel({ onLogout }) {
                         <button className="btn btn-primary" onClick={recalc}>{t('admin.recalc')}</button>
                     </div>
                     <PendingResetsSection showMsg={showMsg} />
+                    <div style={{ marginTop: 'var(--spacing-xxl)' }}>
+                        <AccountsSection showMsg={showMsg} />
+                    </div>
                 </div>
             )}
         </div>
