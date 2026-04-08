@@ -404,6 +404,42 @@ router.delete('/admin/pending-resets/:id', async (req, res) => {
     }
 });
 
+// Admin: list all PlayerUser accounts (for account management)
+router.get('/admin/accounts', async (req, res) => {
+    try {
+        const accounts = await PlayerUser.find().sort({ createdAt: -1 });
+        res.json(accounts);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch accounts' });
+    }
+});
+
+// Admin: delete a PlayerUser account completely (unlinks BattleTag, deletes sessions)
+router.delete('/admin/accounts/:id', async (req, res) => {
+    try {
+        const account = await PlayerUser.findById(req.params.id);
+        if (!account) return res.status(404).json({ error: 'Account not found' });
+
+        // Unlink BattleTag from Player record if linked
+        if (account.linkedBattleTag) {
+            await Player.findOneAndUpdate(
+                { battleTag: { $regex: new RegExp(`^${escapeRegex(account.linkedBattleTag)}$`, 'i') } },
+                { selectedPortrait: null, selectedPortraitId: null }
+            );
+        }
+
+        // Delete all sessions and password resets for this user
+        await PlayerSession.deleteMany({ playerUserId: account.id });
+        await PasswordReset.deleteMany({ username: account.username });
+
+        // Delete the account
+        await PlayerUser.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete account' });
+    }
+});
+
 router.post('/admin/recalculate', async (req, res) => {
     try {
         const result = await recalculateAllPlayerStats();

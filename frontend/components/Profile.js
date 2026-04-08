@@ -298,7 +298,6 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                     {linkedTag ? (
                         <div style={{ color: 'var(--color-accent-primary)', fontWeight: 600, fontSize: '0.95em', marginTop: 4 }}>
                             ⚔ {linkedTag}
-                            {playerData?.currentMmr && <span style={{ color: 'var(--color-accent-secondary)', marginLeft: 10 }}>MMR {playerData.currentMmr}</span>}
                         </div>
                     ) : (
                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.9em', marginTop: 4 }}>{t('profile.noLink')}</div>

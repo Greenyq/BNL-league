@@ -51,13 +51,14 @@ router.put('/:id/matches/:matchId', async (req, res) => {
         if (!match) return res.status(404).json({ error: 'Match not found' });
 
         // Merge update fields into the embedded document
-        const { score, winner, games, playerA, playerB, label } = req.body;
+        const { score, winner, games, playerA, playerB, label, format } = req.body;
         if (score   !== undefined) match.score  = score;
         if (winner  !== undefined) match.winner = winner;
         if (games   !== undefined) match.games  = games;
         if (playerA !== undefined) match.playerA = playerA;
         if (playerB !== undefined) match.playerB = playerB;
         if (label   !== undefined) match.label   = label;
+        if (format  !== undefined) match.format  = format;
 
         // Recalculate clan-war score (count match winners)
         cw.clanWarScore.a = cw.matches.filter(m => m.winner === 'a').length;
