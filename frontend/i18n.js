@@ -100,6 +100,22 @@ const LANGS = {
         'profile.noAccount':      'Нет аккаунта?',
         'profile.haveAccount':    'Уже есть аккаунт?',
 
+        // Password reset
+        'profile.forgotLink':       'Забыли пароль?',
+        'profile.forgotTitle':      '🔑 Восстановление',
+        'profile.forgotBtn':        'Запросить код',
+        'profile.forgotHint':       'Введите имя пользователя. Код сброса будет доступен администратору — свяжитесь с ним в Discord.',
+        'profile.resetTitle':       '🔑 Новый пароль',
+        'profile.resetBtn':         'Сменить пароль',
+        'profile.resetCodePlaceholder': 'Код сброса',
+        'profile.newPassword':      'Новый пароль',
+        'profile.confirmPassword':  'Подтвердите пароль',
+        'profile.resetRequested':   'Код создан! Свяжитесь с администратором для получения кода.',
+        'profile.resetDone':        'Пароль успешно изменён! Войдите с новым паролем.',
+        'profile.resetMismatch':    'Пароли не совпадают',
+        'profile.backToLogin':      'Назад ко входу',
+        'profile.haveCode':         'У меня уже есть код',
+
         // Draft availability (profile toggle)
         'profile.draftTitle':   '⚔ Драфт',
         'profile.draftDesc':    'Доступен для драфта / Available for draft',
@@ -161,6 +177,11 @@ const LANGS = {
         'admin.recalcing':  'Пересчёт...',
         'admin.login_label':'Логин',
         'admin.pass_label': 'Пароль',
+        'admin.resetTitle': 'Запросы сброса пароля',
+        'admin.resetEmpty': 'Нет активных запросов',
+        'admin.resetCode':  'Код',
+        'admin.resetExpired':'Истёк',
+        'admin.resetDeleted':'Запрос удалён',
     },
 
     en: {
@@ -260,6 +281,22 @@ const LANGS = {
         'profile.noAccount':      'No account?',
         'profile.haveAccount':    'Already have an account?',
 
+        // Password reset
+        'profile.forgotLink':       'Forgot password?',
+        'profile.forgotTitle':      '🔑 Password Recovery',
+        'profile.forgotBtn':        'Request code',
+        'profile.forgotHint':       'Enter your username. The reset code will be available to the admin — contact them on Discord.',
+        'profile.resetTitle':       '🔑 New Password',
+        'profile.resetBtn':         'Change password',
+        'profile.resetCodePlaceholder': 'Reset code',
+        'profile.newPassword':      'New password',
+        'profile.confirmPassword':  'Confirm password',
+        'profile.resetRequested':   'Code created! Contact the admin to get your code.',
+        'profile.resetDone':        'Password changed! Sign in with your new password.',
+        'profile.resetMismatch':    'Passwords do not match',
+        'profile.backToLogin':      'Back to login',
+        'profile.haveCode':         'I already have a code',
+
         // Draft availability (profile toggle)
         'profile.draftTitle':   '⚔ Draft',
         'profile.draftDesc':    'Available for draft / Доступен для драфта',
@@ -321,6 +358,11 @@ const LANGS = {
         'admin.recalcing':  'Recalculating...',
         'admin.login_label':'Login',
         'admin.pass_label': 'Password',
+        'admin.resetTitle': 'Password Reset Requests',
+        'admin.resetEmpty': 'No pending requests',
+        'admin.resetCode':  'Code',
+        'admin.resetExpired':'Expired',
+        'admin.resetDeleted':'Request deleted',
     }
 };
 

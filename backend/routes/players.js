@@ -2,7 +2,7 @@ const express  = require('express');
 const bcrypt   = require('bcrypt');
 const crypto   = require('crypto');
 const { Player, PlayerStats, PlayerCache, ManualPointsAdjustment,
-        PlayerUser, PlayerSession } = require('../models/Player');
+        PlayerUser, PlayerSession, PasswordReset } = require('../models/Player');
 const { checkAuth } = require('../middleware/auth');
 const { recalculateAllPlayerStats } = require('../services/scoring');
 const { searchPlayer } = require('../services/w3champions');
@@ -274,6 +274,63 @@ router.put('/auth/select-race', async (req, res) => {
     }
 });
 
+// ── Password Reset ───────────────────────────────────────────────────────────
+
+// Request password reset (generates 6-digit code, 1-hour expiry)
+router.post('/auth/request-reset', async (req, res) => {
+    try {
+        const { username } = req.body;
+        if (!username) return res.status(400).json({ error: 'Username is required' });
+
+        const playerUser = await PlayerUser.findOne({ username });
+        if (!playerUser) return res.status(404).json({ error: 'User not found' });
+
+        // Remove any existing reset for this user
+        await PasswordReset.deleteMany({ username });
+
+        const resetCode = String(Math.floor(100000 + Math.random() * 900000)); // 6-digit code
+        await PasswordReset.create({
+            username,
+            resetCode,
+            expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to create reset request' });
+    }
+});
+
+// Complete password reset with code
+router.post('/auth/reset-password', async (req, res) => {
+    try {
+        const { username, resetCode, newPassword } = req.body;
+        if (!username || !resetCode || !newPassword)
+            return res.status(400).json({ error: 'All fields are required' });
+        if (typeof newPassword !== 'string' || newPassword.length < 6)
+            return res.status(400).json({ error: 'Password must be at least 6 characters' });
+
+        const reset = await PasswordReset.findOne({ username, resetCode });
+        if (!reset) return res.status(400).json({ error: 'Invalid reset code' });
+        if (reset.expiresAt < new Date()) {
+            await PasswordReset.deleteOne({ _id: reset._id });
+            return res.status(400).json({ error: 'Reset code expired' });
+        }
+
+        const passwordHash = await bcrypt.hash(newPassword, 10);
+        await PlayerUser.findOneAndUpdate({ username }, { passwordHash, updatedAt: Date.now() });
+
+        // Clean up: delete reset request and all sessions for this user
+        await PasswordReset.deleteMany({ username });
+        const playerUser = await PlayerUser.findOne({ username });
+        if (playerUser) await PlayerSession.deleteMany({ playerUserId: playerUser.id });
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to reset password' });
+    }
+});
+
 // ── Public: single player by battleTag ───────────────────────────────────────
 router.get('/:battleTag', async (req, res) => {
     try {
@@ -324,6 +381,26 @@ router.post('/:battleTag/points', async (req, res) => {
         res.json(await ManualPointsAdjustment.create({ playerId: player._id.toString(), battleTag: player.battleTag, amount, reason }));
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// Admin: list pending password reset requests
+router.get('/admin/pending-resets', async (req, res) => {
+    try {
+        const resets = await PasswordReset.find().sort({ createdAt: -1 });
+        res.json(resets);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch resets' });
+    }
+});
+
+// Admin: delete a password reset request
+router.delete('/admin/pending-resets/:id', async (req, res) => {
+    try {
+        await PasswordReset.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete reset' });
     }
 });
 
