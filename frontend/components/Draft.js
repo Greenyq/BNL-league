@@ -271,17 +271,36 @@ function DraftView({ clanWarId, onBack }) {
         setPicking(false);
     };
 
-    const adminAction = async (action) => {
+    // Tier order config for draft start
+    const [showStartConfig, setShowStartConfig] = React.useState(false);
+    const [tierOrderCfg, setTierOrderCfg] = React.useState({
+        tier1: 'a', // who picks first in tier B
+        tier2: 'b', // who picks first in tier A
+        tier3: 'a', // who picks first in tier S
+    });
+
+    const adminAction = async (action, body) => {
         const sid = adminSession;
         try {
             const res = await fetch(`/api/draft/${clanWarId}/${action}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'x-session-id': sid || '' },
+                body: body ? JSON.stringify(body) : undefined,
             });
             const json = await res.json();
             if (!res.ok) alert(json.error || 'Failed');
             else fetchDraft();
         } catch (err) { alert(err.message); }
+    };
+
+    const startDraft = () => {
+        const tierOrder = {
+            tier1: [tierOrderCfg.tier1, tierOrderCfg.tier1 === 'a' ? 'b' : 'a'],
+            tier2: [tierOrderCfg.tier2, tierOrderCfg.tier2 === 'a' ? 'b' : 'a'],
+            tier3: [tierOrderCfg.tier3, tierOrderCfg.tier3 === 'a' ? 'b' : 'a'],
+        };
+        adminAction('start', { tierOrder });
+        setShowStartConfig(false);
     };
 
     if (loading) return (
@@ -326,19 +345,55 @@ function DraftView({ clanWarId, onBack }) {
 
             {/* Admin controls */}
             {isAdmin && (
-                <div style={{ display: 'flex', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-xl)', flexWrap: 'wrap' }}>
-                    {draft?.status !== 'drafting' && draft?.status !== 'complete' && (
-                        <button className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85em' }} onClick={() => adminAction('start')}>
-                            {t('draft.start')}
+                <div style={{ marginBottom: 'var(--spacing-xl)' }}>
+                    <div style={{ display: 'flex', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-md)', flexWrap: 'wrap' }}>
+                        {draft?.status !== 'drafting' && draft?.status !== 'complete' && (
+                            <button className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85em' }} onClick={() => setShowStartConfig(true)}>
+                                {t('draft.start')}
+                            </button>
+                        )}
+                        <button className="btn btn-secondary" style={{ padding: '8px 18px', fontSize: '0.85em' }} onClick={() => { if (confirm('Сбросить драфт?')) adminAction('reset'); }}>
+                            {t('draft.reset')}
                         </button>
-                    )}
-                    <button className="btn btn-secondary" style={{ padding: '8px 18px', fontSize: '0.85em' }} onClick={() => { if (confirm('Сбросить драфт?')) adminAction('reset'); }}>
-                        {t('draft.reset')}
-                    </button>
-                    {draft?.status === 'drafting' && (
-                        <button className="btn btn-secondary" style={{ padding: '8px 18px', fontSize: '0.85em', color: 'var(--color-warning)', borderColor: 'var(--color-warning)' }} onClick={() => { if (confirm('Завершить принудительно?')) adminAction('force-complete'); }}>
-                            {t('draft.force_complete')}
-                        </button>
+                        {draft?.status === 'drafting' && (
+                            <button className="btn btn-secondary" style={{ padding: '8px 18px', fontSize: '0.85em', color: 'var(--color-warning)', borderColor: 'var(--color-warning)' }} onClick={() => { if (confirm('Завершить принудительно?')) adminAction('force-complete'); }}>
+                                {t('draft.force_complete')}
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Tier order config modal */}
+                    {showStartConfig && (
+                        <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', maxWidth: 420, marginBottom: 'var(--spacing-md)' }}>
+                            <h4 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-md)' }}>
+                                Порядок выбора по тирам
+                            </h4>
+                            {[
+                                { key: 'tier1', label: 'Тир B (1000–1400)' },
+                                { key: 'tier2', label: 'Тир A (1400–1700)' },
+                                { key: 'tier3', label: 'Тир S (1700+)' },
+                            ].map(t => (
+                                <div key={t.key} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                                    <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.9em', minWidth: 140 }}>{t.label}:</span>
+                                    <select
+                                        value={tierOrderCfg[t.key]}
+                                        onChange={e => setTierOrderCfg(prev => ({ ...prev, [t.key]: e.target.value }))}
+                                        style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '1px solid var(--color-bg-lighter)', borderRadius: 6, padding: '6px 10px' }}
+                                    >
+                                        <option value="a">{nameA} первая</option>
+                                        <option value="b">{nameB} первая</option>
+                                    </select>
+                                </div>
+                            ))}
+                            <div style={{ display: 'flex', gap: 8, marginTop: 'var(--spacing-md)' }}>
+                                <button className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85em' }} onClick={startDraft}>
+                                    Начать драфт
+                                </button>
+                                <button className="btn btn-secondary" style={{ padding: '8px 18px', fontSize: '0.85em' }} onClick={() => setShowStartConfig(false)}>
+                                    Отмена
+                                </button>
+                            </div>
+                        </div>
                     )}
                 </div>
             )}
@@ -384,7 +439,7 @@ function DraftView({ clanWarId, onBack }) {
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <CaptainSlot captain={captains?.a} />
-                        {[0,1,2].map(i => (
+                        {[0,1].map(i => (
                             <PickSlot key={i} pick={picksA[i] || null} allPlayers={allPlayers} />
                         ))}
                     </div>
@@ -397,7 +452,7 @@ function DraftView({ clanWarId, onBack }) {
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <CaptainSlot captain={captains?.b} />
-                        {[0,1,2].map(i => (
+                        {[0,1].map(i => (
                             <PickSlot key={i} pick={picksB[i] || null} allPlayers={allPlayers} />
                         ))}
                     </div>

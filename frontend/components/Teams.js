@@ -121,7 +121,13 @@ function TeamClanWarRow({ cw, teamName }) {
 // ── Полная карточка команды ───────────────────────────────────────────────────
 function TeamCard({ team, players, clanWars, onOpenDraft }) {
     useLang();
-    const roster   = players.filter(p => p.teamId === team.id);
+    const rosterRaw = players.filter(p => p.teamId === team.id);
+    // Captain always first in roster
+    const roster = [...rosterRaw].sort((a, b) => {
+        if (a.id === team.captainId) return -1;
+        if (b.id === team.captainId) return 1;
+        return 0;
+    });
     const captain  = players.find(p => p.id === team.captainId);
     const teamCWs  = clanWars.filter(cw =>
         cw.teamA?.name?.toLowerCase() === team.name.toLowerCase() ||
