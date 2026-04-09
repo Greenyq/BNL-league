@@ -30,7 +30,8 @@ function getEffectiveTier(player) {
 }
 
 // Determine whose turn it is and which tier based on draft.picks
-function getCurrentPickState(draft) {
+// captainTiers = { a: tierNum, b: tierNum } — captain occupies a slot in their tier
+function getCurrentPickState(draft, captainTiers) {
     if (!draft || draft.status !== 'drafting') return null;
 
     const tierOrder = draft.tierOrder || {
@@ -38,21 +39,29 @@ function getCurrentPickState(draft) {
         tier2: ['b', 'a'],
         tier3: ['a', 'b']
     };
+    const capTiers = captainTiers || {};
 
-    const picks   = draft.picks || [];
-    const t1Picks = picks.filter(p => p.tier === 1);
-    const t2Picks = picks.filter(p => p.tier === 2);
-    const t3Picks = picks.filter(p => p.tier === 3);
+    const picks = draft.picks || [];
 
-    // Each tier: 2 picks (one per team, snake order)
-    if (t1Picks.length < 2) {
-        return { tier: 1, team: tierOrder.tier1[t1Picks.length] };
-    }
-    if (t2Picks.length < 2) {
-        return { tier: 2, team: tierOrder.tier2[t2Picks.length] };
-    }
-    if (t3Picks.length < 2) {
-        return { tier: 3, team: tierOrder.tier3[t3Picks.length] };
+    // For each tier, determine how many picks are still needed.
+    // Each team needs 1 pick per tier UNLESS their captain already fills that tier.
+    for (const tierNum of [1, 2, 3]) {
+        const tierKey = `tier${tierNum}`;
+        const order = tierOrder[tierKey] || ['a', 'b'];
+        const tierPicks = picks.filter(p => p.tier === tierNum);
+
+        // Which teams still need to pick in this tier?
+        const teamsNeeding = order.filter(team => {
+            // Captain already fills this tier for this team → skip
+            if (capTiers[team] === tierNum) return false;
+            // Already picked in this tier for this team → skip
+            if (tierPicks.some(p => p.team === team)) return false;
+            return true;
+        });
+
+        if (teamsNeeding.length > 0) {
+            return { tier: tierNum, team: teamsNeeding[0] };
+        }
     }
     return null; // Draft complete
 }
@@ -113,9 +122,15 @@ router.get('/:clanWarId', async (req, res) => {
         };
 
         const draft       = cw.draft || { status: 'pending', picks: [] };
-        const currentTurn = getCurrentPickState(draft);
 
-        res.json({ clanWar: cw, draft, pool, currentTurn, captains: captainsData });
+        // Build captainTiers map: { a: tierNum, b: tierNum }
+        const captainTiers = {};
+        if (captainsData.a?.tier) captainTiers.a = captainsData.a.tier;
+        if (captainsData.b?.tier) captainTiers.b = captainsData.b.tier;
+
+        const currentTurn = getCurrentPickState(draft, captainTiers);
+
+        res.json({ clanWar: cw, draft, pool, currentTurn, captains: captainsData, captainTiers });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -149,8 +164,22 @@ router.post('/:clanWarId/pick', async (req, res) => {
 
         const captainTeam = isCapA ? 'a' : 'b';
 
+        // Resolve captain tiers for both teams
+        const allPlayers = await Player.find();
+        const allStats   = await PlayerStats.find();
+        const sMap       = Object.fromEntries(allStats.map(s => [s.battleTag, s]));
+        const captainTiers = {};
+        for (const [side, capName] of [['a', cw.teamA?.captain], ['b', cw.teamB?.captain]]) {
+            if (!capName) continue;
+            const cp = allPlayers.find(p => p.name === capName || p.battleTag?.split('#')[0] === capName || p.battleTag === capName);
+            if (cp) {
+                const cs = sMap[cp.battleTag];
+                captainTiers[side] = cp.tierOverride || getPlayerTier(cs?.mmr || cp.currentMmr || 0);
+            }
+        }
+
         // Check turn
-        const currentState = getCurrentPickState(cw.draft);
+        const currentState = getCurrentPickState(cw.draft, captainTiers);
         if (!currentState) return res.status(400).json({ error: 'Draft is already complete' });
         if (currentState.team !== captainTeam)
             return res.status(403).json({ error: 'Not your turn' });
@@ -163,6 +192,14 @@ router.post('/:clanWarId/pick', async (req, res) => {
         if (!player || !player.draftAvailable)
             return res.status(400).json({ error: 'Player not available for draft' });
 
+        // Captain cannot be picked
+        const captainNames = [cw.teamA?.captain, cw.teamB?.captain].filter(Boolean);
+        const isCaptain = captainNames.some(cn =>
+            player.name === cn || player.battleTag?.split('#')[0] === cn || player.battleTag === cn
+        );
+        if (isCaptain)
+            return res.status(400).json({ error: 'Captains cannot be picked in draft' });
+
         if (cw.draft.picks.some(p => p.playerId?.toString() === playerId))
             return res.status(400).json({ error: 'Player already picked' });
 
@@ -171,7 +208,7 @@ router.post('/:clanWarId/pick', async (req, res) => {
         const mmr       = stats?.mmr || player.currentMmr || 0;
         const playerTier = player.tierOverride || getPlayerTier(mmr);
         if (playerTier !== currentState.tier)
-            return res.status(400).json({ error: `Player MMR ${mmr} does not belong to tier ${currentState.tier}` });
+            return res.status(400).json({ error: `Player does not belong to tier ${currentState.tier}` });
 
         // Record pick
         cw.draft.picks.push({
@@ -187,7 +224,7 @@ router.post('/:clanWarId/pick', async (req, res) => {
             status: 'drafting',
             picks:  cw.draft.picks,
             tierOrder: cw.draft.tierOrder
-        });
+        }, captainTiers);
 
         if (!nextState) {
             cw.draft.status = 'complete';
@@ -209,11 +246,15 @@ router.post('/:clanWarId/start', checkAuth, async (req, res) => {
         const cw = await ClanWar.findById(req.params.clanWarId);
         if (!cw) return res.status(404).json({ error: 'Clan war not found' });
 
+        // Admin can pass custom tierOrder: { tier1: ['a','b'], tier2: ['b','a'], tier3: ['a','b'] }
+        const defaultOrder = { tier1: ['a', 'b'], tier2: ['b', 'a'], tier3: ['a', 'b'] };
+        const tierOrder = req.body.tierOrder || defaultOrder;
+
         cw.draft = {
             status:          'drafting',
             currentTier:     1,
-            currentTeamTurn: 'a',
-            tierOrder:       { tier1: ['a', 'b'], tier2: ['b', 'a'], tier3: ['a', 'b'] },
+            currentTeamTurn: tierOrder.tier1?.[0] || 'a',
+            tierOrder,
             picks:           []
         };
 
