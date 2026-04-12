@@ -20,22 +20,6 @@ function HomePage() {
     useLang(); // подписка на смену языка
     return (
         <div className="animate-fade-in">
-            {/* Описание лиги */}
-            <div className="card-elevated" style={{ padding: 'var(--spacing-xxl)', marginBottom: 'var(--spacing-xl)' }}>
-                <h3 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-md)' }}>
-                    🎮 {t('hero.subtitle')}
-                </h3>
-                <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.8, marginBottom: 'var(--spacing-md)' }}>
-                    {t('hero.desc1')}
-                </p>
-                <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.8, marginBottom: 'var(--spacing-xl)' }}>
-                    {t('hero.desc2')}
-                </p>
-                <div style={{ color: 'var(--color-accent-secondary)', fontWeight: 700, fontSize: '1.05em' }}>
-                    {t('hero.stage')}
-                </div>
-            </div>
-
             {/* Как работает лига */}
             <div className="card-elevated" style={{ padding: 'var(--spacing-xxl)' }}>
                 <h3 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-lg)' }}>
@@ -60,6 +44,9 @@ function HomePage() {
                             </div>
                         </div>
                     ))}
+                </div>
+                <div style={{ marginTop: 'var(--spacing-xl)', color: 'var(--color-accent-secondary)', fontWeight: 700, fontSize: '1.05em' }}>
+                    {t('hero.stage')}
                 </div>
             </div>
         </div>
