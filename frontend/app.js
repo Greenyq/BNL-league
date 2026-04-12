@@ -36,6 +36,34 @@ function HomePage() {
                 </div>
             </div>
 
+            {/* Как работает лига */}
+            <div className="card-elevated" style={{ padding: 'var(--spacing-xxl)', marginBottom: 'var(--spacing-xl)' }}>
+                <h3 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-lg)' }}>
+                    ⚙ {t('hero.how_title')}
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--spacing-lg)' }}>
+                    {[
+                        { titleKey: 'hero.how1_title', descKey: 'hero.how1_desc', icon: '👤' },
+                        { titleKey: 'hero.how2_title', descKey: 'hero.how2_desc', icon: '🔔' },
+                        { titleKey: 'hero.how3_title', descKey: 'hero.how3_desc', icon: '⚔' },
+                        { titleKey: 'hero.how4_title', descKey: 'hero.how4_desc', icon: '📊' },
+                    ].map(item => (
+                        <div key={item.titleKey} style={{
+                            background: 'rgba(0,0,0,0.25)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: 'var(--spacing-lg)',
+                        }}>
+                            <div style={{ color: 'var(--color-accent-secondary)', fontWeight: 700, marginBottom: 'var(--spacing-sm)', fontSize: '0.95em' }}>
+                                {item.icon} {t(item.titleKey)}
+                            </div>
+                            <div style={{ color: 'var(--color-text-secondary)', lineHeight: 1.7, fontSize: '0.88em' }}>
+                                {t(item.descKey)}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
             {/* Система очков */}
             <div className="card-elevated" style={{ padding: 'var(--spacing-xxl)' }}>
                 <h3 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-lg)' }}>
