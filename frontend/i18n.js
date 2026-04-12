@@ -187,6 +187,17 @@ const LANGS = {
         'admin.accountCreated':      'Создан',
         'admin.accountDeleteConfirm':'Полностью удалить аккаунт',
         'admin.accountDeleted':      'Аккаунт удалён',
+
+        // How it works
+        'hero.how_title':  'Как работает лига',
+        'hero.how1_title': '1. Активируй доступность',
+        'hero.how1_desc':  'Зайди в раздел «Профиль» и включи переключатель «Доступен для драфта» — только тогда ты попадёшь в пул игроков и капитаны смогут тебя выбрать.',
+        'hero.how2_title': '2. Уведомления в Discord',
+        'hero.how2_desc':  'Все участники лиги получат уведомление в Discord: о назначении клан-вара, назначении капитанов и начале драфта.',
+        'hero.how3_title': '3. Драфт',
+        'hero.how3_desc':  'Капитаны по очереди выбирают игроков из пула. Игроки разбиты на тиры: Tier B (1000–1400 MMR), Tier A (1400–1700 MMR), Tier S (1700+ MMR).',
+        'hero.how4_title': '4. Очки',
+        'hero.how4_desc':  'После матчей очки начисляются автоматически по данным W3Champions с учётом разницы MMR соперников.',
     },
 
     en: {
@@ -373,6 +384,17 @@ const LANGS = {
         'admin.accountCreated':      'Created',
         'admin.accountDeleteConfirm':'Completely delete account',
         'admin.accountDeleted':      'Account deleted',
+
+        // How it works
+        'hero.how_title':  'How the League Works',
+        'hero.how1_title': '1. Enable Availability',
+        'hero.how1_desc':  'Go to your Profile and turn on "Available for draft" — this puts you in the player pool so captains can pick you.',
+        'hero.how2_title': '2. Discord Notifications',
+        'hero.how2_desc':  'All league players will be notified on Discord: about clan war schedules, captain assignments, and when drafting begins.',
+        'hero.how3_title': '3. Draft',
+        'hero.how3_desc':  'Captains take turns picking players from the pool by tier: Tier B (1000–1400 MMR), Tier A (1400–1700 MMR), Tier S (1700+ MMR).',
+        'hero.how4_title': '4. Points',
+        'hero.how4_desc':  'After matches, points are awarded automatically from W3Champions data based on MMR difference.',
     }
 };
 
