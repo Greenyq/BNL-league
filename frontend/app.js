@@ -37,7 +37,7 @@ function HomePage() {
             </div>
 
             {/* Как работает лига */}
-            <div className="card-elevated" style={{ padding: 'var(--spacing-xxl)', marginBottom: 'var(--spacing-xl)' }}>
+            <div className="card-elevated" style={{ padding: 'var(--spacing-xxl)' }}>
                 <h3 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-lg)' }}>
                     ⚙ {t('hero.how_title')}
                 </h3>
@@ -46,7 +46,6 @@ function HomePage() {
                         { titleKey: 'hero.how1_title', descKey: 'hero.how1_desc', icon: '👤' },
                         { titleKey: 'hero.how2_title', descKey: 'hero.how2_desc', icon: '🔔' },
                         { titleKey: 'hero.how3_title', descKey: 'hero.how3_desc', icon: '⚔' },
-                        { titleKey: 'hero.how4_title', descKey: 'hero.how4_desc', icon: '📊' },
                     ].map(item => (
                         <div key={item.titleKey} style={{
                             background: 'rgba(0,0,0,0.25)',
@@ -59,34 +58,6 @@ function HomePage() {
                             <div style={{ color: 'var(--color-text-secondary)', lineHeight: 1.7, fontSize: '0.88em' }}>
                                 {t(item.descKey)}
                             </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Система очков */}
-            <div className="card-elevated" style={{ padding: 'var(--spacing-xxl)' }}>
-                <h3 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-lg)' }}>
-                    📊 {t('hero.points_title')}
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--spacing-md)' }}>
-                    {[
-                        { key: 'hero.win_strong',  color: 'var(--color-success)' },
-                        { key: 'hero.win_equal',   color: 'var(--color-success-light)' },
-                        { key: 'hero.win_weak',    color: 'var(--color-success-light)' },
-                        { key: 'hero.loss_strong', color: 'var(--color-error-light)' },
-                        { key: 'hero.loss_equal',  color: 'var(--color-error)' },
-                        { key: 'hero.loss_weak',   color: 'var(--color-error)' },
-                    ].map(item => (
-                        <div key={item.key} style={{
-                            background: 'rgba(0,0,0,0.25)',
-                            borderRadius: 'var(--radius-sm)',
-                            padding: '10px 16px',
-                            color: item.color,
-                            fontWeight: 600,
-                            fontSize: '0.95em',
-                        }}>
-                            {t(item.key)}
                         </div>
                     ))}
                 </div>
