@@ -8,7 +8,7 @@ function DraftPlayerCard({ player, isPicked, isMyTurn, onPick, picking }) {
 
     const raceColor = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
     const raceAbbr  = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
-    const raceImg   = { 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
+    const raceImg   = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
 
     const mmr = stats?.mmr || player.currentMmr || player.mmr || 0;
 
@@ -150,7 +150,7 @@ function TierColumn({ tierNum, players, pickedIds, isMyTurn, onPick, picking }) 
 // ── Слот капитана в шапке команды ─────────────────────────────────────────────
 function CaptainSlot({ captain }) {
     if (!captain) return null;
-    const raceImg = { 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
+    const raceImg = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
     const raceAbbr = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
     const race = captain.mainRace || captain.race;
     const portrait = captain.selectedPortrait;
@@ -191,7 +191,7 @@ function PickSlot({ pick, allPlayers }) {
     const name   = player?.name || pick.playerBattleTag?.split('#')[0] || '?';
     const portrait = player?.selectedPortrait;
     const race     = player?.mainRace || player?.race;
-    const raceImg  = { 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
+    const raceImg  = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
 
     return (
         <div className="draft-pick-slot draft-pick-slot--filled draft-pick-anim">
@@ -511,7 +511,7 @@ function TeamRecruitView({ teamId, teamName, clanWarId, onBack }) {
 
     const raceColor = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
     const raceAbbr  = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
-    const raceImg   = { 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
+    const raceImg   = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
 
     const load = () => {
         fetch('/api/players')

@@ -1,7 +1,7 @@
 // ClanWar — клан-вары (первый до 3 побед, BO3 каждый матч) + интеграция с командами
 
 // ── Вспомогательные константы расы ───────────────────────────────────────────
-const CW_RACE_IMG   = { 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
+const CW_RACE_IMG   = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
 const CW_RACE_COLOR = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
 const CW_RACE_ABBR  = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
 

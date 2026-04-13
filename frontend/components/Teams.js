@@ -1,6 +1,6 @@
 // Teams — карточки команд с портретами игроков, статистикой и клан-варами
 
-const RACE_IMG  = { 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
+const RACE_IMG  = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
 const RACE_ABBR = { 0: 'Rnд', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
 const RACE_COLOR = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
 
