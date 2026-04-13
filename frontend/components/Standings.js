@@ -122,10 +122,169 @@ function TeamStandings() {
     );
 }
 
+// ── Драфт-пул: игроки с draftAvailable, разбитые по тирам ─────────────────────
+function DraftPoolStandings() {
+    useLang();
+    const [players, setPlayers] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError]     = React.useState(null);
+
+    React.useEffect(() => {
+        fetch('/api/players')
+            .then(r => r.json())
+            .then(data => { setPlayers(Array.isArray(data) ? data : []); setLoading(false); })
+            .catch(err => { setError(err.message); setLoading(false); });
+    }, []);
+
+    if (loading) return (
+        <div style={{ marginTop: 'var(--spacing-lg)' }}>
+            {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 120, marginBottom: 12, borderRadius: 'var(--radius-md)' }} />)}
+        </div>
+    );
+    if (error) return <div style={{ color: 'var(--color-error)', padding: 32 }}>⚠ {error}</div>;
+
+    // Filter only draft-available players
+    const draftPlayers = players.filter(p => p.draftAvailable);
+
+    // Tier calculation: same logic as backend
+    function getEffectiveTier(p) {
+        if (p.tierOverride) return p.tierOverride;
+        const mmr = p.stats?.mmr || p.currentMmr || 0;
+        if (mmr >= 1700) return 3;
+        if (mmr >= 1400) return 2;
+        if (mmr >= 1000) return 1;
+        return 0;
+    }
+
+    const tierS = draftPlayers.filter(p => getEffectiveTier(p) === 3).sort((a, b) => (b.stats?.mmr || b.currentMmr || 0) - (a.stats?.mmr || a.currentMmr || 0));
+    const tierA = draftPlayers.filter(p => getEffectiveTier(p) === 2).sort((a, b) => (b.stats?.mmr || b.currentMmr || 0) - (a.stats?.mmr || a.currentMmr || 0));
+    const tierB = draftPlayers.filter(p => getEffectiveTier(p) === 1).sort((a, b) => (b.stats?.mmr || b.currentMmr || 0) - (a.stats?.mmr || a.currentMmr || 0));
+
+    if (draftPlayers.length === 0) {
+        return <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>{t('standings.draftpool.empty')}</p>;
+    }
+
+    const raceImg = { 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
+    const raceAbbr = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
+    const raceColor = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
+
+    function renderPlayerCard(p) {
+        const race = p.mainRace || p.race;
+        const portrait = p.selectedPortrait;
+        const mmr = p.stats?.mmr || p.currentMmr || 0;
+        const stats = p.stats;
+        const avatarSrc = portrait || (race && raceImg[race]) || null;
+
+        return (
+            <div key={p.id || p.battleTag} className="draft-pool-player-card">
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                    {portrait ? (
+                        <img src={portrait} alt="" style={{
+                            width: 40, height: 40, borderRadius: '50%', objectFit: 'cover',
+                            border: '2px solid var(--color-accent-primary)',
+                        }} />
+                    ) : (
+                        <div style={{
+                            width: 40, height: 40, borderRadius: '50%',
+                            background: 'var(--color-bg-lighter)',
+                            border: '2px solid rgba(212,175,55,0.2)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            overflow: 'hidden',
+                        }}>
+                            {race && raceImg[race]
+                                ? <img src={raceImg[race]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.75 }} />
+                                : <span style={{ fontSize: '1.2em', color: 'var(--color-text-muted)' }}>👤</span>
+                            }
+                        </div>
+                    )}
+                    {race && raceImg[race] && portrait && (
+                        <img src={raceImg[race]} alt="" style={{
+                            position: 'absolute', bottom: -2, right: -2,
+                            width: 14, height: 14, borderRadius: '50%', objectFit: 'cover',
+                            border: '1.5px solid var(--color-bg-card, #1a1a2e)',
+                        }} />
+                    )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '0.9em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.name || p.battleTag?.split('#')[0]}
+                    </div>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.battleTag}
+                        {race && raceAbbr[race] && (
+                            <span style={{ marginLeft: 5, color: raceColor[race] || 'var(--color-text-muted)' }}>
+                                · {raceAbbr[race]}
+                            </span>
+                        )}
+                    </div>
+                </div>
+                <div className="team-player-stats" style={{ flexShrink: 0 }}>
+                    <div className="team-stat-cell">
+                        <span className="team-stat-label">MMR</span>
+                        <span className="team-stat-val" style={{ color: 'var(--color-accent-secondary)' }}>{mmr || '—'}</span>
+                    </div>
+                    {stats && <>
+                        <div className="team-stat-cell">
+                            <span className="team-stat-label">W</span>
+                            <span className="team-stat-val" style={{ color: 'var(--color-success)' }}>{stats.wins}</span>
+                        </div>
+                        <div className="team-stat-cell">
+                            <span className="team-stat-label">L</span>
+                            <span className="team-stat-val" style={{ color: 'var(--color-error)' }}>{stats.losses}</span>
+                        </div>
+                        <div className="team-stat-cell">
+                            <span className="team-stat-label">Pts</span>
+                            <span className="team-stat-val" style={{ color: 'var(--color-accent-primary)', fontWeight: 800 }}>{stats.points}</span>
+                        </div>
+                    </>}
+                </div>
+            </div>
+        );
+    }
+
+    function renderTierColumn(tierName, tierRange, players, tierClass) {
+        return (
+            <div className={`draft-pool-tier-col ${tierClass}`}>
+                <div className="draft-pool-tier-header">
+                    <div style={{ fontWeight: 800, fontSize: '0.95em', letterSpacing: 1, textTransform: 'uppercase' }}>
+                        {tierName}
+                    </div>
+                    <div style={{ fontSize: '0.75em', color: 'var(--color-accent-secondary)', marginTop: 2 }}>
+                        {tierRange}
+                    </div>
+                    <div style={{ fontSize: '0.75em', color: 'var(--color-text-muted)', marginTop: 2 }}>
+                        {players.length} {t('standings.draftpool.players_count')}
+                    </div>
+                </div>
+                <div className="draft-pool-tier-players">
+                    {players.length === 0 ? (
+                        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', textAlign: 'center', padding: '16px 0' }}>—</p>
+                    ) : (
+                        players.map(renderPlayerCard)
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ marginTop: 'var(--spacing-lg)' }}>
+            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', marginBottom: 'var(--spacing-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>{t('standings.draftpool.total')}: <strong style={{ color: 'var(--color-accent-primary)' }}>{draftPlayers.length}</strong></span>
+            </div>
+            <div className="draft-pool-tiers-grid">
+                {renderTierColumn(t('standings.draftpool.tier_s'), t('standings.draftpool.tier_s_range'), tierS, 'tier-s')}
+                {renderTierColumn(t('standings.draftpool.tier_a'), t('standings.draftpool.tier_a_range'), tierA, 'tier-a')}
+                {renderTierColumn(t('standings.draftpool.tier_b'), t('standings.draftpool.tier_b_range'), tierB, 'tier-b')}
+            </div>
+        </div>
+    );
+}
+
 // ── Рейтинг игроков (оригинал) ────────────────────────────────────────────────
 function Standings() {
     useLang();
-    const [mode,       setMode]       = React.useState('players'); // 'players' | 'teams'
+    const [mode,       setMode]       = React.useState('players'); // 'players' | 'teams' | 'draftpool'
     const [players,    setPlayers]    = React.useState([]);
     const [loading,    setLoading]    = React.useState(true);
     const [error,      setError]      = React.useState(null);
@@ -176,11 +335,20 @@ function Standings() {
                     >
                         <span>🛡 Команды</span>
                     </button>
+                    <button
+                        className={`nav-btn${mode === 'draftpool' ? ' active' : ''}`}
+                        style={{ padding: '8px 16px', fontSize: '0.85em' }}
+                        onClick={() => setMode('draftpool')}
+                    >
+                        <span>{t('standings.mode.draftpool')}</span>
+                    </button>
                 </div>
             </div>
 
             {mode === 'teams' ? (
                 <TeamStandings />
+            ) : mode === 'draftpool' ? (
+                <DraftPoolStandings />
             ) : (
                 <>
                     {/* Race filter */}

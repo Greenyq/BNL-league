@@ -124,6 +124,19 @@ const LANGS = {
         'profile.draftSaved':   'Статус драфта обновлён!',
         'profile.draftHint':    'Включите, чтобы капитаны могли выбрать вас на драфте клан-вара',
 
+        // Draft pool (standings tab)
+        'standings.mode.draftpool': '⚔ Драфт-пул',
+        'standings.draftpool.title': 'Игроки в драфт-пуле',
+        'standings.draftpool.empty': 'Нет игроков, доступных для драфта',
+        'standings.draftpool.tier_s': 'ТИР S',
+        'standings.draftpool.tier_a': 'ТИР A',
+        'standings.draftpool.tier_b': 'ТИР B',
+        'standings.draftpool.tier_s_range': '1700+ MMR',
+        'standings.draftpool.tier_a_range': '1400–1700 MMR',
+        'standings.draftpool.tier_b_range': '1000–1400 MMR',
+        'standings.draftpool.players_count': 'игроков',
+        'standings.draftpool.total': 'Всего в пуле',
+
         // Draft page
         'draft.title':          '⚔ Драфт',
         'draft.back':           '← Назад',
@@ -320,6 +333,19 @@ const LANGS = {
         'profile.draftOff':     'Unavailable',
         'profile.draftSaved':   'Draft status updated!',
         'profile.draftHint':    'Enable so captains can pick you during a clan war draft',
+
+        // Draft pool (standings tab)
+        'standings.mode.draftpool': '⚔ Draft Pool',
+        'standings.draftpool.title': 'Players in Draft Pool',
+        'standings.draftpool.empty': 'No players available for draft',
+        'standings.draftpool.tier_s': 'TIER S',
+        'standings.draftpool.tier_a': 'TIER A',
+        'standings.draftpool.tier_b': 'TIER B',
+        'standings.draftpool.tier_s_range': '1700+ MMR',
+        'standings.draftpool.tier_a_range': '1400–1700 MMR',
+        'standings.draftpool.tier_b_range': '1000–1400 MMR',
+        'standings.draftpool.players_count': 'players',
+        'standings.draftpool.total': 'Total in pool',
 
         // Draft page
         'draft.title':          '⚔ Draft',
