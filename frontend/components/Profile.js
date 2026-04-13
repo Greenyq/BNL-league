@@ -6,6 +6,7 @@ const setPlayerSession   = id => localStorage.setItem(PLAYER_SESSION_KEY, id);
 const clearPlayerSession = () => localStorage.removeItem(PLAYER_SESSION_KEY);
 
 const RACE_OPTIONS = [
+    { value: 0, label: 'Random',     img: '/images/random.svg' },
     { value: 1, label: 'Human',      img: '/images/human.jpg' },
     { value: 2, label: 'Orc',        img: '/images/orc.jpg' },
     { value: 4, label: 'Night Elf',  img: '/images/nightelf.jpg' },
