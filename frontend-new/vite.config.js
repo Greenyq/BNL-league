@@ -10,6 +10,9 @@ export default defineConfig({
     outDir: '../frontend/pages',
     emptyOutDir: false,
   },
+  // base must match outDir name so asset URLs resolve correctly when
+  // Express serves index.html via the SPA fallback (static root = /frontend)
+  base: '/pages/',
   server: {
     port: 5173,
     proxy: {
