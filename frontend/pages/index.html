@@ -61,7 +61,7 @@
             <div class="online-block">
                 <p>PLAYERS ONLINE</p>
                 <span id="player-count">—</span>
-                <div class="progress-button"></div>
+                <a href="#profile" onclick="navigate('profile'); return false;" class="progress-button"></a>
                 <div class="progress-bar">
                     <img id="progress-bar-fill" style="width: 50%;" src="/images/wow/progress-bar.png">
                 </div>
@@ -125,6 +125,22 @@
 <script type="text/babel" src="/app.js"></script>
 
 <script>
+    // ── Navigation labels (RU / EN) ───────────────────────────────────────
+    var NAV_LABELS = {
+        ru: { home: 'Главная', standings: 'Рейтинг', teams: 'Команды', clanwar: 'Клан-вары', profile: 'Профиль', admin: 'Админ' },
+        en: { home: 'Home', standings: 'Standings', teams: 'Teams', clanwar: 'Clan Wars', profile: 'Profile', admin: 'Admin' }
+    };
+
+    function updateNavText(lang) {
+        var labels = NAV_LABELS[lang] || NAV_LABELS['ru'];
+        document.querySelectorAll('#bnl-nav a').forEach(function(a) {
+            var tab = a.getAttribute('href').replace('#', '');
+            if (labels[tab]) a.textContent = labels[tab];
+        });
+        var loginLink = document.querySelector('.login a');
+        if (loginLink) loginLink.textContent = lang === 'en' ? 'Login' : 'Войти';
+    }
+
     // ── Navigation helper (sync hash + highlight) ─────────────────────────
     function navigate(tab) {
         window.location.hash = tab;
@@ -148,18 +164,23 @@
 
     // ── Language switcher ─────────────────────────────────────────────────
     function switchLang(lang) {
-        // Update i18n (setLang defined in i18n.js, available after React loads)
-        if (typeof setLang === 'function') {
-            setLang(lang);
-        }
-        // Update flag active state
+        if (typeof setLang === 'function') setLang(lang);
         document.getElementById('lang-ru').className = lang === 'ru' ? 'active' : '';
         document.getElementById('lang-en').className = lang === 'en' ? 'active' : '';
+        updateNavText(lang);
     }
+
+    // Apply stored language on page load
+    (function() {
+        var storedLang = localStorage.getItem('bnl_lang') || 'ru';
+        updateNavText(storedLang);
+        document.getElementById('lang-ru').className = storedLang === 'ru' ? 'active' : '';
+        document.getElementById('lang-en').className = storedLang === 'en' ? 'active' : '';
+    })();
 
     // ── Player count from API ─────────────────────────────────────────────
     function loadPlayerCount() {
-        fetch('/api/players/with-cache')
+        fetch('/api/players')
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 var count = Array.isArray(data) ? data.length : 0;
