@@ -152,7 +152,7 @@ a:hover, button:hover {
   color: #c89b3c;
   font-size: 48px;
   font-family: 'Elan';
-  margin-top: -20px;
+  margin-top: 15px;
   text-shadow: 0 0 15px rgba(200,155,60,0.5);
 }
 .online-block p {
@@ -170,17 +170,9 @@ a:hover, button:hover {
   position: relative;
 }
 .progress-bar img { height: 38px; }
-.progress-bar:after {
-  content: "";
-  background: url(../images/wow/progress-bg.png) no-repeat;
-  width: 62px;
-  height: 38px;
-  position: absolute;
-  margin-top: 5px;
-  margin-left: -35px;
-}
+/* progress-bar:after removed — was duplicating the gold ornaments from progress-button.png */
 .progress-button {
-  background: url(../images/wow/progress-button.png) no-repeat;
+  background: url(../images/wow/progress-button.png) no-repeat center;
   width: 396px;
   height: 90px;
   position: absolute;
@@ -188,6 +180,11 @@ a:hover, button:hover {
   margin-left: -198px;
   margin-top: -12px;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
 }
 
 /* ── Content area ───────────────────────────────────────────────────────── */

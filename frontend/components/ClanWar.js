@@ -273,17 +273,16 @@ function ClanWar() {
 
     return (
         <div className="animate-fade-in">
-            <h2 style={{ marginBottom: 'var(--spacing-xl)' }}>{t('cw.title')}</h2>
+            <div className="wow-section-title">{t('cw.title')}</div>
 
-            <div className="cw-filters">
+            <div className="wow-filter-bar" style={{ marginBottom: 18 }}>
                 {FILTERS.map(f => (
                     <button
                         key={f.id}
-                        className={`nav-btn${filter === f.id ? ' active' : ''}`}
-                        style={{ padding: '8px 18px', fontSize: '0.85em' }}
+                        className={`wow-btn${filter === f.id ? ' active' : ''}`}
                         onClick={() => setFilter(f.id)}
                     >
-                        <span>{t(f.key)}</span>
+                        {t(f.key)}
                     </button>
                 ))}
             </div>
