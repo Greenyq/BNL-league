@@ -8,15 +8,20 @@
 }
 
 html {
-  width: 1170px;
+  width: 100%;
+  min-width: 1170px;
   margin: 0 auto !important;
   position: relative;
+  overflow-x: hidden;
 }
 
 body {
   width: 100%;
+  min-width: 1170px;
   background: url(../images/wow/repeat-fon-bg.jpg) center repeat-y;
   background-color: #17120c;
+  background-size: 100% auto;
+  overflow-x: hidden;
 }
 
 a, button {
@@ -29,10 +34,14 @@ a:hover, button:hover {
 }
 
 .top-bg {
-  background: url(../images/wow/top-fon-bg.jpg) center top no-repeat;
+  background:
+    linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.3) 200px, transparent 420px),
+    url(../images/wow/top-fon-bg.jpg) center top no-repeat;
+  background-size: auto, cover;
 }
 .bottom-bg {
   background: url(../images/wow/bottom-fon-bg.jpg) center bottom no-repeat;
+  background-size: cover;
 }
 .wrapper {
   width: 1170px;
@@ -154,6 +163,7 @@ a:hover, button:hover {
   font-family: 'Elan';
   margin-top: 15px;
   text-shadow: 0 0 15px rgba(200,155,60,0.5);
+  position: relative;
 }
 .online-block p {
   color: #83604a;
@@ -165,7 +175,7 @@ a:hover, button:hover {
   height: 38px;
   width: 300px;
   margin: 0 auto;
-  margin-top: 8px;
+  margin-top: 5px;
   text-align: left;
   position: relative;
   background: linear-gradient(to bottom, #c73a3a 0%, #8b1a1a 100%);
