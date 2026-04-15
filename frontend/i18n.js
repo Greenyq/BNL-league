@@ -5,20 +5,20 @@
 const LANGS = {
     ru: {
         // Nav
-        'nav.home':       '🏠 Главная',
+        'nav.home':       'Главная',
         'nav.standings':  'Рейтинг',
         'nav.teams':      'Команды',
         'nav.clanwar':    'Клан-вары',
-        'nav.profile':    '👤 Профиль',
+        'nav.profile':    'Профиль',
         'nav.admin':      'Админ',
         'nav.lang':       'EN',
 
         // Hero
-        'hero.title':     '⚔ BNL LEAGUE ⚔',
+        'hero.title':     'BNL LEAGUE',
         'hero.subtitle':  'Breaking New Limits · Warcraft III',
         'hero.desc1':     'Лига Warcraft 3: Reforged для любителей варкрафта. Игроки соревнуются в ладдере, командных баталиях и клан-варах.',
         'hero.desc2':     'Очки начисляются автоматически по данным W3Champions на основе разницы MMR. Достижения дают дополнительные бонусы.',
-        'hero.stage':     '📅 Сезон 2 стартует 3 мая 2026',
+        'hero.stage':     'Сезон 2 стартует 3 мая 2026',
         'hero.points_title': 'Система очков',
         'hero.win_strong':  '+70 очков — победа над более сильным (+20 MMR)',
         'hero.win_equal':   '+50 очков — победа над равным (±20 MMR)',
@@ -28,7 +28,7 @@ const LANGS = {
         'hero.loss_strong': '−20 очков — поражение от сильного',
 
         // Standings
-        'standings.title':   '🏆 Рейтинг',
+        'standings.title':   'Рейтинг',
         'standings.rank':    '#',
         'standings.player':  'Игрок',
         'standings.race':    'Раса',
@@ -38,8 +38,8 @@ const LANGS = {
         'standings.points':  'Очки',
         'standings.empty':        'Нет данных',
         'standings.loading':      'Загрузка рейтинга...',
-        'standings.mode.players': '👤 Игроки',
-        'standings.mode.teams':   '🛡 Команды',
+        'standings.mode.players': 'Игроки',
+        'standings.mode.teams':   'Команды',
         'standings.teams.played': 'И',
         'standings.teams.cwwins': 'КВ В',
         'standings.teams.cwlose': 'КВ П',
@@ -52,14 +52,14 @@ const LANGS = {
         'race.8':     'Нежить',
 
         // Teams
-        'teams.title':    '🛡 Команды',
+        'teams.title':    'Команды',
         'teams.captain':  'Капитан',
         'teams.empty':    'Команды не добавлены',
         'teams.loading':  'Загрузка команд...',
         'teams.players_count': 'игроков',
 
         // ClanWar
-        'cw.title':     '⚔ Клан-вары',
+        'cw.title':     'Клан-вары',
         'cw.all':       'Все',
         'cw.upcoming':  'Предстоят',
         'cw.ongoing':   'Идут',
@@ -73,7 +73,7 @@ const LANGS = {
         'cw.status.completed': 'Завершён',
 
         // Profile / Auth
-        'profile.title':          '👤 Профиль',
+        'profile.title':          'Профиль',
         'profile.login':          'Вход',
         'profile.register':       'Регистрация',
         'profile.username':       'Имя пользователя',
@@ -102,10 +102,10 @@ const LANGS = {
 
         // Password reset
         'profile.forgotLink':       'Забыли пароль?',
-        'profile.forgotTitle':      '🔑 Восстановление',
+        'profile.forgotTitle':      'Восстановление пароля',
         'profile.forgotBtn':        'Запросить код',
         'profile.forgotHint':       'Введите имя пользователя. Код сброса будет доступен администратору — свяжитесь с ним в Discord.',
-        'profile.resetTitle':       '🔑 Новый пароль',
+        'profile.resetTitle':       'Новый пароль',
         'profile.resetBtn':         'Сменить пароль',
         'profile.resetCodePlaceholder': 'Код сброса',
         'profile.newPassword':      'Новый пароль',
@@ -117,7 +117,7 @@ const LANGS = {
         'profile.haveCode':         'У меня уже есть код',
 
         // Draft availability (profile toggle)
-        'profile.draftTitle':   '⚔ Драфт',
+        'profile.draftTitle':   'Драфт',
         'profile.draftDesc':    'Доступен для драфта / Available for draft',
         'profile.draftOn':      'Доступен',
         'profile.draftOff':     'Недоступен',
@@ -125,7 +125,7 @@ const LANGS = {
         'profile.draftHint':    'Включите, чтобы капитаны могли выбрать вас на драфте клан-вара',
 
         // Draft pool (standings tab)
-        'standings.mode.draftpool': '⚔ Драфт-пул',
+        'standings.mode.draftpool': 'Драфт-пул',
         'standings.draftpool.title': 'Игроки в драфт-пуле',
         'standings.draftpool.empty': 'Нет игроков, доступных для драфта',
         'standings.draftpool.tier_s': 'ТИР S',
@@ -138,7 +138,7 @@ const LANGS = {
         'standings.draftpool.total': 'Всего в пуле',
 
         // Draft page
-        'draft.title':          '⚔ Драфт',
+        'draft.title':          'Драфт',
         'draft.back':           '← Назад',
         'draft.tier1':          'ТИР B',
         'draft.tier1range':     '1000–1400 MMR',
@@ -167,15 +167,15 @@ const LANGS = {
         'draft.teams_title':    'Команды клан-вара',
 
         // Admin
-        'admin.title':      '⚙ Панель управления',
-        'admin.login':      '🔐 Вход в панель',
+        'admin.title':      'Панель управления',
+        'admin.login':      'Вход в панель',
         'admin.loginBtn':   'Войти',
         'admin.logout':     'Выйти',
-        'admin.tab.players':   '👤 Игроки',
-        'admin.tab.teams':     '🛡 Команды',
-        'admin.tab.clanwars':  '⚔ Клан-вары',
-        'admin.tab.portraits': '🖼 Портреты',
-        'admin.tab.tools':     '🔧 Инструменты',
+        'admin.tab.players':   'Игроки',
+        'admin.tab.teams':     'Команды',
+        'admin.tab.clanwars':  'Клан-вары',
+        'admin.tab.portraits': 'Портреты',
+        'admin.tab.tools':     'Инструменты',
         'admin.addPlayer':  'Добавить игрока',
         'admin.addTeam':    'Создать команду',
         'admin.search_w3c': 'Поиск W3Champions',
@@ -186,7 +186,7 @@ const LANGS = {
         'admin.cancel':     'Отмена',
         'admin.delete':     'Удалить',
         'admin.assign_team':'Команда',
-        'admin.recalc':     '🔄 Пересчитать статистику',
+        'admin.recalc':     'Пересчитать статистику',
         'admin.recalcing':  'Пересчёт...',
         'admin.login_label':'Логин',
         'admin.pass_label': 'Пароль',
@@ -215,20 +215,20 @@ const LANGS = {
 
     en: {
         // Nav
-        'nav.home':       '🏠 Home',
+        'nav.home':       'Home',
         'nav.standings':  'Standings',
         'nav.teams':      'Teams',
         'nav.clanwar':    'Clan Wars',
-        'nav.profile':    '👤 Profile',
+        'nav.profile':    'Profile',
         'nav.admin':      'Admin',
         'nav.lang':       'RU',
 
         // Hero
-        'hero.title':     '⚔ BNL LEAGUE ⚔',
+        'hero.title':     'BNL LEAGUE',
         'hero.subtitle':  'Breaking New Limits · Warcraft III',
         'hero.desc1':     'A Warcraft 3: Reforged league for dedicated players. Compete in ladder, team battles, and clan wars.',
         'hero.desc2':     'Points are calculated automatically from W3Champions data based on MMR difference. Achievements grant bonus points.',
-        'hero.stage':     '📅 Season 2 starts May 3, 2026',
+        'hero.stage':     'Season 2 starts May 3, 2026',
         'hero.points_title': 'Points System',
         'hero.win_strong':  '+70 pts — win vs stronger (+20 MMR)',
         'hero.win_equal':   '+50 pts — win vs equal (±20 MMR)',
@@ -238,7 +238,7 @@ const LANGS = {
         'hero.loss_strong': '−20 pts — loss to stronger',
 
         // Standings
-        'standings.title':   '🏆 Standings',
+        'standings.title':   'Standings',
         'standings.rank':    '#',
         'standings.player':  'Player',
         'standings.race':    'Race',
@@ -248,8 +248,8 @@ const LANGS = {
         'standings.points':  'Points',
         'standings.empty':        'No data',
         'standings.loading':      'Loading standings...',
-        'standings.mode.players': '👤 Players',
-        'standings.mode.teams':   '🛡 Teams',
+        'standings.mode.players': 'Players',
+        'standings.mode.teams':   'Teams',
         'standings.teams.played': 'P',
         'standings.teams.cwwins': 'CW W',
         'standings.teams.cwlose': 'CW L',
@@ -262,14 +262,14 @@ const LANGS = {
         'race.8':     'Undead',
 
         // Teams
-        'teams.title':    '🛡 Teams',
+        'teams.title':    'Teams',
         'teams.captain':  'Captain',
         'teams.empty':    'No teams yet',
         'teams.loading':  'Loading teams...',
         'teams.players_count': 'players',
 
         // ClanWar
-        'cw.title':     '⚔ Clan Wars',
+        'cw.title':     'Clan Wars',
         'cw.all':       'All',
         'cw.upcoming':  'Upcoming',
         'cw.ongoing':   'Ongoing',
@@ -283,7 +283,7 @@ const LANGS = {
         'cw.status.completed': 'Completed',
 
         // Profile / Auth
-        'profile.title':          '👤 Profile',
+        'profile.title':          'Profile',
         'profile.login':          'Login',
         'profile.register':       'Register',
         'profile.username':       'Username',
@@ -312,10 +312,10 @@ const LANGS = {
 
         // Password reset
         'profile.forgotLink':       'Forgot password?',
-        'profile.forgotTitle':      '🔑 Password Recovery',
+        'profile.forgotTitle':      'Password Recovery',
         'profile.forgotBtn':        'Request code',
         'profile.forgotHint':       'Enter your username. The reset code will be available to the admin — contact them on Discord.',
-        'profile.resetTitle':       '🔑 New Password',
+        'profile.resetTitle':       'New Password',
         'profile.resetBtn':         'Change password',
         'profile.resetCodePlaceholder': 'Reset code',
         'profile.newPassword':      'New password',
@@ -327,7 +327,7 @@ const LANGS = {
         'profile.haveCode':         'I already have a code',
 
         // Draft availability (profile toggle)
-        'profile.draftTitle':   '⚔ Draft',
+        'profile.draftTitle':   'Draft',
         'profile.draftDesc':    'Available for draft / Доступен для драфта',
         'profile.draftOn':      'Available',
         'profile.draftOff':     'Unavailable',
@@ -335,7 +335,7 @@ const LANGS = {
         'profile.draftHint':    'Enable so captains can pick you during a clan war draft',
 
         // Draft pool (standings tab)
-        'standings.mode.draftpool': '⚔ Draft Pool',
+        'standings.mode.draftpool': 'Draft Pool',
         'standings.draftpool.title': 'Players in Draft Pool',
         'standings.draftpool.empty': 'No players available for draft',
         'standings.draftpool.tier_s': 'TIER S',
@@ -348,7 +348,7 @@ const LANGS = {
         'standings.draftpool.total': 'Total in pool',
 
         // Draft page
-        'draft.title':          '⚔ Draft',
+        'draft.title':          'Draft',
         'draft.back':           '← Back',
         'draft.tier1':          'TIER B',
         'draft.tier1range':     '1000–1400 MMR',
@@ -377,15 +377,15 @@ const LANGS = {
         'draft.teams_title':    'Clan war teams',
 
         // Admin
-        'admin.title':      '⚙ Admin Panel',
-        'admin.login':      '🔐 Admin Login',
+        'admin.title':      'Admin Panel',
+        'admin.login':      'Admin Login',
         'admin.loginBtn':   'Sign in',
         'admin.logout':     'Logout',
-        'admin.tab.players':   '👤 Players',
-        'admin.tab.teams':     '🛡 Teams',
-        'admin.tab.clanwars':  '⚔ Clan Wars',
-        'admin.tab.portraits': '🖼 Portraits',
-        'admin.tab.tools':     '🔧 Tools',
+        'admin.tab.players':   'Players',
+        'admin.tab.teams':     'Teams',
+        'admin.tab.clanwars':  'Clan Wars',
+        'admin.tab.portraits': 'Portraits',
+        'admin.tab.tools':     'Tools',
         'admin.addPlayer':  'Add player',
         'admin.addTeam':    'Create team',
         'admin.search_w3c': 'Search W3Champions',
@@ -396,7 +396,7 @@ const LANGS = {
         'admin.cancel':     'Cancel',
         'admin.delete':     'Delete',
         'admin.assign_team':'Team',
-        'admin.recalc':     '🔄 Recalculate stats',
+        'admin.recalc':     'Recalculate stats',
         'admin.recalcing':  'Recalculating...',
         'admin.login_label':'Login',
         'admin.pass_label': 'Password',

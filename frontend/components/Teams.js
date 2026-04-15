@@ -270,7 +270,7 @@ function Teams({ onOpenDraft }) {
 
     return (
         <div className="animate-fade-in">
-            <h2 style={{ marginBottom: 'var(--spacing-xl)' }}>{t('teams.title')}</h2>
+            <div className="wow-section-title">{t('teams.title')}</div>
             {teams.length === 0 ? (
                 <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>{t('teams.empty')}</p>
             ) : (
