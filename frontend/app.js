@@ -15,39 +15,32 @@ function getTabFromHash() {
     return TABS.find(t => t.id === hash) ? hash : 'home';
 }
 
-// ── Главная страница (Hero + описание) ────────────────────────────────────────
+// ── Главная страница ──────────────────────────────────────────────────────────
 function HomePage() {
-    useLang(); // подписка на смену языка
+    useLang();
     return (
-        <div className="animate-fade-in">
-            {/* Как работает лига */}
-            <div className="card-elevated" style={{ padding: 'var(--spacing-xxl)' }}>
-                <h3 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-lg)' }}>
-                    ⚙ {t('hero.how_title')}
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--spacing-lg)' }}>
-                    {[
-                        { titleKey: 'hero.how1_title', descKey: 'hero.how1_desc', icon: '👤' },
-                        { titleKey: 'hero.how2_title', descKey: 'hero.how2_desc', icon: '🔔' },
-                        { titleKey: 'hero.how3_title', descKey: 'hero.how3_desc', icon: '⚔' },
-                    ].map(item => (
-                        <div key={item.titleKey} style={{
-                            background: 'rgba(0,0,0,0.25)',
-                            borderRadius: 'var(--radius-sm)',
-                            padding: 'var(--spacing-lg)',
-                        }}>
-                            <div style={{ color: 'var(--color-accent-secondary)', fontWeight: 700, marginBottom: 'var(--spacing-sm)', fontSize: '0.95em' }}>
-                                {item.icon} {t(item.titleKey)}
-                            </div>
-                            <div style={{ color: 'var(--color-text-secondary)', lineHeight: 1.7, fontSize: '0.88em' }}>
-                                {t(item.descKey)}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <div style={{ marginTop: 'var(--spacing-xl)', color: 'var(--color-accent-secondary)', fontWeight: 700, fontSize: '1.05em' }}>
-                    {t('hero.stage')}
-                </div>
+        <div className="animate-fade-in" style={{ textAlign: 'center', padding: '10px 0 30px' }}>
+
+            {/* Заголовок в стиле WoW */}
+            <div className="wow-section-title" style={{ fontSize: 26, marginBottom: 6 }}>
+                {t('hero.how_title')}
+            </div>
+            <div style={{ color: '#a87a48', fontSize: 13, marginBottom: 28, letterSpacing: '0.05em' }}>
+                {t('hero.stage')}
+            </div>
+
+            {/* Три карточки */}
+            <div className="bnl-info-grid">
+                {[
+                    { titleKey: 'hero.how1_title', descKey: 'hero.how1_desc' },
+                    { titleKey: 'hero.how2_title', descKey: 'hero.how2_desc' },
+                    { titleKey: 'hero.how3_title', descKey: 'hero.how3_desc' },
+                ].map(item => (
+                    <div key={item.titleKey} className="bnl-info-card">
+                        <div className="bnl-info-card-title">{t(item.titleKey)}</div>
+                        <div className="bnl-info-card-text">{t(item.descKey)}</div>
+                    </div>
+                ))}
             </div>
         </div>
     );

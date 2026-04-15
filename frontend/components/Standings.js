@@ -64,7 +64,7 @@ function TeamStandings() {
     // Sort: clan war wins desc, then match wins desc
     .sort((a, b) => b.wins - a.wins || b.matchWins - a.matchWins);
 
-    const rankIcon = i => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1;
+    const rankIcon = i => i === 0 ? 'I' : i === 1 ? 'II' : i === 2 ? 'III' : i + 1;
     const rankClass = i => i === 0 ? 'top-1' : i === 1 ? 'top-2' : i === 2 ? 'top-3' : '';
 
     return (
@@ -312,35 +312,46 @@ function Standings() {
     }).sort((a, b) => b.points - a.points);
 
     const rankClass = i => i === 0 ? 'top-1' : i === 1 ? 'top-2' : i === 2 ? 'top-3' : '';
-    const rankIcon  = i => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1;
+    const rankIcon  = i => i === 0 ? 'I' : i === 1 ? 'II' : i === 2 ? 'III' : i + 1;
 
     return (
         <div className="animate-fade-in">
-            <div className="standings-header">
-                <h2 style={{ margin: 0 }}>{t('standings.title')}</h2>
+            {/* WoW-style centered title */}
+            <div className="wow-section-title">{t('standings.title')}</div>
 
+            {/* Single row: race filters (left) + mode buttons (right) */}
+            <div className="wow-filter-bar" style={{ justifyContent: 'space-between' }}>
+                {/* Race filter — only visible in players mode */}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {mode === 'players' && RACE_KEYS.map(r => (
+                        <button
+                            key={String(r)}
+                            className={`wow-btn${raceFilter === r ? ' active' : ''}`}
+                            onClick={() => setRaceFilter(r)}
+                        >
+                            {r === null ? t('race.all') : t(`race.${r}`)}
+                        </button>
+                    ))}
+                </div>
                 {/* Mode toggle */}
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     <button
-                        className={`nav-btn${mode === 'players' ? ' active' : ''}`}
-                        style={{ padding: '8px 16px', fontSize: '0.85em' }}
+                        className={`wow-btn${mode === 'players' ? ' active' : ''}`}
                         onClick={() => setMode('players')}
                     >
-                        <span>👤 Игроки</span>
+                        Игроки
                     </button>
                     <button
-                        className={`nav-btn${mode === 'teams' ? ' active' : ''}`}
-                        style={{ padding: '8px 16px', fontSize: '0.85em' }}
+                        className={`wow-btn${mode === 'teams' ? ' active' : ''}`}
                         onClick={() => setMode('teams')}
                     >
-                        <span>🛡 Команды</span>
+                        Команды
                     </button>
                     <button
-                        className={`nav-btn${mode === 'draftpool' ? ' active' : ''}`}
-                        style={{ padding: '8px 16px', fontSize: '0.85em' }}
+                        className={`wow-btn${mode === 'draftpool' ? ' active' : ''}`}
                         onClick={() => setMode('draftpool')}
                     >
-                        <span>{t('standings.mode.draftpool')}</span>
+                        {t('standings.mode.draftpool')}
                     </button>
                 </div>
             </div>
@@ -351,19 +362,6 @@ function Standings() {
                 <DraftPoolStandings />
             ) : (
                 <>
-                    {/* Race filter */}
-                    <div className="race-filter-bar" style={{ marginBottom: 'var(--spacing-lg)' }}>
-                        {RACE_KEYS.map(r => (
-                            <button
-                                key={String(r)}
-                                className={`nav-btn${raceFilter === r ? ' active' : ''}`}
-                                style={{ padding: '8px 16px', fontSize: '0.85em' }}
-                                onClick={() => setRaceFilter(r)}
-                            >
-                                <span>{r === null ? t('race.all') : t(`race.${r}`)}</span>
-                            </button>
-                        ))}
-                    </div>
 
                     {loading ? (
                         <div>
