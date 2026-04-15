@@ -117,6 +117,7 @@ a:hover, button:hover {
   width: 610px;
   height: 172px;
   margin: 0 auto;
+  mix-blend-mode: screen;
 }
 .logo a:hover { filter: none !important; }
 .logo p {
@@ -170,7 +171,15 @@ a:hover, button:hover {
   position: relative;
 }
 .progress-bar img { height: 38px; }
-/* progress-bar:after removed — was duplicating the gold ornaments from progress-button.png */
+.progress-bar:after {
+  content: "";
+  background: url(../images/wow/progress-bg.png) no-repeat;
+  width: 62px;
+  height: 38px;
+  position: absolute;
+  margin-top: 5px;
+  margin-left: -35px;
+}
 .progress-button {
   background: url(../images/wow/progress-button.png) no-repeat center;
   width: 396px;
@@ -180,11 +189,9 @@ a:hover, button:hover {
   margin-left: -198px;
   margin-top: -12px;
   z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   cursor: pointer;
   text-decoration: none;
+  display: block;
 }
 
 /* ── Content area ───────────────────────────────────────────────────────── */
@@ -311,26 +318,30 @@ a:hover, button:hover {
 /* Nav hidden (now static HTML in WoW template) */
 #bnl-content .nav { display: none !important; }
 
-/* Page section titles — WoW style */
+/* Page section titles — WoW button badge style */
 .wow-section-title {
   font-family: 'Elan', serif;
-  color: #e08422;
+  color: #ffd85b;
   font-size: 22px;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 18px rgba(255,216,91,0.55), 0 2px 6px rgba(0,0,0,0.85);
   text-align: center;
-  text-shadow: 0 0 15px rgba(224,132,34,0.4);
-  letter-spacing: 0.08em;
-  margin-bottom: 18px;
-  padding-bottom: 8px;
+  display: table;
+  margin: 0 auto 28px;
+  padding: 13px 52px;
   position: relative;
+  background: radial-gradient(ellipse at center, rgba(38,19,4,0.96) 0%, rgba(14,7,1,0.93) 100%);
+  border: 1px solid rgba(180,120,25,0.85);
+  border-radius: 3px;
+  box-shadow:
+    0 0 0 3px rgba(10,5,1,0.88),
+    0 0 0 4px rgba(130,85,18,0.38),
+    inset 0 1px 0 rgba(255,200,70,0.12),
+    inset 0 -1px 0 rgba(255,200,70,0.12),
+    0 6px 24px rgba(0,0,0,0.6);
 }
-.wow-section-title:after {
-  content: '';
-  display: block;
-  width: 200px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #5a3a18, transparent);
-  margin: 8px auto 0;
-}
+.wow-section-title::before,
+.wow-section-title::after { display: none; }
 
 /* Filter buttons — WoW style */
 .wow-filter-bar {
