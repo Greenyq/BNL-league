@@ -35,13 +35,15 @@ a:hover, button:hover {
 
 .top-bg {
   background-image:
-    linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.3) 200px, transparent 420px),
+    linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.25) 50px, transparent 85px),
     url(../images/wow/top-fon-bg.jpg);
   background-position: center top, center top;
   background-repeat: no-repeat, no-repeat;
+  background-size: auto, 100% auto;
 }
 .bottom-bg {
   background: url(../images/wow/bottom-fon-bg.jpg) center bottom no-repeat;
+  background-size: 100% auto;
 }
 .wrapper {
   width: 1170px;
@@ -198,7 +200,24 @@ a:hover, button:hover {
   z-index: 10;
   cursor: pointer;
   text-decoration: none;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Elan';
+  color: #ffd85b;
+  text-shadow: 0 2px 3px rgba(0,0,0,0.8);
+  letter-spacing: 0.08em;
+}
+.progress-button span {
+  font-size: 18px;
+  text-transform: uppercase;
+}
+.progress-button small {
+  font-size: 11px;
+  color: #d0945e;
+  margin-top: 2px;
+  letter-spacing: 0.04em;
 }
 
 /* ── Content area ───────────────────────────────────────────────────────── */
@@ -397,4 +416,58 @@ a:hover, button:hover {
   color: #c8a870;
   font-size: 13px;
   line-height: 1.6;
+}
+
+/* Play block — icon grid (WoW style) */
+.play-block {
+  padding: 35px 0 30px;
+}
+.play-block h1 {
+  text-align: center;
+  font-size: 26px;
+  font-family: 'Elan';
+  color: #e08422;
+  padding-bottom: 8px;
+  margin-bottom: 0;
+}
+.play-block .play-subtitle {
+  text-align: center;
+  color: #a87a48;
+  font-size: 13px;
+  margin-bottom: 30px;
+  letter-spacing: 0.05em;
+}
+.play-block ul {
+  text-align: center;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.play-block ul li {
+  display: inline-block;
+  text-align: center;
+  width: 200px;
+  vertical-align: top;
+  margin: 0 15px 20px;
+}
+.play-block ul li img {
+  background: #281a18;
+  border-radius: 50%;
+  padding: 4px;
+  width: 95px;
+  height: 95px;
+}
+.play-block ul li p {
+  color: #e08422;
+  font-size: 14px;
+  font-family: 'Elan';
+  margin-top: 10px;
+  line-height: 18px;
+  margin-bottom: 6px;
+}
+.play-block ul li .step-desc {
+  color: #a87a48;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: bold;
 }
