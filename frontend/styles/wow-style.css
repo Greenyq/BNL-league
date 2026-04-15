@@ -117,7 +117,6 @@ a:hover, button:hover {
   width: 610px;
   height: 172px;
   margin: 0 auto;
-  mix-blend-mode: screen;
 }
 .logo a:hover { filter: none !important; }
 .logo p {
@@ -199,7 +198,7 @@ a:hover, button:hover {
 .content {
   min-height: 800px;
   position: relative;
-  padding: 90px 25px 40px;
+  padding: 30px 25px 40px;
 }
 
 /* ── Footer ─────────────────────────────────────────────────────────────── */
@@ -318,30 +317,34 @@ a:hover, button:hover {
 /* Nav hidden (now static HTML in WoW template) */
 #bnl-content .nav { display: none !important; }
 
-/* Page section titles — WoW button badge style */
+/* Page section titles — WoW banner style */
 .wow-section-title {
   font-family: 'Elan', serif;
-  color: #ffd85b;
-  font-size: 22px;
+  color: #c89b3c;
+  font-size: 24px;
   letter-spacing: 0.12em;
-  text-shadow: 0 0 18px rgba(255,216,91,0.55), 0 2px 6px rgba(0,0,0,0.85);
+  text-shadow: 0 0 14px rgba(200,155,60,0.5), 0 2px 4px rgba(0,0,0,0.9);
   text-align: center;
-  display: table;
-  margin: 0 auto 28px;
-  padding: 13px 52px;
+  display: block;
+  margin-bottom: 22px;
+  padding: 10px 0;
   position: relative;
-  background: radial-gradient(ellipse at center, rgba(38,19,4,0.96) 0%, rgba(14,7,1,0.93) 100%);
-  border: 1px solid rgba(180,120,25,0.85);
-  border-radius: 3px;
-  box-shadow:
-    0 0 0 3px rgba(10,5,1,0.88),
-    0 0 0 4px rgba(130,85,18,0.38),
-    inset 0 1px 0 rgba(255,200,70,0.12),
-    inset 0 -1px 0 rgba(255,200,70,0.12),
-    0 6px 24px rgba(0,0,0,0.6);
+  background: linear-gradient(90deg, transparent, rgba(14,7,1,0.78) 18%, rgba(14,7,1,0.78) 82%, transparent);
 }
-.wow-section-title::before,
-.wow-section-title::after { display: none; }
+.wow-section-title::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(180,120,25,0.65) 18%, rgba(180,120,25,0.65) 82%, transparent);
+}
+.wow-section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(180,120,25,0.65) 18%, rgba(180,120,25,0.65) 82%, transparent);
+}
 
 /* Filter buttons — WoW style */
 .wow-filter-bar {
