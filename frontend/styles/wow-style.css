@@ -1,0 +1,295 @@
+/* ── WoW Warlords Template — BNL League adaptation ─────────────────────────
+   Image paths updated: ../images/wow/ (served from /images/wow/ by Express)
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@font-face {
+  font-family: 'Elan';
+  src: url(../fonts/elenbold.ttf);
+}
+
+html {
+  width: 1170px;
+  margin: 0 auto !important;
+  position: relative;
+}
+
+body {
+  width: 100%;
+  background: url(../images/wow/repeat-fon-bg.jpg) center repeat-y;
+  background-color: #17120c;
+}
+
+a, button {
+  transition: all 0.5s ease;
+  color: #eedda1;
+  text-decoration: none;
+}
+a:hover, button:hover {
+  filter: brightness(140%);
+}
+
+.top-bg {
+  background: url(../images/wow/top-fon-bg.jpg) center top no-repeat;
+}
+.bottom-bg {
+  background: url(../images/wow/bottom-fon-bg.jpg) center bottom no-repeat;
+}
+.wrapper {
+  width: 1170px;
+  margin: 0 auto;
+  font-family: 'PT Sans', sans-serif;
+  font-size: 12px;
+  color: #a87a48;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.header {
+  height: 600px;
+}
+.countries-lang {
+  float: right;
+  width: 120px;
+  text-align: center;
+  margin: 12px 6px 0 0;
+}
+.countries-lang a { opacity: 0.5; }
+.countries-lang a:hover { opacity: 1 !important; }
+.countries-lang a:hover img { border: 3px solid #776343; }
+.countries-lang .active { opacity: 1 !important; }
+.countries-lang .active img { border: 3px solid #776343; }
+.countries-lang img {
+  height: 16px;
+  margin: 0 3px;
+  border-radius: 3px;
+  border: 3px solid rgba(0,0,0,0);
+}
+
+.soc-block {
+  float: left;
+  width: 110px;
+  text-align: center;
+  margin-top: 12px;
+  margin-left: 12px;
+}
+.soc-block img { margin: 0 4px; }
+
+.menu {
+  width: 840px;
+  line-height: 67px;
+  margin-left: 184px;
+}
+.menu li {
+  display: inline-block;
+  padding: 0 15px 0 12px;
+}
+.menu a {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 14px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 2px rgba(0,0,0,0.8);
+  color: #eedda1;
+}
+.menu a:hover, .menu a.nav-active {
+  color: #ffd85b;
+  filter: none;
+}
+
+.login {
+  float: right;
+  margin-right: 45px;
+}
+.login a {
+  background: url(../images/wow/login-button.png) center 17px no-repeat;
+  width: 92px;
+  display: block;
+  padding-right: 26px;
+  text-align: right;
+  color: #ffc698;
+}
+
+.logo {
+  padding-top: 90px;
+  text-align: center;
+}
+.logo a {
+  display: block;
+  background: url(../images/wow/logo.jpg) no-repeat center;
+  width: 610px;
+  height: 172px;
+  margin: 0 auto;
+}
+.logo a:hover { filter: none !important; }
+.logo p {
+  color: #c89b3c;
+  font-size: 22px;
+  font-family: 'Elan';
+  padding: 7px 0;
+  position: relative;
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 20px rgba(200,155,60,0.6);
+}
+.logo p:before {
+  content: '';
+  background: url(../images/wow/logo-border.png) no-repeat;
+  height: 1px;
+  width: 313px;
+  position: absolute;
+  top: 0; left: 50%;
+  margin-left: -162px;
+}
+.logo p:after {
+  content: '';
+  background: url(../images/wow/logo-border.png) no-repeat;
+  height: 1px;
+  width: 313px;
+  position: absolute;
+  bottom: 0; left: 50%;
+  margin-left: -162px;
+}
+
+.online-block {
+  text-align: center;
+  color: #c89b3c;
+  font-size: 48px;
+  font-family: 'Elan';
+  margin-top: 50px;
+  text-shadow: 0 0 15px rgba(200,155,60,0.5);
+}
+.online-block p {
+  color: #83604a;
+  font-size: 12px;
+  margin-bottom: 4px;
+  letter-spacing: 0.1em;
+}
+.progress-bar {
+  height: 38px;
+  width: 300px;
+  margin: 0 auto;
+  margin-top: 8px;
+  text-align: left;
+  position: relative;
+}
+.progress-bar img { height: 38px; }
+.progress-bar:after {
+  content: "";
+  background: url(../images/wow/progress-bg.png) no-repeat;
+  width: 62px;
+  height: 38px;
+  position: absolute;
+  margin-top: 5px;
+  margin-left: -35px;
+}
+.progress-button {
+  background: url(../images/wow/progress-button.png) no-repeat;
+  width: 396px;
+  height: 90px;
+  position: absolute;
+  left: 50%;
+  margin-left: -198px;
+  margin-top: -12px;
+  z-index: 10;
+}
+
+/* ── Content area ───────────────────────────────────────────────────────── */
+.container { width: 100%; }
+.content {
+  min-height: 800px;
+  position: relative;
+  padding: 20px 25px 40px;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.footer {
+  height: 230px;
+  padding-top: 35px;
+  padding-left: 20px;
+}
+.footer-img {
+  float: right;
+  margin-top: 10px;
+}
+.footer-img span {
+  display: block;
+  background: url(../images/wow/footer-img.png) no-repeat;
+  width: 280px;
+  height: 143px;
+  opacity: 0.5;
+}
+.footer-menu { margin-top: 10px; }
+.footer-menu .footer-logo {
+  float: left;
+  margin-right: 50px;
+}
+.footer-menu .footer-logo a {
+  display: block;
+  background: url(../images/wow/footer-logo.png) no-repeat;
+  width: 131px;
+  height: 59px;
+}
+.footer-menu ul { padding-top: 20px; }
+.footer-menu ul li {
+  display: inline-block;
+  margin: 0 12px;
+}
+.footer-menu ul li a {
+  color: #ffa130;
+  text-transform: uppercase;
+  font-family: 'Elan';
+}
+.footer-menu ul li a:hover { color: #ffe6c9; }
+
+.copy { margin-top: 70px; }
+.copyright {
+  width: 280px;
+  display: inline-block;
+  font-size: 14px;
+  color: #8e6532;
+}
+.paymant {
+  display: inline-block;
+  margin-left: 50px;
+  margin-right: 10px;
+}
+.footer-banner { display: inline-block; }
+.footer-banner a {
+  display: inline-block;
+  background: url(../images/wow/footer-banner.png) no-repeat;
+  width: 88px;
+  height: 31px;
+  margin-left: 22px;
+}
+
+/* ── BNL content overrides — make cards blend with WoW dark background ─── */
+#bnl-content {
+  /* Transparent so WoW background shows through */
+  background: transparent !important;
+}
+#bnl-content .card-elevated,
+#bnl-content .card {
+  background: rgba(26, 15, 5, 0.88) !important;
+  border: 1px solid #3d2510 !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
+}
+#bnl-content table th {
+  background: rgba(40, 20, 5, 0.9) !important;
+}
+#bnl-content .nav {
+  background: rgba(20, 12, 4, 0.85) !important;
+  border-bottom: 1px solid #3d2510 !important;
+}
+#bnl-content .nav-btn {
+  color: #eedda1 !important;
+}
+#bnl-content .nav-btn.active,
+#bnl-content .nav-btn:hover {
+  color: #ffd85b !important;
+  background: rgba(200,155,60,0.15) !important;
+}
+#bnl-content h2, #bnl-content h3 {
+  font-family: 'Elan', serif !important;
+  color: #e08422 !important;
+}
+#bnl-content .header {
+  /* Override main.css header — hide the React-rendered header bar */
+  display: none !important;
+}
