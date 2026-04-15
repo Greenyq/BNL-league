@@ -86,60 +86,25 @@ function App() {
 
     const toggleLang = () => setLang(getLang() === 'ru' ? 'en' : 'ru');
 
+    // Header and nav are now in the WoW template HTML (index.html).
+    // React renders only the content area.
     return (
-        <div>
-            {/* Header */}
-            <div className="header">
-                <div className="header-content">
-                    <h1 className="league-title">{t('hero.title')}</h1>
-                    <p style={{ color: 'var(--color-text-muted)', marginTop: 8 }}>
-                        {t('hero.subtitle')}
-                    </p>
-                </div>
-            </div>
-
-            {/* Nav */}
-            <nav className="nav">
-                <div className="nav-container">
-                    {TABS.map(tab_item => (
-                        <button
-                            key={tab_item.id}
-                            className={`nav-btn${tab === tab_item.id ? ' active' : ''}`}
-                            onClick={() => navigate(tab_item.id)}
-                        >
-                            <span>{t(tab_item.labelKey)}</span>
-                        </button>
-                    ))}
-                    {/* Переключатель языка */}
-                    <button
-                        className="nav-btn"
-                        onClick={toggleLang}
-                        style={{ marginLeft: 'var(--spacing-lg)', minWidth: 48 }}
-                        title="Switch language"
-                    >
-                        <span>{t('nav.lang')}</span>
-                    </button>
-                </div>
-            </nav>
-
-            {/* Content */}
-            <div className="app">
-                {tab === 'home'      && <HomePage />}
-                {tab === 'standings' && <Standings />}
-                {tab === 'teams'     && (
-                    recruitTarget
-                        ? <TeamRecruitView
-                            teamId={recruitTarget.teamId}
-                            teamName={recruitTarget.teamName}
-                            clanWarId={recruitTarget.clanWarId}
-                            onBack={closeDraft}
-                          />
-                        : <Teams onOpenDraft={openDraft} />
-                )}
-                {tab === 'clanwar'   && <ClanWar />}
-                {tab === 'profile'   && <Profile />}
-                {tab === 'admin'     && <Admin />}
-            </div>
+        <div className="app">
+            {tab === 'home'      && <HomePage />}
+            {tab === 'standings' && <Standings />}
+            {tab === 'teams'     && (
+                recruitTarget
+                    ? <TeamRecruitView
+                        teamId={recruitTarget.teamId}
+                        teamName={recruitTarget.teamName}
+                        clanWarId={recruitTarget.clanWarId}
+                        onBack={closeDraft}
+                      />
+                    : <Teams onOpenDraft={openDraft} />
+            )}
+            {tab === 'clanwar'   && <ClanWar />}
+            {tab === 'profile'   && <Profile />}
+            {tab === 'admin'     && <Admin />}
         </div>
     );
 }
