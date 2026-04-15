@@ -18,29 +18,26 @@ function getTabFromHash() {
 // ── Главная страница ──────────────────────────────────────────────────────────
 function HomePage() {
     useLang();
+    var steps = [
+        { titleKey: 'hero.how1_title', descKey: 'hero.how1_desc', icon: '/images/wow/icon-3.png' },
+        { titleKey: 'hero.how2_title', descKey: 'hero.how2_desc', icon: '/images/wow/icon-2.png' },
+        { titleKey: 'hero.how3_title', descKey: 'hero.how3_desc', icon: '/images/wow/icon-7.png' },
+        { titleKey: 'hero.how4_title', descKey: 'hero.how4_desc', icon: '/images/wow/icon-6.png' },
+    ];
     return (
-        <div className="animate-fade-in" style={{ textAlign: 'center', padding: '10px 0 30px' }}>
-
-            {/* Заголовок в стиле WoW */}
-            <div className="wow-section-title" style={{ fontSize: 26, marginBottom: 6 }}>
-                {t('hero.how_title')}
-            </div>
-            <div style={{ color: '#a87a48', fontSize: 13, marginBottom: 28, letterSpacing: '0.05em' }}>
-                {t('hero.stage')}
-            </div>
-
-            {/* Три карточки */}
-            <div className="bnl-info-grid">
-                {[
-                    { titleKey: 'hero.how1_title', descKey: 'hero.how1_desc' },
-                    { titleKey: 'hero.how2_title', descKey: 'hero.how2_desc' },
-                    { titleKey: 'hero.how3_title', descKey: 'hero.how3_desc' },
-                ].map(item => (
-                    <div key={item.titleKey} className="bnl-info-card">
-                        <div className="bnl-info-card-title">{t(item.titleKey)}</div>
-                        <div className="bnl-info-card-text">{t(item.descKey)}</div>
-                    </div>
-                ))}
+        <div className="animate-fade-in">
+            <div className="play-block">
+                <ul>
+                    {steps.map(function(step) {
+                        return (
+                            <li key={step.titleKey}>
+                                <img src={step.icon} alt="" />
+                                <p>{t(step.titleKey)}</p>
+                                <div className="step-desc">{t(step.descKey)}</div>
+                            </li>
+                        );
+                    })}
+                </ul>
             </div>
         </div>
     );

@@ -61,7 +61,10 @@
             <div class="online-block">
                 <p>PLAYERS ONLINE</p>
                 <span id="player-count">—</span>
-                <a href="#profile" onclick="navigate('profile'); return false;" class="progress-button"></a>
+                <a href="#home" class="progress-button" id="start-game-btn">
+                    <span id="start-game-title">Как работает лига</span>
+                    <small id="start-game-sub">Сезон 2 стартует 3 мая 2026</small>
+                </a>
                 <div class="progress-bar">
                     <img id="progress-bar-fill" style="width: 50%;" src="/images/wow/progress-bar.png">
                 </div>
@@ -139,6 +142,10 @@
         });
         var loginLink = document.querySelector('.login a');
         if (loginLink) loginLink.textContent = lang === 'en' ? 'Login' : 'Войти';
+        var sgTitle = document.getElementById('start-game-title');
+        var sgSub = document.getElementById('start-game-sub');
+        if (sgTitle) sgTitle.textContent = lang === 'en' ? 'How the League Works' : 'Как работает лига';
+        if (sgSub) sgSub.textContent = lang === 'en' ? 'Season 2 starts May 3, 2026' : 'Сезон 2 стартует 3 мая 2026';
     }
 
     // ── Navigation helper (sync hash + highlight) ─────────────────────────
