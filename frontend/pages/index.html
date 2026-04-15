@@ -61,10 +61,7 @@
             <div class="online-block">
                 <p>PLAYERS ONLINE</p>
                 <span id="player-count">—</span>
-                <a href="#home" class="progress-button" id="start-game-btn">
-                    <span id="start-game-title">Как работает лига</span>
-                    <small id="start-game-sub">Сезон 2 стартует 3 мая 2026</small>
-                </a>
+                <div class="progress-button"></div>
                 <div class="progress-bar">
                     <img id="progress-bar-fill" style="width: 50%;" src="/images/wow/progress-bar.png">
                 </div>
@@ -75,6 +72,12 @@
         <!-- ── Content (React app mounts here) ─────────────────────────────── -->
         <div class="container">
             <main class="content">
+                <div class="start-game">
+                    <a href="#home">
+                        <span id="start-game-title">Как работает лига</span><br>
+                        <span id="start-game-sub">Сезон 2 стартует 3 мая 2026</span>
+                    </a>
+                </div>
                 <div id="bnl-content">
                     <div id="root"></div>
                 </div>
@@ -146,6 +149,12 @@
         var sgSub = document.getElementById('start-game-sub');
         if (sgTitle) sgTitle.textContent = lang === 'en' ? 'How the League Works' : 'Как работает лига';
         if (sgSub) sgSub.textContent = lang === 'en' ? 'Season 2 starts May 3, 2026' : 'Сезон 2 стартует 3 мая 2026';
+    }
+
+    // ── Players online label i18n ────────────────────────────────────────
+    function updateOnlineLabel(lang) {
+        var p = document.querySelector('.online-block > p');
+        if (p) p.textContent = 'PLAYERS ONLINE';
     }
 
     // ── Navigation helper (sync hash + highlight) ─────────────────────────
