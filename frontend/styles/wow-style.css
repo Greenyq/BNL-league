@@ -168,16 +168,14 @@ a:hover, button:hover {
   margin-top: 8px;
   text-align: left;
   position: relative;
+  background: linear-gradient(to bottom, #c73a3a 0%, #8b1a1a 100%);
+  overflow: hidden;
 }
-.progress-bar img { height: 38px; }
-.progress-bar:after {
-  content: "";
-  background: url(../images/wow/progress-bg.png) no-repeat;
-  width: 62px;
+.progress-bar img {
   height: 38px;
-  position: absolute;
-  top: 0;
-  margin-left: -35px;
+  display: block;
+  position: relative;
+  z-index: 1;
 }
 .progress-button {
   background: url(../images/wow/progress-button.png) no-repeat center;
@@ -317,7 +315,7 @@ a:hover, button:hover {
 /* Nav hidden (now static HTML in WoW template) */
 #bnl-content .nav { display: none !important; }
 
-/* Page section titles — inside the WoW progress-button shape */
+/* Page section titles */
 .wow-section-title {
   font-family: 'Elan', serif;
   color: #ffd85b;
@@ -325,17 +323,8 @@ a:hover, button:hover {
   letter-spacing: 0.12em;
   text-shadow: 0 0 14px rgba(255,216,91,0.55), 0 2px 5px rgba(0,0,0,0.9);
   text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 396px;
-  height: 90px;
   margin: 0 auto 20px;
-  background: url(../images/wow/progress-button.png) no-repeat center;
-  background-size: 100% 100%;
 }
-.wow-section-title::before,
-.wow-section-title::after { display: none; }
 
 /* Filter buttons — WoW style */
 .wow-filter-bar {
