@@ -1,7 +1,7 @@
 # BNL League — Battle Newbie League | Warcraft III
 
 Warcraft III league management system.
-Stack: **Node.js + Express + MongoDB + React (CDN) + Go microservice**
+Stack: **Node.js + Express + MongoDB + React (CDN)**
 
 ---
 
@@ -22,9 +22,6 @@ BNL-league/
 │   ├── styles/         main.css
 │   └── app.js          Hash-router + root render
 │
-├── services/
-│   └── stats-processor/  Go microservice — parallel stats (port 3001)
-│
 ├── docs/
 │   ├── api.md             All API endpoints
 │   └── clan-war-rules.md  Clan war format rules
@@ -38,33 +35,63 @@ BNL-league/
 
 ---
 
-## Quick Start
+## Local Development
+
+The current runnable app is:
+- `backend/` for the Express API
+- `frontend/` for the UI served by Express
+
+`frontend-new/` exists, but it is not the primary local-dev path yet.
+
+### Recommended: Docker Compose
 
 ```bash
 # 1. Copy and fill in environment variables
 cp .env.example .env
 
-# 2. Start all services
-docker-compose up -d
+# 2. Build images
+npm run build
 
-# 3. Open http://localhost:3000
+# 3. Start MongoDB + API in the background
+npm run up
+
+# 4. Open http://localhost:3000
 ```
 
-Or run locally without Docker:
+Useful commands:
 
 ```bash
-npm install
+npm run build   # docker compose build
+npm run up      # docker compose up -d
+npm run logs    # docker compose logs -f
+npm run down    # docker compose down
+```
+
+### Alternative: Run Node on the Host
+
+```bash
+cp .env.example .env
+npm ci
+
+# Start MongoDB separately, then run:
 MONGO_URL=mongodb://localhost:27017/gnl_league \
 ADMIN_LOGIN=admin ADMIN_PASSWORD=secret \
 node backend/server.js
 ```
 
-Go stats processor (optional, for parallel computation):
+If you want MongoDB in Docker but Node on the host:
 
 ```bash
-cd services/stats-processor
-go mod download
-MONGO_URL=mongodb://localhost:27017/gnl_league go run main.go
+docker run -d --name bnl-mongo -p 27017:27017 mongo:7.0
+npm ci
+npm run dev
+```
+
+If you change Docker-related source files and need a refreshed image:
+
+```bash
+npm run build
+npm run up
 ```
 
 ---
@@ -107,10 +134,14 @@ ADMIN_LOGIN=            # Required
 ADMIN_PASSWORD=         # Required
 MONGO_URL=mongodb://localhost:27017/gnl_league
 PORT=3000
-NODE_ENV=production
+NODE_ENV=development
 ALLOWED_ORIGINS=        # Comma-separated (empty = allow all, dev only)
-GO_WORKER_URL=http://localhost:3001
 ```
+
+## Notes
+
+- The repo contains a deferred Go stats processor under `services/stats-processor/`, but it is not part of the supported local-dev flow.
+- The local Docker setup now targets only MongoDB + the main Node/Express app.
 
 ---
 
