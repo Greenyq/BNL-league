@@ -2,7 +2,14 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=1170">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        /* Scale the whole page down on screens narrower than 1170px */
+        @media (max-width: 1170px) {
+            html { zoom: calc(100vw / 1170); min-width: 0; }
+            body { min-width: 0; }
+        }
+    </style>
     <title>BNL — Battle Newbie League | Warcraft 3</title>
     <link rel="icon" type="image/png" href="/images/favicon.png">
     <link href="https://fonts.googleapis.com/css?family=PT+Sans:400,700&subset=cyrillic" rel="stylesheet">
@@ -173,6 +180,9 @@
                 a.classList.remove('nav-active');
             }
         });
+        // Show start-game only on home page
+        var sg = document.querySelector('.start-game');
+        if (sg) sg.style.display = (hash === 'home' || hash === '') ? 'block' : 'none';
     }
 
     window.addEventListener('hashchange', updateNavHighlight);
