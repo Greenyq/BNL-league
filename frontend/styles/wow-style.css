@@ -136,6 +136,7 @@ a:hover, button:hover {
   width: 610px;
   height: 172px;
   margin: 0 auto;
+  filter: brightness(0.7);
 }
 .logo a:hover { filter: none !important; }
 .logo p {
