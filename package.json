@@ -6,6 +6,10 @@
   "scripts": {
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
+    "build": "docker compose build",
+    "up": "docker compose up -d",
+    "down": "docker compose down",
+    "logs": "docker compose logs -f",
     "frontend:dev": "cd frontend-new && npm run dev",
     "frontend:build": "cd frontend-new && npm run build"
   },
