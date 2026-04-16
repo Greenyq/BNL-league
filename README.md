@@ -58,6 +58,12 @@ npm run up
 # 4. Open http://localhost:3000
 ```
 
+With the current Compose setup, the API container bind-mounts the repo and runs `nodemon`.
+That means:
+- changes in `backend/` trigger an automatic server restart
+- changes in `frontend/` are served immediately without rebuilding the image
+- rebuild is only needed after dependency or Dockerfile changes
+
 Useful commands:
 
 ```bash
@@ -87,7 +93,7 @@ npm ci
 npm run dev
 ```
 
-If you change Docker-related source files and need a refreshed image:
+If you change dependencies or the Docker image itself and need a refreshed image:
 
 ```bash
 npm run build

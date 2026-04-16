@@ -60,4 +60,15 @@ async function searchPlayer(battleTag) {
     }
 }
 
-module.exports = { loadMatchDataForPlayer, fetchPlayerMmr, searchPlayer, STAGE1_START, STAGE1_END };
+// Autocomplete players by partial battletag/name.
+async function searchPlayers(query, { pageSize = 20 } = {}) {
+    try {
+        const url = `${W3C_BASE}/players/global-search?search=${encodeURIComponent(query)}&pageSize=${pageSize}`;
+        const { data } = await axios.get(url, { headers: HEADERS, timeout: 8000 });
+        return Array.isArray(data) ? data : [];
+    } catch (err) {
+        return [];
+    }
+}
+
+module.exports = { loadMatchDataForPlayer, fetchPlayerMmr, searchPlayer, searchPlayers, STAGE1_START, STAGE1_END };
