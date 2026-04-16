@@ -35,11 +35,9 @@ a:hover, button:hover {
 
 .top-bg {
   background: url(../images/wow/top-fon-bg.jpg) center top no-repeat;
-  background-size: cover;
 }
 .bottom-bg {
   background: url(../images/wow/bottom-fon-bg.jpg) center bottom no-repeat;
-  background-size: cover;
 }
 .wrapper {
   width: 1170px;
