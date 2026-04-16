@@ -8,20 +8,15 @@
 }
 
 html {
-  width: 100%;
-  min-width: 1170px;
+  width: 1170px;
   margin: 0 auto !important;
   position: relative;
-  overflow-x: hidden;
 }
 
 body {
   width: 100%;
-  min-width: 1170px;
   background: url(../images/wow/repeat-fon-bg.jpg) center repeat-y;
   background-color: #17120c;
-  background-size: 100% auto;
-  overflow-x: hidden;
 }
 
 a, button {
@@ -34,15 +29,10 @@ a:hover, button:hover {
 }
 
 .top-bg {
-  background-image:
-    linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.25) 50px, transparent 85px),
-    url(../images/wow/top-fon-bg.jpg);
-  background-position: center top, center top;
-  background-repeat: no-repeat, no-repeat;
+  background: url(../images/wow/top-fon-bg.jpg) center top no-repeat;
 }
 .bottom-bg {
   background: url(../images/wow/bottom-fon-bg.jpg) center bottom no-repeat;
-  background-size: 100% auto;
 }
 .wrapper {
   width: 1170px;
@@ -204,10 +194,10 @@ a:hover, button:hover {
 .content {
   min-height: 800px;
   position: relative;
-  padding: 0 25px 40px;
+  padding: 30px 25px 40px;
 }
 
-/* Start game button (text inside ornamental frame) */
+/* Start game button (text below ornamental frame) */
 .start-game {
   text-align: center;
   padding-top: 44px;
@@ -218,16 +208,17 @@ a:hover, button:hover {
   color: #d0945e;
   font-family: 'Elan';
   line-height: 22px;
+  text-decoration: none;
 }
 .start-game a span {
-  font-size: 24px;
+  font-size: 20px;
   color: #ffd85b;
   text-transform: uppercase;
 }
 #start-game-sub {
-  font-size: 12px;
+  font-size: 11px;
   color: #a87a48;
-  letter-spacing: 0.04em;
+  text-transform: none;
 }
 
 /* ── Footer ─────────────────────────────────────────────────────────────── */

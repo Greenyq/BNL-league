@@ -173,6 +173,9 @@
                 a.classList.remove('nav-active');
             }
         });
+        // Show start-game only on home page
+        var sg = document.querySelector('.start-game');
+        if (sg) sg.style.display = (hash === 'home' || hash === '') ? 'block' : 'none';
     }
 
     window.addEventListener('hashchange', updateNavHighlight);
