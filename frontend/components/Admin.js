@@ -62,30 +62,70 @@ function LoginForm({ onLogin }) {
 function PlayersTab({ players, teams, onRefresh, showMsg }) {
     useLang();
     // Форма добавления игрока
-    const [showForm,  setShowForm]  = React.useState(false);
-    const [w3cTag,    setW3cTag]    = React.useState('');
-    const [w3cResult, setW3cResult] = React.useState(null); // { found, name, battleTag, race, currentMmr }
-    const [w3cSearch, setW3cSearch] = React.useState(false);
-    const [teamId,    setTeamId]    = React.useState('');
-    const [saving,    setSaving]    = React.useState(false);
+    const [showForm,       setShowForm]       = React.useState(false);
+    const [w3cTag,         setW3cTag]         = React.useState('');
+    const [w3cResult,      setW3cResult]      = React.useState(null); // { found, name, battleTag, race, currentMmr }
+    const [w3cSearch,      setW3cSearch]      = React.useState(false);
+    const [w3cSuggesting,  setW3cSuggesting]  = React.useState(false);
+    const [w3cSuggestions, setW3cSuggestions] = React.useState([]);
+    const [teamId,         setTeamId]         = React.useState('');
+    const [saving,         setSaving]         = React.useState(false);
 
     // Редактирование (присвоение команды)
     const [editId,    setEditId]    = React.useState(null);
     const [editTeam,  setEditTeam]  = React.useState('');
 
-    const searchW3C = async () => {
-        if (!w3cTag.trim()) return;
+    React.useEffect(() => {
+        if (!showForm) return;
+
+        const query = w3cTag.trim();
+        const selectedTag = w3cResult?.found ? (w3cResult.battleTag || '').trim() : '';
+
+        if (selectedTag && query.toLowerCase() === selectedTag.toLowerCase()) {
+            setW3cSuggestions([]);
+            setW3cSuggesting(false);
+            return;
+        }
+
+        if (query.length < 3) {
+            setW3cSuggestions([]);
+            setW3cSuggesting(false);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setW3cSuggesting(true);
+            try {
+                const res  = await fetch(`/api/players/w3c/autocomplete/${encodeURIComponent(query)}`);
+                const data = await res.json();
+                if (res.ok && Array.isArray(data)) setW3cSuggestions(data);
+                else setW3cSuggestions([]);
+            } catch {
+                setW3cSuggestions([]);
+            }
+            setW3cSuggesting(false);
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [showForm, w3cTag, w3cResult]);
+
+    const searchW3C = async (battleTag) => {
+        const tag = (battleTag || w3cTag).trim();
+        if (!tag) return;
+
         setW3cSearch(true); setW3cResult(null);
+        setW3cSuggestions([]);
         try {
-            const res  = await fetch(`/api/players/w3c/search/${encodeURIComponent(w3cTag.trim())}`);
+            const res  = await fetch(`/api/players/w3c/search/${encodeURIComponent(tag)}`);
             const data = await res.json();
             if (res.ok && !data.error) {
                 // Пытаемся извлечь имя и MMR из ответа W3C
                 const solo = Array.isArray(data) ? data.find(m => m.gameMode === 1) : null;
+                setW3cTag(tag);
                 setW3cResult({
                     found: true,
-                    battleTag: w3cTag.trim(),
-                    name: w3cTag.trim().split('#')[0],
+                    battleTag: tag,
+                    name: tag.split('#')[0],
                     race: solo?.race ?? 0,
                     currentMmr: solo?.mmr ?? 0,
                 });
@@ -186,18 +226,41 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
             {showForm && (
                 <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-xl)' }}>
                     <h4 style={{ marginBottom: 'var(--spacing-md)' }}>{t('admin.addPlayer')}</h4>
-                    <div style={{ display: 'flex', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-md)', flexWrap: 'wrap' }}>
-                        <input
-                            type="text"
-                            placeholder="Player#1234"
-                            value={w3cTag}
-                            onChange={e => { setW3cTag(e.target.value); setW3cResult(null); }}
-                            style={{ flex: 1, minWidth: 200 }}
-                            onKeyDown={e => e.key === 'Enter' && searchW3C()}
-                        />
-                        <button className="btn btn-secondary" onClick={searchW3C} disabled={w3cSearch || !w3cTag.trim()}>
-                            {w3cSearch ? t('admin.searching') : t('admin.search_w3c')}
-                        </button>
+                    <div style={{ position: 'relative', zIndex: 20, marginBottom: 'var(--spacing-md)' }}>
+                        <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
+                            <input
+                                type="text"
+                                placeholder="Player#1234"
+                                value={w3cTag}
+                                onChange={e => { setW3cTag(e.target.value); setW3cResult(null); }}
+                                style={{ flex: 1, minWidth: 200 }}
+                                onKeyDown={e => e.key === 'Enter' && searchW3C()}
+                            />
+                            <button className="btn btn-secondary" onClick={searchW3C} disabled={w3cSearch || !w3cTag.trim()}>
+                                {w3cSearch ? t('admin.searching') : t('admin.search_w3c')}
+                            </button>
+                        </div>
+
+                        {(w3cSuggesting || w3cSuggestions.length > 0) && (
+                            <div style={{ position: 'absolute', left: 0, right: 0, top: 'calc(100% + 8px)', background: 'var(--color-bg-lighter)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 'var(--radius-md)', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.35)' }}>
+                                {w3cSuggesting && (
+                                    <div style={{ padding: '10px 14px', color: 'var(--color-text-muted)', fontSize: '0.9em' }}>
+                                        {t('admin.searching')}
+                                    </div>
+                                )}
+                                {!w3cSuggesting && w3cSuggestions.map(suggestion => (
+                                    <button
+                                        key={suggestion.battleTag}
+                                        type="button"
+                                        onClick={() => searchW3C(suggestion.battleTag)}
+                                        style={{ display: 'block', width: '100%', textAlign: 'left', background: 'transparent', color: 'var(--color-text-primary)', border: 'none', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 14px', cursor: 'pointer' }}
+                                    >
+                                        <strong>{suggestion.name || suggestion.battleTag.split('#')[0]}</strong>
+                                        <span style={{ color: 'var(--color-text-muted)', marginLeft: 8, fontSize: '0.9em' }}>{suggestion.battleTag}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {w3cResult && !w3cResult.found && (
@@ -228,7 +291,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                                 <button className="btn btn-primary" onClick={addPlayer} disabled={saving}>
                                     {saving ? '...' : t('admin.save')}
                                 </button>
-                                <button className="btn btn-secondary" onClick={() => { setShowForm(false); setW3cResult(null); setW3cTag(''); }}>
+                                <button className="btn btn-secondary" onClick={() => { setShowForm(false); setW3cResult(null); setW3cTag(''); setW3cSuggestions([]); }}>
                                     {t('admin.cancel')}
                                 </button>
                             </div>

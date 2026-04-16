@@ -5,7 +5,7 @@ const { Player, PlayerStats, PlayerCache, ManualPointsAdjustment,
         PlayerUser, PlayerSession, PasswordReset } = require('../models/Player');
 const { checkAuth } = require('../middleware/auth');
 const { recalculateAllPlayerStats } = require('../services/scoring');
-const { searchPlayer } = require('../services/w3champions');
+const { searchPlayer, searchPlayers } = require('../services/w3champions');
 
 const router = express.Router();
 
@@ -51,6 +51,21 @@ router.get('/', async (req, res) => {
 });
 
 // ── Public: W3C search (must be before /:battleTag) ──────────────────────────
+router.get('/w3c/autocomplete/:query', async (req, res) => {
+    try {
+        const query = decodeURIComponent(req.params.query || '').trim();
+        if (query.length < 3) return res.json([]);
+
+        const data = await searchPlayers(query, { pageSize: 10 });
+        res.json(data.map(p => ({
+            battleTag: p.battleTag,
+            name: p.name || (p.battleTag ? p.battleTag.split('#')[0] : ''),
+        })));
+    } catch (err) {
+        res.status(500).json({ error: 'W3Champions autocomplete failed' });
+    }
+});
+
 router.get('/w3c/search/:battleTag', async (req, res) => {
     try {
         const data = await searchPlayer(decodeURIComponent(req.params.battleTag));
@@ -348,8 +363,15 @@ router.use(checkAuth);
 
 router.post('/', async (req, res) => {
     try {
-        res.json(await Player.create(req.body));
+        const battleTag = req.body?.battleTag ? String(req.body.battleTag).trim() : '';
+        if (!battleTag) return res.status(400).json({ error: 'battleTag is required' });
+
+        const existing = await Player.findOne(playerQ(battleTag));
+        if (existing) return res.status(409).json({ error: 'Player already added' });
+
+        res.json(await Player.create({ ...req.body, battleTag }));
     } catch (err) {
+        if (err?.code === 11000) return res.status(409).json({ error: 'Player already added' });
         res.status(500).json({ error: err.message });
     }
 });
