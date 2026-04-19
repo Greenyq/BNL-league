@@ -462,6 +462,20 @@ router.delete('/admin/accounts/:id', async (req, res) => {
     }
 });
 
+// Admin: force-unlink a BattleTag from any/all accounts that still reference it
+router.delete('/admin/force-unlink-battletag/:battleTag', async (req, res) => {
+    try {
+        const battleTag = decodeURIComponent(req.params.battleTag);
+        const result = await PlayerUser.updateMany(
+            { linkedBattleTag: { $regex: new RegExp(`^${escapeRegex(battleTag)}$`, 'i') } },
+            { $set: { linkedBattleTag: null, updatedAt: new Date() } }
+        );
+        res.json({ success: true, modifiedCount: result.modifiedCount });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to force-unlink BattleTag' });
+    }
+});
+
 router.post('/admin/recalculate', async (req, res) => {
     try {
         const result = await recalculateAllPlayerStats();
