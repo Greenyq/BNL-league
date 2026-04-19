@@ -1197,8 +1197,9 @@ function PortraitsTab({ showMsg }) {
 // ── Управление аккаунтами игроков (PlayerUser) ───────────────────────────────
 function AccountsSection({ showMsg }) {
     useLang();
-    const [accounts, setAccounts] = React.useState([]);
-    const [loading, setLoading]   = React.useState(true);
+    const [accounts, setAccounts]           = React.useState([]);
+    const [loading, setLoading]             = React.useState(true);
+    const [forceUnlinkTag, setForceUnlinkTag] = React.useState('');
 
     const loadAccounts = React.useCallback(async () => {
         try {
@@ -1219,6 +1220,27 @@ function AccountsSection({ showMsg }) {
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
 
+    const unlinkBattleTag = async (acc) => {
+        if (!confirm(`Отвязать BattleTag "${acc.linkedBattleTag}" от аккаунта "${acc.username}"?`)) return;
+        try {
+            await apiFetch(`/api/players/admin/force-unlink-battletag/${encodeURIComponent(acc.linkedBattleTag)}`, { method: 'DELETE' });
+            showMsg(`✅ BattleTag ${acc.linkedBattleTag} отвязан`);
+            loadAccounts();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+
+    const forceUnlink = async () => {
+        const tag = forceUnlinkTag.trim();
+        if (!tag) return;
+        if (!confirm(`Принудительно отвязать BattleTag "${tag}" от всех аккаунтов?`)) return;
+        try {
+            const res = await apiFetch(`/api/players/admin/force-unlink-battletag/${encodeURIComponent(tag)}`, { method: 'DELETE' });
+            showMsg(`✅ BattleTag ${tag} отвязан (изменено аккаунтов: ${res.modifiedCount})`);
+            setForceUnlinkTag('');
+            loadAccounts();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+
     const fmtDate = (d) => d ? new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
 
     return (
@@ -1226,6 +1248,37 @@ function AccountsSection({ showMsg }) {
             <h4 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-md)' }}>
                 👤 {t('admin.accountsTitle')}
             </h4>
+
+            {/* Force-unlink stuck BattleTag */}
+            <div className="card-elevated" style={{ padding: 'var(--spacing-md)', marginBottom: 'var(--spacing-lg)', maxWidth: 520 }}>
+                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', marginTop: 0, marginBottom: 8 }}>
+                    🔗 Принудительно отвязать BattleTag (если аккаунт удалён, но тег «завис»)
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                        value={forceUnlinkTag}
+                        onChange={e => setForceUnlinkTag(e.target.value)}
+                        placeholder="Name#1234"
+                        style={{
+                            flex: 1, padding: '6px 10px', borderRadius: 'var(--radius-sm)',
+                            border: '1px solid rgba(255,255,255,0.15)', background: 'var(--color-bg-dark)',
+                            color: 'var(--color-text-primary)', fontSize: '0.9em',
+                        }}
+                        onKeyDown={e => e.key === 'Enter' && forceUnlink()}
+                    />
+                    <button
+                        onClick={forceUnlink}
+                        style={{
+                            background: 'rgba(255,152,0,0.15)', color: '#ff9800',
+                            border: '1px solid rgba(255,152,0,0.4)', padding: '6px 14px',
+                            borderRadius: 'var(--radius-sm)', fontSize: '0.85em', cursor: 'pointer',
+                        }}
+                    >
+                        Отвязать
+                    </button>
+                </div>
+            </div>
+
             {loading ? (
                 <p style={{ color: 'var(--color-text-muted)' }}>...</p>
             ) : accounts.length === 0 ? (
@@ -1251,7 +1304,19 @@ function AccountsSection({ showMsg }) {
                                         {acc.linkedBattleTag || '—'}
                                     </td>
                                     <td style={{ padding: '8px 12px', color: 'var(--color-text-muted)' }}>{fmtDate(acc.createdAt)}</td>
-                                    <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                                    <td style={{ padding: '8px 12px', textAlign: 'center', display: 'flex', gap: 6, justifyContent: 'center' }}>
+                                        {acc.linkedBattleTag && (
+                                            <button
+                                                onClick={() => unlinkBattleTag(acc)}
+                                                style={{
+                                                    background: 'rgba(255,152,0,0.12)', color: '#ff9800',
+                                                    border: '1px solid rgba(255,152,0,0.3)', padding: '4px 10px',
+                                                    borderRadius: 'var(--radius-sm)', fontSize: '0.82em', cursor: 'pointer',
+                                                }}
+                                            >
+                                                🔗 Отвязать
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => deleteAccount(acc)}
                                             style={{
