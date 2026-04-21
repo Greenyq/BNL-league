@@ -88,7 +88,7 @@ router.post('/auth/register', async (req, res) => {
         if (typeof password !== 'string' || password.length < 6)
             return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
-        if (await PlayerUser.findOne({ username }))
+        if (await PlayerUser.findOne({ username: { $regex: new RegExp(`^${escapeRegex(username)}$`, 'i') } }))
             return res.status(400).json({ error: 'Username already taken' });
 
         const passwordHash = await bcrypt.hash(password, 10);
@@ -109,7 +109,7 @@ router.post('/auth/login', async (req, res) => {
         const { username, password } = req.body;
         if (!username || !password) return res.status(400).json({ error: 'Username and password are required' });
 
-        const playerUser = await PlayerUser.findOne({ username });
+        const playerUser = await PlayerUser.findOne({ username: { $regex: new RegExp(`^${escapeRegex(username)}$`, 'i') } });
         if (!playerUser || !await bcrypt.compare(password, playerUser.passwordHash))
             return res.status(401).json({ error: 'Invalid username or password' });
 
@@ -297,15 +297,16 @@ router.post('/auth/request-reset', async (req, res) => {
         const { username } = req.body;
         if (!username) return res.status(400).json({ error: 'Username is required' });
 
-        const playerUser = await PlayerUser.findOne({ username });
+        const playerUser = await PlayerUser.findOne({ username: { $regex: new RegExp(`^${escapeRegex(username)}$`, 'i') } });
         if (!playerUser) return res.status(404).json({ error: 'User not found' });
 
+        const canonicalUsername = playerUser.username;
         // Remove any existing reset for this user
-        await PasswordReset.deleteMany({ username });
+        await PasswordReset.deleteMany({ username: canonicalUsername });
 
         const resetCode = String(Math.floor(100000 + Math.random() * 900000)); // 6-digit code
         await PasswordReset.create({
-            username,
+            username: canonicalUsername,
             resetCode,
             expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
         });
@@ -325,19 +326,20 @@ router.post('/auth/reset-password', async (req, res) => {
         if (typeof newPassword !== 'string' || newPassword.length < 6)
             return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
-        const reset = await PasswordReset.findOne({ username, resetCode });
+        const reset = await PasswordReset.findOne({ username: { $regex: new RegExp(`^${escapeRegex(username)}$`, 'i') }, resetCode });
         if (!reset) return res.status(400).json({ error: 'Invalid reset code' });
         if (reset.expiresAt < new Date()) {
             await PasswordReset.deleteOne({ _id: reset._id });
             return res.status(400).json({ error: 'Reset code expired' });
         }
 
+        const canonicalUsername = reset.username;
         const passwordHash = await bcrypt.hash(newPassword, 10);
-        await PlayerUser.findOneAndUpdate({ username }, { passwordHash, updatedAt: Date.now() });
+        await PlayerUser.findOneAndUpdate({ username: canonicalUsername }, { passwordHash, updatedAt: Date.now() });
 
         // Clean up: delete reset request and all sessions for this user
-        await PasswordReset.deleteMany({ username });
-        const playerUser = await PlayerUser.findOne({ username });
+        await PasswordReset.deleteMany({ username: canonicalUsername });
+        const playerUser = await PlayerUser.findOne({ username: canonicalUsername });
         if (playerUser) await PlayerSession.deleteMany({ playerUserId: playerUser.id });
 
         res.json({ success: true });
