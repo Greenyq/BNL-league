@@ -119,7 +119,7 @@ function TeamClanWarRow({ cw, teamName }) {
 }
 
 // ── Полная карточка команды ───────────────────────────────────────────────────
-function TeamCard({ team, players, clanWars, onOpenDraft }) {
+function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
     useLang();
     const rosterRaw = players.filter(p => p.teamId === team.id);
     // Captain always first in roster
@@ -190,17 +190,28 @@ function TeamCard({ team, players, clanWars, onOpenDraft }) {
                     )}
                 </div>
 
-                {/* Кнопка набора — всегда доступна */}
-                <button
-                    className="btn btn-primary"
-                    style={{ padding: '6px 14px', fontSize: '0.82em', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}
-                    onClick={() => onOpenDraft({ teamId: team.id, teamName: team.name, clanWarId: draftCw?.id || draftCw?._id || null, captainId: team.captainId || null })}
-                >
-                    ⚔ Набор
-                    {draftStatus === 'drafting' && (
-                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--color-success)', display: 'inline-block', flexShrink: 0 }} />
+                {/* Кнопки: Набор + Драфт */}
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <button
+                        className="btn btn-secondary"
+                        style={{ padding: '6px 12px', fontSize: '0.82em' }}
+                        onClick={() => onOpenRecruit && onOpenRecruit({ teamId: team.id, teamName: team.name, captainId: team.captainId || null })}
+                    >
+                        Набор
+                    </button>
+                    {draftCw && (
+                        <button
+                            className={`btn ${draftStatus === 'drafting' ? 'btn-primary' : 'btn-secondary'}`}
+                            style={{ padding: '6px 12px', fontSize: '0.82em', display: 'flex', alignItems: 'center', gap: 5 }}
+                            onClick={() => onOpenDraft && onOpenDraft({ clanWarId: draftCw.id || draftCw._id })}
+                        >
+                            Драфт
+                            {draftStatus === 'drafting' && (
+                                <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--color-success)', display: 'inline-block', flexShrink: 0 }} />
+                            )}
+                        </button>
                     )}
-                </button>
+                </div>
             </div>
 
             {/* Разделитель */}
@@ -238,7 +249,7 @@ function TeamCard({ team, players, clanWars, onOpenDraft }) {
 }
 
 // ── Точка входа ───────────────────────────────────────────────────────────────
-function Teams({ onOpenDraft }) {
+function Teams({ onOpenRecruit, onOpenDraft }) {
     useLang();
     const [teams,     setTeams]     = React.useState([]);
     const [players,   setPlayers]   = React.useState([]);
@@ -276,7 +287,7 @@ function Teams({ onOpenDraft }) {
             ) : (
                 <div className="teams-grid-v2">
                     {teams.map(team => (
-                        <TeamCard key={team.id} team={team} players={players} clanWars={clanWars} onOpenDraft={onOpenDraft} />
+                        <TeamCard key={team.id} team={team} players={players} clanWars={clanWars} onOpenRecruit={onOpenRecruit} onOpenDraft={onOpenDraft} />
                     ))}
                 </div>
             )}

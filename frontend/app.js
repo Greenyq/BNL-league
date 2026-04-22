@@ -46,7 +46,8 @@ function HomePage() {
 // ── App ───────────────────────────────────────────────────────────────────────
 function App() {
     const [tab,           setTab]           = React.useState(getTabFromHash);
-    const [recruitTarget, setRecruitTarget] = React.useState(null); // { teamId, teamName, clanWarId? }
+    const [recruitTarget, setRecruitTarget] = React.useState(null); // { teamId, teamName, captainId }
+    const [draftTarget,   setDraftTarget]   = React.useState(null); // { clanWarId }
     useLang(); // подписка на смену языка
 
     // Синхронизация хэша с табом
@@ -54,6 +55,7 @@ function App() {
         const onHash = () => {
             setTab(getTabFromHash());
             setRecruitTarget(null);
+            setDraftTarget(null);
         };
         window.addEventListener('hashchange', onHash);
         return () => window.removeEventListener('hashchange', onHash);
@@ -63,16 +65,13 @@ function App() {
         window.location.hash = id;
         setTab(id);
         setRecruitTarget(null);
+        setDraftTarget(null);
     };
 
-    const openDraft = (target) => {
-        // target = { teamId, teamName, clanWarId }
-        setRecruitTarget(target);
-    };
-
-    const closeDraft = () => {
-        setRecruitTarget(null);
-    };
+    const openRecruit = (target) => { setDraftTarget(null); setRecruitTarget(target); };
+    const closeRecruit = () => setRecruitTarget(null);
+    const openDraft = (target) => { setRecruitTarget(null); setDraftTarget(target); };
+    const closeDraft = () => setDraftTarget(null);
 
     const toggleLang = () => setLang(getLang() === 'ru' ? 'en' : 'ru');
 
@@ -87,11 +86,12 @@ function App() {
                     ? <TeamRecruitView
                         teamId={recruitTarget.teamId}
                         teamName={recruitTarget.teamName}
-                        clanWarId={recruitTarget.clanWarId}
                         captainId={recruitTarget.captainId}
-                        onBack={closeDraft}
+                        onBack={closeRecruit}
                       />
-                    : <Teams onOpenDraft={openDraft} />
+                    : draftTarget
+                        ? <DraftView clanWarId={draftTarget.clanWarId} onBack={closeDraft} />
+                        : <Teams onOpenRecruit={openRecruit} onOpenDraft={openDraft} />
             )}
             {tab === 'clanwar'   && <ClanWar />}
             {tab === 'profile'   && <Profile />}

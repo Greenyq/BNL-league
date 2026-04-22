@@ -74,7 +74,7 @@ function CwPlayerRow({ player, isCaptain }) {
 }
 
 // ── Карточка клан-вара ─────────────────────────────────────────────────────────
-function ClanWarCard({ cw, players, teams, onOpenDraft }) {
+function ClanWarCard({ cw, players, teams }) {
     useLang();
     const [open, setOpen] = React.useState(false);
 
@@ -147,14 +147,12 @@ function ClanWarCard({ cw, players, teams, onOpenDraft }) {
                         🏆 {cw.winner === 'a' ? nameA : nameB}
                     </span>
                 )}
-                {/* Draft button */}
-                <button
-                    className={`btn ${draftStatus === 'drafting' ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{ padding: '4px 12px', fontSize: '0.8em', flexShrink: 0 }}
-                    onClick={e => { e.stopPropagation(); onOpenDraft && onOpenDraft(cw.id || cw._id); }}
-                >
-                    {draftStatus === 'complete' ? t('draft.view_btn') : t('draft.open_btn')}
-                </button>
+                {/* Draft status badge */}
+                {hasDraft && draftStatus !== 'pending' && (
+                    <span className={`cw-draft-badge ${draftStatus === 'drafting' ? 'draft-badge-active' : 'draft-badge-done'}`}>
+                        {t(`draft.status_${draftStatus}`)}
+                    </span>
+                )}
                 <span className="cw-toggle">{open ? '▲' : '▼'}</span>
             </div>
 
@@ -235,13 +233,12 @@ function ClanWarCard({ cw, players, teams, onOpenDraft }) {
 
 function ClanWar() {
     useLang();
-    const [wars,           setWars]           = React.useState([]);
-    const [players,        setPlayers]        = React.useState([]);
-    const [teams,          setTeams]          = React.useState([]);
-    const [loading,        setLoading]        = React.useState(true);
-    const [error,          setError]          = React.useState(null);
-    const [filter,         setFilter]         = React.useState('all');
-    const [draftClanWarId, setDraftClanWarId] = React.useState(null);
+    const [wars,    setWars]    = React.useState([]);
+    const [players, setPlayers] = React.useState([]);
+    const [teams,   setTeams]   = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error,   setError]   = React.useState(null);
+    const [filter,  setFilter]  = React.useState('all');
 
     React.useEffect(() => {
         // Load teams and players once
@@ -274,10 +271,6 @@ function ClanWar() {
 
     if (error) return <div style={{ color: 'var(--color-error)', padding: 32, textAlign: 'center' }}>⚠ {error}</div>;
 
-    if (draftClanWarId) {
-        return <DraftView clanWarId={draftClanWarId} onBack={() => setDraftClanWarId(null)} />;
-    }
-
     return (
         <div className="animate-fade-in">
             <div className="wow-section-title">{t('cw.title')}</div>
@@ -308,7 +301,6 @@ function ClanWar() {
                             cw={cw}
                             players={players}
                             teams={teams}
-                            onOpenDraft={setDraftClanWarId}
                         />
                     ))}
                 </div>

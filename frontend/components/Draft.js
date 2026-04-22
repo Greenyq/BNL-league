@@ -498,7 +498,7 @@ function DraftView({ clanWarId, onBack }) {
 // ══════════════════════════════════════════════════════════════════════════════
 // TeamRecruitView — набор игроков в команду (не привязан к клан-вару)
 // ══════════════════════════════════════════════════════════════════════════════
-function TeamRecruitView({ teamId, teamName, clanWarId, captainId, onBack }) {
+function TeamRecruitView({ teamId, teamName, captainId, onBack }) {
     useLang();
     const [allPlayers, setAllPlayers] = React.useState([]);
     const [loading,    setLoading]    = React.useState(true);
@@ -723,15 +723,6 @@ function TeamRecruitView({ teamId, teamName, clanWarId, captainId, onBack }) {
                 </div>
             </div>
 
-            {/* Clan war draft section (if available) */}
-            {clanWarId && (
-                <div style={{ marginTop: 'var(--spacing-xxl)', borderTop: '1px solid rgba(212,175,55,0.15)', paddingTop: 'var(--spacing-xl)' }}>
-                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 'var(--spacing-md)' }}>
-                        ⚔ Драфт клан-вара
-                    </div>
-                    <DraftView clanWarId={clanWarId} onBack={onBack} embedded={true} />
-                </div>
-            )}
         </div>
     );
 }
