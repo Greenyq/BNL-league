@@ -119,7 +119,7 @@ function TeamClanWarRow({ cw, teamName }) {
 }
 
 // ── Полная карточка команды ───────────────────────────────────────────────────
-function TeamCard({ team, players, clanWars, onOpenDraft }) {
+function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
     useLang();
     const rosterRaw = players.filter(p => p.teamId === team.id);
     // Captain always first in roster
@@ -190,17 +190,26 @@ function TeamCard({ team, players, clanWars, onOpenDraft }) {
                     )}
                 </div>
 
-                {/* Кнопка набора — всегда доступна */}
-                <button
-                    className="btn btn-primary"
-                    style={{ padding: '6px 14px', fontSize: '0.82em', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}
-                    onClick={() => onOpenDraft({ teamId: team.id, teamName: team.name, clanWarId: draftCw?.id || draftCw?._id || null, captainId: team.captainId || null })}
-                >
-                    ⚔ Набор
+                {/* Кнопка набора */}
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
                     {draftStatus === 'drafting' && (
-                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--color-success)', display: 'inline-block', flexShrink: 0 }} />
+                        <button
+                            className="btn btn-primary"
+                            style={{ padding: '6px 12px', fontSize: '0.82em', display: 'flex', alignItems: 'center', gap: 5 }}
+                            onClick={() => onOpenDraft && onOpenDraft({ clanWarId: draftCw.id || draftCw._id })}
+                        >
+                            Драфт идёт
+                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff', display: 'inline-block', flexShrink: 0 }} />
+                        </button>
                     )}
-                </button>
+                    <button
+                        className="btn btn-secondary"
+                        style={{ padding: '6px 12px', fontSize: '0.82em' }}
+                        onClick={() => onOpenRecruit && onOpenRecruit({ teamId: team.id, teamName: team.name, captainId: team.captainId || null })}
+                    >
+                        Набор
+                    </button>
+                </div>
             </div>
 
             {/* Разделитель */}
@@ -237,16 +246,82 @@ function TeamCard({ team, players, clanWars, onOpenDraft }) {
     );
 }
 
-// ── Точка входа ───────────────────────────────────────────────────────────────
-function Teams({ onOpenDraft }) {
+// ── Модалка запуска драфта ────────────────────────────────────────────────────
+function StartDraftModal({ teams, onStart, onClose }) {
     useLang();
-    const [teams,     setTeams]     = React.useState([]);
-    const [players,   setPlayers]   = React.useState([]);
-    const [clanWars,  setClanWars]  = React.useState([]);
-    const [loading,   setLoading]   = React.useState(true);
-    const [error,     setError]     = React.useState(null);
+    const [teamAId, setTeamAId] = React.useState('');
+    const [teamBId, setTeamBId] = React.useState('');
+    const [loading, setLoading] = React.useState(false);
+    const [error,   setError]   = React.useState(null);
+    const adminSid = localStorage.getItem('bnl_admin_session');
 
-    React.useEffect(() => {
+    const submit = async () => {
+        if (!teamAId || !teamBId) return setError('Выберите обе команды');
+        if (teamAId === teamBId)  return setError('Команды должны быть разными');
+        setLoading(true); setError(null);
+        try {
+            const res  = await fetch('/api/draft/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-session-id': adminSid || '' },
+                body: JSON.stringify({ teamAId, teamBId }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Ошибка создания драфта');
+            onStart(data.clanWarId);
+        } catch (err) { setError(err.message); setLoading(false); }
+    };
+
+    const sel = { background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: 6, padding: '8px 12px', width: '100%', fontSize: '0.9em' };
+    return (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div className="card-elevated" style={{ padding: 'var(--spacing-xxl)', maxWidth: 420, width: '90%' }}>
+                <h3 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-xl)', textAlign: 'center' }}>
+                    Начать драфт
+                </h3>
+                {error && (
+                    <div style={{ background: 'rgba(244,67,54,0.1)', border: '1px solid var(--color-error)', borderRadius: 6, padding: '8px 12px', color: 'var(--color-error)', marginBottom: 'var(--spacing-md)', fontSize: '0.9em' }}>
+                        {error}
+                    </div>
+                )}
+                <div style={{ marginBottom: 'var(--spacing-md)' }}>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>Команда A</div>
+                    <select value={teamAId} onChange={e => setTeamAId(e.target.value)} style={sel}>
+                        <option value="">— выберите команду —</option>
+                        {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                </div>
+                <div style={{ marginBottom: 'var(--spacing-xl)' }}>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>Команда B</div>
+                    <select value={teamBId} onChange={e => setTeamBId(e.target.value)} style={sel}>
+                        <option value="">— выберите команду —</option>
+                        {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-primary" style={{ flex: 1, padding: '10px' }} onClick={submit} disabled={loading}>
+                        {loading ? '...' : 'Начать драфт'}
+                    </button>
+                    <button className="btn btn-secondary" style={{ flex: 1, padding: '10px' }} onClick={onClose} disabled={loading}>
+                        Отмена
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ── Точка входа ───────────────────────────────────────────────────────────────
+function Teams({ onOpenRecruit, onOpenDraft }) {
+    useLang();
+    const [teams,         setTeams]         = React.useState([]);
+    const [players,       setPlayers]       = React.useState([]);
+    const [clanWars,      setClanWars]      = React.useState([]);
+    const [loading,       setLoading]       = React.useState(true);
+    const [error,         setError]         = React.useState(null);
+    const [showDraftModal, setShowDraftModal] = React.useState(false);
+    const isAdmin = !!localStorage.getItem('bnl_admin_session');
+
+    const load = () => {
         Promise.all([
             fetch('/api/teams').then(r => r.json()),
             fetch('/api/players').then(r => r.json()),
@@ -259,7 +334,9 @@ function Teams({ onOpenDraft }) {
                 setLoading(false);
             })
             .catch(err => { setError(err.message); setLoading(false); });
-    }, []);
+    };
+
+    React.useEffect(() => { load(); }, []);
 
     if (loading) return (
         <div className="teams-grid-v2">
@@ -270,13 +347,27 @@ function Teams({ onOpenDraft }) {
 
     return (
         <div className="animate-fade-in">
-            <div className="wow-section-title">{t('teams.title')}</div>
+            {showDraftModal && (
+                <StartDraftModal
+                    teams={teams}
+                    onStart={clanWarId => { setShowDraftModal(false); onOpenDraft && onOpenDraft({ clanWarId }); }}
+                    onClose={() => setShowDraftModal(false)}
+                />
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 'var(--spacing-lg)' }}>
+                <div className="wow-section-title" style={{ margin: 0 }}>{t('teams.title')}</div>
+                {isAdmin && (
+                    <button className="btn btn-primary" style={{ padding: '8px 20px', fontSize: '0.9em' }} onClick={() => setShowDraftModal(true)}>
+                        Начать драфт
+                    </button>
+                )}
+            </div>
             {teams.length === 0 ? (
                 <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>{t('teams.empty')}</p>
             ) : (
                 <div className="teams-grid-v2">
                     {teams.map(team => (
-                        <TeamCard key={team.id} team={team} players={players} clanWars={clanWars} onOpenDraft={onOpenDraft} />
+                        <TeamCard key={team.id} team={team} players={players} clanWars={clanWars} onOpenRecruit={onOpenRecruit} onOpenDraft={onOpenDraft} />
                     ))}
                 </div>
             )}
