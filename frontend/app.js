@@ -88,6 +88,7 @@ function App() {
                         teamId={recruitTarget.teamId}
                         teamName={recruitTarget.teamName}
                         clanWarId={recruitTarget.clanWarId}
+                        captainId={recruitTarget.captainId}
                         onBack={closeDraft}
                       />
                     : <Teams onOpenDraft={openDraft} />

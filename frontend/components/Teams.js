@@ -194,7 +194,7 @@ function TeamCard({ team, players, clanWars, onOpenDraft }) {
                 <button
                     className="btn btn-primary"
                     style={{ padding: '6px 14px', fontSize: '0.82em', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}
-                    onClick={() => onOpenDraft({ teamId: team.id, teamName: team.name, clanWarId: draftCw?.id || draftCw?._id || null })}
+                    onClick={() => onOpenDraft({ teamId: team.id, teamName: team.name, clanWarId: draftCw?.id || draftCw?._id || null, captainId: team.captainId || null })}
                 >
                     ⚔ Набор
                     {draftStatus === 'drafting' && (
