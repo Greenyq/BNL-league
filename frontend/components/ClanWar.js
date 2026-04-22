@@ -148,15 +148,13 @@ function ClanWarCard({ cw, players, teams, onOpenDraft }) {
                     </span>
                 )}
                 {/* Draft button */}
-                {hasDraft && (
-                    <button
-                        className={`btn ${draftStatus === 'drafting' ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ padding: '4px 12px', fontSize: '0.8em', flexShrink: 0 }}
-                        onClick={e => { e.stopPropagation(); onOpenDraft && onOpenDraft(cw.id || cw._id); }}
-                    >
-                        {draftStatus === 'complete' ? t('draft.view_btn') : t('draft.open_btn')}
-                    </button>
-                )}
+                <button
+                    className={`btn ${draftStatus === 'drafting' ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ padding: '4px 12px', fontSize: '0.8em', flexShrink: 0 }}
+                    onClick={e => { e.stopPropagation(); onOpenDraft && onOpenDraft(cw.id || cw._id); }}
+                >
+                    {draftStatus === 'complete' ? t('draft.view_btn') : t('draft.open_btn')}
+                </button>
                 <span className="cw-toggle">{open ? '▲' : '▼'}</span>
             </div>
 

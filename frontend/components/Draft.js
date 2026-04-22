@@ -498,7 +498,7 @@ function DraftView({ clanWarId, onBack }) {
 // ══════════════════════════════════════════════════════════════════════════════
 // TeamRecruitView — набор игроков в команду (не привязан к клан-вару)
 // ══════════════════════════════════════════════════════════════════════════════
-function TeamRecruitView({ teamId, teamName, clanWarId, onBack }) {
+function TeamRecruitView({ teamId, teamName, clanWarId, captainId, onBack }) {
     useLang();
     const [allPlayers, setAllPlayers] = React.useState([]);
     const [loading,    setLoading]    = React.useState(true);
@@ -550,9 +550,13 @@ function TeamRecruitView({ teamId, teamName, clanWarId, onBack }) {
         setRemoving(null);
     };
 
-    // Split players: roster (in this team) vs pool (draftAvailable + not in any team)
-    const roster = allPlayers.filter(p => p.teamId === teamId);
-    const pool   = allPlayers.filter(p => p.draftAvailable && !p.teamId);
+    // Split players: roster (in this team, OR captain without teamId yet) vs pool
+    const roster = allPlayers.filter(p =>
+        p.teamId === teamId || (captainId && p.id === captainId && !p.teamId)
+    );
+    const pool = allPlayers.filter(p =>
+        p.draftAvailable && !p.teamId && !(captainId && p.id === captainId)
+    );
 
     // Group pool by tier using stats.mmr or currentMmr
     const mmrOf = p => p.stats?.mmr || p.currentMmr || 0;
