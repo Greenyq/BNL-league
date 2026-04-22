@@ -1,6 +1,7 @@
 const express    = require('express');
 const { ClanWar }  = require('../models/ClanWar');
 const { Player, PlayerStats, PlayerSession, PlayerUser } = require('../models/Player');
+const { Team }     = require('../models/Team');
 const { checkAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -65,6 +66,35 @@ function getCurrentPickState(draft, captainTiers) {
     }
     return null; // Draft complete
 }
+
+// ── POST /api/draft/create — create a draft clan war for two teams (admin) ────
+router.post('/create', checkAuth, async (req, res) => {
+    try {
+        const { teamAId, teamBId } = req.body;
+        if (!teamAId || !teamBId) return res.status(400).json({ error: 'Both teamAId and teamBId are required' });
+        if (teamAId === teamBId)  return res.status(400).json({ error: 'Teams must be different' });
+
+        const [teamA, teamB] = await Promise.all([Team.findById(teamAId), Team.findById(teamBId)]);
+        if (!teamA) return res.status(404).json({ error: 'Team A not found' });
+        if (!teamB) return res.status(404).json({ error: 'Team B not found' });
+
+        const allPlayers = await Player.find();
+        const capA = teamA.captainId ? allPlayers.find(p => p._id.toString() === teamA.captainId) : null;
+        const capB = teamB.captainId ? allPlayers.find(p => p._id.toString() === teamB.captainId) : null;
+
+        const cw = new ClanWar({
+            status: 'upcoming',
+            teamA:  { name: teamA.name, captain: capA ? (capA.name || capA.battleTag?.split('#')[0]) : '', players: [] },
+            teamB:  { name: teamB.name, captain: capB ? (capB.name || capB.battleTag?.split('#')[0]) : '', players: [] },
+            draft:  { status: 'pending', picks: [] },
+            matches: [],
+        });
+        await cw.save();
+        res.json({ clanWarId: cw._id.toString(), clanWar: cw });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // ── GET /api/draft/:clanWarId ─────────────────────────────────────────────────
 router.get('/:clanWarId', async (req, res) => {
@@ -228,6 +258,20 @@ router.post('/:clanWarId/pick', async (req, res) => {
 
         if (!nextState) {
             cw.draft.status = 'complete';
+
+            // Auto-assign picked players to their teams
+            const [teamObjA, teamObjB] = await Promise.all([
+                Team.findOne({ name: cw.teamA?.name }),
+                Team.findOne({ name: cw.teamB?.name }),
+            ]);
+            const picksA = cw.draft.picks.filter(p => p.team === 'a').map(p => p.playerId);
+            const picksB = cw.draft.picks.filter(p => p.team === 'b').map(p => p.playerId);
+            if (teamObjA && picksA.length) {
+                await Player.updateMany({ _id: { $in: picksA } }, { teamId: teamObjA._id.toString() });
+            }
+            if (teamObjB && picksB.length) {
+                await Player.updateMany({ _id: { $in: picksB } }, { teamId: teamObjB._id.toString() });
+            }
         } else {
             cw.draft.currentTier     = nextState.tier;
             cw.draft.currentTeamTurn = nextState.team;
