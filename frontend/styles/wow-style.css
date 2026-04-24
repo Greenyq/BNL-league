@@ -746,6 +746,10 @@ a:hover, button:hover {
   }
 
   .logo a {
+    pointer-events: none;
+  }
+
+  .logo a {
     width: min(86vw, 543px);
     height: auto;
     aspect-ratio: 543 / 167;
