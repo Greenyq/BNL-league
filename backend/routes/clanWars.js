@@ -1,6 +1,7 @@
 const express = require('express');
 const { ClanWar } = require('../models/ClanWar');
 const { Player, PlayerStats } = require('../models/Player');
+const { Team } = require('../models/Team');
 const { checkAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -30,6 +31,90 @@ router.get('/:id', async (req, res) => {
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 router.use(checkAuth);
+
+// POST /api/clan-wars/schedule — generate full round-robin for a season
+router.post('/schedule', async (req, res) => {
+    try {
+        const { season, startDate, daysBetweenRounds = 7 } = req.body;
+        if (!season) return res.status(400).json({ error: 'season is required' });
+
+        const teams = await Team.find().sort({ createdAt: 1 });
+        if (teams.length < 2) return res.status(400).json({ error: 'Need at least 2 teams' });
+
+        // Circle-method round-robin
+        function buildRoundRobin(ts) {
+            const arr = ts.length % 2 === 0 ? [...ts] : [...ts, null];
+            const half = arr.length / 2;
+            const rounds = [];
+            for (let r = 0; r < arr.length - 1; r++) {
+                const pairs = [];
+                for (let i = 0; i < half; i++) {
+                    const a = arr[i], b = arr[arr.length - 1 - i];
+                    if (a && b) pairs.push([a, b]);
+                }
+                if (pairs.length) rounds.push(pairs);
+                arr.splice(1, 0, arr.pop());
+            }
+            return rounds;
+        }
+
+        const rounds = buildRoundRobin(teams);
+
+        // Skip pairs already scheduled in this season
+        const existing = await ClanWar.find({ season });
+        const existingSet = new Set(existing.map(cw => [cw.teamA.name, cw.teamB.name].sort().join('|')));
+
+        const allPlayers = await Player.find();
+        const start = startDate ? new Date(startDate) : new Date();
+
+        const defaultMatches = [
+            { order: 1, format: '1v1', label: 'Дуэль I',    playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
+            { order: 2, format: '1v1', label: 'Дуэль II',   playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
+            { order: 3, format: '2v2', label: '2 на 2',     playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
+            { order: 4, format: '1v1', label: 'Дуэль III',  playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
+            { order: 5, format: '1v1', label: 'Тайм-брейк', playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
+        ];
+
+        const created = [];
+        let skipped = 0;
+
+        for (let ri = 0; ri < rounds.length; ri++) {
+            const roundDate = new Date(start.getTime() + ri * Number(daysBetweenRounds) * 24 * 60 * 60 * 1000);
+            for (const [teamA, teamB] of rounds[ri]) {
+                const pairKey = [teamA.name, teamB.name].sort().join('|');
+                if (existingSet.has(pairKey)) { skipped++; continue; }
+
+                const capA = teamA.captainId ? allPlayers.find(p => p.id === teamA.captainId) : null;
+                const capB = teamB.captainId ? allPlayers.find(p => p.id === teamB.captainId) : null;
+                const plA  = allPlayers.filter(p => p.teamId === teamA.id);
+                const plB  = allPlayers.filter(p => p.teamId === teamB.id);
+
+                const cw = await ClanWar.create({
+                    season,
+                    date: roundDate,
+                    status: 'upcoming',
+                    teamA: {
+                        name:    teamA.name,
+                        captain: capA?.name || capA?.battleTag?.split('#')[0] || '',
+                        players: plA.map(p => p.name || p.battleTag?.split('#')[0]),
+                    },
+                    teamB: {
+                        name:    teamB.name,
+                        captain: capB?.name || capB?.battleTag?.split('#')[0] || '',
+                        players: plB.map(p => p.name || p.battleTag?.split('#')[0]),
+                    },
+                    matches: defaultMatches,
+                });
+                created.push(cw);
+                existingSet.add(pairKey);
+            }
+        }
+
+        res.json({ success: true, created: created.length, skipped, totalRounds: rounds.length, clanWars: created });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // POST /api/clan-wars — create a new clan war
 router.post('/', async (req, res) => {

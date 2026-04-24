@@ -676,12 +676,33 @@ const DEFAULT_MATCHES = [
     { order: 5, format: '1v1', label: 'Тайм-брейк' },
 ].map(m => ({ ...m, playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] }));
 
+// Round-robin (circle method): returns array of rounds, each round = array of [teamA, teamB]
+function buildRoundRobin(ts) {
+    if (ts.length < 2) return [];
+    const arr = ts.length % 2 === 0 ? [...ts] : [...ts, null];
+    const half = arr.length / 2;
+    const rounds = [];
+    for (let r = 0; r < arr.length - 1; r++) {
+        const pairs = [];
+        for (let i = 0; i < half; i++) {
+            const a = arr[i], b = arr[arr.length - 1 - i];
+            if (a && b) pairs.push([a, b]);
+        }
+        if (pairs.length) rounds.push(pairs);
+        arr.splice(1, 0, arr.pop());
+    }
+    return rounds;
+}
+
 function ClanWarTab({ showMsg, players, teams }) {
     useLang();
-    const [wars,       setWars]       = React.useState([]);
-    const [selected,   setSelected]   = React.useState(null);
-    const [showCreate, setShowCreate] = React.useState(false);
-    const [form,       setForm]       = React.useState({
+    const [wars,          setWars]          = React.useState([]);
+    const [selected,      setSelected]      = React.useState(null);
+    const [showCreate,    setShowCreate]    = React.useState(false);
+    const [showScheduler, setShowScheduler] = React.useState(false);
+    const [schedForm,     setSchedForm]     = React.useState({ season: '', startDate: '', daysBetweenRounds: 7 });
+    const [scheduling,    setScheduling]    = React.useState(false);
+    const [form,          setForm]          = React.useState({
         season: '', date: '', teamAId: '', teamBId: '',
     });
 
@@ -780,6 +801,26 @@ function ClanWarTab({ showMsg, players, teams }) {
             const count = result.assignments?.length || 0;
             showMsg(`✅ Авто-назначение: ${count} матчей по тирам`);
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+
+    const generateSchedule = async () => {
+        if (!schedForm.season.trim()) return showMsg('❌ Укажите название сезона', 'error');
+        if ((teams || []).length < 2) return showMsg('❌ Нужно минимум 2 команды', 'error');
+        setScheduling(true);
+        try {
+            const result = await apiFetch('/api/clan-wars/schedule', {
+                method: 'POST',
+                body: JSON.stringify({
+                    season: schedForm.season.trim(),
+                    startDate: schedForm.startDate || undefined,
+                    daysBetweenRounds: parseInt(schedForm.daysBetweenRounds) || 7,
+                }),
+            });
+            showMsg(`✅ Создано ${result.created} клан-варов в ${result.totalRounds} турах${result.skipped ? ` (пропущено ${result.skipped} — уже существуют)` : ''}`);
+            setShowScheduler(false);
+            load();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+        setScheduling(false);
     };
 
     // ── Detail view ────────────────────────────────────────────────────────────
@@ -939,14 +980,119 @@ function ClanWarTab({ showMsg, players, teams }) {
     }
 
     // ── List view ──────────────────────────────────────────────────────────────
+    const schedPreview = buildRoundRobin(teams || []);
+
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)', flexWrap: 'wrap', gap: 8 }}>
                 <h3 style={{ margin: 0 }}>⚔ Клан-вары ({wars.length})</h3>
-                <button className="btn btn-primary" style={{ padding: '8px 18px' }} onClick={() => setShowCreate(!showCreate)}>
-                    + Создать клан-вар
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                        className="btn btn-secondary"
+                        style={{ padding: '8px 18px' }}
+                        onClick={() => { setShowScheduler(!showScheduler); setShowCreate(false); }}
+                    >
+                        🗓 Авто-расписание
+                    </button>
+                    <button className="btn btn-primary" style={{ padding: '8px 18px' }}
+                        onClick={() => { setShowCreate(!showCreate); setShowScheduler(false); }}>
+                        + Создать клан-вар
+                    </button>
+                </div>
             </div>
+
+            {/* Авто-расписание (round-robin) */}
+            {showScheduler && (
+                <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-xl)' }}>
+                    <h4 style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-accent-primary)' }}>
+                        🗓 Авто-расписание — круговой турнир
+                    </h4>
+                    <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88em', marginBottom: 'var(--spacing-lg)' }}>
+                        Система автоматически создаст клан-вары между всеми командами ({(teams || []).length} команд → {schedPreview.reduce((s, r) => s + r.length, 0)} игр в {schedPreview.length} турах). Уже существующие пары в этом сезоне будут пропущены.
+                    </p>
+
+                    {(teams || []).length < 2 ? (
+                        <div style={{ color: 'var(--color-error)', padding: 'var(--spacing-md)', background: 'rgba(244,67,54,0.08)', borderRadius: 'var(--radius-sm)', fontSize: '0.9em', marginBottom: 'var(--spacing-lg)' }}>
+                            ⚠ Сначала создайте минимум 2 команды во вкладке «Команды»
+                        </div>
+                    ) : (
+                        <>
+                            {/* Форма параметров */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-lg)' }}>
+                                <div>
+                                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>Сезон *</div>
+                                    <input
+                                        type="text" placeholder="напр. 1"
+                                        value={schedForm.season}
+                                        onChange={e => setSchedForm({ ...schedForm, season: e.target.value })}
+                                        style={{ width: '100%' }}
+                                    />
+                                </div>
+                                <div>
+                                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>Дата первого тура</div>
+                                    <input
+                                        type="date"
+                                        value={schedForm.startDate}
+                                        onChange={e => setSchedForm({ ...schedForm, startDate: e.target.value })}
+                                        style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '2px solid var(--color-bg-lighter)', borderRadius: 'var(--radius-md)', padding: '10px 14px', fontSize: '1em', width: '100%' }}
+                                    />
+                                </div>
+                                <div>
+                                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>Дней между турами</div>
+                                    <input
+                                        type="number" min="1" max="60"
+                                        value={schedForm.daysBetweenRounds}
+                                        onChange={e => setSchedForm({ ...schedForm, daysBetweenRounds: e.target.value })}
+                                        style={{ width: '100%' }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Превью туров */}
+                            <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+                                    Превью расписания
+                                </div>
+                                {schedPreview.map((round, ri) => {
+                                    const roundDate = schedForm.startDate
+                                        ? new Date(new Date(schedForm.startDate).getTime() + ri * (parseInt(schedForm.daysBetweenRounds) || 7) * 86400000)
+                                        : null;
+                                    return (
+                                        <div key={ri} style={{ marginBottom: 8 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                                <span style={{ fontSize: '0.78em', fontWeight: 700, color: 'var(--color-accent-primary)', minWidth: 55 }}>
+                                                    Тур {ri + 1}{roundDate ? ` · ${roundDate.toLocaleDateString('ru')}` : ''}
+                                                </span>
+                                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                                    {round.map(([a, b], pi) => (
+                                                        <span key={pi} style={{ fontSize: '0.82em', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: 6, padding: '2px 10px', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+                                                            {a.emoji || ''} {a.name} <span style={{ color: 'var(--color-text-muted)' }}>vs</span> {b.emoji || ''} {b.name}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    )}
+
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                            className="btn btn-primary"
+                            style={{ padding: '10px 24px' }}
+                            onClick={generateSchedule}
+                            disabled={scheduling || (teams || []).length < 2 || !schedForm.season.trim()}
+                        >
+                            {scheduling ? '⏳ Создаю...' : `🗓 Создать ${schedPreview.reduce((s, r) => s + r.length, 0)} клан-варов`}
+                        </button>
+                        <button className="btn btn-secondary" style={{ padding: '10px 18px' }} onClick={() => setShowScheduler(false)}>
+                            Отмена
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Форма создания */}
             {showCreate && (
