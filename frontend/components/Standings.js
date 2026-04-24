@@ -323,9 +323,8 @@ function Standings() {
     const rankIcon  = i => i === 0 ? 'I' : i === 1 ? 'II' : i === 2 ? 'III' : i + 1;
 
     return (
-        <div className="animate-fade-in">
-            {/* WoW-style centered title */}
-            <div className="wow-section-title">{t('standings.title')}</div>
+        <div className="animate-fade-in wow-section-page">
+            <WoWSectionTitle>{t('standings.title')}</WoWSectionTitle>
 
             {/* Single row: race filters (left) + mode buttons (right) */}
             <div className="wow-filter-bar" style={{ justifyContent: 'space-between' }}>

@@ -26,6 +26,7 @@ function HomePage() {
     ];
     return (
         <div className="animate-fade-in">
+            <WoWSectionTitle>{t('hero.how_title')}</WoWSectionTitle>
             <div className="play-block">
                 <ul>
                     {steps.map(function(step) {
@@ -43,6 +44,12 @@ function HomePage() {
     );
 }
 
+function WoWSectionTitle({ children }) {
+    const slot = document.getElementById('wow-section-title-slot');
+    const title = <div className="wow-section-title">{children}</div>;
+    return slot ? ReactDOM.createPortal(title, slot) : title;
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 function App() {
     const [tab,           setTab]           = React.useState(getTabFromHash);
@@ -53,6 +60,7 @@ function App() {
     // Синхронизация хэша с табом
     React.useEffect(() => {
         const onHash = () => {
+            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
             setTab(getTabFromHash());
             setRecruitTarget(null);
             setDraftTarget(null);

@@ -400,8 +400,8 @@ function ClanWar() {
     if (error) return <div style={{ color: 'var(--color-error)', padding: 32, textAlign: 'center' }}>⚠ {error}</div>;
 
     return (
-        <div className="animate-fade-in">
-            <div className="wow-section-title">{t('cw.title')}</div>
+        <div className="animate-fade-in wow-section-page">
+            <WoWSectionTitle>{t('cw.title')}</WoWSectionTitle>
 
             <div className="wow-filter-bar" style={{ marginBottom: 18 }}>
                 {FILTERS.map(f => (
