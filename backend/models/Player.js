@@ -18,6 +18,7 @@ const playerSchema = new mongoose.Schema({
     selectedPortraitId:       { type: String },
     selectedPortrait:         { type: String }, // URL of selected portrait image
     tierOverride:             { type: Number, default: null }, // null=auto, 1=B, 2=A, 3=S
+    seasonWinner:             { type: Number, default: null }, // null=no, 1=season1, 2=season2, ...
     draftAvailable:           { type: Boolean, default: false },
     draftAvailableUpdatedAt:  { type: Date },
     createdAt:                { type: Date, default: Date.now },

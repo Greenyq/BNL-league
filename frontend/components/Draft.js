@@ -5,6 +5,7 @@ function DraftPlayerCard({ player, isPicked, isMyTurn, onPick, picking }) {
     const race    = player.mainRace || player.race;
     const stats   = player.stats;
     const portrait = player.selectedPortrait;
+    const isWinner = !!player.seasonWinner;
 
     const raceColor = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
     const raceAbbr  = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
@@ -14,7 +15,7 @@ function DraftPlayerCard({ player, isPicked, isMyTurn, onPick, picking }) {
 
     return (
         <div
-            className={`draft-player-card${isPicked ? ' draft-picked' : ''}${isMyTurn && !isPicked ? ' draft-pickable' : ''}`}
+            className={`draft-player-card${isPicked ? ' draft-picked' : ''}${isMyTurn && !isPicked ? ' draft-pickable' : ''}${isWinner ? ' season-winner-card' : ''}`}
             style={{
                 opacity: isPicked ? 0.45 : 1,
                 transition: 'all 0.25s ease',
@@ -23,16 +24,19 @@ function DraftPlayerCard({ player, isPicked, isMyTurn, onPick, picking }) {
         >
             {/* Avatar */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
+                {isWinner && (
+                    <div className="season-winner-badge" title={`Победитель сезона ${player.seasonWinner}`}>🏆</div>
+                )}
                 {portrait ? (
-                    <img src={portrait} alt={player.name} style={{
+                    <img src={portrait} alt={player.name} className={isWinner ? 'season-winner-avatar' : ''} style={{
                         width: 44, height: 44, borderRadius: '50%', objectFit: 'cover',
-                        border: '2px solid var(--color-accent-primary)',
+                        border: isWinner ? undefined : '2px solid var(--color-accent-primary)',
                     }} />
                 ) : (
-                    <div style={{
+                    <div className={isWinner ? 'season-winner-avatar' : ''} style={{
                         width: 44, height: 44, borderRadius: '50%',
                         background: 'var(--color-bg-lighter)',
-                        border: '2px solid rgba(212,175,55,0.2)',
+                        border: isWinner ? undefined : '2px solid rgba(212,175,55,0.2)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         overflow: 'hidden',
                     }}>
@@ -53,8 +57,13 @@ function DraftPlayerCard({ player, isPicked, isMyTurn, onPick, picking }) {
 
             {/* Info */}
             <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '0.92em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {player.name || player.battleTag?.split('#')[0]}
+                <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '0.92em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name || player.battleTag?.split('#')[0]}</span>
+                    {isWinner && (
+                        <span style={{ fontSize: '0.7em', background: 'rgba(255,215,0,0.15)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.5)', borderRadius: 4, padding: '0 4px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            🏆 С{player.seasonWinner}
+                        </span>
+                    )}
                 </div>
                 <div style={{ color: 'var(--color-text-muted)', fontSize: '0.73em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {player.battleTag}
