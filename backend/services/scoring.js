@@ -13,6 +13,8 @@
 
 const cron = require('node-cron');
 const { Player, PlayerCache, PlayerStats, ManualPointsAdjustment } = require('../models/Player');
+const { ClanWar } = require('../models/ClanWar');
+const { Team }    = require('../models/Team');
 const { loadMatchDataForPlayer, fetchPlayerMmr } = require('./w3champions');
 
 // ── Achievement bonus table ───────────────────────────────────────────────────
@@ -232,16 +234,47 @@ async function recalculateAllPlayerStats() {
     const allTags = new Set(players.map(p => p.battleTag));
     let updated = 0;
 
-    // 2. Load fresh match data and compute stats
+    // 2. Pre-calculate clan war match-win points per player
+    //    Each internal match win gives 1 point to all players in the winning team.
+    //    Final score 3-2 → team A members +3 pts, team B members +2 pts.
+    const cwPointsMap = {};
+    try {
+        const completedCWs = await ClanWar.find({ status: 'completed' });
+        const allTeams     = await Team.find();
+
+        const teamMembersMap = {}; // teamName.lowercase → [battleTags]
+        for (const team of allTeams) {
+            const members = players.filter(p => p.teamId === team.id).map(p => p.battleTag);
+            teamMembersMap[team.name.toLowerCase()] = members;
+        }
+
+        for (const cw of completedCWs) {
+            const scoreA = cw.clanWarScore?.a || 0;
+            const scoreB = cw.clanWarScore?.b || 0;
+            const keyA   = (cw.teamA?.name || '').toLowerCase();
+            const keyB   = (cw.teamB?.name || '').toLowerCase();
+            for (const bt of (teamMembersMap[keyA] || [])) {
+                cwPointsMap[bt] = (cwPointsMap[bt] || 0) + scoreA;
+            }
+            for (const bt of (teamMembersMap[keyB] || [])) {
+                cwPointsMap[bt] = (cwPointsMap[bt] || 0) + scoreB;
+            }
+        }
+    } catch (err) {
+        console.error('⚠ Clan war points calc failed:', err.message);
+    }
+
+    // 3. Load fresh match data and compute stats
     for (const player of players) {
         try {
             await loadMatchDataForPlayer(player);
             const cache = await PlayerCache.findOne({ battleTag: player.battleTag });
 
             if (!cache || !cache.matchData?.length) {
+                const cwBonus = cwPointsMap[player.battleTag] || 0;
                 await PlayerStats.findOneAndUpdate(
                     { battleTag: player.battleTag },
-                    { battleTag: player.battleTag, points: 0, wins: 0, losses: 0, mmr: player.currentMmr || 0, raceStats: [], updatedAt: new Date() },
+                    { battleTag: player.battleTag, points: cwBonus, wins: 0, losses: 0, mmr: player.currentMmr || 0, raceStats: [], updatedAt: new Date() },
                     { upsert: true }
                 );
                 updated++;
@@ -270,6 +303,9 @@ async function recalculateAllPlayerStats() {
                 const delta = adjustments.reduce((s, a) => s + a.amount, 0);
                 totalPoints = Math.max(0, totalPoints + delta);
             }
+
+            // Clan war match-win bonus points
+            totalPoints += cwPointsMap[player.battleTag] || 0;
 
             await PlayerStats.findOneAndUpdate(
                 { battleTag: player.battleTag },

@@ -73,6 +73,143 @@ function CwPlayerRow({ player, isCaptain }) {
     );
 }
 
+// ── Мини-карточка игрока внутри матча ─────────────────────────────────────────
+function CwPlayerMini({ player, side }) {
+    const race    = player.mainRace || player.race;
+    const portrait = player.selectedPortrait;
+    const mmr     = player.stats?.mmr || player.currentMmr || 0;
+    const tier    = player.tierOverride || (mmr >= 1700 ? 3 : mmr >= 1400 ? 2 : mmr >= 1000 ? 1 : null);
+    const tierLabel = { 1: 'B', 2: 'A', 3: 'S' }[tier] || null;
+    const tierColor = { 3: '#ffd700', 2: '#00d4ff', 1: '#b0b0b0' }[tier] || 'var(--color-text-muted)';
+    const isRight = side === 'b';
+
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRight ? 'row-reverse' : 'row' }}>
+            {portrait ? (
+                <img src={portrait} alt={player.name} style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-accent-primary)', flexShrink: 0 }} />
+            ) : (
+                <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--color-bg-lighter)', border: '2px solid rgba(212,175,55,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                    {race && CW_RACE_IMG[race]
+                        ? <img src={CW_RACE_IMG[race]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.75 }} />
+                        : <span style={{ color: 'var(--color-text-muted)' }}>👤</span>}
+                </div>
+            )}
+            <div style={{ textAlign: isRight ? 'right' : 'left' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexDirection: isRight ? 'row-reverse' : 'row' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.92em', color: 'var(--color-text-primary)' }}>
+                        {player.name || player.battleTag?.split('#')[0]}
+                    </span>
+                    {tierLabel && (
+                        <span style={{ fontSize: '0.65em', background: `${tierColor}22`, color: tierColor, border: `1px solid ${tierColor}66`, borderRadius: 4, padding: '1px 5px', fontWeight: 800 }}>
+                            {tierLabel}
+                        </span>
+                    )}
+                </div>
+                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em' }}>MMR {mmr || '—'}</div>
+            </div>
+        </div>
+    );
+}
+
+// ── Карточка одного матча внутри клан-вара ────────────────────────────────────
+function CwMatchupCard({ match, players, nameA, nameB }) {
+    const findPlayer = (name) => {
+        if (!name || !name.trim()) return null;
+        const n = name.trim();
+        return players.find(p => p.name === n || p.battleTag?.split('#')[0] === n || p.battleTag === n) || null;
+    };
+    const parseSide = (str) => (str || '').split(' + ').map(s => s.trim()).filter(Boolean);
+
+    const sideA = parseSide(match.playerA);
+    const sideB = parseSide(match.playerB);
+
+    const winA  = match.winner === 'a';
+    const winB  = match.winner === 'b';
+    const played = match.winner != null;
+
+    // Determine tier from first player on side A
+    const p0    = sideA[0] ? findPlayer(sideA[0]) : null;
+    const mmr0  = p0 ? (p0.stats?.mmr || p0.currentMmr || 0) : 0;
+    const tier0 = p0 ? (p0.tierOverride || (mmr0 >= 1700 ? 3 : mmr0 >= 1400 ? 2 : mmr0 >= 1000 ? 1 : null)) : null;
+    const tierLabel = { 1: 'B', 2: 'A', 3: 'S' }[tier0] || null;
+    const tierColor = { 3: '#ffd700', 2: '#00d4ff', 1: '#b0b0b0' }[tier0] || null;
+
+    const scoreA = match.score?.a ?? 0;
+    const scoreB = match.score?.b ?? 0;
+
+    const winnerGlow = 'rgba(76,175,80,0.07)';
+
+    return (
+        <div style={{
+            border: `1px solid ${played ? 'rgba(212,175,55,0.22)' : 'rgba(255,255,255,0.07)'}`,
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--color-bg-base)',
+            marginBottom: 8,
+            overflow: 'hidden',
+        }}>
+            {/* Header */}
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                padding: '7px 14px',
+                background: 'rgba(0,0,0,0.2)',
+                borderBottom: '1px solid rgba(255,255,255,0.05)',
+            }}>
+                <span style={{ fontWeight: 700, fontSize: '0.88em', color: 'var(--color-text-primary)' }}>
+                    {match.label || `Матч ${match.order}`}
+                </span>
+                <span className="cw-match-fmt">{match.format}</span>
+                {tierLabel && (
+                    <span style={{ fontSize: '0.75em', fontWeight: 800, color: tierColor }}>Tier {tierLabel}</span>
+                )}
+                {match.winner && (
+                    <span style={{ marginLeft: 'auto', color: 'var(--color-success)', fontSize: '0.82em', fontWeight: 700 }}>
+                        ✓ {match.winner === 'a' ? nameA : nameB}
+                    </span>
+                )}
+            </div>
+
+            {/* Body */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12, padding: '10px 16px' }}>
+                {/* Team A side */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, borderRadius: 8, padding: winA ? '6px 8px' : 0, background: winA ? winnerGlow : 'transparent' }}>
+                    {sideA.length === 0
+                        ? <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>—</span>
+                        : sideA.map((name, i) => {
+                            const p = findPlayer(name);
+                            return p
+                                ? <CwPlayerMini key={i} player={p} side="a" />
+                                : <span key={i} style={{ color: 'var(--color-text-secondary)', fontSize: '0.9em', fontWeight: 600 }}>{name}</span>;
+                        })
+                    }
+                </div>
+
+                {/* Score */}
+                <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '1.7em', fontWeight: 900 }}>
+                        <span style={{ color: winA ? 'var(--color-success)' : played ? 'var(--color-error)' : 'var(--color-text-muted)' }}>{scoreA}</span>
+                        <span style={{ color: 'var(--color-text-muted)', fontWeight: 300, fontSize: '0.65em' }}>:</span>
+                        <span style={{ color: winB ? 'var(--color-success)' : played ? 'var(--color-error)' : 'var(--color-text-muted)' }}>{scoreB}</span>
+                    </div>
+                    <div style={{ fontSize: '0.68em', color: 'var(--color-text-muted)' }}>BO3</div>
+                </div>
+
+                {/* Team B side */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end', borderRadius: 8, padding: winB ? '6px 8px' : 0, background: winB ? winnerGlow : 'transparent' }}>
+                    {sideB.length === 0
+                        ? <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>—</span>
+                        : sideB.map((name, i) => {
+                            const p = findPlayer(name);
+                            return p
+                                ? <CwPlayerMini key={i} player={p} side="b" />
+                                : <span key={i} style={{ color: 'var(--color-text-secondary)', fontSize: '0.9em', fontWeight: 600 }}>{name}</span>;
+                        })
+                    }
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ── Карточка клан-вара ─────────────────────────────────────────────────────────
 function ClanWarCard({ cw, players, teams }) {
     useLang();
@@ -203,24 +340,15 @@ function ClanWarCard({ cw, players, teams }) {
                     {/* Divider */}
                     <div style={{ height: 1, background: 'rgba(212,175,55,0.1)', margin: '0 var(--spacing-lg)' }} />
 
-                    {/* Matches list */}
-                    <div className="cw-matches-list">
+                    {/* Match matchups */}
+                    <div style={{ padding: 'var(--spacing-md) var(--spacing-lg)' }}>
+                        <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+                            ⚔ Матчи
+                        </div>
                         {(cw.matches || []).length === 0
-                            ? <p style={{ color: 'var(--color-text-muted)', padding: 8 }}>—</p>
+                            ? <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>—</p>
                             : (cw.matches || []).map((m, i) => (
-                                <div key={m._id || i} className={`cw-match-row${m.winner ? ' done' : ''}`}>
-                                    <span className="cw-match-label">{m.label || `${t('cw.match_fmt')} ${m.order}`}</span>
-                                    <span className="cw-match-fmt">{m.format}</span>
-                                    <span className="cw-match-players">
-                                        {m.playerA || '?'} <span style={{ color: 'var(--color-text-muted)' }}>vs</span> {m.playerB || '?'}
-                                    </span>
-                                    <span className="cw-match-score">{m.score?.a ?? 0} : {m.score?.b ?? 0}</span>
-                                    {m.winner && (
-                                        <span className="cw-match-winner-badge">
-                                            ✓ {m.winner === 'a' ? nameA : nameB}
-                                        </span>
-                                    )}
-                                </div>
+                                <CwMatchupCard key={m._id || i} match={m} players={players} nameA={nameA} nameB={nameB} />
                             ))
                         }
                     </div>
