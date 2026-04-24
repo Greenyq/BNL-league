@@ -173,21 +173,24 @@ function DraftPoolStandings() {
         const portrait = p.selectedPortrait;
         const mmr = p.stats?.mmr || p.currentMmr || 0;
         const stats = p.stats;
-        const avatarSrc = portrait || (race && raceImg[race]) || null;
+        const isWinner = !!p.seasonWinner;
 
         return (
-            <div key={p.id || p.battleTag} className="draft-pool-player-card">
+            <div key={p.id || p.battleTag} className={`draft-pool-player-card${isWinner ? ' season-winner-card' : ''}`}>
                 <div style={{ position: 'relative', flexShrink: 0 }}>
+                    {isWinner && (
+                        <div className="season-winner-badge" title={`Победитель сезона ${p.seasonWinner}`}>🏆</div>
+                    )}
                     {portrait ? (
-                        <img src={portrait} alt="" style={{
+                        <img src={portrait} alt="" className={isWinner ? 'season-winner-avatar' : ''} style={{
                             width: 40, height: 40, borderRadius: '50%', objectFit: 'cover',
-                            border: '2px solid var(--color-accent-primary)',
+                            border: isWinner ? undefined : '2px solid var(--color-accent-primary)',
                         }} />
                     ) : (
-                        <div style={{
+                        <div className={isWinner ? 'season-winner-avatar' : ''} style={{
                             width: 40, height: 40, borderRadius: '50%',
                             background: 'var(--color-bg-lighter)',
-                            border: '2px solid rgba(212,175,55,0.2)',
+                            border: isWinner ? undefined : '2px solid rgba(212,175,55,0.2)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             overflow: 'hidden',
                         }}>
@@ -206,8 +209,13 @@ function DraftPoolStandings() {
                     )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '0.9em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {p.name || p.battleTag?.split('#')[0]}
+                    <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '0.9em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name || p.battleTag?.split('#')[0]}</span>
+                        {isWinner && (
+                            <span style={{ fontSize: '0.7em', background: 'rgba(255,215,0,0.15)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.5)', borderRadius: 4, padding: '0 4px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                🏆 С{p.seasonWinner}
+                            </span>
+                        )}
                     </div>
                     <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {p.battleTag}
@@ -390,14 +398,23 @@ function Standings() {
                                         const portrait = row.player.selectedPortrait;
                                         const raceImg  = RACE_IMG[row.race || row.player.mainRace || row.player.race];
                                         const avatarSrc = portrait || raceImg || null;
+                                        const isWinner = !!row.player.seasonWinner;
                                         return (
                                             <tr key={`${row.player.battleTag}-${row.race}`}>
                                                 <td className={`col-rank ${rankClass(i)}`}>{rankIcon(i)}</td>
                                                 <td className="col-name" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                                     {avatarSrc && (
-                                                        <img src={avatarSrc} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(212,175,55,0.4)' }} />
+                                                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                                                            <img src={avatarSrc} alt="" className={isWinner ? 'season-winner-avatar' : ''} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: isWinner ? undefined : '2px solid rgba(212,175,55,0.4)' }} />
+                                                            {isWinner && <div className="season-winner-badge" style={{ width: 14, height: 14, fontSize: 8, top: -4, left: -4 }} title={`Победитель сезона ${row.player.seasonWinner}`}>🏆</div>}
+                                                        </div>
                                                     )}
                                                     <span>{row.player.name || row.player.battleTag}</span>
+                                                    {isWinner && (
+                                                        <span style={{ fontSize: '0.68em', background: 'rgba(255,215,0,0.15)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.5)', borderRadius: 4, padding: '0 4px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                                            🏆 С{row.player.seasonWinner}
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td style={{ color: 'var(--color-text-muted)' }}>
                                                     {row.race !== null ? t(`race.${row.race}`) : '—'}

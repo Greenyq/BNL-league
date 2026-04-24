@@ -9,21 +9,25 @@ function PlayerRow({ player, isCaptain }) {
     const race    = player.mainRace || player.race;
     const stats   = player.stats;
     const portrait = player.selectedPortrait;
+    const isWinner = !!player.seasonWinner;
 
     return (
-        <div className="team-player-row">
+        <div className={`team-player-row${isWinner ? ' season-winner-card' : ''}`}>
             {/* Аватар + раса */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
+                {isWinner && (
+                    <div className="season-winner-badge" title={`Победитель сезона ${player.seasonWinner}`}>🏆</div>
+                )}
                 {portrait ? (
-                    <img src={portrait} alt={player.name} style={{
+                    <img src={portrait} alt={player.name} className={isWinner ? 'season-winner-avatar' : ''} style={{
                         width: 46, height: 46, borderRadius: '50%', objectFit: 'cover',
-                        border: '2px solid var(--color-accent-primary)',
+                        border: isWinner ? undefined : '2px solid var(--color-accent-primary)',
                     }} />
                 ) : (
-                    <div style={{
+                    <div className={isWinner ? 'season-winner-avatar' : ''} style={{
                         width: 46, height: 46, borderRadius: '50%',
                         background: 'var(--color-bg-lighter)',
-                        border: '2px solid rgba(212,175,55,0.25)',
+                        border: isWinner ? undefined : '2px solid rgba(212,175,55,0.25)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: '1.3em', color: 'var(--color-text-muted)',
                     }}>
@@ -51,6 +55,11 @@ function PlayerRow({ player, isCaptain }) {
                     {isCaptain && (
                         <span style={{ fontSize: '0.65em', background: 'rgba(212,175,55,0.2)', color: 'var(--color-accent-primary)', border: '1px solid rgba(212,175,55,0.4)', borderRadius: 4, padding: '1px 5px', fontWeight: 700, whiteSpace: 'nowrap' }}>
                             👑 Капитан
+                        </span>
+                    )}
+                    {isWinner && (
+                        <span style={{ fontSize: '0.65em', background: 'rgba(255,215,0,0.15)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.5)', borderRadius: 4, padding: '1px 5px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                            🏆 Сезон {player.seasonWinner}
                         </span>
                     )}
                 </div>
