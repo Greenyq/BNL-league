@@ -1802,7 +1802,7 @@ input[type="datetime-local"] {
 /* ==================== TEAMS V2 ==================== */
 .teams-grid-v2 {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr));
     gap: var(--spacing-xl);
 }
 
@@ -1814,6 +1814,7 @@ input[type="datetime-local"] {
     overflow: hidden;
     transition: all var(--transition-normal);
     animation: fadeInUp 0.5s ease forwards;
+    min-width: 0;
 }
 .team-card-v2:hover {
     border-color: rgba(212,175,55,0.55);

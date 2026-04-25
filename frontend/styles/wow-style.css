@@ -7,6 +7,14 @@
   src: url(../fonts/elenbold.ttf);
 }
 
+:root {
+  --bg-ember-dark: #181411;
+  --bg-ember-dark-rgb: 24, 20, 17;
+  --bg-ember-panel-alpha: 0.86;
+  --header-top-row-height: 72px;
+  --header-top-row-mobile-height: 92px;
+}
+
 html {
   width: 100%;
   min-width: 1170px;
@@ -18,10 +26,16 @@ html {
 body {
   width: 100%;
   min-width: 1170px;
-  background: url(../images/wow/repeat-fon-bg.jpg) center repeat-y;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: url(../images/warcraft/background/bg_fill_stretch_xy.png) center top repeat-y;
   background-color: #17120c;
   background-size: 100% auto;
   overflow-x: hidden;
+}
+html body {
+  min-height: 100vh;
 }
 
 a, button {
@@ -34,7 +48,9 @@ a:hover, button:hover {
 }
 
 .top-bg {
-  background: url(../images/wow/top-fon-bg.jpg) center top no-repeat;
+  flex: 1 0 auto;
+  background: url(../images/warcraft/background/bg_top_hero.png) center top no-repeat;
+  background-size: 100% auto;
   position: relative;
 }
 .top-bg::before {
@@ -48,9 +64,6 @@ a:hover, button:hover {
   pointer-events: none;
   z-index: 0;
 }
-.bottom-bg {
-  background: url(../images/wow/bottom-fon-bg.jpg) center bottom no-repeat;
-}
 .wrapper {
   width: 1170px;
   margin: 0 auto;
@@ -61,15 +74,80 @@ a:hover, button:hover {
   z-index: 1;
 }
 
+.bottom-scene {
+  flex: 0 0 auto;
+  position: relative;
+  min-height: 396px;
+  background: url(../images/warcraft/background/bg_bottom_foreground.png) center bottom no-repeat;
+  background-size: 100% auto;
+  overflow: hidden;
+}
+.bottom-scene::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(to top, rgba(23,18,12,0.08), rgba(23,18,12,0.22) 48%, rgba(23,18,12,0) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+.bottom-scene .wrapper {
+  min-height: inherit;
+  display: flex;
+  align-items: flex-end;
+  position: relative;
+  z-index: 1;
+}
+
 /* ── Header ─────────────────────────────────────────────────────────────── */
 .header {
+  box-sizing: border-box;
   height: 600px;
+  padding-top: var(--header-top-row-height);
+}
+.header-top-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--header-top-row-height);
+  position: fixed;
+  top: 0;
+  left: 50%;
+  width: 1170px;
+  transform: translateX(-50%);
+  padding: 0 12px;
+  box-sizing: border-box;
+  z-index: 120;
+  isolation: isolate;
+}
+.header-menu-toggle {
+  display: none;
+}
+.header-top-row::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 100vw;
+  transform: translateX(-50%);
+  background:
+    linear-gradient(to bottom, rgba(16, 11, 8, 0.94), rgba(22, 15, 10, 0.88)),
+    url(../images/warcraft/background/bg_fill_stretch_xy.png) center top / auto 100% repeat-x;
+  border-bottom: 1px solid rgba(200, 155, 60, 0.28);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  z-index: -1;
 }
 .countries-lang {
-  float: right;
+  float: none;
   width: 120px;
-  text-align: center;
-  margin: 12px 6px 0 0;
+  text-align: right;
+  margin: 0;
+  flex: 0 0 auto;
 }
 .countries-lang a { opacity: 0.5; }
 .countries-lang a:hover { opacity: 1 !important; }
@@ -84,22 +162,46 @@ a:hover, button:hover {
 }
 
 .soc-block {
-  float: left;
-  width: 110px;
-  text-align: center;
-  margin-top: 12px;
-  margin-left: 12px;
+  float: none;
+  width: 44px;
+  text-align: left;
+  margin: 0;
+  flex: 0 0 auto;
 }
-.soc-block img { margin: 0 4px; }
+.soc-block a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.soc-block img {
+  display: block;
+  width: 28px;
+  height: 28px;
+}
 
 .menu {
-  width: 840px;
-  line-height: 67px;
-  margin-left: 184px;
+  width: auto;
+  max-width: 840px;
+  flex: 1 1 auto;
+  line-height: var(--header-top-row-height);
+  margin: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.menu ul {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  text-align: center;
 }
 .menu li {
   display: inline-block;
   padding: 0 15px 0 12px;
+}
+.menu li.login {
+  padding: 0 0 0 18px;
 }
 .menu a {
   font-family: "Times New Roman", Times, serif;
@@ -114,8 +216,8 @@ a:hover, button:hover {
 }
 
 .login {
-  float: right;
-  margin-right: 45px;
+  float: none;
+  margin: 0;
 }
 .login a {
   background: url(../images/wow/login-button.png) center 17px no-repeat;
@@ -132,20 +234,49 @@ a:hover, button:hover {
 }
 .logo a {
   display: block;
-  background: url(../images/wow/logo.jpg) no-repeat center;
-  width: 610px;
-  height: 172px;
+  background: url("../images/warcraft/PLAY WARCRAFT SIMPLE.png") no-repeat center;
+  width: 543px;
+  height: 167px;
   margin: 0 auto;
-  filter: brightness(0.7);
+  position: relative;
+  border-radius: 22px;
+  transition:
+    background-color 0.5s ease,
+    box-shadow 0.5s ease,
+    filter 0.5s ease;
 }
-.logo a:hover { filter: none !important; }
+.logo a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("../images/warcraft/PLAY WARCRAFT HIGHLIGHTED.png") no-repeat center;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+.logo a:hover {
+  background-color: rgba(255, 245, 210, 0.08);
+  box-shadow:
+    0 0 30px rgba(255, 248, 225, 0.26),
+    inset 0 0 36px rgba(255, 245, 210, 0.14);
+  filter: brightness(1.18) drop-shadow(0 0 18px rgba(255, 248, 225, 0.38)) !important;
+}
+.logo a:hover::after {
+  opacity: 1;
+}
+.logo a:focus,
+.logo a:active {
+  outline: none;
+}
 .logo p {
   color: #ffd85b;
   font-size: 22px;
   font-family: 'Elan';
-  padding: 7px 0;
+  margin: 0;
+  padding: 7px 0 9px;
   position: relative;
   letter-spacing: 0.15em;
+  line-height: 1.1;
   text-shadow:
     0 1px 2px rgba(0,0,0,0.9),
     0 0 10px rgba(0,0,0,0.7),
@@ -169,6 +300,32 @@ a:hover, button:hover {
   bottom: 0; left: 50%;
   margin-left: -162px;
 }
+.logo-season-status {
+  display: block;
+  margin-top: 6px;
+  color: #d7b17a;
+  font-size: 12px;
+  font-family: 'PT Sans', sans-serif;
+  line-height: 1.35;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow:
+    0 1px 2px rgba(0,0,0,0.85),
+    0 0 10px rgba(0,0,0,0.65),
+    0 0 18px rgba(200,155,60,0.2);
+}
+.logo-season-date {
+  display: inline-block;
+  white-space: nowrap;
+  color: #f5db8b;
+  font-weight: 700;
+  font-size: 1.12em;
+  letter-spacing: 0.12em;
+  text-shadow:
+    0 1px 2px rgba(0,0,0,0.9),
+    0 0 12px rgba(0,0,0,0.7),
+    0 0 16px rgba(255,216,91,0.22);
+}
 
 .online-block {
   text-align: center;
@@ -190,69 +347,165 @@ a:hover, button:hover {
   letter-spacing: 0.1em;
 }
 .progress-bar {
-  height: 38px;
-  width: 300px;
+  /* 70px-tall endcaps in the original horizontal footprint for stronger overlap. */
+  --progress-endcap-width: 17.67677%;
+  --progress-track-left: 12.87879%;
+  --progress-track-width: 74.24242%;
+  --progress-track-top: 21.42857%;
+  --progress-track-height: 57.14286%;
+  width: min(96vw, 396px);
+  max-width: 396px;
+  aspect-ratio: 396 / 70;
   margin: 0 auto;
-  margin-top: 5px;
-  text-align: left;
+  margin-top: 9px;
   position: relative;
-  background: linear-gradient(to bottom, #c73a3a 0%, #8b1a1a 100%);
-  overflow: hidden;
+  overflow: visible;
+  isolation: isolate;
 }
-.progress-bar img {
-  height: 38px;
-  display: block;
-  position: relative;
-  z-index: 1;
-}
-.progress-button {
-  background: url(../images/wow/progress-button.png) no-repeat center;
-  width: 396px;
-  height: 90px;
+.progress-bar__glow {
   position: absolute;
   left: 50%;
-  margin-left: -198px;
-  margin-top: -12px;
-  z-index: 10;
+  top: 50%;
+  width: 185%;
+  aspect-ratio: 1280 / 433;
+  transform: translate(-50%, -50%);
+  background: url(../images/warcraft/progress_bar/glow_overlay.png) center / contain no-repeat;
+  opacity: 0.38;
+  filter: brightness(1.55) saturate(1.25);
+  pointer-events: none;
+  z-index: 4;
+}
+.progress-bar__endcap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--progress-endcap-width);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+.progress-bar__endcap--left {
+  left: 0;
+  background-image: url(../images/warcraft/progress_bar/frame_left_endcap.png);
+}
+.progress-bar__endcap--right {
+  right: 0;
+  background-image: url(../images/warcraft/progress_bar/frame_right_endcap.png);
+}
+.progress-bar__track {
+  position: absolute;
+  left: var(--progress-track-left);
+  top: var(--progress-track-top);
+  width: var(--progress-track-width);
+  height: var(--progress-track-height);
+  background: url(../images/warcraft/progress_bar/track_background.png) center / 100% 100% no-repeat;
+  overflow: hidden;
+  z-index: 2;
+}
+.progress-bar__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  max-width: 100%;
+  background: url(../images/warcraft/progress_bar/progress-fill-body.png) left center / auto 100% repeat-x;
+  filter: saturate(1.04) brightness(1.05);
+}
+.progress-bar__fill::before,
+.progress-bar__fill::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+.progress-bar__fill::before {
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: min(98px, 100%);
+  background: url(../images/warcraft/progress_bar/progress-fill-left.png) left center / auto 100% no-repeat;
+}
+.progress-bar__fill::after {
+  right: 0;
+  top: 50%;
+  width: min(62px, 100%);
+  height: 95%;
+  transform: translate(50%, -50%);
+  background: url(../images/warcraft/progress_bar/progress-fill-highlight.png) right center / 100% 100% no-repeat;
 }
 
 /* ── Content area ───────────────────────────────────────────────────────── */
-.container { width: 100%; }
-.content {
-  min-height: 800px;
+.container {
+  --wow-title-width: 345px;
+  --wow-title-height: calc(var(--wow-title-width) * 117 / 345);
+  --wow-title-raise: 5px;
+  --wow-title-foreground-width: calc(100% + 110px);
+  width: 100%;
   position: relative;
-  padding: 30px 25px 40px;
+  margin: 100px 0 42px;
+  padding: 28px 36px 48px;
+  background: linear-gradient(
+    to bottom,
+    rgba(var(--bg-ember-dark-rgb), var(--bg-ember-panel-alpha)) 0%,
+    rgba(var(--bg-ember-dark-rgb), var(--bg-ember-panel-alpha)) 72%,
+    rgba(var(--bg-ember-dark-rgb), 0) 100%
+  );
+}
+.container::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: var(--wow-title-foreground-width);
+  aspect-ratio: 1280 / 720;
+  transform: translate(-50%, calc(-50% - var(--wow-title-raise)));
+  pointer-events: none;
+  z-index: 0;
+}
+.container::after {
+  content: '';
+  position: absolute;
+  left: -18px;
+  right: -18px;
+  top: -18px;
+  bottom: 0;
+  background:
+    url(../images/warcraft/content/content_bg_left_top_angle.png) left top no-repeat,
+    url(../images/warcraft/content/content_bg_right_top_angle.png) right top no-repeat;
+  background-size: 461px auto, 461px auto;
+  pointer-events: none;
+  z-index: 1;
+}
+.container > * {
+  position: relative;
+  z-index: 2;
+}
+.container-title-slot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 3;
+  pointer-events: none;
+}
+.content {
+  position: relative;
+  padding: 6px 0 138px;
 }
 
 /* Start game button (text below ornamental frame) */
-.start-game {
-  text-align: center;
-  padding-top: 44px;
-}
-.start-game a {
-  text-shadow: 0 2px 2px rgba(0,0,0,0.8);
-  font-size: 14px;
-  color: #d0945e;
-  font-family: 'Elan';
-  line-height: 22px;
-  text-decoration: none;
-}
-.start-game a span {
-  font-size: 20px;
-  color: #ffd85b;
-  text-transform: uppercase;
-}
-#start-game-sub {
-  font-size: 11px;
-  color: #a87a48;
-  text-transform: none;
-}
-
 /* ── Footer ─────────────────────────────────────────────────────────────── */
 .footer {
   height: 230px;
+  width: 100%;
   padding-top: 35px;
   padding-left: 20px;
+  position: relative;
+  z-index: 1;
 }
 .footer-img {
   float: right;
@@ -260,9 +513,10 @@ a:hover, button:hover {
 }
 .footer-img span {
   display: block;
-  background: url(../images/wow/footer-img.png) no-repeat;
+  background: url(../images/wow/footer-img.png) no-repeat center;
+  background-size: contain;
   width: 280px;
-  height: 143px;
+  height: 170px;
   opacity: 0.5;
 }
 .footer-menu { margin-top: 10px; }
@@ -309,6 +563,315 @@ a:hover, button:hover {
   margin-left: 22px;
 }
 
+@media (max-width: 1170px) {
+  html {
+    min-width: 0;
+  }
+
+  body {
+    min-width: 0;
+  }
+
+  html body {
+    min-height: 100vh;
+  }
+
+  .wrapper {
+    width: 100%;
+    max-width: 1170px;
+  }
+
+  .top-bg {
+    flex: 0 0 auto;
+    z-index: 2;
+  }
+
+  .bottom-scene {
+    z-index: 1;
+  }
+
+  body .header {
+    height: auto;
+    min-height: 520px;
+    padding: var(--header-top-row-mobile-height) 18px 34px;
+  }
+
+  .header-top-row {
+    position: fixed;
+    top: 12px;
+    right: 18px;
+    left: auto;
+    width: auto;
+    min-height: 0;
+    transform: none;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 0;
+    z-index: 120;
+  }
+
+  .header-top-row::before {
+    display: none;
+  }
+
+  .header-menu-toggle {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 48px;
+    height: 48px;
+    margin-left: auto;
+    padding: 0;
+    border: 1px solid rgba(200, 155, 60, 0.38);
+    border-radius: 12px;
+    background:
+      linear-gradient(to bottom, rgba(16, 11, 8, 0.94), rgba(22, 15, 10, 0.88)),
+      url(../images/warcraft/background/bg_fill_stretch_xy.png) center top / auto 100% repeat-x;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.3);
+    color: #eedda1;
+  }
+
+  .header-menu-toggle span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  .header-top-row .soc-block,
+  .header-top-row .menu,
+  .header-top-row .countries-lang {
+    display: none;
+  }
+
+  .header-top-row.is-open {
+    left: 18px;
+    right: 18px;
+    padding: 12px 14px 16px;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .header-top-row.is-open::before {
+    display: block;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: auto;
+    transform: none;
+    border: 1px solid rgba(200, 155, 60, 0.24);
+    border-radius: inherit;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.34);
+  }
+
+  .header-top-row.is-open .soc-block,
+  .header-top-row.is-open .menu,
+  .header-top-row.is-open .countries-lang {
+    display: block;
+  }
+
+  .countries-lang {
+    float: none;
+    position: static;
+    width: auto;
+    margin: 0;
+    text-align: center;
+    align-self: center;
+    order: 2;
+  }
+
+  .soc-block {
+    float: none;
+    position: static;
+    width: auto;
+    margin: 0;
+    text-align: center;
+    order: 1;
+  }
+
+  .menu {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    line-height: normal;
+    order: 3;
+  }
+
+  .menu ul {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .menu li {
+    display: block;
+    padding: 0;
+  }
+
+  .menu li.login {
+    padding: 0;
+  }
+
+  .menu a {
+    display: block;
+    font-size: 12px;
+    line-height: 1.2;
+    padding: 8px 0;
+    text-align: center;
+  }
+
+  .login {
+    float: none;
+    margin: 0;
+  }
+
+  .login a {
+    background-position: center;
+    width: auto;
+    min-width: 82px;
+    padding: 8px 12px;
+    text-align: center;
+  }
+
+  .logo {
+    padding-top: 76px;
+  }
+
+  .logo a {
+    pointer-events: none;
+  }
+
+  .logo a {
+    width: min(86vw, 543px);
+    height: auto;
+    aspect-ratio: 543 / 167;
+    background-size: contain;
+  }
+
+  .logo a::after {
+    background-size: contain;
+  }
+
+  .logo p {
+    font-size: clamp(16px, 5vw, 22px);
+  }
+
+  .logo-season-status {
+    font-size: clamp(10px, 2.8vw, 12px);
+    line-height: 1.35;
+    padding: 0 12px;
+  }
+
+  .logo p:before,
+  .logo p:after {
+    width: min(78vw, 313px);
+    margin-left: 0;
+    transform: translateX(-50%);
+    background-size: 100% 1px;
+  }
+
+  .online-block {
+    font-size: clamp(34px, 11vw, 48px);
+    margin-top: 18px;
+  }
+
+  .progress-bar {
+    width: min(100%, 396px);
+  }
+
+  .wow-section-title {
+    font-size: clamp(16px, 4.8vw, 22px);
+    letter-spacing: 0.08em;
+    padding: 0 26px 2px;
+  }
+
+  .content {
+    padding: 6px 0 132px;
+  }
+
+  .bottom-scene {
+    margin-top: auto;
+    min-height: 330px;
+  }
+
+  .bottom-scene .wrapper {
+    display: block;
+    min-height: 330px;
+  }
+
+  .footer {
+    height: auto;
+    min-height: 330px;
+    padding: 34px 18px 28px;
+    text-align: center;
+  }
+
+  .footer-img {
+    float: none;
+    margin: 0 auto 18px;
+  }
+
+  .footer-img span {
+    width: min(64vw, 280px);
+    height: auto;
+    aspect-ratio: 280 / 170;
+    margin: 0 auto;
+  }
+
+  .footer-menu {
+    margin-top: 0;
+  }
+
+  .footer-menu .footer-logo {
+    float: none;
+    margin: 0 auto 14px;
+  }
+
+  .footer-menu .footer-logo a {
+    margin: 0 auto;
+  }
+
+  .footer-menu ul {
+    padding-top: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 14px;
+  }
+
+  .footer-menu ul li {
+    display: block;
+    margin: 0;
+  }
+
+  .copy {
+    margin-top: 24px;
+  }
+
+  .copyright,
+  .paymant {
+    display: block;
+    width: auto;
+    margin: 0 auto;
+  }
+
+  .paymant {
+    margin-top: 16px;
+  }
+
+  .paymant img {
+    margin: 0 auto;
+  }
+}
+
 /* ── BNL content overrides — WoW background shows through everywhere ─────── */
 
 /* Transparent wrapper */
@@ -316,6 +879,26 @@ a:hover, button:hover {
 #root,
 .app {
   background: transparent !important;
+}
+@media (max-width: 1170px) {
+  .container {
+    --wow-title-width: min(86vw, calc(100% - 16px), 345px);
+    --wow-title-raise: 4px;
+    --wow-title-foreground-width: min(112vw, 1280px);
+    margin: 100px 0 30px;
+    padding: 22px 18px 36px;
+  }
+
+  .container::after {
+    left: -8px;
+    right: -8px;
+    top: -8px;
+    background-size: min(46vw, 230px) auto, min(46vw, 230px) auto;
+  }
+
+  .wow-section-page {
+    padding-top: calc((var(--wow-title-height) / 2) + 10px);
+  }
 }
 
 /* Cards: remove old dark grey backgrounds → WoW dark brown glass */
@@ -372,7 +955,24 @@ a:hover, button:hover {
   letter-spacing: 0.12em;
   text-shadow: 0 0 14px rgba(255,216,91,0.55), 0 2px 5px rgba(0,0,0,0.9);
   text-align: center;
-  margin: 0 auto 20px;
+  width: var(--wow-title-width);
+  min-height: var(--wow-title-height);
+  aspect-ratio: 345 / 117;
+  margin: 0;
+  padding: 0 34px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: url(../images/warcraft/content/content_title_bg.png) center / 100% 100% no-repeat;
+  box-sizing: border-box;
+}
+.container-title-slot .wow-section-title {
+  transform: translateY(calc(-50% - var(--wow-title-raise)));
+  position: relative;
+  z-index: 1;
+}
+.wow-section-page {
+  padding-top: calc((var(--wow-title-height) / 2) + 14px);
 }
 
 /* Filter buttons — WoW style */

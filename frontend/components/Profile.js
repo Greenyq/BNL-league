@@ -79,11 +79,9 @@ function AuthForm({ onAuth }) {
     const modeTitle = { login: t('profile.login'), register: t('profile.register'), forgot: t('profile.forgotTitle'), reset: t('profile.resetTitle') };
 
     return (
-        <div style={{ maxWidth: 400, margin: '40px auto' }}>
+        <div className="animate-fade-in wow-section-page" style={{ maxWidth: 400, margin: '0 auto' }}>
+            <WoWSectionTitle>{modeTitle[mode]}</WoWSectionTitle>
             <div className="card-elevated" style={{ padding: 'var(--spacing-xxl)' }}>
-                <h3 style={{ textAlign: 'center', marginBottom: 'var(--spacing-lg)', color: 'var(--color-accent-primary)' }}>
-                    {modeTitle[mode]}
-                </h3>
 
                 {/* Переключатель режима */}
                 {(mode === 'login' || mode === 'register') && (
@@ -285,7 +283,8 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
     }, {});
 
     return (
-        <div className="animate-fade-in" style={{ maxWidth: 600, margin: '0 auto' }}>
+        <div className="animate-fade-in wow-section-page" style={{ maxWidth: 600, margin: '0 auto' }}>
+            <WoWSectionTitle>{t('profile.title')}</WoWSectionTitle>
 
             {/* Шапка профиля */}
             <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-lg)', display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)' }}>

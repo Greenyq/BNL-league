@@ -348,14 +348,23 @@ function Teams({ onOpenRecruit, onOpenDraft }) {
     React.useEffect(() => { load(); }, []);
 
     if (loading) return (
-        <div className="teams-grid-v2">
-            {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 320, borderRadius: 'var(--radius-lg)' }} />)}
+        <div className="animate-fade-in wow-section-page">
+            <WoWSectionTitle>{t('teams.title')}</WoWSectionTitle>
+            <div className="teams-grid-v2">
+                {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 320, borderRadius: 'var(--radius-lg)' }} />)}
+            </div>
         </div>
     );
-    if (error) return <div style={{ color: 'var(--color-error)', padding: 32, textAlign: 'center' }}>⚠ {error}</div>;
+    if (error) return (
+        <div className="animate-fade-in wow-section-page">
+            <WoWSectionTitle>{t('teams.title')}</WoWSectionTitle>
+            <div style={{ color: 'var(--color-error)', padding: 32, textAlign: 'center' }}>⚠ {error}</div>
+        </div>
+    );
 
     return (
-        <div className="animate-fade-in">
+        <div className="animate-fade-in wow-section-page">
+            <WoWSectionTitle>{t('teams.title')}</WoWSectionTitle>
             {showDraftModal && (
                 <StartDraftModal
                     teams={teams}
@@ -363,14 +372,13 @@ function Teams({ onOpenRecruit, onOpenDraft }) {
                     onClose={() => setShowDraftModal(false)}
                 />
             )}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 'var(--spacing-lg)' }}>
-                <div className="wow-section-title" style={{ margin: 0 }}>{t('teams.title')}</div>
-                {isAdmin && (
+            {isAdmin && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--spacing-lg)' }}>
                     <button className="btn btn-primary" style={{ padding: '8px 20px', fontSize: '0.9em' }} onClick={() => setShowDraftModal(true)}>
                         Начать драфт
                     </button>
-                )}
-            </div>
+                </div>
+            )}
             {teams.length === 0 ? (
                 <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>{t('teams.empty')}</p>
             ) : (

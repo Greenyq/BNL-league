@@ -7,19 +7,24 @@
         html { overflow-x: hidden; }
     </style>
     <script>
-        // Scale page up on 4K, down on small screens
+        // Keep mobile at native scale, but enlarge the fixed-width desktop
+        // layout on wide screens similarly to the deployed site.
         function applyPageZoom() {
-            var vw = window.screen.width; // use screen width, not window
+            var layoutWidth = 1170;
+            var viewportWidth = window.innerWidth;
+            var screenWidth = window.screen.width;
             var zoom = 1;
-            if (vw >= 1921) {
-                zoom = vw / 1920;
-            } else if (vw < 1170) {
-                zoom = vw / 1170;
+
+            if (viewportWidth >= layoutWidth && screenWidth >= 1921) {
+                zoom = Math.min(screenWidth / 1920, viewportWidth / layoutWidth);
             }
+
             document.documentElement.style.zoom = zoom;
         }
         applyPageZoom();
+        window.addEventListener('load', applyPageZoom);
         window.addEventListener('resize', applyPageZoom);
+        window.addEventListener('orientationchange', applyPageZoom);
     </script>
     <title>BNL — Battle Newbie League | Warcraft 3</title>
     <link rel="icon" type="image/png" href="/images/favicon.png">
@@ -31,57 +36,75 @@
 <body>
 
 <div class="top-bg">
-<div class="bottom-bg">
     <div class="wrapper">
 
         <!-- ── Header ──────────────────────────────────────────────────────── -->
         <header class="header">
 
-            <!-- Language switcher -->
-            <div class="countries-lang">
-                <a href="" id="lang-ru" class="active" onclick="switchLang('ru'); return false;">
-                    <img src="/images/wow/rus-icon.png" alt="Ru">
-                </a>
-                <a href="" id="lang-en" onclick="switchLang('en'); return false;">
-                    <img src="/images/wow/eng-icon.png" alt="En">
-                </a>
-            </div>
-
-            <!-- Social links -->
-            <div class="soc-block">
-                <a href="" target="_blank"><img src="/images/wow/youtube-icon.png" alt="YouTube"></a>
-                <a href="" target="_blank"><img src="/images/wow/facebook-icon.png" alt="Facebook"></a>
-                <a href="" target="_blank"><img src="/images/wow/twitter-icon.png" alt="Twitter"></a>
-            </div>
-
-            <!-- Navigation -->
-            <div class="menu">
-                <div class="login">
-                    <a href="#profile" onclick="navigate('profile')">Войти</a>
+            <div id="header-top-row" class="header-top-row">
+                <button
+                    id="header-menu-toggle"
+                    class="header-menu-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="header-top-row"
+                    aria-label="Toggle navigation menu"
+                    onclick="toggleHeaderMenu(); return false;"
+                >
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <!-- Social links -->
+                <div class="soc-block">
+                    <a href="https://discord.gg/XCj2GTgAt2" target="_blank" rel="noopener noreferrer" aria-label="Discord">
+                        <img src="/images/discord_logo.png" alt="Discord">
+                    </a>
                 </div>
-                <ul id="bnl-nav">
-                    <li><a href="#home"      onclick="navigate('home');      return false;">Главная</a></li>
-                    <li><a href="#standings" onclick="navigate('standings'); return false;">Таблица</a></li>
-                    <li><a href="#teams"     onclick="navigate('teams');     return false;">Команды</a></li>
-                    <li><a href="#clanwar"   onclick="navigate('clanwar');   return false;">Клан-вары</a></li>
-                    <li><a href="#profile"   onclick="navigate('profile');   return false;">Профиль</a></li>
-                    <li><a href="#admin"     onclick="navigate('admin');     return false;">Админ</a></li>
-                </ul>
+
+                <!-- Navigation -->
+                <div class="menu">
+                    <ul id="bnl-nav">
+                        <li><a href="#home"      onclick="navigate('home');      return false;">Главная</a></li>
+                        <li><a href="#standings" onclick="navigate('standings'); return false;">Таблица</a></li>
+                        <li><a href="#teams"     onclick="navigate('teams');     return false;">Команды</a></li>
+                        <li><a href="#clanwar"   onclick="navigate('clanwar');   return false;">Клан-вары</a></li>
+                        <li><a href="#profile"   onclick="navigate('profile');   return false;">Профиль</a></li>
+                        <li class="login"><a href="#profile" onclick="navigate('profile'); return false;">Войти</a></li>
+                    </ul>
+                </div>
+
+                <!-- Language switcher -->
+                <div class="countries-lang">
+                    <a href="" id="lang-ru" class="active" onclick="switchLang('ru'); return false;">
+                        <img src="/images/wow/rus-icon.png" alt="Ru">
+                    </a>
+                    <a href="" id="lang-en" onclick="switchLang('en'); return false;">
+                        <img src="/images/wow/eng-icon.png" alt="En">
+                    </a>
+                </div>
             </div>
 
             <!-- Logo -->
             <div class="logo">
                 <a href="#profile" onclick="navigate('profile'); return false;"></a>
-                <p>BNL LEAGUE</p>
+                <p>
+                    BNL LEAGUE
+                    <span id="start-game-sub" class="logo-season-status">Сезон 2 стартует <strong class="logo-season-date">3 мая 2026</strong></span>
+                </p>
             </div>
 
             <!-- Players online counter -->
             <div class="online-block">
                 <p>PLAYERS ONLINE</p>
                 <span id="player-count">—</span>
-                <div class="progress-button"></div>
-                <div class="progress-bar">
-                    <img id="progress-bar-fill" style="width: 50%;" src="/images/wow/progress-bar.png">
+                <div class="progress-bar" aria-hidden="true">
+                    <div class="progress-bar__glow"></div>
+                    <div class="progress-bar__endcap progress-bar__endcap--left"></div>
+                    <div class="progress-bar__track">
+                        <div id="progress-bar-fill" class="progress-bar__fill" style="width: 50%;"></div>
+                    </div>
+                    <div class="progress-bar__endcap progress-bar__endcap--right"></div>
                 </div>
             </div>
 
@@ -89,19 +112,18 @@
 
         <!-- ── Content (React app mounts here) ─────────────────────────────── -->
         <div class="container">
+            <div id="wow-section-title-slot" class="container-title-slot"></div>
             <main class="content">
-                <div class="start-game">
-                    <a href="#home">
-                        <span id="start-game-title">Как работает лига</span><br>
-                        <span id="start-game-sub">Сезон 2 стартует 3 мая 2026</span>
-                    </a>
-                </div>
                 <div id="bnl-content">
                     <div id="root"></div>
                 </div>
             </main>
         </div>
+    </div><!-- .wrapper -->
+</div><!-- .top-bg -->
 
+<div class="bottom-scene">
+    <div class="wrapper">
         <!-- ── Footer ──────────────────────────────────────────────────────── -->
         <footer class="footer">
             <div class="footer-img">
@@ -111,7 +133,7 @@
                 <div class="footer-logo">
                     <a href="#home" onclick="navigate('home'); return false;"></a>
                 </div>
-                <ul>
+                <ul id="footer-nav">
                     <li><a href="#home"      onclick="navigate('home');      return false;">Главная</a></li>
                     <li><a href="#standings" onclick="navigate('standings'); return false;">Таблица</a></li>
                     <li><a href="#teams"     onclick="navigate('teams');     return false;">Команды</a></li>
@@ -128,10 +150,8 @@
                 </div>
             </div>
         </footer>
-
     </div><!-- .wrapper -->
-</div><!-- .bottom-bg -->
-</div><!-- .top-bg -->
+</div><!-- .bottom-scene -->
 
 <!-- ── Scripts ───────────────────────────────────────────────────────────── -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
@@ -157,16 +177,17 @@
 
     function updateNavText(lang) {
         var labels = NAV_LABELS[lang] || NAV_LABELS['ru'];
-        document.querySelectorAll('#bnl-nav a').forEach(function(a) {
+        document.querySelectorAll('#bnl-nav a, #footer-nav a').forEach(function(a) {
+            if (a.closest('.login')) return;
             var tab = a.getAttribute('href').replace('#', '');
             if (labels[tab]) a.textContent = labels[tab];
         });
         var loginLink = document.querySelector('.login a');
         if (loginLink) loginLink.textContent = lang === 'en' ? 'Login' : 'Войти';
-        var sgTitle = document.getElementById('start-game-title');
         var sgSub = document.getElementById('start-game-sub');
-        if (sgTitle) sgTitle.textContent = lang === 'en' ? 'How the League Works' : 'Как работает лига';
-        if (sgSub) sgSub.textContent = lang === 'en' ? 'Season 2 starts May 3, 2026' : 'Сезон 2 стартует 3 мая 2026';
+        if (sgSub) sgSub.innerHTML = lang === 'en'
+            ? 'Season 2 starts <strong class="logo-season-date">May 3, 2026</strong>'
+            : 'Сезон 2 стартует <strong class="logo-season-date">3 мая 2026</strong>';
     }
 
     // ── Players online label i18n ────────────────────────────────────────
@@ -176,7 +197,32 @@
     }
 
     // ── Navigation helper (sync hash + highlight) ─────────────────────────
+    function scrollPageToTop() {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
+
+    function closeHeaderMenu() {
+        var row = document.getElementById('header-top-row');
+        var toggle = document.getElementById('header-menu-toggle');
+        if (row) row.classList.remove('is-open');
+        if (toggle) toggle.setAttribute('aria-expanded', 'false');
+    }
+
+    function toggleHeaderMenu() {
+        var row = document.getElementById('header-top-row');
+        var toggle = document.getElementById('header-menu-toggle');
+        if (!row || !toggle) return;
+        var isOpen = row.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+
     function navigate(tab) {
+        var current = window.location.hash.replace('#', '') || 'home';
+        closeHeaderMenu();
+        if (current === tab) {
+            scrollPageToTop();
+            return;
+        }
         window.location.hash = tab;
     }
 
@@ -184,6 +230,10 @@
         var hash = window.location.hash.replace('#', '') || 'home';
         var links = document.querySelectorAll('#bnl-nav a');
         links.forEach(function(a) {
+            if (a.closest('.login')) {
+                a.classList.remove('nav-active');
+                return;
+            }
             var aTab = a.getAttribute('href').replace('#', '');
             if (aTab === hash) {
                 a.classList.add('nav-active');
@@ -191,12 +241,15 @@
                 a.classList.remove('nav-active');
             }
         });
-        // Show start-game only on home page
-        var sg = document.querySelector('.start-game');
-        if (sg) sg.style.display = (hash === 'home' || hash === '') ? 'block' : 'none';
     }
 
-    window.addEventListener('hashchange', updateNavHighlight);
+    window.addEventListener('hashchange', function() {
+        scrollPageToTop();
+        updateNavHighlight();
+    });
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 1170) closeHeaderMenu();
+    });
     updateNavHighlight();
 
     // ── Language switcher ─────────────────────────────────────────────────
@@ -222,7 +275,7 @@
             .then(function(data) {
                 var count = Array.isArray(data) ? data.length : 0;
                 document.getElementById('player-count').textContent = count;
-                // Scale progress bar width based on count (max ~50 players = 100%)
+                // Scale filled track width based on count (max ~50 players = 100%)
                 var pct = Math.min(count / 50 * 100, 100);
                 var bar = document.getElementById('progress-bar-fill');
                 if (bar) bar.style.width = pct + '%';
