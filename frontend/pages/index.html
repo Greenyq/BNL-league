@@ -69,8 +69,7 @@
                         <li><a href="#standings" onclick="navigate('standings'); return false;">Таблица</a></li>
                         <li><a href="#teams"     onclick="navigate('teams');     return false;">Команды</a></li>
                         <li><a href="#clanwar"   onclick="navigate('clanwar');   return false;">Клан-вары</a></li>
-                        <li><a href="#profile"   onclick="navigate('profile');   return false;">Профиль</a></li>
-                        <li class="login"><a href="#profile" onclick="navigate('profile'); return false;">Войти</a></li>
+                        <li><a id="header-profile-link" href="#profile" onclick="navigate('profile'); return false;">Профиль</a></li>
                     </ul>
                 </div>
 
@@ -170,20 +169,90 @@
 
 <script>
     // ── Navigation labels (RU / EN) ───────────────────────────────────────
+    var PLAYER_SESSION_KEY = 'bnl_player_session';
+    var PLAYER_USERNAME_KEY = 'bnl_player_username';
+    var PLAYER_SESSION_EVENT = 'bnl-player-session-change';
+    var pendingPlayerUsernameRequest = null;
+
     var NAV_LABELS = {
         ru: { home: 'Главная', standings: 'Рейтинг', teams: 'Команды', clanwar: 'Клан-вары', profile: 'Профиль', admin: 'Админ' },
         en: { home: 'Home', standings: 'Standings', teams: 'Teams', clanwar: 'Clan Wars', profile: 'Profile', admin: 'Admin' }
     };
 
+    function isPlayerAuthenticated() {
+        return !!localStorage.getItem(PLAYER_SESSION_KEY);
+    }
+
+    function getStoredPlayerUsername() {
+        return localStorage.getItem(PLAYER_USERNAME_KEY);
+    }
+
+    function setStoredPlayerUsername(username) {
+        if (username) localStorage.setItem(PLAYER_USERNAME_KEY, username);
+        else localStorage.removeItem(PLAYER_USERNAME_KEY);
+    }
+
+    function ensurePlayerUsername() {
+        var sid = localStorage.getItem(PLAYER_SESSION_KEY);
+        if (!sid || !isPlayerAuthenticated()) {
+            setStoredPlayerUsername(null);
+            return;
+        }
+        if (getStoredPlayerUsername() || pendingPlayerUsernameRequest) return;
+
+        pendingPlayerUsernameRequest = fetch('/api/players/auth/me', {
+            headers: { 'x-player-session-id': sid }
+        })
+            .then(function(r) {
+                return r.json().catch(function() { return {}; }).then(function(data) {
+                    if (!r.ok) {
+                        var error = data.error || r.statusText;
+                        if (r.status === 401 || error === 'Not authenticated' || error === 'User not found') {
+                            localStorage.removeItem(PLAYER_SESSION_KEY);
+                            setStoredPlayerUsername(null);
+                        }
+                        throw new Error(error);
+                    }
+                    return data;
+                });
+            })
+            .then(function(data) {
+                setStoredPlayerUsername(data.user && data.user.username ? data.user.username : null);
+                updateHeaderProfileLink();
+            })
+            .catch(function() {
+                updateHeaderProfileLink();
+            })
+            .finally(function() {
+                pendingPlayerUsernameRequest = null;
+            });
+    }
+
+    function updateHeaderProfileLink(lang) {
+        var profileLink = document.getElementById('header-profile-link');
+        if (!profileLink) return;
+
+        var currentLang = typeof lang === 'string'
+            ? lang
+            : (localStorage.getItem('bnl_lang') || 'ru');
+        var playerUsername = getStoredPlayerUsername();
+
+        if (isPlayerAuthenticated()) {
+            profileLink.textContent = playerUsername || (currentLang === 'en' ? 'Profile' : 'Профиль');
+            ensurePlayerUsername();
+            return;
+        }
+
+        profileLink.textContent = currentLang === 'en' ? 'Login' : 'Войти';
+    }
+
     function updateNavText(lang) {
         var labels = NAV_LABELS[lang] || NAV_LABELS['ru'];
         document.querySelectorAll('#bnl-nav a, #footer-nav a').forEach(function(a) {
-            if (a.closest('.login')) return;
             var tab = a.getAttribute('href').replace('#', '');
             if (labels[tab]) a.textContent = labels[tab];
         });
-        var loginLink = document.querySelector('.login a');
-        if (loginLink) loginLink.textContent = lang === 'en' ? 'Login' : 'Войти';
+        updateHeaderProfileLink(lang);
         var sgSub = document.getElementById('start-game-sub');
         if (sgSub) sgSub.innerHTML = lang === 'en'
             ? 'Season 2 starts <strong class="logo-season-date">May 3, 2026</strong>'
@@ -230,10 +299,6 @@
         var hash = window.location.hash.replace('#', '') || 'home';
         var links = document.querySelectorAll('#bnl-nav a');
         links.forEach(function(a) {
-            if (a.closest('.login')) {
-                a.classList.remove('nav-active');
-                return;
-            }
             var aTab = a.getAttribute('href').replace('#', '');
             if (aTab === hash) {
                 a.classList.add('nav-active');
@@ -267,6 +332,12 @@
         document.getElementById('lang-ru').className = storedLang === 'ru' ? 'active' : '';
         document.getElementById('lang-en').className = storedLang === 'en' ? 'active' : '';
     })();
+
+    window.addEventListener('storage', function(e) {
+        if (!e.key || e.key === PLAYER_SESSION_KEY || e.key === PLAYER_USERNAME_KEY) updateHeaderProfileLink();
+    });
+    window.addEventListener(PLAYER_SESSION_EVENT, updateHeaderProfileLink);
+    updateHeaderProfileLink();
 
     // ── Player count from API ─────────────────────────────────────────────
     function loadPlayerCount() {
