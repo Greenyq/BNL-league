@@ -1,9 +1,32 @@
 // Profile — вход игрока, привязка BattleTag, выбор расы и портрета
 
 const PLAYER_SESSION_KEY = 'bnl_player_session';
+const PLAYER_USERNAME_KEY = 'bnl_player_username';
+const PLAYER_SESSION_EVENT = 'bnl-player-session-change';
 const getPlayerSession   = () => localStorage.getItem(PLAYER_SESSION_KEY);
-const setPlayerSession   = id => localStorage.setItem(PLAYER_SESSION_KEY, id);
-const clearPlayerSession = () => localStorage.removeItem(PLAYER_SESSION_KEY);
+const getPlayerUsername  = () => localStorage.getItem(PLAYER_USERNAME_KEY);
+const emitPlayerSessionChange = () => window.dispatchEvent(new CustomEvent(PLAYER_SESSION_EVENT));
+const setPlayerUsername  = username => {
+    if (username) localStorage.setItem(PLAYER_USERNAME_KEY, username);
+    else localStorage.removeItem(PLAYER_USERNAME_KEY);
+};
+const setPlayerSession   = (id, username = null) => {
+    localStorage.setItem(PLAYER_SESSION_KEY, id);
+    setPlayerUsername(username);
+    emitPlayerSessionChange();
+};
+const clearPlayerSession = () => {
+    localStorage.removeItem(PLAYER_SESSION_KEY);
+    localStorage.removeItem(PLAYER_USERNAME_KEY);
+    emitPlayerSessionChange();
+};
+const syncPlayerUsername = user => {
+    const username = user?.username || null;
+    if (username !== getPlayerUsername()) {
+        setPlayerUsername(username);
+        emitPlayerSessionChange();
+    }
+};
 
 const RACE_OPTIONS = [
     { value: 0, label: 'Random',     img: '/images/random.svg' },
@@ -52,7 +75,7 @@ function AuthForm({ onAuth }) {
                     method: 'POST',
                     body: JSON.stringify({ username, password }),
                 });
-                setPlayerSession(data.sessionId);
+                setPlayerSession(data.sessionId, data.user?.username || null);
                 onAuth(data.user, data.playerData || null);
             } else if (mode === 'forgot') {
                 await playerFetch('/api/players/auth/request-reset', {
@@ -196,6 +219,7 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                     setSelectedPort(d.playerData.selectedPortrait ?? null);
                     setDraftAvailable(d.playerData.draftAvailable ?? false);
                 }
+                syncPlayerUsername(d.user);
             })
             .catch(() => {});
     }, []);
@@ -458,7 +482,11 @@ function Profile() {
         const sid = getPlayerSession();
         if (!sid) { setChecking(false); return; }
         playerFetch('/api/players/auth/me')
-            .then(d => { setUser(d.user); setPlayerData(d.playerData); })
+            .then(d => {
+                setUser(d.user);
+                setPlayerData(d.playerData);
+                syncPlayerUsername(d.user);
+            })
             .catch(err => {
                 // Only clear session on explicit auth rejection, not network/server errors
                 const msg = err.message || '';

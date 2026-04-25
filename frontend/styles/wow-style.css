@@ -47,6 +47,28 @@ a:hover, button:hover {
   filter: brightness(140%);
 }
 
+.header a,
+.header button,
+.header-top-row a,
+.header-top-row button {
+  -webkit-tap-highlight-color: transparent;
+}
+.header a:focus,
+.header a:active,
+.header a:focus-visible,
+.header button:focus,
+.header button:active,
+.header button:focus-visible,
+.header-top-row a:focus,
+.header-top-row a:active,
+.header-top-row a:focus-visible,
+.header-top-row button:focus,
+.header-top-row button:active,
+.header-top-row button:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 .top-bg {
   flex: 1 0 auto;
   background: url(../images/warcraft/background/bg_top_hero.png) center top no-repeat;
@@ -200,9 +222,6 @@ a:hover, button:hover {
   display: inline-block;
   padding: 0 15px 0 12px;
 }
-.menu li.login {
-  padding: 0 0 0 18px;
-}
 .menu a {
   font-family: "Times New Roman", Times, serif;
   font-size: 14px;
@@ -213,19 +232,6 @@ a:hover, button:hover {
 .menu a:hover, .menu a.nav-active {
   color: #ffd85b;
   filter: none;
-}
-
-.login {
-  float: none;
-  margin: 0;
-}
-.login a {
-  background: url(../images/wow/login-button.png) center 17px no-repeat;
-  width: 92px;
-  display: block;
-  padding-right: 26px;
-  text-align: right;
-  color: #ffc698;
 }
 
 .logo {
@@ -716,28 +722,11 @@ a:hover, button:hover {
     padding: 0;
   }
 
-  .menu li.login {
-    padding: 0;
-  }
-
   .menu a {
     display: block;
     font-size: 12px;
     line-height: 1.2;
     padding: 8px 0;
-    text-align: center;
-  }
-
-  .login {
-    float: none;
-    margin: 0;
-  }
-
-  .login a {
-    background-position: center;
-    width: auto;
-    min-width: 82px;
-    padding: 8px 12px;
     text-align: center;
   }
 
