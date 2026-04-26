@@ -32,7 +32,7 @@ function Maps() {
     const totalMaps = labels.reduce((sum, label) => sum + (label.maps || []).length, 0);
 
     return (
-        <div className="animate-fade-in">
+        <div className="animate-fade-in wow-section-page">
             <WoWSectionTitle>{t('maps.title')}</WoWSectionTitle>
 
             {loading ? (
@@ -60,14 +60,14 @@ function Maps() {
                                 {(label.maps || []).map(map => (
                                     <div key={map.id} className="card-elevated" style={{ padding: 'var(--spacing-lg)' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--spacing-md)', flexWrap: 'wrap' }}>
-                                            <div style={{ flex: 1, minWidth: 220 }}>
-                                                <h4 style={{ marginBottom: 6, color: 'var(--color-text-primary)' }}>{map.title}</h4>
+                                            <div style={{ flex: '1 1 220px', minWidth: 0, overflowWrap: 'anywhere' }}>
+                                                <h4 style={{ marginBottom: 6, color: 'var(--color-text-primary)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{map.title}</h4>
                                                 {map.description && (
                                                     <p style={{ color: 'var(--color-text-secondary)', marginBottom: 8, lineHeight: 1.5 }}>
                                                         {map.description}
                                                     </p>
                                                 )}
-                                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.86em' }}>
+                                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.86em', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                                                     {map.originalName} · {formatMapSize(map.size)}
                                                 </div>
                                             </div>
