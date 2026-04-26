@@ -3,8 +3,21 @@ const { ClanWar } = require('../models/ClanWar');
 const { Player, PlayerStats } = require('../models/Player');
 const { Team } = require('../models/Team');
 const { checkAuth } = require('../middleware/auth');
+const {
+    getCachedSeasonProgress,
+    setCachedSeasonProgress,
+} = require('../services/seasonProgressCache');
 
 const router = express.Router();
+
+function calculateSeasonProgress(wars) {
+    return wars.reduce((progress, war) => {
+        const matches = Array.isArray(war.matches) ? war.matches : [];
+        progress.total += matches.length;
+        progress.finished += matches.filter(match => match?.winner === 'a' || match?.winner === 'b').length;
+        return progress;
+    }, { finished: 0, total: 0 });
+}
 
 // GET /api/clan-wars — list all clan wars
 router.get('/', async (req, res) => {
@@ -15,6 +28,21 @@ router.get('/', async (req, res) => {
         res.json(await ClanWar.find(filter).sort({ date: -1 }));
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch clan wars' });
+    }
+});
+
+// GET /api/clan-wars/progress — cached season progress summary
+router.get('/progress', async (req, res) => {
+    try {
+        const cached = getCachedSeasonProgress();
+        if (cached) return res.json(cached);
+
+        const wars = await ClanWar.find({}, { 'matches.winner': 1 }).lean();
+        const progress = calculateSeasonProgress(wars);
+        setCachedSeasonProgress(progress);
+        res.json(progress);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch season progress' });
     }
 });
 

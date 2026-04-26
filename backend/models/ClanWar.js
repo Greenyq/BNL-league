@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { clearSeasonProgressCache } = require('../services/seasonProgressCache');
 
 // ── ClanWar ───────────────────────────────────────────────────────────────────
 // Format: first team to 3 wins. Each internal match is BO3.
@@ -68,5 +69,15 @@ clanWarSchema.set('toJSON', {
     versionKey: false,
     transform: (doc, ret) => { ret.id = ret._id.toString(); delete ret._id; }
 });
+
+function invalidateSeasonProgressCache() {
+    clearSeasonProgressCache();
+}
+
+clanWarSchema.post('save', invalidateSeasonProgressCache);
+clanWarSchema.post('findOneAndUpdate', invalidateSeasonProgressCache);
+clanWarSchema.post('findOneAndDelete', invalidateSeasonProgressCache);
+clanWarSchema.post('findOneAndReplace', invalidateSeasonProgressCache);
+clanWarSchema.post('deleteOne', { document: true, query: false }, invalidateSeasonProgressCache);
 
 module.exports = { ClanWar: mongoose.model('ClanWar', clanWarSchema) };

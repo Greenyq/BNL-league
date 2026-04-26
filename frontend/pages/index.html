@@ -93,9 +93,9 @@
                 </p>
             </div>
 
-            <!-- Players online counter -->
+            <!-- Season progress counter -->
             <div class="online-block">
-                <p>PLAYERS ONLINE</p>
+                <p>SEASON PROGRESS</p>
                 <span id="player-count">—</span>
                 <div class="progress-bar" aria-hidden="true">
                     <div class="progress-bar__glow"></div>
@@ -179,6 +179,11 @@
         en: { home: 'Home', standings: 'Standings', teams: 'Teams', clanwar: 'Clan Wars', profile: 'Profile', admin: 'Admin' }
     };
 
+    var HEADER_PROGRESS_LABELS = {
+        ru: 'ПРОГРЕСС СЕЗОНА',
+        en: 'SEASON PROGRESS'
+    };
+
     function isPlayerAuthenticated() {
         return !!localStorage.getItem(PLAYER_SESSION_KEY);
     }
@@ -253,16 +258,17 @@
             if (labels[tab]) a.textContent = labels[tab];
         });
         updateHeaderProfileLink(lang);
+        updateOnlineLabel(lang);
         var sgSub = document.getElementById('start-game-sub');
         if (sgSub) sgSub.innerHTML = lang === 'en'
             ? 'Season 2 starts <strong class="logo-season-date">May 3, 2026</strong>'
             : 'Сезон 2 стартует <strong class="logo-season-date">3 мая 2026</strong>';
     }
 
-    // ── Players online label i18n ────────────────────────────────────────
+    // ── Season progress label i18n ───────────────────────────────────────
     function updateOnlineLabel(lang) {
         var p = document.querySelector('.online-block > p');
-        if (p) p.textContent = 'PLAYERS ONLINE';
+        if (p) p.textContent = HEADER_PROGRESS_LABELS[lang] || HEADER_PROGRESS_LABELS['ru'];
     }
 
     // ── Navigation helper (sync hash + highlight) ─────────────────────────
@@ -339,21 +345,31 @@
     window.addEventListener(PLAYER_SESSION_EVENT, updateHeaderProfileLink);
     updateHeaderProfileLink();
 
-    // ── Player count from API ─────────────────────────────────────────────
-    function loadPlayerCount() {
-        fetch('/api/players')
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                var count = Array.isArray(data) ? data.length : 0;
-                document.getElementById('player-count').textContent = count;
-                // Scale filled track width based on count (max ~50 players = 100%)
-                var pct = Math.min(count / 50 * 100, 100);
-                var bar = document.getElementById('progress-bar-fill');
-                if (bar) bar.style.width = pct + '%';
-            })
-            .catch(function() {});
+    function setSeasonProgress(finished, total) {
+        var countEl = document.getElementById('player-count');
+        if (countEl) countEl.textContent = finished + '/' + total;
+
+        var pct = total > 0 ? Math.min(finished / total * 100, 100) : 0;
+        var bar = document.getElementById('progress-bar-fill');
+        if (bar) bar.style.width = pct + '%';
     }
-    loadPlayerCount();
+
+    function loadSeasonProgress() {
+        fetch('/api/clan-wars/progress')
+            .then(function(r) {
+                if (!r.ok) throw new Error('Failed to load season progress');
+                return r.json();
+            })
+            .then(function(data) {
+                var finished = Number(data && data.finished) || 0;
+                var total = Number(data && data.total) || 0;
+                setSeasonProgress(finished, total);
+            })
+            .catch(function() {
+                setSeasonProgress(0, 0);
+            });
+    }
+    loadSeasonProgress();
 </script>
 
 </body>
