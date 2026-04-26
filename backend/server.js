@@ -15,6 +15,7 @@ const matchesRouter   = require('./routes/matches');
 const clanWarsRouter  = require('./routes/clanWars');
 const portraitsRouter = require('./routes/portraits');
 const draftRouter     = require('./routes/draft');
+const mapsRouter      = require('./routes/maps');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -127,6 +128,7 @@ app.use('/api/matches',   matchesRouter);
 app.use('/api/clan-wars', clanWarsRouter);
 app.use('/api/portraits', portraitsRouter);
 app.use('/api/draft',     draftRouter);
+app.use('/api/maps',      mapsRouter);
 
 // ── SPA fallback ──────────────────────────────────────────────────────────────
 app.get('*', (req, res) => {

@@ -1368,6 +1368,354 @@ function PortraitsTab({ showMsg }) {
     );
 }
 
+// ── Вкладка Manage maps ──────────────────────────────────────────────────────
+const EMPTY_MAP_FORM = { title: '', description: '', labelId: '' };
+const EMPTY_LABEL_FORM = { name: '' };
+
+function titleFromMapFile(fileName) {
+    return (fileName || '').replace(/\.[^/.]+$/, '').trim();
+}
+
+function ManageMapsTab({ showMsg }) {
+    useLang();
+    const [labels, setLabels] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [labelForm, setLabelForm] = React.useState(EMPTY_LABEL_FORM);
+    const [editingLabelId, setEditingLabelId] = React.useState(null);
+    const [mapForm, setMapForm] = React.useState(EMPTY_MAP_FORM);
+    const [editingMap, setEditingMap] = React.useState(null);
+    const [file, setFile] = React.useState(null);
+    const [savingLabel, setSavingLabel] = React.useState(false);
+    const [savingMap, setSavingMap] = React.useState(false);
+    const [mapsSubtab, setMapsSubtab] = React.useState('maps');
+    const fileRef = React.useRef(null);
+
+    const load = React.useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await apiFetch('/api/maps');
+            const list = Array.isArray(data) ? data : [];
+            setLabels(list);
+            setMapForm(f => ({
+                ...f,
+                labelId: list.some(label => label.id === f.labelId) ? f.labelId : (list[0]?.id || ''),
+            }));
+        } catch {
+            setLabels([]);
+        }
+        setLoading(false);
+    }, []);
+
+    React.useEffect(() => { load(); }, [load]);
+
+    const resetLabelForm = () => {
+        setEditingLabelId(null);
+        setLabelForm(EMPTY_LABEL_FORM);
+    };
+
+    const resetMapForm = () => {
+        setEditingMap(null);
+        setMapForm({ ...EMPTY_MAP_FORM, labelId: labels[0]?.id || '' });
+        setFile(null);
+        if (fileRef.current) fileRef.current.value = '';
+    };
+
+    const saveLabel = async (e) => {
+        e.preventDefault();
+        if (!labelForm.name.trim()) return;
+        setSavingLabel(true);
+        try {
+            const body = JSON.stringify({
+                name: labelForm.name.trim(),
+            });
+            if (editingLabelId) {
+                await apiFetch(`/api/maps/labels/${editingLabelId}`, { method: 'PUT', body });
+                showMsg('Label updated');
+            } else {
+                await apiFetch('/api/maps/labels', { method: 'POST', body });
+                showMsg('Label created');
+            }
+            resetLabelForm();
+            load();
+            setMapsSubtab('labels');
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+        setSavingLabel(false);
+    };
+
+    const editLabel = (label) => {
+        setEditingLabelId(label.id);
+        setLabelForm({ name: label.name || '' });
+        setMapsSubtab('label-form');
+    };
+
+    const addLabel = () => {
+        resetLabelForm();
+        setMapsSubtab('label-form');
+    };
+
+    const deleteLabel = async (label) => {
+        if (!confirm(`Delete label "${label.name}"?`)) return;
+        try {
+            await apiFetch(`/api/maps/labels/${label.id}`, { method: 'DELETE' });
+            showMsg('Label deleted');
+            if (mapForm.labelId === label.id) {
+                setMapForm(f => ({ ...f, labelId: '' }));
+            }
+            load();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+
+    const saveMap = async (e) => {
+        e.preventDefault();
+        if (!mapForm.labelId) {
+            showMsg('❌ Label is required', 'error');
+            return;
+        }
+        if (!mapForm.title.trim()) return;
+        if (!editingMap && !file) {
+            showMsg('❌ Map file is required', 'error');
+            return;
+        }
+
+        setSavingMap(true);
+        try {
+            const form = new FormData();
+            form.append('title', mapForm.title.trim());
+            form.append('description', mapForm.description.trim());
+            form.append('labelId', mapForm.labelId);
+            if (file) form.append('file', file);
+
+            const sid = getSession();
+            const res = await fetch(editingMap ? `/api/maps/${editingMap.id}` : '/api/maps', {
+                method: editingMap ? 'PUT' : 'POST',
+                headers: { 'x-session-id': sid },
+                body: form,
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'Map save failed');
+
+            showMsg(editingMap ? 'Map updated' : 'Map uploaded');
+            resetMapForm();
+            load();
+            setMapsSubtab('maps');
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+        setSavingMap(false);
+    };
+
+    const editMap = (map) => {
+        setEditingMap(map);
+        setMapForm({
+            title: map.title || '',
+            description: map.description || '',
+            labelId: map.labelId || labels.find(label => label.name === map.labelName)?.id || '',
+        });
+        setFile(null);
+        if (fileRef.current) fileRef.current.value = '';
+        setMapsSubtab('edit-map');
+    };
+
+    const deleteMap = async (map) => {
+        if (!confirm(`Delete map "${map.title}"?`)) return;
+        try {
+            await apiFetch(`/api/maps/${map.id}`, { method: 'DELETE' });
+            showMsg('Map deleted');
+            if (editingMap?.id === map.id) resetMapForm();
+            load();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+
+    const allMaps = labels.flatMap(label => (label.maps || []).map(map => ({ ...map, labelName: label.name })));
+    const mapsSubtabs = [
+        { id: 'maps', label: `Manage maps (${allMaps.length})` },
+        { id: 'labels', label: `Manage labels (${labels.length})` },
+    ];
+    const showMapForm = mapsSubtab === 'upload' || mapsSubtab === 'edit-map';
+
+    return (
+        <div>
+            <h3 style={{ marginBottom: 'var(--spacing-lg)' }}>Manage maps</h3>
+
+            <div style={{ display: 'flex', gap: 8, marginBottom: 'var(--spacing-xl)', flexWrap: 'wrap' }}>
+                {mapsSubtabs.map(subtab => (
+                    <button
+                        key={subtab.id}
+                        type="button"
+                        className={`nav-btn${mapsSubtab === subtab.id ? ' active' : ''}`}
+                        onClick={() => setMapsSubtab(subtab.id)}
+                        style={{ padding: '8px 16px', fontSize: '0.82em' }}
+                    >
+                        <span>{subtab.label}</span>
+                    </button>
+                ))}
+            </div>
+
+            {mapsSubtab === 'label-form' && (
+                <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-xl)', maxWidth: 560 }}>
+                    <h4 style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-accent-primary)' }}>
+                        {editingLabelId ? 'Edit label' : 'Add label'}
+                    </h4>
+                    <form onSubmit={saveLabel} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+                        <input
+                            value={labelForm.name}
+                            onChange={e => setLabelForm({ ...labelForm, name: e.target.value })}
+                            placeholder="Label name"
+                            required
+                        />
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button className="btn btn-primary" disabled={savingLabel || !labelForm.name.trim()}>
+                                {savingLabel ? '...' : (editingLabelId ? 'Save label' : 'Add label')}
+                            </button>
+                            <button type="button" className="btn btn-secondary" onClick={() => { resetLabelForm(); setMapsSubtab('labels'); }}>Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {showMapForm && (
+                <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-xl)' }}>
+                    <h4 style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-accent-primary)' }}>
+                        {editingMap ? 'Edit map' : 'Upload map'}
+                    </h4>
+                    <form onSubmit={saveMap} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+                        <div>
+                            <select
+                                value={mapForm.labelId}
+                                onChange={e => setMapForm({ ...mapForm, labelId: e.target.value })}
+                                required
+                                style={{ width: '100%', background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '2px solid var(--color-bg-lighter)', borderRadius: 'var(--radius-md)', padding: '10px 14px' }}
+                            >
+                                <option value="">Select label</option>
+                                {labels.map(label => (
+                                    <option key={label.id} value={label.id}>{label.name}</option>
+                                ))}
+                            </select>
+                            {!labels.length && (
+                                <div style={{ marginTop: 6, color: 'var(--color-text-muted)', fontSize: '0.82em' }}>
+                                    Add a label before uploading maps.
+                                </div>
+                            )}
+                        </div>
+                        <input
+                            value={mapForm.title}
+                            onChange={e => setMapForm({ ...mapForm, title: e.target.value })}
+                            placeholder="Map title"
+                            required
+                        />
+                        <textarea
+                            value={mapForm.description}
+                            onChange={e => setMapForm({ ...mapForm, description: e.target.value })}
+                            placeholder="Description"
+                            rows="3"
+                            style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '2px solid var(--color-bg-lighter)', borderRadius: 'var(--radius-md)', padding: '10px 14px', resize: 'vertical' }}
+                        />
+                        <input
+                            ref={fileRef}
+                            type="file"
+                            accept=".w3x,.w3m"
+                            onChange={e => {
+                                const selected = e.target.files[0] || null;
+                                setFile(selected);
+                                if (selected && !mapForm.title.trim()) {
+                                    setMapForm({ ...mapForm, title: titleFromMapFile(selected.name) });
+                                }
+                            }}
+                            required={!editingMap}
+                            style={{ color: 'var(--color-text-secondary)' }}
+                        />
+                        {editingMap && (
+                            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>
+                                Current file: {editingMap.originalName} · {formatMapSize(editingMap.size)}
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button className="btn btn-primary" disabled={savingMap || !mapForm.title.trim() || !mapForm.labelId || (!editingMap && !file)}>
+                                {savingMap ? '...' : (editingMap ? 'Save map' : 'Upload map')}
+                            </button>
+                            <button type="button" className="btn btn-secondary" onClick={() => { resetMapForm(); setMapsSubtab('maps'); }}>Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {loading ? (
+                <p style={{ color: 'var(--color-text-muted)' }}>...</p>
+            ) : mapsSubtab === 'labels' ? (
+                <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 'var(--spacing-md)', flexWrap: 'wrap' }}>
+                        <h4 style={{ color: 'var(--color-accent-primary)', marginBottom: 0 }}>Labels ({labels.length})</h4>
+                        <button type="button" className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.86em' }} onClick={addLabel}>
+                            Add label
+                        </button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
+                        {labels.length === 0 ? (
+                            <div className="card-elevated" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-text-muted)' }}>No labels yet</div>
+                        ) : labels.map(label => (
+                            <div key={label.id} className="card-elevated" style={{ padding: 'var(--spacing-md)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{label.name}</div>
+                                        <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>
+                                            {(label.maps || []).length} maps
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 6 }}>
+                                        <button onClick={() => editLabel(label)} style={{ background: 'rgba(33,150,243,0.15)', color: '#2196f3', border: '1px solid rgba(33,150,243,0.3)', padding: '5px 9px', borderRadius: 'var(--radius-sm)', fontSize: '0.8em' }}>Edit</button>
+                                        <button onClick={() => deleteLabel(label)} style={{ background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', padding: '5px 9px', borderRadius: 'var(--radius-sm)', fontSize: '0.8em' }}>Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : mapsSubtab === 'maps' ? (
+                <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 'var(--spacing-md)', flexWrap: 'wrap' }}>
+                        <h4 style={{ color: 'var(--color-accent-primary)', marginBottom: 0 }}>Maps ({allMaps.length})</h4>
+                        <button type="button" className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.86em' }} onClick={() => { resetMapForm(); setMapsSubtab('upload'); }}>
+                            Upload map
+                        </button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
+                        {allMaps.length === 0 ? (
+                            <div className="card-elevated" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-text-muted)' }}>No maps yet</div>
+                        ) : labels.filter(label => (label.maps || []).length > 0).map(label => (
+                            <section key={label.id}>
+                                <h4 style={{ color: 'var(--color-accent-secondary)', marginBottom: 'var(--spacing-sm)' }}>
+                                    {label.name}
+                                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75em', fontWeight: 400, marginLeft: 8 }}>
+                                        ({(label.maps || []).length} maps)
+                                    </span>
+                                </h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
+                                    {(label.maps || []).map(map => (
+                                        <div key={map.id} className="card-elevated" style={{ padding: 'var(--spacing-md)' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                                                <div style={{ flex: 1, minWidth: 220 }}>
+                                                    <div style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{map.title}</div>
+                                                    {map.description && <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.88em', marginTop: 5 }}>{map.description}</div>}
+                                                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', marginTop: 5 }}>
+                                                        {map.originalName} · {formatMapSize(map.size)}
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                                                    <a href={`/api/maps/${map.id}/download`} className="btn btn-secondary" style={{ textDecoration: 'none', padding: '6px 12px', fontSize: '0.82em' }}>Download</a>
+                                                    <button onClick={() => editMap({ ...map, labelId: map.labelId || label.id, labelName: label.name })} style={{ background: 'rgba(33,150,243,0.15)', color: '#2196f3', border: '1px solid rgba(33,150,243,0.3)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: '0.82em' }}>Edit</button>
+                                                    <button onClick={() => deleteMap(map)} style={{ background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: '0.82em' }}>Delete</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        ))}
+                    </div>
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
 // ── Управление аккаунтами игроков (PlayerUser) ───────────────────────────────
 function AccountsSection({ showMsg }) {
     useLang();
@@ -1613,6 +1961,7 @@ function AdminPanel({ onLogout }) {
     const [teams,   setTeams]   = React.useState([]);
     const [msg,     setMsg]     = React.useState(null);
     const [msgType, setMsgType] = React.useState('info');
+    const msgTimerRef = React.useRef(null);
 
     const load = React.useCallback(async () => {
         const [p, tm] = await Promise.all([apiFetch('/api/players'), apiFetch('/api/teams')]);
@@ -1622,9 +1971,18 @@ function AdminPanel({ onLogout }) {
     React.useEffect(() => { load(); }, [load]);
 
     const showMsg = (text, type = 'info') => {
-        setMsg(text); setMsgType(type);
-        setTimeout(() => setMsg(null), 4000);
+        if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+        setMsg(text);
+        setMsgType(type);
+        msgTimerRef.current = setTimeout(() => {
+            setMsg(null);
+            msgTimerRef.current = null;
+        }, type === 'error' ? 8000 : 4000);
     };
+
+    React.useEffect(() => () => {
+        if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+    }, []);
 
     const logout = async () => {
         try { await apiFetch('/api/admin/logout', { method: 'POST' }); } catch {}
@@ -1644,6 +2002,7 @@ function AdminPanel({ onLogout }) {
         { id: 'teams',    key: 'admin.tab.teams' },
         { id: 'clanwars', key: 'admin.tab.clanwars' },
         { id: 'portraits',key: 'admin.tab.portraits' },
+        { id: 'maps',     label: 'Manage maps' },
         { id: 'tools',    key: 'admin.tab.tools' },
     ];
 
@@ -1655,21 +2014,57 @@ function AdminPanel({ onLogout }) {
             </div>
 
             {msg && (
-                <div style={{
-                    background: msgType === 'error' ? 'rgba(244,67,54,0.1)' : 'rgba(212,175,55,0.1)',
-                    border: `1px solid ${msgType === 'error' ? 'var(--color-error)' : 'var(--color-accent-primary)'}`,
-                    borderRadius: 'var(--radius-sm)', padding: 'var(--spacing-md) var(--spacing-lg)',
-                    color: msgType === 'error' ? 'var(--color-error)' : 'var(--color-accent-primary)',
-                    marginBottom: 'var(--spacing-lg)', fontWeight: 600,
-                }}>
-                    {msg}
+                <div
+                    role="alert"
+                    aria-live="assertive"
+                    style={{
+                        position: 'fixed',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 2000,
+                        width: 'min(440px, calc(100vw - 32px))',
+                        background: msgType === 'error' ? 'rgba(35,12,12,0.98)' : 'rgba(30,25,12,0.98)',
+                        border: `2px solid ${msgType === 'error' ? 'var(--color-error)' : 'var(--color-accent-primary)'}`,
+                        borderRadius: 'var(--radius-md)',
+                        padding: 'var(--spacing-md) var(--spacing-lg)',
+                        color: msgType === 'error' ? 'var(--color-error-light)' : 'var(--color-accent-primary)',
+                        fontWeight: 700,
+                        boxShadow: msgType === 'error'
+                            ? '0 12px 40px rgba(244,67,54,0.35), 0 8px 24px rgba(0,0,0,0.5)'
+                            : '0 12px 40px rgba(212,175,55,0.25), 0 8px 24px rgba(0,0,0,0.5)',
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                        <div style={{ flex: 1, lineHeight: 1.45 }}>{msg}</div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+                                msgTimerRef.current = null;
+                                setMsg(null);
+                            }}
+                            aria-label="Close notification"
+                            style={{
+                                background: 'transparent',
+                                color: msgType === 'error' ? 'var(--color-error-light)' : 'var(--color-accent-primary)',
+                                border: 'none',
+                                fontSize: 20,
+                                lineHeight: 1,
+                                padding: 0,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            ×
+                        </button>
+                    </div>
                 </div>
             )}
 
             <div style={{ display: 'flex', gap: 'var(--spacing-xs)', marginBottom: 'var(--spacing-xl)', flexWrap: 'wrap' }}>
                 {TABS_ADMIN.map(tb => (
                     <button key={tb.id} className={`nav-btn${tab === tb.id ? ' active' : ''}`} style={{ padding: '10px 22px' }} onClick={() => setTab(tb.id)}>
-                        <span>{t(tb.key)}</span>
+                        <span>{tb.label || t(tb.key)}</span>
                     </button>
                 ))}
             </div>
@@ -1678,6 +2073,7 @@ function AdminPanel({ onLogout }) {
             {tab === 'teams'     && <TeamsTab    teams={teams}   players={players} onRefresh={load} showMsg={showMsg} />}
             {tab === 'clanwars'  && <ClanWarTab  players={players} teams={teams} showMsg={showMsg} />}
             {tab === 'portraits' && <PortraitsTab showMsg={showMsg} />}
+            {tab === 'maps'      && <ManageMapsTab showMsg={showMsg} />}
             {tab === 'tools'   && (
                 <div>
                     <h3 style={{ marginBottom: 'var(--spacing-lg)' }}>{t('admin.tab.tools')}</h3>

@@ -1,11 +1,12 @@
 // BNL League — app entry point (JSX via Babel CDN)
-// Хэш-роутинг: /#home, /#standings, /#teams, /#clanwar, /#profile, /#admin
+// Хэш-роутинг: /#home, /#standings, /#teams, /#clanwar, /#maps, /#profile, /#admin
 
 const TABS = [
     { id: 'home',      labelKey: 'nav.home' },
     { id: 'standings', labelKey: 'nav.standings' },
     { id: 'teams',     labelKey: 'nav.teams' },
     { id: 'clanwar',   labelKey: 'nav.clanwar' },
+    { id: 'maps',      labelKey: 'nav.maps' },
     { id: 'profile',   labelKey: 'nav.profile' },
     { id: 'admin',     labelKey: 'nav.admin' },
 ];
@@ -102,6 +103,7 @@ function App() {
                         : <Teams onOpenRecruit={openRecruit} onOpenDraft={openDraft} />
             )}
             {tab === 'clanwar'   && <ClanWar />}
+            {tab === 'maps'      && <Maps />}
             {tab === 'profile'   && <Profile />}
             {tab === 'admin'     && <Admin />}
         </div>

@@ -9,6 +9,7 @@ const LANGS = {
         'nav.standings':  'Рейтинг',
         'nav.teams':      'Команды',
         'nav.clanwar':    'Клан-вары',
+        'nav.maps':       'Карты',
         'nav.profile':    'Профиль',
         'nav.admin':      'Админ',
         'nav.lang':       'EN',
@@ -71,6 +72,11 @@ const LANGS = {
         'cw.status.upcoming':  'Предстоит',
         'cw.status.ongoing':   'Идёт',
         'cw.status.completed': 'Завершён',
+
+        // Maps
+        'maps.title':    'Карты',
+        'maps.empty':    'Карты пока не добавлены',
+        'maps.download': 'Скачать',
 
         // Profile / Auth
         'profile.title':          'Профиль',
@@ -220,6 +226,7 @@ const LANGS = {
         'nav.standings':  'Standings',
         'nav.teams':      'Teams',
         'nav.clanwar':    'Clan Wars',
+        'nav.maps':       'Maps',
         'nav.profile':    'Profile',
         'nav.admin':      'Admin',
         'nav.lang':       'RU',
@@ -282,6 +289,11 @@ const LANGS = {
         'cw.status.upcoming':  'Upcoming',
         'cw.status.ongoing':   'Ongoing',
         'cw.status.completed': 'Completed',
+
+        // Maps
+        'maps.title':    'Maps',
+        'maps.empty':    'No maps yet',
+        'maps.download': 'Download',
 
         // Profile / Auth
         'profile.title':          'Profile',
