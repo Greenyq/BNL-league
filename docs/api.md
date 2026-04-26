@@ -68,6 +68,7 @@ Obtain the token via `POST /api/admin/login`.
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET    | `/clan-wars` | — | All clan wars (`?status=`, `?season=`) |
+| GET    | `/clan-wars/progress` | — | Cached season progress summary (`finished` / `total`) |
 | GET    | `/clan-wars/:id` | — | One clan war with all internal matches |
 | POST   | `/clan-wars` | ✓ | Create clan war |
 | PUT    | `/clan-wars/:id` | ✓ | Update top-level fields (status, date, teams) |
