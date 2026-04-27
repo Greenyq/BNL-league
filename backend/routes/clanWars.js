@@ -99,8 +99,8 @@ router.post('/schedule', async (req, res) => {
             { order: 1, format: '1v1', label: 'Дуэль I',    playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
             { order: 2, format: '1v1', label: 'Дуэль II',   playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
             { order: 3, format: '2v2', label: '2 на 2',     playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
-            { order: 4, format: '1v1', label: 'Дуэль III',  playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
-            { order: 5, format: '1v1', label: 'Тайм-брейк', playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
+            { order: 4, format: '1v1', label: 'Тайм-брейк', playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
+            { order: 5, format: '3v3', label: '3 на 3',     playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
         ];
 
         const created = [];
@@ -209,6 +209,28 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+// POST /api/clan-wars/:id/reset-matches — reset all matches to empty default structure
+router.post('/:id/reset-matches', async (req, res) => {
+    try {
+        const cw = await ClanWar.findById(req.params.id);
+        if (!cw) return res.status(404).json({ error: 'Clan war not found' });
+
+        cw.matches = [
+            { order: 1, format: '1v1', label: 'Дуэль I',    playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
+            { order: 2, format: '1v1', label: 'Дуэль II',   playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
+            { order: 3, format: '2v2', label: '2 на 2',     playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
+            { order: 4, format: '1v1', label: 'Тайм-брейк', playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
+            { order: 5, format: '3v3', label: '3 на 3',     playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
+        ];
+        cw.clanWarScore = { a: 0, b: 0 };
+        cw.winner = null;
+        await cw.save();
+        res.json({ success: true, clanWar: cw });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ── POST /api/clan-wars/:id/auto-assign — auto-assign 1v1 matches by tier ────
 // Looks at players in each team, determines their tier, and pairs them for
 // 1v1 matches. Does NOT touch 2v2 matches.
@@ -284,7 +306,7 @@ router.post('/:id/auto-assign', async (req, res) => {
 
         // Apply assignments to 1v1 matches only
         for (const match of cw.matches) {
-            if (match.format === '2v2' || match.format === '3v3') continue;
+            if (match.format !== '1v1') continue;
             if (matchIdx < assignments.length) {
                 const a = assignments[matchIdx];
                 match.playerA = a.playerA;
@@ -293,6 +315,26 @@ router.post('/:id/auto-assign', async (req, res) => {
                 match.label = match.label || `Тир ${tierName}`;
                 matchIdx++;
             }
+        }
+
+        // Assign 2v2 match: S + A tier players from each team
+        for (const match of cw.matches) {
+            if (match.format !== '2v2') continue;
+            const a2v2 = [teamATiers[3][0], teamATiers[2][0]].filter(Boolean);
+            const b2v2 = [teamBTiers[3][0], teamBTiers[2][0]].filter(Boolean);
+            if (a2v2.length > 0) match.playerA = a2v2.join(' + ');
+            if (b2v2.length > 0) match.playerB = b2v2.join(' + ');
+        }
+
+        // Assign 3v3 match: all players from each team
+        for (const match of cw.matches) {
+            if (match.format !== '3v3') continue;
+            const allA = [...teamANames];
+            if (cw.teamA?.captain && !allA.includes(cw.teamA.captain)) allA.push(cw.teamA.captain);
+            const allB = [...teamBNames];
+            if (cw.teamB?.captain && !allB.includes(cw.teamB.captain)) allB.push(cw.teamB.captain);
+            match.playerA = allA.slice(0, 3).join(' + ');
+            match.playerB = allB.slice(0, 3).join(' + ');
         }
 
         await cw.save();
