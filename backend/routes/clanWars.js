@@ -98,7 +98,7 @@ router.post('/schedule', async (req, res) => {
         const defaultMatches = [
             { order: 1, format: '1v1', label: 'Дуэль I',    playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
             { order: 2, format: '1v1', label: 'Дуэль II',   playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
-            { order: 3, format: '1v1', label: 'Дуэль III',  playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
+            { order: 3, format: '2v2', label: '2 на 2',     playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
             { order: 4, format: '1v1', label: 'Тайм-брейк', playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
             { order: 5, format: '3v3', label: '3 на 3',     playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
         ];
@@ -218,7 +218,7 @@ router.post('/:id/reset-matches', async (req, res) => {
         cw.matches = [
             { order: 1, format: '1v1', label: 'Дуэль I',    playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
             { order: 2, format: '1v1', label: 'Дуэль II',   playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
-            { order: 3, format: '1v1', label: 'Дуэль III',  playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
+            { order: 3, format: '2v2', label: '2 на 2',     playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
             { order: 4, format: '1v1', label: 'Тайм-брейк', playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
             { order: 5, format: '3v3', label: '3 на 3',     playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
         ];

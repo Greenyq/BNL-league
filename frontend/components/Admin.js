@@ -671,7 +671,7 @@ function PlayerPicker({ value, onChange, count, players }) {
 const DEFAULT_MATCHES = [
     { order: 1, format: '1v1', label: 'Дуэль I' },
     { order: 2, format: '1v1', label: 'Дуэль II' },
-    { order: 3, format: '1v1', label: 'Дуэль III' },
+    { order: 3, format: '2v2', label: '2 на 2' },
     { order: 4, format: '1v1', label: 'Тайм-брейк' },
     { order: 5, format: '3v3', label: '3 на 3' },
 ].map(m => ({ ...m, playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] }));
