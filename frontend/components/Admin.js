@@ -671,9 +671,9 @@ function PlayerPicker({ value, onChange, count, players }) {
 const DEFAULT_MATCHES = [
     { order: 1, format: '1v1', label: 'Дуэль I' },
     { order: 2, format: '1v1', label: 'Дуэль II' },
-    { order: 3, format: '2v2', label: '2 на 2' },
-    { order: 4, format: '1v1', label: 'Дуэль III' },
-    { order: 5, format: '1v1', label: 'Тайм-брейк' },
+    { order: 3, format: '1v1', label: 'Дуэль III' },
+    { order: 4, format: '1v1', label: 'Тайм-брейк' },
+    { order: 5, format: '3v3', label: '3 на 3' },
 ].map(m => ({ ...m, playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] }));
 
 // Round-robin (circle method): returns array of rounds, each round = array of [teamA, teamB]
@@ -803,6 +803,16 @@ function ClanWarTab({ showMsg, players, teams }) {
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
 
+    const resetMatches = async () => {
+        if (!selected) return;
+        if (!confirm('Удалить все матчи и сбросить результаты?')) return;
+        try {
+            const result = await apiFetch(`/api/clan-wars/${selected.id}/reset-matches`, { method: 'POST' });
+            setSelected(result.clanWar); load();
+            showMsg('✅ Матчи сброшены');
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+
     const generateSchedule = async () => {
         if (!schedForm.season.trim()) return showMsg('❌ Укажите название сезона', 'error');
         if ((teams || []).length < 2) return showMsg('❌ Нужно минимум 2 команды', 'error');
@@ -860,8 +870,14 @@ function ClanWarTab({ showMsg, players, teams }) {
                         >
                             🎯 Авто-назначение по тирам
                         </button>
+                        <button
+                            onClick={resetMatches}
+                            style={{ padding: '6px 14px', fontSize: '0.9em', background: 'rgba(255,152,0,0.1)', color: '#ff9800', border: '1px solid rgba(255,152,0,0.4)', borderRadius: 'var(--radius-sm)', fontWeight: 700 }}
+                        >
+                            🗑 Удалить все матчи
+                        </button>
                         <button onClick={() => deleteWar(cw.id)} style={{ padding: '6px 14px', fontSize: '0.9em', background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', borderRadius: 'var(--radius-sm)' }}>
-                            🗑️ Удалить
+                            🗑️ Удалить клан-вар
                         </button>
                     </div>
                 </div>
