@@ -306,7 +306,7 @@ router.post('/:id/auto-assign', async (req, res) => {
 
         // Apply assignments to 1v1 matches only
         for (const match of cw.matches) {
-            if (match.format === '2v2' || match.format === '3v3') continue;
+            if (match.format !== '1v1') continue;
             if (matchIdx < assignments.length) {
                 const a = assignments[matchIdx];
                 match.playerA = a.playerA;
@@ -315,6 +315,15 @@ router.post('/:id/auto-assign', async (req, res) => {
                 match.label = match.label || `Тир ${tierName}`;
                 matchIdx++;
             }
+        }
+
+        // Assign 2v2 match: S + A tier players from each team
+        for (const match of cw.matches) {
+            if (match.format !== '2v2') continue;
+            const a2v2 = [teamATiers[3][0], teamATiers[2][0]].filter(Boolean);
+            const b2v2 = [teamBTiers[3][0], teamBTiers[2][0]].filter(Boolean);
+            if (a2v2.length > 0) match.playerA = a2v2.join(' + ');
+            if (b2v2.length > 0) match.playerB = b2v2.join(' + ');
         }
 
         // Assign 3v3 match: all players from each team
