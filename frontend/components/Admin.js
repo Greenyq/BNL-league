@@ -813,6 +813,25 @@ function ClanWarTab({ showMsg, players, teams }) {
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
 
+    const autoAssignAll = async () => {
+        if (!confirm(`Авто-назначить игроков во ВСЕХ клан-варах (${wars.length})?`)) return;
+        try {
+            const result = await apiFetch('/api/clan-wars/auto-assign-all', { method: 'POST' });
+            showMsg(`✅ Назначено: ${result.totalWars} клан-варов`);
+            load();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+
+    const deleteAllWars = async () => {
+        if (!confirm(`Удалить ВСЕ клан-вары (${wars.length})? Это действие необратимо!`)) return;
+        try {
+            await apiFetch('/api/clan-wars', { method: 'DELETE' });
+            showMsg('✅ Все клан-вары удалены');
+            setSelected(null);
+            load();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+
     const generateSchedule = async () => {
         if (!schedForm.season.trim()) return showMsg('❌ Укажите название сезона', 'error');
         if ((teams || []).length < 2) return showMsg('❌ Нужно минимум 2 команды', 'error');
@@ -864,18 +883,6 @@ function ClanWarTab({ showMsg, players, teams }) {
                         {cw.status === 'upcoming'  && <button className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.9em' }} onClick={() => changeStatus('ongoing')}>▶ Начать</button>}
                         {cw.status === 'ongoing'   && <button className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.9em' }} onClick={() => changeStatus('completed')}>✅ Завершить</button>}
                         {cw.status === 'completed' && <button className="btn btn-secondary" style={{ padding: '6px 14px', fontSize: '0.9em' }} onClick={() => changeStatus('ongoing')}>↩ Возобновить</button>}
-                        <button
-                            onClick={autoAssign}
-                            style={{ padding: '6px 14px', fontSize: '0.9em', background: 'rgba(0,212,255,0.1)', color: 'var(--color-accent-secondary)', border: '1px solid rgba(0,212,255,0.4)', borderRadius: 'var(--radius-sm)', fontWeight: 700 }}
-                        >
-                            🎯 Авто-назначение по тирам
-                        </button>
-                        <button
-                            onClick={resetMatches}
-                            style={{ padding: '6px 14px', fontSize: '0.9em', background: 'rgba(255,152,0,0.1)', color: '#ff9800', border: '1px solid rgba(255,152,0,0.4)', borderRadius: 'var(--radius-sm)', fontWeight: 700 }}
-                        >
-                            🗑 Удалить все матчи
-                        </button>
                         <button onClick={() => deleteWar(cw.id)} style={{ padding: '6px 14px', fontSize: '0.9em', background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', borderRadius: 'var(--radius-sm)' }}>
                             🗑️ Удалить клан-вар
                         </button>
@@ -1002,13 +1009,25 @@ function ClanWarTab({ showMsg, players, teams }) {
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)', flexWrap: 'wrap', gap: 8 }}>
                 <h3 style={{ margin: 0 }}>⚔ Клан-вары ({wars.length})</h3>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <button
                         className="btn btn-secondary"
                         style={{ padding: '8px 18px' }}
                         onClick={() => { setShowScheduler(!showScheduler); setShowCreate(false); }}
                     >
                         🗓 Авто-расписание
+                    </button>
+                    <button
+                        onClick={autoAssignAll}
+                        style={{ padding: '8px 18px', background: 'rgba(0,212,255,0.1)', color: 'var(--color-accent-secondary)', border: '1px solid rgba(0,212,255,0.4)', borderRadius: 'var(--radius-sm)', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                        🎯 Назначить всех
+                    </button>
+                    <button
+                        onClick={deleteAllWars}
+                        style={{ padding: '8px 18px', background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}
+                    >
+                        🗑 Удалить все
                     </button>
                     <button className="btn btn-primary" style={{ padding: '8px 18px' }}
                         onClick={() => { setShowCreate(!showCreate); setShowScheduler(false); }}>
