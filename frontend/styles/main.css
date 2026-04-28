@@ -1903,10 +1903,68 @@ input[type="datetime-local"] {
     background: rgba(212,175,55,0.06);
 }
 
+.team-player-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.team-player-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.team-player-name {
+    font-weight: 700;
+    color: var(--color-text-primary);
+    font-size: 0.95em;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.team-player-meta {
+    color: var(--color-text-muted);
+    font-size: 0.75em;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
 .team-player-stats {
     display: flex;
     gap: 10px;
     flex-shrink: 0;
+    align-items: flex-start;
+}
+
+@media (max-width: 600px) {
+    .team-player-row {
+        align-items: flex-start;
+    }
+
+    .team-player-content {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .team-player-stats {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        padding: 8px 10px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(212,175,55,0.12);
+        border-radius: var(--radius-sm);
+    }
+
+    .team-stat-cell {
+        align-items: flex-start;
+        min-width: 0;
+    }
 }
 
 .team-stat-cell {
