@@ -2008,6 +2008,69 @@ input[type="datetime-local"] {
     margin-bottom: var(--spacing-xl);
 }
 
+.standings-desktop-only {
+    display: block;
+}
+
+.standings-mobile-only {
+    display: none;
+}
+
+.standings-controls {
+    justify-content: space-between;
+}
+
+.standings-controls-group {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: var(--spacing-lg);
+}
+
+.pagination__pages {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.pagination__btn {
+    background: rgba(20,10,2,0.75);
+    border: 1px solid #5a3a18;
+    color: #c8a870;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'PT Sans', sans-serif;
+    font-size: 12px;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    transition: all 0.25s;
+}
+
+.pagination__btn:hover:not(:disabled),
+.pagination__btn.is-active {
+    border-color: #c8902a;
+    color: #ffd85b;
+    background: rgba(200,155,60,0.18);
+    text-shadow: 0 0 8px rgba(255,216,91,0.3);
+}
+
+.pagination__btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
 .standings-table-wrap {
     overflow-x: auto;
     border-radius: var(--radius-lg);
@@ -2074,10 +2137,278 @@ input[type="datetime-local"] {
 .standings-table td.col-wins  { color: var(--color-success); font-weight: 700; }
 .standings-table td.col-losses { color: var(--color-error); font-weight: 700; }
 
+.standings-note {
+    color: var(--color-text-muted);
+    font-size: 0.78em;
+    margin-top: 10px;
+    padding: 0 4px;
+}
+
+.standings-mobile-list,
+.team-standings-mobile-list {
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.standings-mobile-card,
+.team-standings-mobile-card {
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    background: linear-gradient(135deg, rgba(42,42,42,0.82) 0%, rgba(26,26,26,0.95) 100%);
+    border: 1px solid rgba(212,175,55,0.16);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.standings-mobile-rank-wrap {
+    flex-shrink: 0;
+}
+
+.standings-mobile-rank {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(212,175,55,0.1);
+    border: 1px solid rgba(212,175,55,0.22);
+    color: var(--color-text-muted);
+    font-weight: 900;
+    font-size: 0.95em;
+}
+
+.standings-mobile-rank.top-1 {
+    color: var(--color-accent-primary);
+    border-color: rgba(212,175,55,0.5);
+}
+
+.standings-mobile-rank.top-2 {
+    color: var(--color-text-secondary);
+}
+
+.standings-mobile-rank.top-3 {
+    color: #cd7f32;
+}
+
+.standings-mobile-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.standings-mobile-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.standings-mobile-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(212,175,55,0.32);
+    flex-shrink: 0;
+}
+
+.standings-mobile-avatar--placeholder,
+.standings-mobile-team-emoji {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(212,175,55,0.08);
+    color: var(--color-text-muted);
+}
+
+.standings-mobile-team-logo,
+.standings-mobile-team-emoji {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(212,175,55,0.25);
+    flex-shrink: 0;
+}
+
+.standings-mobile-team-logo {
+    object-fit: contain;
+    background: rgba(0,0,0,0.16);
+    padding: 4px;
+}
+
+.standings-mobile-team-emoji {
+    font-size: 1.4em;
+}
+
+.standings-mobile-identity {
+    min-width: 0;
+    flex: 1;
+}
+
+.standings-mobile-name-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.standings-mobile-name {
+    font-weight: 800;
+    color: var(--color-text-primary);
+    font-size: 0.96em;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.standings-mobile-meta {
+    color: var(--color-text-muted);
+    font-size: 0.76em;
+    margin-top: 3px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.standings-mobile-badge {
+    font-size: 0.68em;
+    background: rgba(255,215,0,0.15);
+    color: #ffd700;
+    border: 1px solid rgba(255,215,0,0.5);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.standings-mobile-subrow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.standings-mobile-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(212,175,55,0.18);
+    background: rgba(212,175,55,0.08);
+    color: var(--color-text-secondary);
+    font-size: 0.74em;
+    line-height: 1;
+    min-width: 0;
+}
+
+.standings-mobile-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.team-standings-mobile-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.standings-mobile-stat {
+    min-width: 0;
+    padding: 9px 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(212,175,55,0.12);
+    border-radius: var(--radius-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.standings-mobile-stat-label {
+    color: var(--color-text-muted);
+    font-size: 0.62em;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.standings-mobile-stat-value {
+    color: var(--color-text-primary);
+    font-weight: 800;
+    font-size: 0.92em;
+    overflow-wrap: anywhere;
+}
+
+.standings-mobile-stat-value--mmr {
+    color: var(--color-accent-secondary);
+}
+
+.standings-mobile-stat-value--wins {
+    color: var(--color-success);
+}
+
+.standings-mobile-stat-value--losses {
+    color: var(--color-error);
+}
+
+.standings-mobile-stat-value--points {
+    color: var(--color-accent-primary);
+}
+
+.teams-pagination {
+    margin-top: var(--spacing-xl);
+}
+
 .race-filter-bar {
     display: flex;
     gap: var(--spacing-xs);
     flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .standings-desktop-only {
+        display: none;
+    }
+
+    .standings-mobile-only {
+        display: block;
+    }
+
+    .standings-mobile-list,
+    .team-standings-mobile-list {
+        display: flex;
+    }
+
+    .standings-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .standings-controls-group {
+        width: 100%;
+    }
+
+    .standings-controls-group--filters {
+        justify-content: flex-start;
+    }
+
+    .standings-controls-group--modes .wow-btn {
+        flex: 1 1 0;
+        min-width: 0;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .standings-mobile-card,
+    .team-standings-mobile-card {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .standings-mobile-stats,
+    .team-standings-mobile-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 /* ==================== DRAFT SYSTEM ==================== */
@@ -2295,6 +2626,122 @@ input[type="datetime-local"] {
     background: rgba(212, 175, 55, 0.03);
 }
 
+.draft-pool-player-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.draft-pool-player-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.draft-pool-player-name-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.draft-pool-player-name {
+    font-weight: 700;
+    color: var(--color-text-primary);
+    font-size: 0.9em;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.draft-pool-player-meta {
+    color: var(--color-text-muted);
+    font-size: 0.72em;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.draft-pool-player-stats {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+    align-items: flex-start;
+}
+
+.draft-pool-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.draft-pool-tier-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 0.68em;
+    line-height: 1;
+    font-weight: 800;
+    border: 1px solid transparent;
+    letter-spacing: 0.06em;
+}
+
+.draft-pool-tier-pill--s {
+    background: rgba(255,215,0,0.12);
+    color: #ffd700;
+    border-color: rgba(255,215,0,0.45);
+}
+
+.draft-pool-tier-pill--a {
+    background: rgba(0,212,255,0.1);
+    color: #00d4ff;
+    border-color: rgba(0,212,255,0.35);
+}
+
+.draft-pool-tier-pill--b {
+    background: rgba(76,175,80,0.1);
+    color: #7bd67f;
+    border-color: rgba(76,175,80,0.35);
+}
+
+.draft-pool-tier-pill--u {
+    background: rgba(255,255,255,0.04);
+    color: var(--color-text-muted);
+    border-color: rgba(255,255,255,0.12);
+}
+
+@media (max-width: 768px) {
+    .draft-pool-player-card {
+        align-items: flex-start;
+    }
+
+    .draft-pool-player-content {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .draft-pool-player-stats {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        padding: 8px 10px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(212,175,55,0.12);
+        border-radius: var(--radius-sm);
+    }
+}
+
+@media (max-width: 480px) {
+    .draft-pool-player-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 /* ClanWar teams section (expanded) */
 .cw-teams-section {
     padding: 0 0 var(--spacing-sm);
@@ -2389,6 +2836,7 @@ input[type="datetime-local"] {
 /* Card-level golden border for season winner */
 .draft-pool-player-card.season-winner-card,
 .draft-player-card.season-winner-card,
+.standings-mobile-card.season-winner-card,
 .team-player-row.season-winner-card {
     border-color: rgba(255, 215, 0, 0.35) !important;
     background: rgba(212, 175, 55, 0.04) !important;

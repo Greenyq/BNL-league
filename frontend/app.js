@@ -51,6 +51,71 @@ function WoWSectionTitle({ children }) {
     return slot ? ReactDOM.createPortal(title, slot) : title;
 }
 
+function clampPage(page, totalPages) {
+    const safeTotal = Math.max(1, Number(totalPages) || 1);
+    return Math.min(Math.max(1, Number(page) || 1), safeTotal);
+}
+
+function paginateCollection(items, page, pageSize) {
+    const list = Array.isArray(items) ? items : [];
+    const safePageSize = Math.max(1, Number(pageSize) || 1);
+    const totalPages = Math.max(1, Math.ceil(list.length / safePageSize));
+    const currentPage = clampPage(page, totalPages);
+    const start = (currentPage - 1) * safePageSize;
+
+    return {
+        items: list.slice(start, start + safePageSize),
+        currentPage,
+        totalPages,
+        totalItems: list.length,
+    };
+}
+
+function PaginationControls({ page, totalPages, onPageChange, className = '' }) {
+    useLang();
+    if (totalPages <= 1) return null;
+
+    const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+    const rootClass = ['pagination', className].filter(Boolean).join(' ');
+
+    return (
+        <nav className={rootClass} aria-label={t('pagination.label')}>
+            <button
+                type="button"
+                className="pagination__btn"
+                onClick={() => onPageChange(page - 1)}
+                disabled={page <= 1}
+                aria-label={t('pagination.prev')}
+            >
+                {t('pagination.prev')}
+            </button>
+            <div className="pagination__pages">
+                {pages.map(pageNum => (
+                    <button
+                        key={pageNum}
+                        type="button"
+                        className={`pagination__btn pagination__page${pageNum === page ? ' is-active' : ''}`}
+                        onClick={() => onPageChange(pageNum)}
+                        aria-label={`${t('pagination.page')} ${pageNum}`}
+                        aria-current={pageNum === page ? 'page' : undefined}
+                    >
+                        {pageNum}
+                    </button>
+                ))}
+            </div>
+            <button
+                type="button"
+                className="pagination__btn"
+                onClick={() => onPageChange(page + 1)}
+                disabled={page >= totalPages}
+                aria-label={t('pagination.next')}
+            >
+                {t('pagination.next')}
+            </button>
+        </nav>
+    );
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 function App() {
     const [tab,           setTab]           = React.useState(getTabFromHash);

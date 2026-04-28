@@ -3,6 +3,7 @@
 const RACE_IMG  = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
 const RACE_ABBR = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
 const RACE_COLOR = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
+const TEAMS_PAGE_SIZE = 10;
 
 // ── Строка игрока в команде ───────────────────────────────────────────────────
 function PlayerRow({ player, isCaptain }) {
@@ -330,6 +331,7 @@ function Teams({ onOpenRecruit, onOpenDraft }) {
     const [loading,       setLoading]       = React.useState(true);
     const [error,         setError]         = React.useState(null);
     const [showDraftModal, setShowDraftModal] = React.useState(false);
+    const [page,          setPage]          = React.useState(1);
     const isAdmin = !!localStorage.getItem('bnl_admin_session');
 
     const load = () => {
@@ -348,6 +350,11 @@ function Teams({ onOpenRecruit, onOpenDraft }) {
     };
 
     React.useEffect(() => { load(); }, []);
+    const pagination = paginateCollection(teams, page, TEAMS_PAGE_SIZE);
+
+    React.useEffect(() => {
+        if (page !== pagination.currentPage) setPage(pagination.currentPage);
+    }, [page, pagination.currentPage]);
 
     if (loading) return (
         <div className="animate-fade-in wow-section-page">
@@ -384,11 +391,14 @@ function Teams({ onOpenRecruit, onOpenDraft }) {
             {teams.length === 0 ? (
                 <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>{t('teams.empty')}</p>
             ) : (
-                <div className="teams-grid-v2">
-                    {teams.map(team => (
-                        <TeamCard key={team.id} team={team} players={players} clanWars={clanWars} onOpenRecruit={onOpenRecruit} onOpenDraft={onOpenDraft} />
-                    ))}
-                </div>
+                <>
+                    <div className="teams-grid-v2">
+                        {pagination.items.map(team => (
+                            <TeamCard key={team.id} team={team} players={players} clanWars={clanWars} onOpenRecruit={onOpenRecruit} onOpenDraft={onOpenDraft} />
+                        ))}
+                    </div>
+                    <PaginationControls page={pagination.currentPage} totalPages={pagination.totalPages} onPageChange={setPage} className="teams-pagination" />
+                </>
             )}
         </div>
     );
