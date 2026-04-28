@@ -1,15 +1,22 @@
 // Teams — карточки команд с портретами игроков, статистикой и клан-варами
 
 const RACE_IMG  = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
-const RACE_ABBR = { 0: 'Rnд', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
+const RACE_ABBR = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
 const RACE_COLOR = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
+const TEAMS_PAGE_SIZE = 10;
 
 // ── Строка игрока в команде ───────────────────────────────────────────────────
 function PlayerRow({ player, isCaptain }) {
-    const race    = player.mainRace || player.race;
-    const stats   = player.stats;
+    const race    = player.mainRace ?? player.race;
+    const stats   = player.stats || null;
     const portrait = player.selectedPortrait;
     const isWinner = !!player.seasonWinner;
+    const statValues = {
+        mmr: stats?.mmr ?? player.currentMmr ?? null,
+        wins: stats?.wins ?? 0,
+        losses: stats?.losses ?? 0,
+        points: stats?.points ?? 0,
+    };
 
     return (
         <div className={`team-player-row${isWinner ? ' season-winner-card' : ''}`}>
@@ -31,13 +38,13 @@ function PlayerRow({ player, isCaptain }) {
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: '1.3em', color: 'var(--color-text-muted)',
                     }}>
-                        {race && RACE_IMG[race] ? (
+                        {race != null && RACE_IMG[race] ? (
                             <img src={RACE_IMG[race]} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', opacity: 0.7 }} />
                         ) : '👤'}
                     </div>
                 )}
                 {/* Иконка расы в углу */}
-                {race && RACE_IMG[race] && portrait && (
+                {race != null && RACE_IMG[race] && portrait && (
                     <img src={RACE_IMG[race]} alt="" style={{
                         position: 'absolute', bottom: -3, right: -3,
                         width: 18, height: 18, borderRadius: '50%', objectFit: 'cover',
@@ -46,58 +53,54 @@ function PlayerRow({ player, isCaptain }) {
                 )}
             </div>
 
-            {/* Имя + тег */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '0.95em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {player.name || player.battleTag.split('#')[0]}
-                    </span>
-                    {isCaptain && (
-                        <span style={{ fontSize: '0.65em', background: 'rgba(212,175,55,0.2)', color: 'var(--color-accent-primary)', border: '1px solid rgba(212,175,55,0.4)', borderRadius: 4, padding: '1px 5px', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                            👑 Капитан
+            <div className="team-player-content">
+                {/* Имя + тег */}
+                <div className="team-player-info">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span className="team-player-name">
+                            {player.name || player.battleTag.split('#')[0]}
                         </span>
-                    )}
-                    {isWinner && (
-                        <span style={{ fontSize: '0.65em', background: 'rgba(255,215,0,0.15)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.5)', borderRadius: 4, padding: '1px 5px', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                            🏆 Сезон {player.seasonWinner}
-                        </span>
-                    )}
+                        {isCaptain && (
+                            <span style={{ fontSize: '0.65em', background: 'rgba(212,175,55,0.2)', color: 'var(--color-accent-primary)', border: '1px solid rgba(212,175,55,0.4)', borderRadius: 4, padding: '1px 5px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                👑 Капитан
+                            </span>
+                        )}
+                        {isWinner && (
+                            <span style={{ fontSize: '0.65em', background: 'rgba(255,215,0,0.15)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.5)', borderRadius: 4, padding: '1px 5px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                🏆 Сезон {player.seasonWinner}
+                            </span>
+                        )}
+                    </div>
+                    <div className="team-player-meta">
+                        {player.battleTag}
+                        {race != null && RACE_ABBR[race] && (
+                            <span style={{ marginLeft: 6, color: RACE_COLOR[race] || 'var(--color-text-muted)' }}>
+                                · {RACE_ABBR[race]}
+                            </span>
+                        )}
+                    </div>
                 </div>
-                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {player.battleTag}
-                    {race && RACE_ABBR[race] && (
-                        <span style={{ marginLeft: 6, color: RACE_COLOR[race] || 'var(--color-text-muted)' }}>
-                            · {RACE_ABBR[race]}
-                        </span>
-                    )}
-                </div>
-            </div>
 
-            {/* Статистика */}
-            {stats ? (
+                {/* Статистика */}
                 <div className="team-player-stats">
                     <div className="team-stat-cell">
                         <span className="team-stat-label">MMR</span>
-                        <span className="team-stat-val" style={{ color: 'var(--color-accent-secondary)' }}>{stats.mmr || player.currentMmr || '—'}</span>
+                        <span className="team-stat-val" style={{ color: 'var(--color-accent-secondary)' }}>{statValues.mmr ?? '—'}</span>
                     </div>
                     <div className="team-stat-cell">
                         <span className="team-stat-label">W</span>
-                        <span className="team-stat-val" style={{ color: 'var(--color-success)' }}>{stats.wins}</span>
+                        <span className="team-stat-val" style={{ color: 'var(--color-success)' }}>{statValues.wins}</span>
                     </div>
                     <div className="team-stat-cell">
                         <span className="team-stat-label">L</span>
-                        <span className="team-stat-val" style={{ color: 'var(--color-error)' }}>{stats.losses}</span>
+                        <span className="team-stat-val" style={{ color: 'var(--color-error)' }}>{statValues.losses}</span>
                     </div>
                     <div className="team-stat-cell">
                         <span className="team-stat-label">Pts</span>
-                        <span className="team-stat-val" style={{ color: 'var(--color-accent-primary)', fontWeight: 800 }}>{stats.points}</span>
+                        <span className="team-stat-val" style={{ color: 'var(--color-accent-primary)', fontWeight: 800 }}>{statValues.points}</span>
                     </div>
                 </div>
-            ) : (
-                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75em', whiteSpace: 'nowrap' }}>
-                    MMR {player.currentMmr || '—'}
-                </div>
-            )}
+            </div>
         </div>
     );
 }
@@ -328,6 +331,7 @@ function Teams({ onOpenRecruit, onOpenDraft }) {
     const [loading,       setLoading]       = React.useState(true);
     const [error,         setError]         = React.useState(null);
     const [showDraftModal, setShowDraftModal] = React.useState(false);
+    const [page,          setPage]          = React.useState(1);
     const isAdmin = !!localStorage.getItem('bnl_admin_session');
 
     const load = () => {
@@ -346,6 +350,11 @@ function Teams({ onOpenRecruit, onOpenDraft }) {
     };
 
     React.useEffect(() => { load(); }, []);
+    const pagination = paginateCollection(teams, page, TEAMS_PAGE_SIZE);
+
+    React.useEffect(() => {
+        if (page !== pagination.currentPage) setPage(pagination.currentPage);
+    }, [page, pagination.currentPage]);
 
     if (loading) return (
         <div className="animate-fade-in wow-section-page">
@@ -382,11 +391,14 @@ function Teams({ onOpenRecruit, onOpenDraft }) {
             {teams.length === 0 ? (
                 <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>{t('teams.empty')}</p>
             ) : (
-                <div className="teams-grid-v2">
-                    {teams.map(team => (
-                        <TeamCard key={team.id} team={team} players={players} clanWars={clanWars} onOpenRecruit={onOpenRecruit} onOpenDraft={onOpenDraft} />
-                    ))}
-                </div>
+                <>
+                    <div className="teams-grid-v2">
+                        {pagination.items.map(team => (
+                            <TeamCard key={team.id} team={team} players={players} clanWars={clanWars} onOpenRecruit={onOpenRecruit} onOpenDraft={onOpenDraft} />
+                        ))}
+                    </div>
+                    <PaginationControls page={pagination.currentPage} totalPages={pagination.totalPages} onPageChange={setPage} className="teams-pagination" />
+                </>
             )}
         </div>
     );

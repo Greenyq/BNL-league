@@ -13,6 +13,7 @@ const router = express.Router();
 const SESSION_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days
 const escapeRegex = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const isValidBattleTag = t => /^[a-zA-Z0-9_\u0400-\u04FF]{2,12}#\d+$/.test(t) && t.length <= 30;
+const normalizeBattleTag = t => String(t || '').trim().toLowerCase();
 
 // Returns player doc merged with stats (or null). Case-insensitive battleTag lookup.
 async function playerWithStats(battleTag) {
@@ -21,7 +22,9 @@ async function playerWithStats(battleTag) {
         battleTag: { $regex: new RegExp(`^${escapeRegex(battleTag.trim())}$`, 'i') }
     });
     if (!player) return null;
-    const stats = await PlayerStats.findOne({ battleTag: player.battleTag });
+    const stats = await PlayerStats.findOne({
+        battleTag: { $regex: new RegExp(`^${escapeRegex(player.battleTag)}$`, 'i') }
+    });
     return { ...player.toJSON(), stats: stats ? stats.toJSON() : null };
 }
 
@@ -43,8 +46,8 @@ router.get('/', async (req, res) => {
     try {
         const players  = await Player.find();
         const stats    = await PlayerStats.find();
-        const statsMap = Object.fromEntries(stats.map(s => [s.battleTag, s]));
-        res.json(players.map(p => ({ ...p.toJSON(), stats: statsMap[p.battleTag] || null })));
+        const statsMap = Object.fromEntries(stats.map(s => [normalizeBattleTag(s.battleTag), s]));
+        res.json(players.map(p => ({ ...p.toJSON(), stats: statsMap[normalizeBattleTag(p.battleTag)] || null })));
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch players' });
     }

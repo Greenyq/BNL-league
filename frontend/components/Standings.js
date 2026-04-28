@@ -2,9 +2,216 @@
 
 const RACE_KEYS   = [null, 1, 2, 4, 8];
 const RACE_IMG    = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
+const PLAYERS_PAGE_SIZE = 10;
+const TEAMS_PAGE_SIZE = 10;
+const DRAFT_POOL_PAGE_SIZE = 10;
+const rankClass   = i => i === 0 ? 'top-1' : i === 1 ? 'top-2' : i === 2 ? 'top-3' : '';
+const rankIcon    = i => i === 0 ? 'I' : i === 1 ? 'II' : i === 2 ? 'III' : i + 1;
+const playerRace  = player => player?.mainRace ?? player?.race ?? null;
+
+function PlayerStandingsMobileCard({ row, index }) {
+    const race = row.race ?? playerRace(row.player);
+    const portrait = row.player.selectedPortrait;
+    const raceImg = race != null ? RACE_IMG[race] : null;
+    const avatarSrc = portrait || raceImg || null;
+    const isWinner = !!row.player.seasonWinner;
+
+    return (
+        <div className={`standings-mobile-card${isWinner ? ' season-winner-card' : ''}`}>
+            <div className="standings-mobile-rank-wrap">
+                <div className={`standings-mobile-rank ${rankClass(index)}`}>{rankIcon(index)}</div>
+            </div>
+            <div className="standings-mobile-main">
+                <div className="standings-mobile-head">
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                        {avatarSrc ? (
+                            <img
+                                src={avatarSrc}
+                                alt=""
+                                className={isWinner ? 'season-winner-avatar standings-mobile-avatar' : 'standings-mobile-avatar'}
+                            />
+                        ) : (
+                            <div className="standings-mobile-avatar standings-mobile-avatar--placeholder">👤</div>
+                        )}
+                        {isWinner && (
+                            <div className="season-winner-badge" title={`Победитель сезона ${row.player.seasonWinner}`}>🏆</div>
+                        )}
+                    </div>
+                    <div className="standings-mobile-identity">
+                        <div className="standings-mobile-name-row">
+                            <span className="standings-mobile-name">{row.player.name || row.player.battleTag}</span>
+                            {isWinner && (
+                                <span className="standings-mobile-badge">🏆 С{row.player.seasonWinner}</span>
+                            )}
+                        </div>
+                        <div className="standings-mobile-meta">{row.player.battleTag}</div>
+                    </div>
+                </div>
+                <div className="standings-mobile-subrow">
+                    <span className="standings-mobile-pill">
+                        {race != null ? t(`race.${race}`) : '—'}
+                    </span>
+                </div>
+                <div className="standings-mobile-stats">
+                    <div className="standings-mobile-stat">
+                        <span className="standings-mobile-stat-label">{t('standings.mmr')}</span>
+                        <span className="standings-mobile-stat-value standings-mobile-stat-value--mmr">{row.mmr ?? '—'}</span>
+                    </div>
+                    <div className="standings-mobile-stat">
+                        <span className="standings-mobile-stat-label">{t('standings.wins')}</span>
+                        <span className="standings-mobile-stat-value standings-mobile-stat-value--wins">{row.wins}</span>
+                    </div>
+                    <div className="standings-mobile-stat">
+                        <span className="standings-mobile-stat-label">{t('standings.losses')}</span>
+                        <span className="standings-mobile-stat-value standings-mobile-stat-value--losses">{row.losses}</span>
+                    </div>
+                    <div className="standings-mobile-stat">
+                        <span className="standings-mobile-stat-label">{t('standings.points')}</span>
+                        <span className="standings-mobile-stat-value standings-mobile-stat-value--points">{row.points}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function TeamStandingsMobileCard({ row, index }) {
+    return (
+        <div className="team-standings-mobile-card">
+            <div className="standings-mobile-rank-wrap">
+                <div className={`standings-mobile-rank ${rankClass(index)}`}>{rankIcon(index)}</div>
+            </div>
+            <div className="standings-mobile-main">
+                <div className="standings-mobile-head">
+                    {row.team.logo ? (
+                        <img src={row.team.logo} alt="" className="standings-mobile-team-logo" />
+                    ) : (
+                        <div className="standings-mobile-team-emoji">{row.team.emoji || '🛡'}</div>
+                    )}
+                    <div className="standings-mobile-identity">
+                        <div className="standings-mobile-name-row">
+                            <span className="standings-mobile-name">{row.team.name}</span>
+                        </div>
+                        {row.captain && (
+                            <div className="standings-mobile-meta">👑 {row.captain.name || row.captain.battleTag}</div>
+                        )}
+                    </div>
+                </div>
+                <div className="standings-mobile-stats team-standings-mobile-stats">
+                    <div className="standings-mobile-stat">
+                        <span className="standings-mobile-stat-label">{t('standings.teams.played')}</span>
+                        <span className="standings-mobile-stat-value">{row.played}</span>
+                    </div>
+                    <div className="standings-mobile-stat">
+                        <span className="standings-mobile-stat-label">{t('standings.teams.cwwins')}</span>
+                        <span className="standings-mobile-stat-value standings-mobile-stat-value--wins">{row.wins}</span>
+                    </div>
+                    <div className="standings-mobile-stat">
+                        <span className="standings-mobile-stat-label">{t('standings.teams.cwlose')}</span>
+                        <span className="standings-mobile-stat-value standings-mobile-stat-value--losses">{row.losses}</span>
+                    </div>
+                    <div className="standings-mobile-stat">
+                        <span className="standings-mobile-stat-label">{t('standings.teams.matches')}</span>
+                        <span className="standings-mobile-stat-value standings-mobile-stat-value--mmr">{row.matchWins}:{row.matchLosses}</span>
+                    </div>
+                    <div className="standings-mobile-stat">
+                        <span className="standings-mobile-stat-label">{t('teams.players_count')}</span>
+                        <span className="standings-mobile-stat-value">{row.roster}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function DraftPoolCard({ row, index }) {
+    const player = row.player;
+    const race = playerRace(player);
+    const portrait = player.selectedPortrait;
+    const raceImg = race != null ? RACE_IMG[race] : null;
+    const isWinner = !!player.seasonWinner;
+
+    return (
+        <div className={`draft-pool-player-card${isWinner ? ' season-winner-card' : ''}`}>
+            <div className="standings-mobile-rank-wrap">
+                <div className={`standings-mobile-rank ${rankClass(index)}`}>{rankIcon(index)}</div>
+            </div>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+                {isWinner && (
+                    <div className="season-winner-badge" title={`Победитель сезона ${player.seasonWinner}`}>🏆</div>
+                )}
+                {portrait ? (
+                    <img src={portrait} alt="" className={isWinner ? 'season-winner-avatar' : ''} style={{
+                        width: 40, height: 40, borderRadius: '50%', objectFit: 'cover',
+                        border: isWinner ? undefined : '2px solid var(--color-accent-primary)',
+                    }} />
+                ) : (
+                    <div className={isWinner ? 'season-winner-avatar' : ''} style={{
+                        width: 40, height: 40, borderRadius: '50%',
+                        background: 'var(--color-bg-lighter)',
+                        border: isWinner ? undefined : '2px solid rgba(212,175,55,0.2)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        overflow: 'hidden',
+                    }}>
+                        {race != null && raceImg
+                            ? <img src={raceImg} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.75 }} />
+                            : <span style={{ fontSize: '1.2em', color: 'var(--color-text-muted)' }}>👤</span>
+                        }
+                    </div>
+                )}
+                {race != null && raceImg && portrait && (
+                    <img src={raceImg} alt="" style={{
+                        position: 'absolute', bottom: -2, right: -2,
+                        width: 14, height: 14, borderRadius: '50%', objectFit: 'cover',
+                        border: '1.5px solid var(--color-bg-card, #1a1a2e)',
+                    }} />
+                )}
+            </div>
+            <div className="draft-pool-player-content">
+                <div className="draft-pool-player-info">
+                    <div className="draft-pool-player-name-row">
+                        <span className="draft-pool-player-name">{player.name || player.battleTag?.split('#')[0]}</span>
+                        <span className={`draft-pool-tier-pill draft-pool-tier-pill--${row.tierClass}`}>
+                            {row.tierLabel}
+                        </span>
+                        {isWinner && (
+                            <span className="standings-mobile-badge">🏆 С{player.seasonWinner}</span>
+                        )}
+                    </div>
+                    <div className="draft-pool-player-meta">
+                        {player.battleTag}
+                        {race != null && (
+                            <span style={{ marginLeft: 6 }}>
+                                · {t(`race.${race}`)}
+                            </span>
+                        )}
+                    </div>
+                </div>
+                <div className="draft-pool-player-stats">
+                    <div className="team-stat-cell">
+                        <span className="team-stat-label">MMR</span>
+                        <span className="team-stat-val" style={{ color: 'var(--color-accent-secondary)' }}>{row.mmr ?? '—'}</span>
+                    </div>
+                    <div className="team-stat-cell">
+                        <span className="team-stat-label">W</span>
+                        <span className="team-stat-val" style={{ color: 'var(--color-success)' }}>{row.wins}</span>
+                    </div>
+                    <div className="team-stat-cell">
+                        <span className="team-stat-label">L</span>
+                        <span className="team-stat-val" style={{ color: 'var(--color-error)' }}>{row.losses}</span>
+                    </div>
+                    <div className="team-stat-cell">
+                        <span className="team-stat-label">Pts</span>
+                        <span className="team-stat-val" style={{ color: 'var(--color-accent-primary)', fontWeight: 800 }}>{row.points}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 // ── Рейтинг команд по победам в клан-варах ────────────────────────────────────
-function TeamStandings() {
+function TeamStandings({ page, onPageChange }) {
     useLang();
     const [teams,    setTeams]    = React.useState([]);
     const [wars,     setWars]     = React.useState([]);
@@ -26,13 +233,6 @@ function TeamStandings() {
             })
             .catch(err => { setError(err.message); setLoading(false); });
     }, []);
-
-    if (loading) return (
-        <div>
-            {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 52, marginBottom: 8, borderRadius: 'var(--radius-sm)' }} />)}
-        </div>
-    );
-    if (error) return <div style={{ color: 'var(--color-error)', padding: 32 }}>⚠ {error}</div>;
 
     const completed = wars.filter(cw => cw.status === 'completed' && cw.winner);
 
@@ -63,59 +263,84 @@ function TeamStandings() {
     })
     // Sort: clan war wins desc, then match wins desc
     .sort((a, b) => b.wins - a.wins || b.matchWins - a.matchWins);
+    const pagination = paginateCollection(rows, page, TEAMS_PAGE_SIZE);
 
-    const rankIcon = i => i === 0 ? 'I' : i === 1 ? 'II' : i === 2 ? 'III' : i + 1;
-    const rankClass = i => i === 0 ? 'top-1' : i === 1 ? 'top-2' : i === 2 ? 'top-3' : '';
+    React.useEffect(() => {
+        if (page !== pagination.currentPage) onPageChange(pagination.currentPage);
+    }, [page, pagination.currentPage, onPageChange]);
+
+    if (loading) return (
+        <div>
+            {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 52, marginBottom: 8, borderRadius: 'var(--radius-sm)' }} />)}
+        </div>
+    );
+    if (error) return <div style={{ color: 'var(--color-error)', padding: 32 }}>⚠ {error}</div>;
 
     return (
-        <div className="standings-table-wrap" style={{ marginTop: 'var(--spacing-lg)' }}>
-            <table className="standings-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Команда</th>
-                        <th>И</th>
-                        <th style={{ color: 'var(--color-success)' }}>КВ В</th>
-                        <th style={{ color: 'var(--color-error)' }}>КВ П</th>
-                        <th style={{ color: 'var(--color-accent-secondary)' }}>Матчи</th>
-                        <th>Состав</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.length === 0 && (
-                        <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 32 }}>Нет данных</td></tr>
-                    )}
-                    {rows.map((row, i) => (
-                        <tr key={row.team.id}>
-                            <td className={`col-rank ${rankClass(i)}`}>{rankIcon(i)}</td>
-                            <td className="col-name">
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    {row.team.logo
-                                        ? <img src={row.team.logo} alt="" style={{ width: 28, height: 28, borderRadius: 'var(--radius-sm)', objectFit: 'contain', border: '1px solid rgba(212,175,55,0.3)' }} />
-                                        : <span style={{ fontSize: '1.3em' }}>{row.team.emoji || '🛡'}</span>
-                                    }
-                                    <div>
-                                        <div style={{ fontWeight: 700 }}>{row.team.name}</div>
-                                        {row.captain && (
-                                            <div style={{ fontSize: '0.75em', color: 'var(--color-text-muted)' }}>
-                                                👑 {row.captain.name || row.captain.battleTag}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </td>
-                            <td style={{ color: 'var(--color-text-muted)' }}>{row.played}</td>
-                            <td className="col-wins">{row.wins}</td>
-                            <td className="col-losses">{row.losses}</td>
-                            <td style={{ color: 'var(--color-accent-secondary)', fontWeight: 600 }}>
-                                {row.matchWins}<span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}> : </span>{row.matchLosses}
-                            </td>
-                            <td style={{ color: 'var(--color-text-muted)', fontSize: '0.88em' }}>{row.roster} чел.</td>
+        <div style={{ marginTop: 'var(--spacing-lg)' }}>
+            <div className="standings-desktop-only standings-table-wrap">
+                <table className="standings-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Команда</th>
+                            <th>И</th>
+                            <th style={{ color: 'var(--color-success)' }}>КВ В</th>
+                            <th style={{ color: 'var(--color-error)' }}>КВ П</th>
+                            <th style={{ color: 'var(--color-accent-secondary)' }}>Матчи</th>
+                            <th>Состав</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
-            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.78em', marginTop: 10, padding: '0 4px' }}>
+                    </thead>
+                    <tbody>
+                        {rows.length === 0 && (
+                            <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 32 }}>Нет данных</td></tr>
+                        )}
+                        {pagination.items.map((row, i) => {
+                            const rank = (pagination.currentPage - 1) * TEAMS_PAGE_SIZE + i;
+                            return (
+                            <tr key={row.team.id}>
+                                <td className={`col-rank ${rankClass(rank)}`}>{rankIcon(rank)}</td>
+                                <td className="col-name">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        {row.team.logo
+                                            ? <img src={row.team.logo} alt="" style={{ width: 28, height: 28, borderRadius: 'var(--radius-sm)', objectFit: 'contain', border: '1px solid rgba(212,175,55,0.3)' }} />
+                                            : <span style={{ fontSize: '1.3em' }}>{row.team.emoji || '🛡'}</span>
+                                        }
+                                        <div>
+                                            <div style={{ fontWeight: 700 }}>{row.team.name}</div>
+                                            {row.captain && (
+                                                <div style={{ fontSize: '0.75em', color: 'var(--color-text-muted)' }}>
+                                                    👑 {row.captain.name || row.captain.battleTag}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style={{ color: 'var(--color-text-muted)' }}>{row.played}</td>
+                                <td className="col-wins">{row.wins}</td>
+                                <td className="col-losses">{row.losses}</td>
+                                <td style={{ color: 'var(--color-accent-secondary)', fontWeight: 600 }}>
+                                    {row.matchWins}<span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}> : </span>{row.matchLosses}
+                                </td>
+                                <td style={{ color: 'var(--color-text-muted)', fontSize: '0.88em' }}>{row.roster} чел.</td>
+                            </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+            <div className="team-standings-mobile-list standings-mobile-only">
+                {rows.length === 0 ? (
+                    <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 32 }}>Нет данных</p>
+                ) : (
+                    pagination.items.map((row, i) => {
+                        const rank = (pagination.currentPage - 1) * TEAMS_PAGE_SIZE + i;
+                        return <TeamStandingsMobileCard key={row.team.id} row={row} index={rank} />;
+                    })
+                )}
+            </div>
+            <PaginationControls page={pagination.currentPage} totalPages={pagination.totalPages} onPageChange={onPageChange} />
+            <div className="standings-note">
                 КВ В/П — победы/поражения в клан-варах. Матчи — суммарный счёт внутренних матчей.
             </div>
         </div>
@@ -123,7 +348,7 @@ function TeamStandings() {
 }
 
 // ── Драфт-пул: игроки с draftAvailable, разбитые по тирам ─────────────────────
-function DraftPoolStandings() {
+function DraftPoolStandings({ page, onPageChange }) {
     useLang();
     const [players, setPlayers] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
@@ -135,13 +360,6 @@ function DraftPoolStandings() {
             .then(data => { setPlayers(Array.isArray(data) ? data : []); setLoading(false); })
             .catch(err => { setError(err.message); setLoading(false); });
     }, []);
-
-    if (loading) return (
-        <div style={{ marginTop: 'var(--spacing-lg)' }}>
-            {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 120, marginBottom: 12, borderRadius: 'var(--radius-md)' }} />)}
-        </div>
-    );
-    if (error) return <div style={{ color: 'var(--color-error)', padding: 32 }}>⚠ {error}</div>;
 
     // Filter only draft-available players
     const draftPlayers = players.filter(p => p.draftAvailable);
@@ -156,123 +374,36 @@ function DraftPoolStandings() {
         return 0;
     }
 
-    const tierS = draftPlayers.filter(p => getEffectiveTier(p) === 3).sort((a, b) => (b.stats?.mmr || b.currentMmr || 0) - (a.stats?.mmr || a.currentMmr || 0));
-    const tierA = draftPlayers.filter(p => getEffectiveTier(p) === 2).sort((a, b) => (b.stats?.mmr || b.currentMmr || 0) - (a.stats?.mmr || a.currentMmr || 0));
-    const tierB = draftPlayers.filter(p => getEffectiveTier(p) === 1).sort((a, b) => (b.stats?.mmr || b.currentMmr || 0) - (a.stats?.mmr || a.currentMmr || 0));
+    const draftRows = draftPlayers
+        .map(player => {
+            const tier = getEffectiveTier(player);
+            const mmr = player.stats?.mmr ?? player.currentMmr ?? null;
+            return {
+                player,
+                tier,
+                tierClass: tier === 3 ? 's' : tier === 2 ? 'a' : tier === 1 ? 'b' : 'u',
+                tierLabel: tier === 3 ? 'S' : tier === 2 ? 'A' : tier === 1 ? 'B' : '—',
+                mmr,
+                wins: player.stats?.wins ?? 0,
+                losses: player.stats?.losses ?? 0,
+                points: player.stats?.points ?? 0,
+            };
+        })
+        .sort((a, b) => b.tier - a.tier || (b.mmr ?? 0) - (a.mmr ?? 0) || b.points - a.points);
+    const pagination = paginateCollection(draftRows, page, DRAFT_POOL_PAGE_SIZE);
 
+    React.useEffect(() => {
+        if (page !== pagination.currentPage) onPageChange(pagination.currentPage);
+    }, [page, pagination.currentPage, onPageChange]);
+
+    if (loading) return (
+        <div style={{ marginTop: 'var(--spacing-lg)' }}>
+            {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 120, marginBottom: 12, borderRadius: 'var(--radius-md)' }} />)}
+        </div>
+    );
+    if (error) return <div style={{ color: 'var(--color-error)', padding: 32 }}>⚠ {error}</div>;
     if (draftPlayers.length === 0) {
         return <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>{t('standings.draftpool.empty')}</p>;
-    }
-
-    const raceImg = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
-    const raceAbbr = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
-    const raceColor = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
-
-    function renderPlayerCard(p) {
-        const race = p.mainRace || p.race;
-        const portrait = p.selectedPortrait;
-        const mmr = p.stats?.mmr || p.currentMmr || 0;
-        const stats = p.stats;
-        const isWinner = !!p.seasonWinner;
-
-        return (
-            <div key={p.id || p.battleTag} className={`draft-pool-player-card${isWinner ? ' season-winner-card' : ''}`}>
-                <div style={{ position: 'relative', flexShrink: 0 }}>
-                    {isWinner && (
-                        <div className="season-winner-badge" title={`Победитель сезона ${p.seasonWinner}`}>🏆</div>
-                    )}
-                    {portrait ? (
-                        <img src={portrait} alt="" className={isWinner ? 'season-winner-avatar' : ''} style={{
-                            width: 40, height: 40, borderRadius: '50%', objectFit: 'cover',
-                            border: isWinner ? undefined : '2px solid var(--color-accent-primary)',
-                        }} />
-                    ) : (
-                        <div className={isWinner ? 'season-winner-avatar' : ''} style={{
-                            width: 40, height: 40, borderRadius: '50%',
-                            background: 'var(--color-bg-lighter)',
-                            border: isWinner ? undefined : '2px solid rgba(212,175,55,0.2)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            overflow: 'hidden',
-                        }}>
-                            {race && raceImg[race]
-                                ? <img src={raceImg[race]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.75 }} />
-                                : <span style={{ fontSize: '1.2em', color: 'var(--color-text-muted)' }}>👤</span>
-                            }
-                        </div>
-                    )}
-                    {race && raceImg[race] && portrait && (
-                        <img src={raceImg[race]} alt="" style={{
-                            position: 'absolute', bottom: -2, right: -2,
-                            width: 14, height: 14, borderRadius: '50%', objectFit: 'cover',
-                            border: '1.5px solid var(--color-bg-card, #1a1a2e)',
-                        }} />
-                    )}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '0.9em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name || p.battleTag?.split('#')[0]}</span>
-                        {isWinner && (
-                            <span style={{ fontSize: '0.7em', background: 'rgba(255,215,0,0.15)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.5)', borderRadius: 4, padding: '0 4px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                🏆 С{p.seasonWinner}
-                            </span>
-                        )}
-                    </div>
-                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {p.battleTag}
-                        {race && raceAbbr[race] && (
-                            <span style={{ marginLeft: 5, color: raceColor[race] || 'var(--color-text-muted)' }}>
-                                · {raceAbbr[race]}
-                            </span>
-                        )}
-                    </div>
-                </div>
-                <div className="team-player-stats" style={{ flexShrink: 0 }}>
-                    <div className="team-stat-cell">
-                        <span className="team-stat-label">MMR</span>
-                        <span className="team-stat-val" style={{ color: 'var(--color-accent-secondary)' }}>{mmr || '—'}</span>
-                    </div>
-                    {stats && <>
-                        <div className="team-stat-cell">
-                            <span className="team-stat-label">W</span>
-                            <span className="team-stat-val" style={{ color: 'var(--color-success)' }}>{stats.wins}</span>
-                        </div>
-                        <div className="team-stat-cell">
-                            <span className="team-stat-label">L</span>
-                            <span className="team-stat-val" style={{ color: 'var(--color-error)' }}>{stats.losses}</span>
-                        </div>
-                        <div className="team-stat-cell">
-                            <span className="team-stat-label">Pts</span>
-                            <span className="team-stat-val" style={{ color: 'var(--color-accent-primary)', fontWeight: 800 }}>{stats.points}</span>
-                        </div>
-                    </>}
-                </div>
-            </div>
-        );
-    }
-
-    function renderTierColumn(tierName, tierRange, players, tierClass) {
-        return (
-            <div className={`draft-pool-tier-col ${tierClass}`}>
-                <div className="draft-pool-tier-header">
-                    <div style={{ fontWeight: 800, fontSize: '0.95em', letterSpacing: 1, textTransform: 'uppercase' }}>
-                        {tierName}
-                    </div>
-                    <div style={{ fontSize: '0.75em', color: 'var(--color-accent-secondary)', marginTop: 2 }}>
-                        {tierRange}
-                    </div>
-                    <div style={{ fontSize: '0.75em', color: 'var(--color-text-muted)', marginTop: 2 }}>
-                        {players.length} {t('standings.draftpool.players_count')}
-                    </div>
-                </div>
-                <div className="draft-pool-tier-players">
-                    {players.length === 0 ? (
-                        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', textAlign: 'center', padding: '16px 0' }}>—</p>
-                    ) : (
-                        players.map(renderPlayerCard)
-                    )}
-                </div>
-            </div>
-        );
     }
 
     return (
@@ -280,11 +411,13 @@ function DraftPoolStandings() {
             <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', marginBottom: 'var(--spacing-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>{t('standings.draftpool.total')}: <strong style={{ color: 'var(--color-accent-primary)' }}>{draftPlayers.length}</strong></span>
             </div>
-            <div className="draft-pool-tiers-grid">
-                {renderTierColumn(t('standings.draftpool.tier_s'), t('standings.draftpool.tier_s_range'), tierS, 'tier-s')}
-                {renderTierColumn(t('standings.draftpool.tier_a'), t('standings.draftpool.tier_a_range'), tierA, 'tier-a')}
-                {renderTierColumn(t('standings.draftpool.tier_b'), t('standings.draftpool.tier_b_range'), tierB, 'tier-b')}
+            <div className="draft-pool-list">
+                {pagination.items.map((row, i) => {
+                    const rank = (pagination.currentPage - 1) * DRAFT_POOL_PAGE_SIZE + i;
+                    return <DraftPoolCard key={row.player.id || row.player.battleTag} row={row} index={rank} />;
+                })}
             </div>
+            <PaginationControls page={pagination.currentPage} totalPages={pagination.totalPages} onPageChange={onPageChange} />
         </div>
     );
 }
@@ -297,6 +430,7 @@ function Standings() {
     const [loading,    setLoading]    = React.useState(true);
     const [error,      setError]      = React.useState(null);
     const [raceFilter, setRaceFilter] = React.useState(null);
+    const [pages,      setPages]      = React.useState({ players: 1, teams: 1, draftpool: 1 });
 
     React.useEffect(() => {
         fetch('/api/players')
@@ -304,8 +438,6 @@ function Standings() {
             .then(data => { setPlayers(data); setLoading(false); })
             .catch(err  => { setError(err.message); setLoading(false); });
     }, []);
-
-    if (error) return <div style={{ color: 'var(--color-error)', padding: 32, textAlign: 'center' }}>⚠ {error}</div>;
 
     // Строим строки таблицы
     const rows = players.flatMap(p => {
@@ -318,30 +450,44 @@ function Standings() {
         }
         return [{ player: p, race: null, wins: s.wins, losses: s.losses, points: s.points, mmr: s.mmr }];
     }).sort((a, b) => b.points - a.points);
+    const pagedPlayers = paginateCollection(rows, pages.players, PLAYERS_PAGE_SIZE);
 
-    const rankClass = i => i === 0 ? 'top-1' : i === 1 ? 'top-2' : i === 2 ? 'top-3' : '';
-    const rankIcon  = i => i === 0 ? 'I' : i === 1 ? 'II' : i === 2 ? 'III' : i + 1;
+    const setModePage = (key, value) => {
+        setPages(prev => prev[key] === value ? prev : { ...prev, [key]: value });
+    };
+
+    React.useEffect(() => {
+        setModePage('players', 1);
+    }, [raceFilter]);
+
+    React.useEffect(() => {
+        if (pages.players !== pagedPlayers.currentPage) setModePage('players', pagedPlayers.currentPage);
+    }, [pages.players, pagedPlayers.currentPage]);
+
+    if (error) return <div style={{ color: 'var(--color-error)', padding: 32, textAlign: 'center' }}>⚠ {error}</div>;
 
     return (
         <div className="animate-fade-in wow-section-page">
             <WoWSectionTitle>{t('standings.title')}</WoWSectionTitle>
 
             {/* Single row: race filters (left) + mode buttons (right) */}
-            <div className="wow-filter-bar" style={{ justifyContent: 'space-between' }}>
+            <div className="wow-filter-bar standings-controls">
                 {/* Race filter — only visible in players mode */}
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {mode === 'players' && RACE_KEYS.map(r => (
-                        <button
-                            key={String(r)}
-                            className={`wow-btn${raceFilter === r ? ' active' : ''}`}
-                            onClick={() => setRaceFilter(r)}
-                        >
-                            {r === null ? t('race.all') : t(`race.${r}`)}
-                        </button>
-                    ))}
-                </div>
+                {mode === 'players' && (
+                    <div className="standings-controls-group standings-controls-group--filters">
+                        {RACE_KEYS.map(r => (
+                            <button
+                                key={String(r)}
+                                className={`wow-btn${raceFilter === r ? ' active' : ''}`}
+                                onClick={() => setRaceFilter(r)}
+                            >
+                                {r === null ? t('race.all') : t(`race.${r}`)}
+                            </button>
+                        ))}
+                    </div>
+                )}
                 {/* Mode toggle */}
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <div className="standings-controls-group standings-controls-group--modes">
                     <button
                         className={`wow-btn${mode === 'players' ? ' active' : ''}`}
                         onClick={() => setMode('players')}
@@ -364,9 +510,9 @@ function Standings() {
             </div>
 
             {mode === 'teams' ? (
-                <TeamStandings />
+                <TeamStandings page={pages.teams} onPageChange={page => setModePage('teams', page)} />
             ) : mode === 'draftpool' ? (
-                <DraftPoolStandings />
+                <DraftPoolStandings page={pages.draftpool} onPageChange={page => setModePage('draftpool', page)} />
             ) : (
                 <>
 
@@ -379,57 +525,72 @@ function Standings() {
                     ) : rows.length === 0 ? (
                         <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>{t('standings.empty')}</p>
                     ) : (
-                        <div className="standings-table-wrap">
-                            <table className="standings-table">
-                                <thead>
-                                    <tr>
-                                        <th>{t('standings.rank')}</th>
-                                        <th>{t('standings.player')}</th>
-                                        <th>{t('standings.race')}</th>
-                                        <th>{t('standings.mmr')}</th>
-                                        <th>{t('standings.wins')}</th>
-                                        <th>{t('standings.losses')}</th>
-                                        <th>{t('standings.points')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {rows.map((row, i) => {
-                                        const portrait = row.player.selectedPortrait;
-                                        const raceImg  = RACE_IMG[row.race || row.player.mainRace || row.player.race];
-                                        const avatarSrc = portrait || raceImg || null;
-                                        const isWinner = !!row.player.seasonWinner;
-                                        return (
-                                            <tr key={`${row.player.battleTag}-${row.race}`}>
-                                                <td className={`col-rank ${rankClass(i)}`}>{rankIcon(i)}</td>
-                                                <td className="col-name" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                    {avatarSrc && (
-                                                        <div style={{ position: 'relative', flexShrink: 0 }}>
-                                                            <img src={avatarSrc} alt="" className={isWinner ? 'season-winner-avatar' : ''} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: isWinner ? undefined : '2px solid rgba(212,175,55,0.4)' }} />
-                                                            {isWinner && <div className="season-winner-badge" style={{ width: 14, height: 14, fontSize: 8, top: -4, left: -4 }} title={`Победитель сезона ${row.player.seasonWinner}`}>🏆</div>}
-                                                        </div>
-                                                    )}
-                                                    <span>{row.player.name || row.player.battleTag}</span>
-                                                    {isWinner && (
-                                                        <span style={{ fontSize: '0.68em', background: 'rgba(255,215,0,0.15)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.5)', borderRadius: 4, padding: '0 4px', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                                                            🏆 С{row.player.seasonWinner}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td style={{ color: 'var(--color-text-muted)' }}>
-                                                    {row.race !== null ? t(`race.${row.race}`) : '—'}
-                                                </td>
-                                                <td style={{ color: 'var(--color-accent-secondary)', fontWeight: 600 }}>
-                                                    {row.mmr || '—'}
-                                                </td>
-                                                <td className="col-wins">{row.wins}</td>
-                                                <td className="col-losses">{row.losses}</td>
-                                                <td className="col-points">{row.points}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                        <>
+                            <div className="standings-desktop-only standings-table-wrap">
+                                <table className="standings-table">
+                                    <thead>
+                                        <tr>
+                                            <th>{t('standings.rank')}</th>
+                                            <th>{t('standings.player')}</th>
+                                            <th>{t('standings.race')}</th>
+                                            <th>{t('standings.mmr')}</th>
+                                            <th>{t('standings.wins')}</th>
+                                            <th>{t('standings.losses')}</th>
+                                            <th>{t('standings.points')}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {pagedPlayers.items.map((row, i) => {
+                                            const rank = (pagedPlayers.currentPage - 1) * PLAYERS_PAGE_SIZE + i;
+                                            const portrait = row.player.selectedPortrait;
+                                            const race = row.race ?? playerRace(row.player);
+                                            const raceImg  = race != null ? RACE_IMG[race] : null;
+                                            const avatarSrc = portrait || raceImg || null;
+                                            const isWinner = !!row.player.seasonWinner;
+                                            return (
+                                                <tr key={`${row.player.battleTag}-${row.race}`}>
+                                                    <td className={`col-rank ${rankClass(rank)}`}>{rankIcon(rank)}</td>
+                                                    <td className="col-name" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                        {avatarSrc && (
+                                                            <div style={{ position: 'relative', flexShrink: 0 }}>
+                                                                <img src={avatarSrc} alt="" className={isWinner ? 'season-winner-avatar' : ''} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: isWinner ? undefined : '2px solid rgba(212,175,55,0.4)' }} />
+                                                                {isWinner && <div className="season-winner-badge" style={{ width: 14, height: 14, fontSize: 8, top: -4, left: -4 }} title={`Победитель сезона ${row.player.seasonWinner}`}>🏆</div>}
+                                                            </div>
+                                                        )}
+                                                        <span>{row.player.name || row.player.battleTag}</span>
+                                                        {isWinner && (
+                                                            <span style={{ fontSize: '0.68em', background: 'rgba(255,215,0,0.15)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.5)', borderRadius: 4, padding: '0 4px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                                                🏆 С{row.player.seasonWinner}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ color: 'var(--color-text-muted)' }}>
+                                                        {row.race !== null ? t(`race.${row.race}`) : '—'}
+                                                    </td>
+                                                    <td style={{ color: 'var(--color-accent-secondary)', fontWeight: 600 }}>
+                                                        {row.mmr ?? '—'}
+                                                    </td>
+                                                    <td className="col-wins">{row.wins}</td>
+                                                    <td className="col-losses">{row.losses}</td>
+                                                    <td className="col-points">{row.points}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="standings-mobile-list standings-mobile-only">
+                                {pagedPlayers.items.map((row, i) => {
+                                    const rank = (pagedPlayers.currentPage - 1) * PLAYERS_PAGE_SIZE + i;
+                                    return <PlayerStandingsMobileCard key={`${row.player.battleTag}-${row.race}`} row={row} index={rank} />;
+                                })}
+                            </div>
+                            <PaginationControls
+                                page={pagedPlayers.currentPage}
+                                totalPages={pagedPlayers.totalPages}
+                                onPageChange={page => setModePage('players', page)}
+                            />
+                        </>
                     )}
                 </>
             )}
