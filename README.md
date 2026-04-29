@@ -18,7 +18,7 @@ BNL-league/
 │
 ├── frontend/           React via CDN (no build tools)
 │   ├── components/     Standings, Teams, ClanWar, Admin
-│   ├── pages/          index.html, standings.html, clan-war.html
+│   ├── pages/          index.html
 │   ├── styles/         main.css
 │   └── app.js          Hash-router + root render
 │
@@ -40,8 +40,6 @@ BNL-league/
 The current runnable app is:
 - `backend/` for the Express API
 - `frontend/` for the UI served by Express
-
-`frontend-new/` exists, but it is not the primary local-dev path yet.
 
 ### Recommended: Docker Compose
 
