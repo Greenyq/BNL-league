@@ -29,8 +29,8 @@ const clanWarSchema = new mongoose.Schema(
         matches: [{
             order:  { type: Number },                                        // 1–5
             format: { type: String, enum: ['1v1', '2v2', '3v3'] },
-            label:  { type: String },                                        // "Дуэль I", "2 на 2" etc.
-            playerA:{ type: String },                                        // "МистерЧенс" or "А + Б"
+            label:  { type: String },                                        // "Дуэль I / Duel I", "2 на 2 / 2v2" etc.
+            playerA:{ type: String },                                        // "МистерЧенс / MisterChance" or "А + Б / A + B"
             playerB:{ type: String },
             score:  { a: { type: Number, default: 0 }, b: { type: Number, default: 0 } }, // BO3 score
             winner: { type: String, enum: ['a', 'b', null], default: null },

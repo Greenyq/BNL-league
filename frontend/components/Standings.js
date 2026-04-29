@@ -5,6 +5,7 @@ const RACE_IMG    = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/imag
 const PLAYERS_PAGE_SIZE = 10;
 const TEAMS_PAGE_SIZE = 10;
 const DRAFT_POOL_PAGE_SIZE = 10;
+const tr = (ru, en) => getLang() === 'en' ? en : ru;
 const rankClass   = i => i === 0 ? 'top-1' : i === 1 ? 'top-2' : i === 2 ? 'top-3' : '';
 const rankIcon    = i => i === 0 ? 'I' : i === 1 ? 'II' : i === 2 ? 'III' : i + 1;
 const playerRace  = player => player?.mainRace ?? player?.race ?? null;
@@ -34,14 +35,14 @@ function PlayerStandingsMobileCard({ row, index }) {
                             <div className="standings-mobile-avatar standings-mobile-avatar--placeholder">👤</div>
                         )}
                         {isWinner && (
-                            <div className="season-winner-badge" title={`Победитель сезона ${row.player.seasonWinner}`}>🏆</div>
+                            <div className="season-winner-badge" title={tr(`Победитель сезона ${row.player.seasonWinner}`, `Season ${row.player.seasonWinner} winner`)}>🏆</div>
                         )}
                     </div>
                     <div className="standings-mobile-identity">
                         <div className="standings-mobile-name-row">
                             <span className="standings-mobile-name">{row.player.name || row.player.battleTag}</span>
                             {isWinner && (
-                                <span className="standings-mobile-badge">🏆 С{row.player.seasonWinner}</span>
+                                <span className="standings-mobile-badge">🏆 {tr(`С${row.player.seasonWinner}`, `S${row.player.seasonWinner}`)}</span>
                             )}
                         </div>
                         <div className="standings-mobile-meta">{row.player.battleTag}</div>
@@ -138,7 +139,7 @@ function DraftPoolCard({ row, index }) {
             </div>
             <div style={{ position: 'relative', flexShrink: 0 }}>
                 {isWinner && (
-                    <div className="season-winner-badge" title={`Победитель сезона ${player.seasonWinner}`}>🏆</div>
+                    <div className="season-winner-badge" title={tr(`Победитель сезона ${player.seasonWinner}`, `Season ${player.seasonWinner} winner`)}>🏆</div>
                 )}
                 {portrait ? (
                     <img src={portrait} alt="" className={isWinner ? 'season-winner-avatar' : ''} style={{
@@ -175,7 +176,7 @@ function DraftPoolCard({ row, index }) {
                             {row.tierLabel}
                         </span>
                         {isWinner && (
-                            <span className="standings-mobile-badge">🏆 С{player.seasonWinner}</span>
+                            <span className="standings-mobile-badge">🏆 {tr(`С${player.seasonWinner}`, `S${player.seasonWinner}`)}</span>
                         )}
                     </div>
                     <div className="draft-pool-player-meta">
@@ -283,17 +284,17 @@ function TeamStandings({ page, onPageChange }) {
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Команда</th>
-                            <th>И</th>
-                            <th style={{ color: 'var(--color-success)' }}>КВ В</th>
-                            <th style={{ color: 'var(--color-error)' }}>КВ П</th>
-                            <th style={{ color: 'var(--color-accent-secondary)' }}>Матчи</th>
-                            <th>Состав</th>
+                            <th>{tr('Команда', 'Team')}</th>
+                            <th>{tr('И', 'P')}</th>
+                            <th style={{ color: 'var(--color-success)' }}>{tr('КВ В', 'CW W')}</th>
+                            <th style={{ color: 'var(--color-error)' }}>{tr('КВ П', 'CW L')}</th>
+                            <th style={{ color: 'var(--color-accent-secondary)' }}>{tr('Матчи', 'Matches')}</th>
+                            <th>{tr('Состав', 'Roster')}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {rows.length === 0 && (
-                            <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 32 }}>Нет данных</td></tr>
+                            <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 32 }}>{tr('Нет данных', 'No data')}</td></tr>
                         )}
                         {pagination.items.map((row, i) => {
                             const rank = (pagination.currentPage - 1) * TEAMS_PAGE_SIZE + i;
@@ -322,7 +323,7 @@ function TeamStandings({ page, onPageChange }) {
                                 <td style={{ color: 'var(--color-accent-secondary)', fontWeight: 600 }}>
                                     {row.matchWins}<span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}> : </span>{row.matchLosses}
                                 </td>
-                                <td style={{ color: 'var(--color-text-muted)', fontSize: '0.88em' }}>{row.roster} чел.</td>
+                                <td style={{ color: 'var(--color-text-muted)', fontSize: '0.88em' }}>{row.roster} {tr('чел.', 'players')}</td>
                             </tr>
                             );
                         })}
@@ -331,7 +332,7 @@ function TeamStandings({ page, onPageChange }) {
             </div>
             <div className="team-standings-mobile-list standings-mobile-only">
                 {rows.length === 0 ? (
-                    <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 32 }}>Нет данных</p>
+                    <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 32 }}>{tr('Нет данных', 'No data')}</p>
                 ) : (
                     pagination.items.map((row, i) => {
                         const rank = (pagination.currentPage - 1) * TEAMS_PAGE_SIZE + i;
@@ -341,7 +342,7 @@ function TeamStandings({ page, onPageChange }) {
             </div>
             <PaginationControls page={pagination.currentPage} totalPages={pagination.totalPages} onPageChange={onPageChange} />
             <div className="standings-note">
-                КВ В/П — победы/поражения в клан-варах. Матчи — суммарный счёт внутренних матчей.
+                {tr('КВ В/П — победы/поражения в клан-варах. Матчи — суммарный счёт внутренних матчей.', 'CW W/L shows clan-war wins/losses. Matches shows the combined score of internal matchups.')}
             </div>
         </div>
     );
@@ -492,13 +493,13 @@ function Standings() {
                         className={`wow-btn${mode === 'players' ? ' active' : ''}`}
                         onClick={() => setMode('players')}
                     >
-                        Игроки
+                        {t('standings.mode.players')}
                     </button>
                     <button
                         className={`wow-btn${mode === 'teams' ? ' active' : ''}`}
                         onClick={() => setMode('teams')}
                     >
-                        Команды
+                        {t('standings.mode.teams')}
                     </button>
                     <button
                         className={`wow-btn${mode === 'draftpool' ? ' active' : ''}`}
@@ -554,13 +555,13 @@ function Standings() {
                                                         {avatarSrc && (
                                                             <div style={{ position: 'relative', flexShrink: 0 }}>
                                                                 <img src={avatarSrc} alt="" className={isWinner ? 'season-winner-avatar' : ''} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: isWinner ? undefined : '2px solid rgba(212,175,55,0.4)' }} />
-                                                                {isWinner && <div className="season-winner-badge" style={{ width: 14, height: 14, fontSize: 8, top: -4, left: -4 }} title={`Победитель сезона ${row.player.seasonWinner}`}>🏆</div>}
+                                                                {isWinner && <div className="season-winner-badge" style={{ width: 14, height: 14, fontSize: 8, top: -4, left: -4 }} title={tr(`Победитель сезона ${row.player.seasonWinner}`, `Season ${row.player.seasonWinner} winner`)}>🏆</div>}
                                                             </div>
                                                         )}
                                                         <span>{row.player.name || row.player.battleTag}</span>
                                                         {isWinner && (
                                                             <span style={{ fontSize: '0.68em', background: 'rgba(255,215,0,0.15)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.5)', borderRadius: 4, padding: '0 4px', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                                                                🏆 С{row.player.seasonWinner}
+                                                                🏆 {tr(`С${row.player.seasonWinner}`, `S${row.player.seasonWinner}`)}
                                                             </span>
                                                         )}
                                                     </td>

@@ -3,7 +3,14 @@
 // ── Вспомогательные константы расы ───────────────────────────────────────────
 const CW_RACE_IMG   = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
 const CW_RACE_COLOR = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
-const CW_RACE_ABBR  = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
+const tr = (ru, en) => getLang() === 'en' ? en : ru;
+const CW_RACE_ABBR  = race => ({
+    0: 'Rnd',
+    1: tr('Люди', 'Human'),
+    2: tr('Орки', 'Orc'),
+    4: tr('Эльфы', 'Elves'),
+    8: tr('Нежить', 'Undead'),
+}[race] || 'Rnd');
 
 // ── Мини-строка игрока (для расширенного вида клан-вара) ──────────────────────
 function CwPlayerRow({ player, isCaptain }) {
@@ -46,8 +53,8 @@ function CwPlayerRow({ player, isCaptain }) {
                 </div>
                 <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em' }}>
                     {player.battleTag}
-                    {race && CW_RACE_ABBR[race] && (
-                        <span style={{ marginLeft: 5, color: CW_RACE_COLOR[race] }}>· {CW_RACE_ABBR[race]}</span>
+                    {race && CW_RACE_ABBR(race) && (
+                        <span style={{ marginLeft: 5, color: CW_RACE_COLOR[race] }}>· {CW_RACE_ABBR(race)}</span>
                     )}
                 </div>
             </div>
@@ -155,7 +162,7 @@ function CwMatchupCard({ match, players, nameA, nameB }) {
                 borderBottom: '1px solid rgba(255,255,255,0.05)',
             }}>
                 <span style={{ fontWeight: 700, fontSize: '0.88em', color: 'var(--color-text-primary)' }}>
-                    {match.label || `Матч ${match.order}`}
+                    {match.label || tr(`Матч ${match.order}`, `Match ${match.order}`)}
                 </span>
                 <span className="cw-match-fmt">{match.format}</span>
                 {tierLabel && (
@@ -315,7 +322,7 @@ function ClanWarCard({ cw, players, teams }) {
                                     {rosterA.map(p => (
                                         <CwPlayerRow key={p.id} player={p} isCaptain={isCaptainA(p)} />
                                     ))}
-                                    {rosterA.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', padding: '6px 0' }}>Нет игроков</p>}
+                                    {rosterA.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', padding: '6px 0' }}>{tr('Нет игроков', 'No players')}</p>}
                                 </div>
 
                                 {/* Team B */}
@@ -331,7 +338,7 @@ function ClanWarCard({ cw, players, teams }) {
                                     {rosterB.map(p => (
                                         <CwPlayerRow key={p.id} player={p} isCaptain={isCaptainB(p)} />
                                     ))}
-                                    {rosterB.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', padding: '6px 0' }}>Нет игроков</p>}
+                                    {rosterB.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', padding: '6px 0' }}>{tr('Нет игроков', 'No players')}</p>}
                                 </div>
                             </div>
                         </div>
@@ -343,7 +350,7 @@ function ClanWarCard({ cw, players, teams }) {
                     {/* Match matchups */}
                     <div style={{ padding: 'var(--spacing-md) var(--spacing-lg)' }}>
                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
-                            ⚔ Матчи
+                            ⚔ {tr('Матчи', 'Matches')}
                         </div>
                         {(cw.matches || []).length === 0
                             ? <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>—</p>

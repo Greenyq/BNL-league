@@ -1,4 +1,5 @@
 // Draft — система набора игроков: TeamRecruitView (набор в команду) + DraftView (клан-вар)
+const tr = (ru, en) => getLang() === 'en' ? en : ru;
 
 // ── Карточка игрока в пуле ────────────────────────────────────────────────────
 function DraftPlayerCard({ player, isPicked, isMyTurn, onPick, picking }) {
@@ -8,7 +9,7 @@ function DraftPlayerCard({ player, isPicked, isMyTurn, onPick, picking }) {
     const isWinner = !!player.seasonWinner;
 
     const raceColor = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
-    const raceAbbr  = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
+    const raceAbbr  = { 0: 'Rnd', 1: tr('Люди', 'Human'), 2: tr('Орки', 'Orc'), 4: tr('Эльфы', 'Elves'), 8: tr('Нежить', 'Undead') };
     const raceImg   = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
 
     const mmr = stats?.mmr || player.currentMmr || player.mmr || 0;
@@ -25,7 +26,7 @@ function DraftPlayerCard({ player, isPicked, isMyTurn, onPick, picking }) {
             {/* Avatar */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
                 {isWinner && (
-                    <div className="season-winner-badge" title={`Победитель сезона ${player.seasonWinner}`}>🏆</div>
+                    <div className="season-winner-badge" title={tr(`Победитель сезона ${player.seasonWinner}`, `Season ${player.seasonWinner} winner`)}>🏆</div>
                 )}
                 {portrait ? (
                     <img src={portrait} alt={player.name} className={isWinner ? 'season-winner-avatar' : ''} style={{
@@ -61,7 +62,7 @@ function DraftPlayerCard({ player, isPicked, isMyTurn, onPick, picking }) {
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name || player.battleTag?.split('#')[0]}</span>
                     {isWinner && (
                         <span style={{ fontSize: '0.7em', background: 'rgba(255,215,0,0.15)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.5)', borderRadius: 4, padding: '0 4px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                            🏆 С{player.seasonWinner}
+                            🏆 {tr(`С${player.seasonWinner}`, `S${player.seasonWinner}`)}
                         </span>
                     )}
                 </div>
@@ -130,7 +131,7 @@ function TierColumn({ tierNum, players, pickedIds, isMyTurn, onPick, picking }) 
                     {ranges[tierNum]}
                 </div>
                 <div style={{ fontSize: '0.75em', color: 'var(--color-text-muted)', marginTop: 2 }}>
-                    {available.length} {available.length === 1 ? 'игрок' : 'игроков'}
+                    {available.length} {available.length === 1 ? tr('игрок', 'player') : tr('игроков', 'players')}
                 </div>
             </div>
 
@@ -160,7 +161,7 @@ function TierColumn({ tierNum, players, pickedIds, isMyTurn, onPick, picking }) 
 function CaptainSlot({ captain }) {
     if (!captain) return null;
     const raceImg = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
-    const raceAbbr = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
+    const raceAbbr = { 0: 'Rnd', 1: tr('Люди', 'Human'), 2: tr('Орки', 'Orc'), 4: tr('Эльфы', 'Elves'), 8: tr('Нежить', 'Undead') };
     const race = captain.mainRace || captain.race;
     const portrait = captain.selectedPortrait;
     const mmr = captain.stats?.mmr || captain.currentMmr || captain.mmr || 0;
@@ -361,11 +362,11 @@ function DraftView({ clanWarId, onBack }) {
                                 {t('draft.start')}
                             </button>
                         )}
-                        <button className="btn btn-secondary" style={{ padding: '8px 18px', fontSize: '0.85em' }} onClick={() => { if (confirm('Сбросить драфт?')) adminAction('reset'); }}>
+                        <button className="btn btn-secondary" style={{ padding: '8px 18px', fontSize: '0.85em' }} onClick={() => { if (confirm(tr('Сбросить драфт?', 'Reset draft?'))) adminAction('reset'); }}>
                             {t('draft.reset')}
                         </button>
                         {draft?.status === 'drafting' && (
-                            <button className="btn btn-secondary" style={{ padding: '8px 18px', fontSize: '0.85em', color: 'var(--color-warning)', borderColor: 'var(--color-warning)' }} onClick={() => { if (confirm('Завершить принудительно?')) adminAction('force-complete'); }}>
+                            <button className="btn btn-secondary" style={{ padding: '8px 18px', fontSize: '0.85em', color: 'var(--color-warning)', borderColor: 'var(--color-warning)' }} onClick={() => { if (confirm(tr('Завершить принудительно?', 'Force complete?'))) adminAction('force-complete'); }}>
                                 {t('draft.force_complete')}
                             </button>
                         )}
@@ -375,12 +376,12 @@ function DraftView({ clanWarId, onBack }) {
                     {showStartConfig && (
                         <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', maxWidth: 420, marginBottom: 'var(--spacing-md)' }}>
                             <h4 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-md)' }}>
-                                Порядок выбора по тирам
+                                {tr('Порядок выбора по тирам', 'Tier pick order')}
                             </h4>
                             {[
-                                { key: 'tier1', label: 'Тир B (1000–1400)' },
-                                { key: 'tier2', label: 'Тир A (1400–1700)' },
-                                { key: 'tier3', label: 'Тир S (1700+)' },
+                                { key: 'tier1', label: tr('Тир B (1000–1400)', 'Tier B (1000–1400)') },
+                                { key: 'tier2', label: tr('Тир A (1400–1700)', 'Tier A (1400–1700)') },
+                                { key: 'tier3', label: tr('Тир S (1700+)', 'Tier S (1700+)') },
                             ].map(t => (
                                 <div key={t.key} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
                                     <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.9em', minWidth: 140 }}>{t.label}:</span>
@@ -389,17 +390,17 @@ function DraftView({ clanWarId, onBack }) {
                                         onChange={e => setTierOrderCfg(prev => ({ ...prev, [t.key]: e.target.value }))}
                                         style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '1px solid var(--color-bg-lighter)', borderRadius: 6, padding: '6px 10px' }}
                                     >
-                                        <option value="a">{nameA} первая</option>
-                                        <option value="b">{nameB} первая</option>
+                                        <option value="a">{nameA} {tr('первая', 'first')}</option>
+                                        <option value="b">{nameB} {tr('первая', 'first')}</option>
                                     </select>
                                 </div>
                             ))}
                             <div style={{ display: 'flex', gap: 8, marginTop: 'var(--spacing-md)' }}>
                                 <button className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85em' }} onClick={startDraft}>
-                                    Начать драфт
+                                    {tr('Начать драфт', 'Start draft')}
                                 </button>
                                 <button className="btn btn-secondary" style={{ padding: '8px 18px', fontSize: '0.85em' }} onClick={() => setShowStartConfig(false)}>
-                                    Отмена
+                                    {tr('Отмена', 'Cancel')}
                                 </button>
                             </div>
                         </div>
@@ -421,7 +422,7 @@ function DraftView({ clanWarId, onBack }) {
                     display: 'flex', alignItems: 'center', gap: 10,
                 }}>
                     <span style={{ fontSize: '1.1em' }}>🟢</span>
-                    <span>{currentTurn.team === 'a' ? nameA : nameB} — {t(currentTurn.team === 'a' ? 'draft.turn_a' : 'draft.turn_b')} (Тир {currentTurn.tier})</span>
+                    <span>{currentTurn.team === 'a' ? nameA : nameB} — {t(currentTurn.team === 'a' ? 'draft.turn_a' : 'draft.turn_b')} ({tr('Тир', 'Tier')} {currentTurn.tier})</span>
                 </div>
             )}
             {draft?.status === 'complete' && (
@@ -479,8 +480,8 @@ function DraftView({ clanWarId, onBack }) {
             {draft?.status === 'pending' ? (
                 <div style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 40 }}>
                     {isAdmin
-                        ? 'Нажмите «Начать драфт» чтобы открыть пул игроков'
-                        : 'Драфт ещё не начат. Ожидайте администратора.'}
+                        ? tr('Нажмите «Начать драфт», чтобы открыть пул игроков', 'Click "Start draft" to open the player pool')
+                        : tr('Драфт ещё не начат. Ожидайте администратора.', 'The draft has not started yet. Wait for the admin.')}
                 </div>
             ) : (
                 <div className="draft-tiers-grid">
@@ -519,7 +520,13 @@ function TeamRecruitView({ teamId, teamName, captainId, onBack }) {
     const adminSid = localStorage.getItem('bnl_admin_session');
 
     const raceColor = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
-    const raceAbbr  = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
+    const raceAbbr  = race => ({
+        0: 'Rnd',
+        1: tr('Люди', 'Human'),
+        2: tr('Орки', 'Orc'),
+        4: tr('Эльфы', 'Elves'),
+        8: tr('Нежить', 'Undead'),
+    }[race] || 'Rnd');
     const raceImg   = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
 
     const load = () => {
@@ -584,9 +591,14 @@ function TeamRecruitView({ teamId, teamName, captainId, onBack }) {
         3: pool.filter(p => effectiveTier(p) === 3),
         0: pool.filter(p => effectiveTier(p) === 0),
     };
-    const tierLabels = { 0: 'Без тира (<1000)', 1: 'Тир B · 1000–1400', 2: 'Тир A · 1400–1700', 3: 'Тир S · 1700+' };
+    const tierLabels = {
+        0: tr('Без тира (<1000)', 'No tier (<1000)'),
+        1: tr('Тир B · 1000–1400', 'Tier B · 1000–1400'),
+        2: tr('Тир A · 1400–1700', 'Tier A · 1400–1700'),
+        3: tr('Тир S · 1700+', 'Tier S · 1700+'),
+    };
 
-    const PlayerMini = ({ p, action, actionLabel, busy }) => {
+    const PlayerMini = ({ p, action, actionLabel, busy, actionTone }) => {
         const race = p.mainRace || p.race;
         const portrait = p.selectedPortrait;
         const stats = p.stats;
@@ -608,7 +620,7 @@ function TeamRecruitView({ teamId, teamName, captainId, onBack }) {
                     </div>
                     <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {p.battleTag}
-                        {race && raceAbbr[race] && <span style={{ marginLeft: 5, color: raceColor[race] }}>· {raceAbbr[race]}</span>}
+                        {race && raceAbbr(race) && <span style={{ marginLeft: 5, color: raceColor[race] }}>· {raceAbbr(race)}</span>}
                     </div>
                 </div>
                 <div className="team-player-stats" style={{ flexShrink: 0 }}>
@@ -633,9 +645,9 @@ function TeamRecruitView({ teamId, teamName, captainId, onBack }) {
                         disabled={busy}
                         style={{
                             padding: '4px 12px', fontSize: '0.8em', borderRadius: 4, cursor: 'pointer', fontWeight: 700, flexShrink: 0,
-                            background: actionLabel === '+ Добавить' ? 'rgba(76,175,80,0.15)' : 'rgba(244,67,54,0.12)',
-                            color: actionLabel === '+ Добавить' ? 'var(--color-success)' : 'var(--color-error)',
-                            border: `1px solid ${actionLabel === '+ Добавить' ? 'var(--color-success)' : 'rgba(244,67,54,0.4)'}`,
+                            background: actionTone === 'add' ? 'rgba(76,175,80,0.15)' : 'rgba(244,67,54,0.12)',
+                            color: actionTone === 'add' ? 'var(--color-success)' : 'var(--color-error)',
+                            border: `1px solid ${actionTone === 'add' ? 'var(--color-success)' : 'rgba(244,67,54,0.4)'}`,
                         }}
                     >
                         {busy ? '...' : actionLabel}
@@ -656,14 +668,14 @@ function TeamRecruitView({ teamId, teamName, captainId, onBack }) {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)', marginBottom: 'var(--spacing-xl)', flexWrap: 'wrap' }}>
                 <button className="btn btn-secondary" style={{ padding: '7px 16px', fontSize: '0.9em' }} onClick={onBack}>
-                    ← Назад
+                    ← {tr('Назад', 'Back')}
                 </button>
                 <h2 style={{ margin: 0 }}>
-                    ⚔ Набор &nbsp;<span style={{ color: 'var(--color-text-muted)', fontSize: '0.75em' }}>{teamName}</span>
+                    ⚔ {tr('Набор', 'Recruit')} &nbsp;<span style={{ color: 'var(--color-text-muted)', fontSize: '0.75em' }}>{teamName}</span>
                 </h2>
                 {!isAdmin && (
                     <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>
-                        Только администратор может добавлять игроков
+                        {tr('Только администратор может добавлять игроков', 'Only the admin can add players')}
                     </span>
                 )}
             </div>
@@ -679,17 +691,18 @@ function TeamRecruitView({ teamId, teamName, captainId, onBack }) {
                 {/* ── Текущий состав ── */}
                 <div>
                     <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 'var(--spacing-md)' }}>
-                        🛡 Состав команды ({roster.length})
+                        🛡 {tr('Состав команды', 'Team roster')} ({roster.length})
                     </div>
                     <div className="draft-tier-col" style={{ padding: 'var(--spacing-sm)' }}>
                         {roster.length === 0
-                            ? <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', textAlign: 'center', padding: 16 }}>Нет игроков</p>
+                            ? <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', textAlign: 'center', padding: 16 }}>{tr('Нет игроков', 'No players')}</p>
                             : roster.map(p => (
                                 <PlayerMini
                                     key={p.id}
                                     p={p}
                                     action={() => removePlayer(p.id)}
-                                    actionLabel="− Убрать"
+                                    actionLabel={tr('− Убрать', '− Remove')}
+                                    actionTone="remove"
                                     busy={removing === p.id}
                                 />
                             ))
@@ -700,13 +713,14 @@ function TeamRecruitView({ teamId, teamName, captainId, onBack }) {
                 {/* ── Пул доступных игроков ── */}
                 <div>
                     <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 'var(--spacing-md)' }}>
-                        👥 Доступны для набора ({pool.length})
+                        👥 {tr('Доступны для набора', 'Available to recruit')} ({pool.length})
                     </div>
                     {pool.length === 0 ? (
                         <div className="draft-tier-col" style={{ padding: 'var(--spacing-lg)', textAlign: 'center' }}>
                             <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88em' }}>
-                                Нет доступных игроков.<br />
-                                Включите игрокам «⚔ Драфт» в&nbsp;<strong>Админ → Игроки</strong>.
+                                {tr('Нет доступных игроков.', 'No available players.')}<br />
+                                {tr('Включите игрокам «⚔ Драфт» в', 'Enable "⚔ Draft" for players in')}&nbsp;
+                                <strong>{tr('Админ', 'Admin')} → {tr('Игроки', 'Players')}</strong>.
                             </p>
                         </div>
                     ) : (
@@ -721,7 +735,8 @@ function TeamRecruitView({ teamId, teamName, captainId, onBack }) {
                                             key={p.id}
                                             p={p}
                                             action={() => assignPlayer(p.id)}
-                                            actionLabel="+ Добавить"
+                                            actionLabel={tr('+ Добавить', '+ Add')}
+                                            actionTone="add"
                                             busy={assigning === p.id}
                                         />
                                     ))}

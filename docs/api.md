@@ -80,9 +80,9 @@ Obtain the token via `POST /api/admin/login`.
 {
   "score":   { "a": 2, "b": 1 },
   "winner":  "a",
-  "playerA": "МистерЧенс",
-  "playerB": "Иллидан",
-  "label":   "Дуэль I",
+  "playerA": "МистерЧенс / MisterChance",
+  "playerB": "Иллидан / Illidan",
+  "label":   "Дуэль I / Duel I",
   "games": [
     { "gameNumber": 1, "map": "Turtle Rock", "winner": "a" },
     { "gameNumber": 2, "map": "Amazonia",    "winner": "b" },

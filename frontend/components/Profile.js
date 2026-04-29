@@ -37,7 +37,14 @@ const RACE_OPTIONS = [
 ];
 
 // Portraits are loaded dynamically from /api/portraits
-const PORTRAIT_RACE_LABELS = { 0: 'Все', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
+const tr = (ru, en) => getLang() === 'en' ? en : ru;
+const PORTRAIT_RACE_LABELS = {
+    0: () => tr('Все', 'All'),
+    1: () => tr('Люди', 'Human'),
+    2: () => tr('Орки', 'Orc'),
+    4: () => tr('Эльфы', 'Elves'),
+    8: () => tr('Нежить', 'Undead'),
+};
 
 async function playerFetch(url, options = {}) {
     const sid = getPlayerSession();
@@ -438,14 +445,14 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                     </p>
 
                     {allPortraits.length === 0 && (
-                        <p style={{ color: 'var(--color-text-muted)' }}>Портреты ещё не добавлены администратором</p>
+                        <p style={{ color: 'var(--color-text-muted)' }}>{tr('Портреты ещё не добавлены администратором', 'Portraits have not been added by an admin yet')}</p>
                     )}
 
                     {/* Все портреты по расам, без замков */}
                     {PORTRAIT_RACE_ORDER.filter(r => portraitsByRace[r]?.length).map(r => (
                         <div key={r} style={{ marginBottom: 'var(--spacing-lg)' }}>
                             <div style={{ color: 'var(--color-text-muted)', fontSize: '0.78em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 'var(--spacing-sm)' }}>
-                                {PORTRAIT_RACE_LABELS[r]}
+                                {PORTRAIT_RACE_LABELS[r]()}
                             </div>
                             <div style={{ display: 'flex', gap: 'var(--spacing-md)', flexWrap: 'wrap' }}>
                                 {portraitsByRace[r].map(p => (
