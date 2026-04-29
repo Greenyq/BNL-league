@@ -20,7 +20,6 @@ BNL-league/
 │   ├── components/        # Draft.js, Teams.js, ClanWar.js, Admin.js, Profile.js, ...
 │   ├── i18n.js            # RU/EN translations
 │   └── styles/            # CSS
-├── frontend-new/          # Future Vite+React migration (not in production yet)
 ├── docker-compose.yml
 ├── .env.example
 └── package.json
@@ -67,13 +66,6 @@ copy .env.example .env
 npm run dev
 
 # 4. Open http://localhost:3000
-```
-
-### Frontend dev (Vite, optional — for frontend-new only)
-
-```powershell
-npm run frontend:dev    # Vite dev server at http://localhost:5173
-npm run frontend:build  # Build into frontend/pages/ for Express to serve
 ```
 
 The **current production frontend** (`frontend/`) requires **no build step** — it's plain React via Babel CDN, served directly by Express as static files.

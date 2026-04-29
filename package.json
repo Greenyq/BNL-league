@@ -9,9 +9,7 @@
     "build": "docker compose build",
     "up": "docker compose up -d",
     "down": "docker compose down",
-    "logs": "docker compose logs -f",
-    "frontend:dev": "cd frontend-new && npm run dev",
-    "frontend:build": "cd frontend-new && npm run build"
+    "logs": "docker compose logs -f"
   },
   "dependencies": {
     "axios": "^1.6.0",
