@@ -1,5 +1,5 @@
 // BNL League — app entry point (JSX via Babel CDN)
-// Хэш-роутинг: /#home, /#standings, /#teams, /#clanwar, /#maps, /#profile, /#admin
+// Хэш-роутинг / Hash routing: /#home, /#standings, /#teams, /#clanwar, /#maps, /#profile, /#admin
 
 const TABS = [
     { id: 'home',      labelKey: 'nav.home' },
@@ -16,7 +16,7 @@ function getTabFromHash() {
     return TABS.find(t => t.id === hash) ? hash : 'home';
 }
 
-// ── Главная страница ──────────────────────────────────────────────────────────
+// ── Главная страница / Home page ──────────────────────────────────────────────
 function HomePage() {
     useLang();
     var steps = [
@@ -121,9 +121,9 @@ function App() {
     const [tab,           setTab]           = React.useState(getTabFromHash);
     const [recruitTarget, setRecruitTarget] = React.useState(null); // { teamId, teamName, captainId }
     const [draftTarget,   setDraftTarget]   = React.useState(null); // { clanWarId }
-    useLang(); // подписка на смену языка
+    useLang(); // подписка на смену языка / language-change subscription
 
-    // Синхронизация хэша с табом
+    // Синхронизация хэша с табом / sync hash with current tab
     React.useEffect(() => {
         const onHash = () => {
             window.scrollTo({ top: 0, left: 0, behavior: 'auto' });

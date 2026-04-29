@@ -20,6 +20,8 @@ async function apiFetch(url, options = {}) {
     return res.json();
 }
 
+const tr = (ru, en) => getLang() === 'en' ? en : ru;
+
 // ── Форма логина ──────────────────────────────────────────────────────────────
 function LoginForm({ onLogin }) {
     useLang();
@@ -153,7 +155,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                     teamId:     teamId || undefined,
                 }),
             });
-            showMsg(`✅ Игрок ${w3cResult.name} добавлен`);
+            showMsg(`✅ ${tr(`Игрок ${w3cResult.name} добавлен`, `Player ${w3cResult.name} added`)}`);
             setShowForm(false); setW3cTag(''); setW3cResult(null); setTeamId('');
             onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
@@ -163,17 +165,17 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
     const saveTeam = async (playerId) => {
         try {
             await apiFetch(`/api/players/${playerId}`, { method: 'PUT', body: JSON.stringify({ teamId: editTeam || null }) });
-            showMsg('✅ Команда обновлена');
+            showMsg(`✅ ${tr('Команда обновлена', 'Team updated')}`);
             setEditId(null);
             onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
 
     const deletePlayer = async (id, name) => {
-        if (!confirm(`Удалить ${name}?`)) return;
+        if (!confirm(tr(`Удалить ${name}?`, `Delete ${name}?`))) return;
         try {
             await apiFetch(`/api/players/${id}`, { method: 'DELETE' });
-            showMsg('✅ Игрок удалён');
+            showMsg(`✅ ${tr('Игрок удалён', 'Player deleted')}`);
             onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
@@ -186,8 +188,8 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                 method: 'PUT',
                 body: JSON.stringify({ tierOverride: tier }),
             });
-            const tierName = { 1: 'B', 2: 'A', 3: 'S' }[tier] || 'Авто';
-            showMsg(`✅ Тир: ${p.name} → ${tierName}`);
+            const tierName = { 1: 'B', 2: 'A', 3: 'S' }[tier] || tr('Авто', 'Auto');
+            showMsg(`✅ ${tr('Тир', 'Tier')}: ${p.name} → ${tierName}`);
             onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
@@ -208,7 +210,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                 method: 'PUT',
                 body: JSON.stringify({ draftAvailable: !p.draftAvailable }),
             });
-            showMsg(`✅ Драфт: ${p.name} → ${!p.draftAvailable ? 'доступен' : 'недоступен'}`);
+            showMsg(`✅ ${tr('Драфт', 'Draft')}: ${p.name} → ${!p.draftAvailable ? tr('доступен', 'available') : tr('недоступен', 'unavailable')}`);
             onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
@@ -220,7 +222,9 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                 method: 'PUT',
                 body: JSON.stringify({ seasonWinner: season }),
             });
-            showMsg(season ? `🏆 ${p.name} — победитель сезона 1` : `✅ ${p.name} — значок победителя снят`);
+            showMsg(season
+                ? `🏆 ${p.name} — ${tr('победитель сезона 1', 'season 1 winner')}`
+                : `✅ ${p.name} — ${tr('значок победителя снят', 'winner badge removed')}`);
             onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
@@ -320,10 +324,10 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                             <th>BattleTag</th>
                             <th>{t('standings.player')}</th>
                             <th>MMR</th>
-                            <th>Тир</th>
+                            <th>{tr('Тир', 'Tier')}</th>
                             <th>{t('admin.assign_team')}</th>
-                            <th>⚔ Драфт</th>
-                            <th>🏆 Сезон</th>
+                            <th>⚔ {tr('Драфт', 'Draft')}</th>
+                            <th>🏆 {tr('Сезон', 'Season')}</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -344,7 +348,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                                             borderRadius: 4, padding: '3px 6px', fontSize: '0.82em', fontWeight: 700,
                                         }}
                                     >
-                                        <option value="">Авто ({tierLabel(autoTier(p))})</option>
+                                        <option value="">{tr('Авто', 'Auto')} ({tierLabel(autoTier(p))})</option>
                                         <option value="3">S (1700+)</option>
                                         <option value="2">A (1400–1700)</option>
                                         <option value="1">B (1000–1400)</option>
@@ -358,7 +362,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                                                 onChange={e => setEditTeam(e.target.value)}
                                                 style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '1px solid var(--color-bg-lighter)', borderRadius: 6, padding: '4px 8px', fontSize: '0.9em' }}
                                             >
-                                                <option value="">— без команды —</option>
+                                                <option value="">— {tr('без команды', 'no team')} —</option>
                                                 {teams.map(tm => <option key={tm.id} value={tm.id}>{tm.emoji} {tm.name}</option>)}
                                             </select>
                                             <button onClick={() => saveTeam(p.id)} style={{ background: 'rgba(76,175,80,0.15)', color: 'var(--color-success)', border: '1px solid var(--color-success)', padding: '3px 8px', borderRadius: 4, fontSize: '0.82em' }}>✓</button>
@@ -369,7 +373,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                                             onClick={() => { setEditId(p.id); setEditTeam(p.teamId || ''); }}
                                             style={{ cursor: 'pointer', color: p.teamId ? 'var(--color-accent-primary)' : 'var(--color-text-muted)', fontSize: '0.9em' }}
                                         >
-                                            {teamMap[p.teamId]?.name || '— назначить →'}
+                                            {teamMap[p.teamId]?.name || `— ${tr('назначить', 'assign')} →`}
                                         </span>
                                     )}
                                 </td>
@@ -385,13 +389,13 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                                             minWidth: 64,
                                         }}
                                     >
-                                        {p.draftAvailable ? '✔ Да' : '✗ Нет'}
+                                        {p.draftAvailable ? `✔ ${tr('Да', 'Yes')}` : `✗ ${tr('Нет', 'No')}`}
                                     </button>
                                 </td>
                                 <td>
                                     <button
                                         onClick={() => toggleSeasonWinner(p)}
-                                        title={p.seasonWinner ? 'Снять значок победителя' : 'Назначить победителем сезона 1'}
+                                        title={p.seasonWinner ? tr('Снять значок победителя', 'Remove winner badge') : tr('Назначить победителем сезона 1', 'Mark as season 1 winner')}
                                         style={{
                                             padding: '3px 10px', fontSize: '0.78em', borderRadius: 4, cursor: 'pointer', fontWeight: 700,
                                             background: p.seasonWinner ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.04)',
@@ -400,7 +404,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                                             minWidth: 48,
                                         }}
                                     >
-                                        {p.seasonWinner ? `🏆 С${p.seasonWinner}` : '—'}
+                                        {p.seasonWinner ? `🏆 ${tr(`С${p.seasonWinner}`, `S${p.seasonWinner}`)}` : '—'}
                                     </button>
                                 </td>
                                 <td>
@@ -411,7 +415,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                             </tr>
                         ))}
                         {players.length === 0 && (
-                            <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 32 }}>Нет игроков</td></tr>
+                            <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 32 }}>{tr('Нет игроков', 'No players')}</td></tr>
                         )}
                     </tbody>
                 </table>
@@ -452,7 +456,7 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
                 method: 'PUT',
                 body: JSON.stringify({ name: editName.trim(), emoji: editEmoji, captainId: editCap || null }),
             });
-            showMsg('✅ Команда обновлена');
+            showMsg(`✅ ${tr('Команда обновлена', 'Team updated')}`);
             setEditId(null);
             onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
@@ -464,7 +468,7 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
         setSaving(true);
         try {
             await apiFetch('/api/teams', { method: 'POST', body: JSON.stringify({ name: name.trim(), emoji, captainId: captainId || undefined }) });
-            showMsg(`✅ Команда "${name}" создана`);
+            showMsg(`✅ ${tr(`Команда "${name}" создана`, `Team "${name}" created`)}`);
             setShowForm(false); setName(''); setEmoji('🛡'); setCaptain('');
             onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
@@ -472,10 +476,10 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
     };
 
     const deleteTeam = async (id, name) => {
-        if (!confirm(`Удалить команду "${name}"?`)) return;
+        if (!confirm(tr(`Удалить команду "${name}"?`, `Delete team "${name}"?`))) return;
         try {
             await apiFetch(`/api/teams/${id}`, { method: 'DELETE' });
-            showMsg('✅ Команда удалена');
+            showMsg(`✅ ${tr('Команда удалена', 'Team deleted')}`);
             onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
@@ -496,7 +500,7 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
                 const err = await res.json().catch(() => ({}));
                 throw new Error(err.error || 'Upload failed');
             }
-            showMsg('✅ Логотип загружен');
+            showMsg(`✅ ${tr('Логотип загружен', 'Logo uploaded')}`);
             onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
         setUploading(null);
@@ -519,14 +523,14 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)', maxWidth: 400 }}>
                         <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
                             <input type="text" placeholder="Emoji" value={emoji} onChange={e => setEmoji(e.target.value)} style={{ width: 60 }} />
-                            <input type="text" placeholder="Название команды" value={name} onChange={e => setName(e.target.value)} style={{ flex: 1 }} />
+                            <input type="text" placeholder={tr('Название команды', 'Team name')} value={name} onChange={e => setName(e.target.value)} style={{ flex: 1 }} />
                         </div>
                         <select
                             value={captainId}
                             onChange={e => setCaptain(e.target.value)}
                             style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '2px solid var(--color-bg-lighter)', borderRadius: 'var(--radius-md)', padding: '10px 14px', fontSize: '1em' }}
                         >
-                            <option value="">— выбрать капитана —</option>
+                            <option value="">— {tr('выбрать капитана', 'select captain')} —</option>
                             {players.map(p => <option key={p.id} value={p.id}>{p.name} ({p.battleTag})</option>)}
                         </select>
                         <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
@@ -543,7 +547,7 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
 
             {/* Карточки команд с логотипом */}
             {teams.length === 0 ? (
-                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 32 }}>Нет команд</p>
+                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 32 }}>{tr('Нет команд', 'No teams')}</p>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
                     {teams.map(tm => (
@@ -560,7 +564,7 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
                                         </div>
                                     )}
                                     <label style={{ cursor: 'pointer', fontSize: '0.68em', color: 'var(--color-accent-primary)', whiteSpace: 'nowrap' }}>
-                                        {uploading === tm.id ? '⏳...' : '🖼 Лого'}
+                                        {uploading === tm.id ? '⏳...' : `🖼 ${tr('Лого', 'Logo')}`}
                                         <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} disabled={uploading === tm.id} onChange={e => uploadLogo(tm.id, e.target.files[0])} />
                                     </label>
                                 </div>
@@ -571,9 +575,9 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
                                         {tm.emoji} {tm.name}
                                     </div>
                                     <div style={{ color: 'var(--color-text-muted)', fontSize: '0.83em' }}>
-                                        👑 {playerMap[tm.captainId]?.name || (tm.captainId ? tm.captainId : '— капитан не назначен')}
+                                        👑 {playerMap[tm.captainId]?.name || (tm.captainId ? tm.captainId : `— ${tr('капитан не назначен', 'no captain assigned')}`)}
                                         &nbsp;·&nbsp;
-                                        {players.filter(p => p.teamId === tm.id).length} игроков
+                                        {players.filter(p => p.teamId === tm.id).length} {tr('игроков', 'players')}
                                     </div>
                                 </div>
 
@@ -583,7 +587,7 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
                                         onClick={() => editId === tm.id ? cancelEdit() : startEdit(tm)}
                                         style={{ background: editId === tm.id ? 'rgba(0,212,255,0.1)' : 'rgba(212,175,55,0.1)', color: editId === tm.id ? 'var(--color-accent-secondary)' : 'var(--color-accent-primary)', border: `1px solid ${editId === tm.id ? 'var(--color-accent-secondary)' : 'rgba(212,175,55,0.4)'}`, padding: '6px 14px', fontSize: '0.82em', borderRadius: 'var(--radius-sm)' }}
                                     >
-                                        {editId === tm.id ? '✕ Отмена' : '✏ Изменить'}
+                                        {editId === tm.id ? `✕ ${tr('Отмена', 'Cancel')}` : `✏ ${tr('Изменить', 'Edit')}`}
                                     </button>
                                     <button onClick={() => deleteTeam(tm.id, tm.name)} style={{ background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', padding: '6px 14px', fontSize: '0.82em', borderRadius: 'var(--radius-sm)' }}>
                                         {t('admin.delete')}
@@ -598,20 +602,20 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
                                         {/* Название и эмодзи */}
                                         <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
                                             <input type="text" placeholder="Emoji" value={editEmoji} onChange={e => setEditEmoji(e.target.value)} style={{ width: 60 }} />
-                                            <input type="text" placeholder="Название команды" value={editName} onChange={e => setEditName(e.target.value)} style={{ flex: 1 }} />
+                                            <input type="text" placeholder={tr('Название команды', 'Team name')} value={editName} onChange={e => setEditName(e.target.value)} style={{ flex: 1 }} />
                                         </div>
                                         {/* Капитан */}
                                         <div>
-                                            <div style={{ fontSize: '0.8em', color: 'var(--color-text-muted)', marginBottom: 4 }}>👑 Капитан</div>
+                                            <div style={{ fontSize: '0.8em', color: 'var(--color-text-muted)', marginBottom: 4 }}>👑 {tr('Капитан', 'Captain')}</div>
                                             <select
                                                 value={editCap}
                                                 onChange={e => setEditCap(e.target.value)}
                                                 style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '2px solid var(--color-bg-lighter)', borderRadius: 'var(--radius-md)', padding: '9px 12px', fontSize: '0.95em', width: '100%' }}
                                             >
-                                                <option value="">— без капитана —</option>
+                                                <option value="">— {tr('без капитана', 'no captain')} —</option>
                                                 {players.map(p => (
                                                     <option key={p.id} value={p.id}>
-                                                        {p.name} ({p.battleTag}) {p.teamId === tm.id ? '· в команде' : ''}
+                                                        {p.name} ({p.battleTag}) {p.teamId === tm.id ? `· ${tr('в команде', 'in team')}` : ''}
                                                     </option>
                                                 ))}
                                             </select>
@@ -619,9 +623,9 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
                                         {/* Сохранить */}
                                         <div style={{ display: 'flex', gap: 8 }}>
                                             <button className="btn btn-primary" onClick={() => saveEdit(tm.id)} disabled={editSaving || !editName.trim()} style={{ padding: '7px 18px' }}>
-                                                {editSaving ? '...' : '💾 Сохранить'}
+                                                {editSaving ? '...' : `💾 ${tr('Сохранить', 'Save')}`}
                                             </button>
-                                            <button className="btn btn-secondary" onClick={cancelEdit} style={{ padding: '7px 14px' }}>Отмена</button>
+                                            <button className="btn btn-secondary" onClick={cancelEdit} style={{ padding: '7px 14px' }}>{tr('Отмена', 'Cancel')}</button>
                                         </div>
                                     </div>
                                 </div>
@@ -635,7 +639,11 @@ function TeamsTab({ teams, players, onRefresh, showMsg }) {
 }
 
 // ── Вкладка Клан-вары ─────────────────────────────────────────────────────────
-const CW_STATUS_LABELS = { upcoming: '📅 Предстоит', ongoing: '⚔ Идёт', completed: '✅ Завершён' };
+const CW_STATUS_LABELS = {
+    upcoming: () => `📅 ${tr('Предстоит', 'Upcoming')}`,
+    ongoing: () => `⚔ ${tr('Идёт', 'Ongoing')}`,
+    completed: () => `✅ ${tr('Завершён', 'Completed')}`,
+};
 const CW_STATUS_COLORS = { upcoming: 'var(--color-accent-secondary)', ongoing: 'var(--color-success)', completed: 'var(--color-text-muted)' };
 
 // Dropdown picker for N players (1 for 1v1, 2 for 2v2, 3 for 3v3)
@@ -659,7 +667,7 @@ function PlayerPicker({ value, onChange, count, players }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {Array.from({ length: count }).map((_, i) => (
                 <select key={i} value={parts[i] || ''} onChange={e => update(i, e.target.value)} style={selStyle}>
-                    <option value="">— Игрок {i + 1} —</option>
+                    <option value="">{`— ${tr(`Игрок ${i + 1}`, `Player ${i + 1}`)} —`}</option>
                     {players.map(p => (
                         <option key={p.id} value={p.name}>{p.name} · {p.battleTag}</option>
                     ))}
@@ -726,8 +734,8 @@ function ClanWarTab({ showMsg, players, teams }) {
 
     const createWar = async (e) => {
         e.preventDefault();
-        if (!form.teamAId || !form.teamBId) return showMsg('❌ Выберите обе команды', 'error');
-        if (form.teamAId === form.teamBId) return showMsg('❌ Команды должны быть разными', 'error');
+        if (!form.teamAId || !form.teamBId) return showMsg(`❌ ${tr('Выберите обе команды', 'Select both teams')}`, 'error');
+        if (form.teamAId === form.teamBId) return showMsg(`❌ ${tr('Команды должны быть разными', 'Teams must be different')}`, 'error');
         try {
             const body = {
                 season: form.season,
@@ -738,7 +746,7 @@ function ClanWarTab({ showMsg, players, teams }) {
                 matches: DEFAULT_MATCHES,
             };
             const cw = await apiFetch('/api/clan-wars', { method: 'POST', body: JSON.stringify(body) });
-            showMsg('✅ Клан-вар создан');
+            showMsg(`✅ ${tr('Клан-вар создан', 'Clan war created')}`);
             setShowCreate(false);
             setForm({ season: '', date: '', teamAId: '', teamBId: '' });
             setSelected(cw);
@@ -747,10 +755,10 @@ function ClanWarTab({ showMsg, players, teams }) {
     };
 
     const deleteWar = async (id) => {
-        if (!confirm('Удалить клан-вар?')) return;
+        if (!confirm(tr('Удалить клан-вар?', 'Delete clan war?'))) return;
         try {
             await apiFetch(`/api/clan-wars/${id}`, { method: 'DELETE' });
-            showMsg('✅ Удалено');
+            showMsg(`✅ ${tr('Удалено', 'Deleted')}`);
             if (selected?.id === id) setSelected(null);
             load();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
@@ -789,7 +797,7 @@ function ClanWarTab({ showMsg, players, teams }) {
                 }),
             });
             setSelected(cw); load();
-            showMsg('✅ Матч сохранён');
+            showMsg(`✅ ${tr('Матч сохранён', 'Match saved')}`);
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
 
@@ -799,42 +807,42 @@ function ClanWarTab({ showMsg, players, teams }) {
             const result = await apiFetch(`/api/clan-wars/${selected.id}/auto-assign`, { method: 'POST' });
             setSelected(result.clanWar); load();
             const count = result.assignments?.length || 0;
-            showMsg(`✅ Авто-назначение: ${count} матчей по тирам`);
+            showMsg(`✅ ${tr('Авто-назначение', 'Auto-assignment')}: ${count} ${tr('матчей по тирам', 'tier-based matches')}`);
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
 
     const resetMatches = async () => {
         if (!selected) return;
-        if (!confirm('Удалить все матчи и сбросить результаты?')) return;
+        if (!confirm(tr('Удалить все матчи и сбросить результаты?', 'Delete all matches and reset results?'))) return;
         try {
             const result = await apiFetch(`/api/clan-wars/${selected.id}/reset-matches`, { method: 'POST' });
             setSelected(result.clanWar); load();
-            showMsg('✅ Матчи сброшены');
+            showMsg(`✅ ${tr('Матчи сброшены', 'Matches reset')}`);
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
 
     const autoAssignAll = async () => {
-        if (!confirm(`Авто-назначить игроков во ВСЕХ клан-варах (${wars.length})?`)) return;
+        if (!confirm(tr(`Авто-назначить игроков во ВСЕХ клан-варах (${wars.length})?`, `Auto-assign players in ALL clan wars (${wars.length})?`))) return;
         try {
             const result = await apiFetch('/api/clan-wars/auto-assign-all', { method: 'POST' });
-            showMsg(`✅ Назначено: ${result.totalWars} клан-варов`);
+            showMsg(`✅ ${tr('Назначено', 'Assigned')}: ${result.totalWars} ${tr('клан-варов', 'clan wars')}`);
             load();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
 
     const deleteAllWars = async () => {
-        if (!confirm(`Удалить ВСЕ клан-вары (${wars.length})? Это действие необратимо!`)) return;
+        if (!confirm(tr(`Удалить ВСЕ клан-вары (${wars.length})? Это действие необратимо!`, `Delete ALL clan wars (${wars.length})? This action cannot be undone!`))) return;
         try {
             await apiFetch('/api/clan-wars', { method: 'DELETE' });
-            showMsg('✅ Все клан-вары удалены');
+            showMsg(`✅ ${tr('Все клан-вары удалены', 'All clan wars deleted')}`);
             setSelected(null);
             load();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
 
     const generateSchedule = async () => {
-        if (!schedForm.season.trim()) return showMsg('❌ Укажите название сезона', 'error');
-        if ((teams || []).length < 2) return showMsg('❌ Нужно минимум 2 команды', 'error');
+        if (!schedForm.season.trim()) return showMsg(`❌ ${tr('Укажите название сезона', 'Enter a season name')}`, 'error');
+        if ((teams || []).length < 2) return showMsg(`❌ ${tr('Нужно минимум 2 команды', 'At least 2 teams are required')}`, 'error');
         setScheduling(true);
         try {
             const result = await apiFetch('/api/clan-wars/schedule', {
@@ -845,7 +853,7 @@ function ClanWarTab({ showMsg, players, teams }) {
                     daysBetweenRounds: parseInt(schedForm.daysBetweenRounds) || 7,
                 }),
             });
-            showMsg(`✅ Создано ${result.created} клан-варов в ${result.totalRounds} турах${result.skipped ? ` (пропущено ${result.skipped} — уже существуют)` : ''}`);
+            showMsg(`✅ ${tr('Создано', 'Created')} ${result.created} ${tr('клан-варов', 'clan wars')} ${tr('в', 'in')} ${result.totalRounds} ${tr('турах', 'rounds')}${result.skipped ? ` (${tr('пропущено', 'skipped')} ${result.skipped} — ${tr('уже существуют', 'already exist')})` : ''}`);
             setShowScheduler(false);
             load();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
@@ -859,50 +867,50 @@ function ClanWarTab({ showMsg, players, teams }) {
         return (
             <div>
                 <button className="btn btn-secondary" onClick={() => { setSelected(null); load(); }} style={{ marginBottom: 'var(--spacing-lg)', padding: '8px 16px' }}>
-                    ← Назад
+                    ← {tr('Назад', 'Back')}
                 </button>
 
                 {/* Заголовок */}
                 <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-lg)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: '1.2em', fontWeight: 800 }}>{cw.teamA?.name || 'Команда A'}</span>
+                            <span style={{ fontSize: '1.2em', fontWeight: 800 }}>{cw.teamA?.name || tr('Команда A', 'Team A')}</span>
                             <span style={scoreStyle}>{cw.clanWarScore?.a ?? 0}</span>
                             <span style={{ color: 'var(--color-text-muted)' }}>:</span>
                             <span style={scoreStyle}>{cw.clanWarScore?.b ?? 0}</span>
-                            <span style={{ fontSize: '1.2em', fontWeight: 800 }}>{cw.teamB?.name || 'Команда B'}</span>
+                            <span style={{ fontSize: '1.2em', fontWeight: 800 }}>{cw.teamB?.name || tr('Команда B', 'Team B')}</span>
                         </div>
                         <span style={{ color: CW_STATUS_COLORS[cw.status], fontWeight: 600 }}>
-                            {CW_STATUS_LABELS[cw.status]}
+                            {CW_STATUS_LABELS[cw.status]?.() || cw.status}
                         </span>
                     </div>
-                    {cw.season && <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', marginTop: 6 }}>Сезон {cw.season}</div>}
+                    {cw.season && <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', marginTop: 6 }}>{tr('Сезон', 'Season')} {cw.season}</div>}
 
                     {/* Смена статуса */}
                     <div style={{ display: 'flex', gap: 8, marginTop: 'var(--spacing-md)', flexWrap: 'wrap' }}>
-                        {cw.status === 'upcoming'  && <button className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.9em' }} onClick={() => changeStatus('ongoing')}>▶ Начать</button>}
-                        {cw.status === 'ongoing'   && <button className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.9em' }} onClick={() => changeStatus('completed')}>✅ Завершить</button>}
-                        {cw.status === 'completed' && <button className="btn btn-secondary" style={{ padding: '6px 14px', fontSize: '0.9em' }} onClick={() => changeStatus('ongoing')}>↩ Возобновить</button>}
+                        {cw.status === 'upcoming'  && <button className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.9em' }} onClick={() => changeStatus('ongoing')}>{`▶ ${tr('Начать', 'Start')}`}</button>}
+                        {cw.status === 'ongoing'   && <button className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.9em' }} onClick={() => changeStatus('completed')}>{`✅ ${tr('Завершить', 'Complete')}`}</button>}
+                        {cw.status === 'completed' && <button className="btn btn-secondary" style={{ padding: '6px 14px', fontSize: '0.9em' }} onClick={() => changeStatus('ongoing')}>{`↩ ${tr('Возобновить', 'Resume')}`}</button>}
                         <button onClick={() => deleteWar(cw.id)} style={{ padding: '6px 14px', fontSize: '0.9em', background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', borderRadius: 'var(--radius-sm)' }}>
-                            🗑️ Удалить клан-вар
+                            {`🗑️ ${tr('Удалить клан-вар', 'Delete clan war')}`}
                         </button>
                     </div>
                 </div>
 
                 {/* Матчи */}
-                <h4 style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-accent-primary)' }}>Матчи</h4>
+                <h4 style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-accent-primary)' }}>{tr('Матчи', 'Matches')}</h4>
                 {(cw.matches || []).map((match, idx) => {
                     const winColor = (side) => match.winner === side ? 'var(--color-success)' : 'transparent';
                     return (
                         <div key={match.id || idx} className="card-elevated" style={{ padding: 'var(--spacing-lg)', marginBottom: 'var(--spacing-md)' }}>
                             {/* Заголовок матча */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 'var(--spacing-md)', flexWrap: 'wrap' }}>
-                                <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>Матч {match.order}: </span>
+                                <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{tr('Матч', 'Match')} {match.order}: </span>
                                 <input
                                     value={match.label || ''}
                                     onChange={e => updateField(`matches.${idx}.label`, e.target.value)}
                                     style={{ width: 140, padding: '4px 8px', fontSize: '0.9em' }}
-                                    placeholder="Название"
+                                    placeholder={tr('Название', 'Name')}
                                 />
                                 <select
                                     value={match.format || '1v1'}
@@ -923,7 +931,7 @@ function ClanWarTab({ showMsg, players, teams }) {
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 'var(--spacing-md)', alignItems: 'start', marginBottom: 'var(--spacing-md)' }}>
                                         {/* Сторона A */}
                                         <div>
-                                            <div style={{ fontSize: '0.75em', color: 'var(--color-text-muted)', marginBottom: 4 }}>{cw.teamA?.name || 'Команда A'}</div>
+                                            <div style={{ fontSize: '0.75em', color: 'var(--color-text-muted)', marginBottom: 4 }}>{cw.teamA?.name || tr('Команда A', 'Team A')}</div>
                                             <PlayerPicker
                                                 value={match.playerA || ''}
                                                 onChange={val => updateField(`matches.${idx}.playerA`, val)}
@@ -954,7 +962,7 @@ function ClanWarTab({ showMsg, players, teams }) {
 
                                         {/* Сторона B */}
                                         <div>
-                                            <div style={{ fontSize: '0.75em', color: 'var(--color-text-muted)', marginBottom: 4 }}>{cw.teamB?.name || 'Команда B'}</div>
+                                            <div style={{ fontSize: '0.75em', color: 'var(--color-text-muted)', marginBottom: 4 }}>{cw.teamB?.name || tr('Команда B', 'Team B')}</div>
                                             <PlayerPicker
                                                 value={match.playerB || ''}
                                                 onChange={val => updateField(`matches.${idx}.playerB`, val)}
@@ -968,11 +976,11 @@ function ClanWarTab({ showMsg, players, teams }) {
 
                             {/* Победитель */}
                             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                                <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>Победитель:</span>
+                                <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>{tr('Победитель', 'Winner')}:</span>
                                 {[
-                                    { val: 'a', label: `✅ ${cw.teamA?.name || 'Команда A'}` },
-                                    { val: 'b', label: `✅ ${cw.teamB?.name || 'Команда B'}` },
-                                    { val: null, label: '⏸ Не сыграно' },
+                                    { val: 'a', label: `✅ ${cw.teamA?.name || tr('Команда A', 'Team A')}` },
+                                    { val: 'b', label: `✅ ${cw.teamB?.name || tr('Команда B', 'Team B')}` },
+                                    { val: null, label: `⏸ ${tr('Не сыграно', 'Not played')}` },
                                 ].map(opt => (
                                     <button
                                         key={String(opt.val)}
@@ -992,7 +1000,7 @@ function ClanWarTab({ showMsg, players, teams }) {
                                     style={{ marginLeft: 'auto', padding: '6px 16px', fontSize: '0.85em' }}
                                     onClick={() => saveMatch(idx)}
                                 >
-                                    💾 Сохранить
+                                    {`💾 ${tr('Сохранить', 'Save')}`}
                                 </button>
                             </div>
                         </div>
@@ -1008,30 +1016,30 @@ function ClanWarTab({ showMsg, players, teams }) {
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)', flexWrap: 'wrap', gap: 8 }}>
-                <h3 style={{ margin: 0 }}>⚔ Клан-вары ({wars.length})</h3>
+                <h3 style={{ margin: 0 }}>⚔ {tr('Клан-вары', 'Clan Wars')} ({wars.length})</h3>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <button
                         className="btn btn-secondary"
                         style={{ padding: '8px 18px' }}
                         onClick={() => { setShowScheduler(!showScheduler); setShowCreate(false); }}
                     >
-                        🗓 Авто-расписание
+                        {`🗓 ${tr('Авто-расписание', 'Auto schedule')}`}
                     </button>
                     <button
                         onClick={autoAssignAll}
                         style={{ padding: '8px 18px', background: 'rgba(0,212,255,0.1)', color: 'var(--color-accent-secondary)', border: '1px solid rgba(0,212,255,0.4)', borderRadius: 'var(--radius-sm)', fontWeight: 700, cursor: 'pointer' }}
                     >
-                        🎯 Назначить всех
+                        {`🎯 ${tr('Назначить всех', 'Assign all')}`}
                     </button>
                     <button
                         onClick={deleteAllWars}
                         style={{ padding: '8px 18px', background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}
                     >
-                        🗑 Удалить все
+                        {`🗑 ${tr('Удалить все', 'Delete all')}`}
                     </button>
                     <button className="btn btn-primary" style={{ padding: '8px 18px' }}
                         onClick={() => { setShowCreate(!showCreate); setShowScheduler(false); }}>
-                        + Создать клан-вар
+                        + {tr('Создать клан-вар', 'Create clan war')}
                     </button>
                 </div>
             </div>
@@ -1040,31 +1048,31 @@ function ClanWarTab({ showMsg, players, teams }) {
             {showScheduler && (
                 <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-xl)' }}>
                     <h4 style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-accent-primary)' }}>
-                        🗓 Авто-расписание — круговой турнир
+                        {`🗓 ${tr('Авто-расписание', 'Auto schedule')} · ${tr('круговой турнир', 'round robin')}`}
                     </h4>
                     <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88em', marginBottom: 'var(--spacing-lg)' }}>
-                        Система автоматически создаст клан-вары между всеми командами ({(teams || []).length} команд → {schedPreview.reduce((s, r) => s + r.length, 0)} игр в {schedPreview.length} турах). Уже существующие пары в этом сезоне будут пропущены.
+                        {tr('Система автоматически создаст клан-вары между всеми командами', 'The system will automatically create clan wars between all teams')} ({(teams || []).length} {tr('команд', 'teams')} → {schedPreview.reduce((s, r) => s + r.length, 0)} {tr('игр', 'matches')} {tr('в', 'in')} {schedPreview.length} {tr('турах', 'rounds')}). {tr('Уже существующие пары в этом сезоне будут пропущены', 'Existing pairs in this season will be skipped')}.
                     </p>
 
                     {(teams || []).length < 2 ? (
                         <div style={{ color: 'var(--color-error)', padding: 'var(--spacing-md)', background: 'rgba(244,67,54,0.08)', borderRadius: 'var(--radius-sm)', fontSize: '0.9em', marginBottom: 'var(--spacing-lg)' }}>
-                            ⚠ Сначала создайте минимум 2 команды во вкладке «Команды»
+                            ⚠ {tr('Сначала создайте минимум 2 команды во вкладке «Команды»', 'First create at least 2 teams in the "Teams" tab')}
                         </div>
                     ) : (
                         <>
                             {/* Форма параметров */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-lg)' }}>
                                 <div>
-                                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>Сезон *</div>
+                                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>{tr('Сезон', 'Season')} *</div>
                                     <input
-                                        type="text" placeholder="напр. 1"
+                                        type="text" placeholder={tr('напр. 1', 'e.g. 1')}
                                         value={schedForm.season}
                                         onChange={e => setSchedForm({ ...schedForm, season: e.target.value })}
                                         style={{ width: '100%' }}
                                     />
                                 </div>
                                 <div>
-                                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>Дата первого тура</div>
+                                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>{tr('Дата первого тура', 'First round date')}</div>
                                     <input
                                         type="date"
                                         value={schedForm.startDate}
@@ -1073,7 +1081,7 @@ function ClanWarTab({ showMsg, players, teams }) {
                                     />
                                 </div>
                                 <div>
-                                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>Дней между турами</div>
+                                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>{tr('Дней между турами', 'Days between rounds')}</div>
                                     <input
                                         type="number" min="1" max="60"
                                         value={schedForm.daysBetweenRounds}
@@ -1086,7 +1094,7 @@ function ClanWarTab({ showMsg, players, teams }) {
                             {/* Превью туров */}
                             <div style={{ marginBottom: 'var(--spacing-lg)' }}>
                                 <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
-                                    Превью расписания
+                                    {tr('Превью расписания', 'Schedule preview')}
                                 </div>
                                 {schedPreview.map((round, ri) => {
                                     const roundDate = schedForm.startDate
@@ -1096,7 +1104,7 @@ function ClanWarTab({ showMsg, players, teams }) {
                                         <div key={ri} style={{ marginBottom: 8 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                                                 <span style={{ fontSize: '0.78em', fontWeight: 700, color: 'var(--color-accent-primary)', minWidth: 55 }}>
-                                                    Тур {ri + 1}{roundDate ? ` · ${roundDate.toLocaleDateString('ru')}` : ''}
+                                                    {tr('Тур', 'Round')} {ri + 1}{roundDate ? ` · ${roundDate.toLocaleDateString(getLang() === 'en' ? 'en-US' : 'ru-RU')}` : ''}
                                                 </span>
                                                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                                     {round.map(([a, b], pi) => (
@@ -1120,10 +1128,10 @@ function ClanWarTab({ showMsg, players, teams }) {
                             onClick={generateSchedule}
                             disabled={scheduling || (teams || []).length < 2 || !schedForm.season.trim()}
                         >
-                            {scheduling ? '⏳ Создаю...' : `🗓 Создать ${schedPreview.reduce((s, r) => s + r.length, 0)} клан-варов`}
+                            {scheduling ? `⏳ ${tr('Создаю...', 'Creating...')}` : `🗓 ${tr('Создать', 'Create')} ${schedPreview.reduce((s, r) => s + r.length, 0)} ${tr('клан-варов', 'clan wars')}`}
                         </button>
                         <button className="btn btn-secondary" style={{ padding: '10px 18px' }} onClick={() => setShowScheduler(false)}>
-                            Отмена
+                            {tr('Отмена', 'Cancel')}
                         </button>
                     </div>
                 </div>
@@ -1132,10 +1140,10 @@ function ClanWarTab({ showMsg, players, teams }) {
             {/* Форма создания */}
             {showCreate && (
                 <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-xl)' }}>
-                    <h4 style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-accent-primary)' }}>Новый клан-вар</h4>
+                    <h4 style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-accent-primary)' }}>{tr('Новый клан-вар', 'New clan war')}</h4>
                     <form onSubmit={createWar} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-md)' }}>
-                            <input type="text" placeholder="Сезон (напр. 24)" value={form.season}
+                            <input type="text" placeholder={tr('Сезон (напр. 24)', 'Season (e.g. 24)')} value={form.season}
                                 onChange={e => setForm({ ...form, season: e.target.value })} />
                             <input type="date" value={form.date}
                                 onChange={e => setForm({ ...form, date: e.target.value })}
@@ -1144,13 +1152,13 @@ function ClanWarTab({ showMsg, players, teams }) {
 
                         {(!teams || teams.length < 2) ? (
                             <div style={{ color: 'var(--color-error)', padding: 'var(--spacing-md)', background: 'rgba(244,67,54,0.08)', borderRadius: 'var(--radius-sm)', fontSize: '0.9em' }}>
-                                ⚠ Сначала создайте минимум 2 команды во вкладке «Команды»
+                                ⚠ {tr('Сначала создайте минимум 2 команды во вкладке «Команды»', 'First create at least 2 teams in the "Teams" tab')}
                             </div>
                         ) : (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-md)' }}>
                                 {[
-                                    { key: 'teamAId', label: 'Команда A' },
-                                    { key: 'teamBId', label: 'Команда B' },
+                                    { key: 'teamAId', label: tr('Команда A', 'Team A') },
+                                    { key: 'teamBId', label: tr('Команда B', 'Team B') },
                                 ].map(({ key, label }) => {
                                     const selTeam = (teams || []).find(t => t.id === form[key]);
                                     const captain = selTeam && players.find(p => p.id === selTeam.captainId);
@@ -1163,7 +1171,7 @@ function ClanWarTab({ showMsg, players, teams }) {
                                                 style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '2px solid var(--color-bg-lighter)', borderRadius: 'var(--radius-md)', padding: '10px 14px', fontSize: '1em', width: '100%' }}
                                                 required
                                             >
-                                                <option value="">— Выбрать команду —</option>
+                                                <option value="">— {tr('Выбрать команду', 'Select team')} —</option>
                                                 {(teams || []).map(tm => (
                                                     <option key={tm.id} value={tm.id}>{tm.emoji} {tm.name}</option>
                                                 ))}
@@ -1173,7 +1181,7 @@ function ClanWarTab({ showMsg, players, teams }) {
                                                     {selTeam.logo && <img src={selTeam.logo} alt="" style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'contain' }} />}
                                                     👑 {captain ? captain.name : (selTeam.captainId || '—')}
                                                     &nbsp;·&nbsp;
-                                                    {players.filter(p => p.teamId === selTeam.id).length} игроков
+                                                    {players.filter(p => p.teamId === selTeam.id).length} {tr('игроков', 'players')}
                                                 </div>
                                             )}
                                         </div>
@@ -1183,10 +1191,10 @@ function ClanWarTab({ showMsg, players, teams }) {
                         )}
 
                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.82em' }}>
-                            Автоматически создаются 5 матчей: Дуэль I · Дуэль II · 2 на 2 · Дуэль III · Тайм-брейк
+                            {tr('Автоматически создаются 5 матчей', '5 matches are created automatically')}: {tr('Дуэль I', 'Duel I')} · {tr('Дуэль II', 'Duel II')} · {tr('2 на 2', '2v2')} · {tr('Тайм-брейк', 'Tiebreak')} · {tr('3 на 3', '3v3')}
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
-                            <button type="submit" className="btn btn-primary" disabled={!form.teamAId || !form.teamBId}>Создать</button>
+                            <button type="submit" className="btn btn-primary" disabled={!form.teamAId || !form.teamBId}>{tr('Создать', 'Create')}</button>
                             <button type="button" className="btn btn-secondary" onClick={() => setShowCreate(false)}>{t('admin.cancel')}</button>
                         </div>
                     </form>
@@ -1196,18 +1204,18 @@ function ClanWarTab({ showMsg, players, teams }) {
             {/* Список */}
             {wars.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--color-text-muted)' }}>
-                    Клан-варов нет. Нажмите «+ Создать клан-вар»
+                    {tr('Клан-варов нет. Нажмите «+ Создать клан-вар»', 'No clan wars. Click "+ Create clan war"')}
                 </div>
             ) : (
                 <div className="standings-table-wrap">
                     <table className="standings-table">
                         <thead>
                             <tr>
-                                <th>Дата</th>
-                                <th>Сезон</th>
-                                <th>Команды</th>
-                                <th>Счёт</th>
-                                <th>Статус</th>
+                                <th>{tr('Дата', 'Date')}</th>
+                                <th>{tr('Сезон', 'Season')}</th>
+                                <th>{tr('Команды', 'Teams')}</th>
+                                <th>{tr('Счёт', 'Score')}</th>
+                                <th>{tr('Статус', 'Status')}</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -1215,14 +1223,14 @@ function ClanWarTab({ showMsg, players, teams }) {
                             {wars.map(w => (
                                 <tr key={w.id} style={{ cursor: 'pointer' }} onClick={() => setSelected(w)}>
                                     <td style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>
-                                        {w.date ? new Date(w.date).toLocaleDateString('ru') : '—'}
+                                        {w.date ? new Date(w.date).toLocaleDateString(getLang() === 'en' ? 'en-US' : 'ru-RU') : '—'}
                                     </td>
                                     <td style={{ color: 'var(--color-text-muted)' }}>{w.season || '—'}</td>
                                     <td className="col-name">{w.teamA?.name || '?'} vs {w.teamB?.name || '?'}</td>
                                     <td style={{ color: 'var(--color-accent-secondary)', fontWeight: 700 }}>
                                         {w.clanWarScore?.a ?? 0} : {w.clanWarScore?.b ?? 0}
                                     </td>
-                                    <td style={{ color: CW_STATUS_COLORS[w.status] }}>{CW_STATUS_LABELS[w.status]}</td>
+                                    <td style={{ color: CW_STATUS_COLORS[w.status] }}>{CW_STATUS_LABELS[w.status]?.() || w.status}</td>
                                     <td onClick={e => e.stopPropagation()}>
                                         <button onClick={() => deleteWar(w.id)}
                                             style={{ background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', padding: '4px 10px', fontSize: '0.8em', borderRadius: 'var(--radius-sm)' }}>
@@ -1240,7 +1248,13 @@ function ClanWarTab({ showMsg, players, teams }) {
 }
 
 // ── Вкладка Портреты ──────────────────────────────────────────────────────────
-const RACE_NAMES = { 0: '🎲 Все расы', 1: '👑 Люди', 2: '⚔️ Орки', 4: '🌙 Ночные эльфы', 8: '💀 Нежить' };
+const RACE_NAMES = {
+    0: () => `🎲 ${tr('Все расы', 'All races')}`,
+    1: () => `👑 ${tr('Люди', 'Human')}`,
+    2: () => `⚔️ ${tr('Орки', 'Orc')}`,
+    4: () => `🌙 ${tr('Ночные эльфы', 'Night Elf')}`,
+    8: () => `💀 ${tr('Нежить', 'Undead')}`,
+};
 const EMPTY_FORM = { name: '', race: 0, pointsRequired: 0, imageUrl: '' };
 
 function PortraitsTab({ showMsg }) {
@@ -1275,10 +1289,10 @@ function PortraitsTab({ showMsg }) {
             const body = { ...form, race: parseInt(form.race), pointsRequired: parseInt(form.pointsRequired) };
             if (editingId) {
                 await apiFetch(`/api/portraits/${editingId}`, { method: 'PUT', body: JSON.stringify(body) });
-                showMsg('✅ Портрет обновлён');
+                showMsg(`✅ ${tr('Портрет обновлён', 'Portrait updated')}`);
             } else {
                 await apiFetch('/api/portraits', { method: 'POST', body: JSON.stringify(body) });
-                showMsg('✅ Портрет добавлен');
+                showMsg(`✅ ${tr('Портрет добавлен', 'Portrait added')}`);
             }
             cancel();
             load();
@@ -1287,10 +1301,10 @@ function PortraitsTab({ showMsg }) {
     };
 
     const del = async (id, name) => {
-        if (!confirm(`Удалить портрет "${name}"?`)) return;
+        if (!confirm(tr(`Удалить портрет "${name}"?`, `Delete portrait "${name}"?`))) return;
         try {
             await apiFetch(`/api/portraits/${id}`, { method: 'DELETE' });
-            showMsg('✅ Портрет удалён');
+            showMsg(`✅ ${tr('Портрет удалён', 'Portrait deleted')}`);
             load();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
@@ -1306,16 +1320,16 @@ function PortraitsTab({ showMsg }) {
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)', flexWrap: 'wrap', gap: 8 }}>
-                <h3 style={{ margin: 0 }}>🖼 Портреты ({portraits.length})</h3>
+                <h3 style={{ margin: 0 }}>🖼 {tr('Портреты', 'Portraits')} ({portraits.length})</h3>
                 <button className="btn btn-primary" style={{ padding: '8px 18px' }} onClick={openAdd}>
-                    + Добавить портрет
+                    + {tr('Добавить портрет', 'Add portrait')}
                 </button>
             </div>
 
             {/* Инфо-карточка */}
             <div className="card-elevated" style={{ padding: 'var(--spacing-md) var(--spacing-xl)', marginBottom: 'var(--spacing-xl)', borderColor: 'var(--color-accent-primary)' }}>
                 <p style={{ color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.7, fontSize: '0.9em' }}>
-                    Рекомендуемый размер: <strong>128×128 px</strong> · PNG или JPG · Портреты разблокируются при достижении указанного кол-ва очков · Раса 0 = доступен всем
+                    {tr('Рекомендуемый размер', 'Recommended size')}: <strong>128×128 px</strong> · {tr('PNG или JPG', 'PNG or JPG')} · {tr('Портреты разблокируются при достижении указанного кол-ва очков', 'Portraits unlock at the specified point total')} · {tr('Раса 0 = доступен всем', 'Race 0 = available to everyone')}
                 </p>
             </div>
 
@@ -1323,25 +1337,25 @@ function PortraitsTab({ showMsg }) {
             {showForm && (
                 <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-xl)' }}>
                     <h4 style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-accent-primary)' }}>
-                        {editingId ? '✏️ Редактировать портрет' : '➕ Добавить портрет'}
+                        {editingId ? `✏️ ${tr('Редактировать портрет', 'Edit portrait')}` : `➕ ${tr('Добавить портрет', 'Add portrait')}`}
                     </h4>
                     <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)', maxWidth: 480 }}>
                         <input
-                            type="text" placeholder="Название портрета" required
+                            type="text" placeholder={tr('Название портрета', 'Portrait name')} required
                             value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
                         />
                         <select
                             value={form.race} onChange={e => setForm({ ...form, race: e.target.value })}
                             style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '2px solid var(--color-bg-lighter)', borderRadius: 'var(--radius-md)', padding: '10px 14px', fontSize: '1em' }}
                         >
-                            {raceOrder.map(r => <option key={r} value={r}>{RACE_NAMES[r]}</option>)}
+                            {raceOrder.map(r => <option key={r} value={r}>{RACE_NAMES[r]()}</option>)}
                         </select>
                         <input
-                            type="number" placeholder="Очков для разблокировки (0 = бесплатно)" min="0" required
+                            type="number" placeholder={tr('Очков для разблокировки (0 = бесплатно)', 'Points to unlock (0 = free)')} min="0" required
                             value={form.pointsRequired} onChange={e => setForm({ ...form, pointsRequired: e.target.value })}
                         />
                         <input
-                            type="text" placeholder="URL изображения" required
+                            type="text" placeholder={tr('URL изображения', 'Image URL')} required
                             value={form.imageUrl} onChange={e => setForm({ ...form, imageUrl: e.target.value })}
                         />
                         {form.imageUrl && (
@@ -1350,7 +1364,7 @@ function PortraitsTab({ showMsg }) {
                         )}
                         <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
                             <button type="submit" className="btn btn-primary" disabled={saving}>
-                                {saving ? '...' : (editingId ? '💾 Сохранить' : '➕ Добавить')}
+                                {saving ? '...' : (editingId ? `💾 ${tr('Сохранить', 'Save')}` : `➕ ${tr('Добавить', 'Add')}`)}
                             </button>
                             <button type="button" className="btn btn-secondary" onClick={cancel}>{t('admin.cancel')}</button>
                         </div>
@@ -1361,15 +1375,15 @@ function PortraitsTab({ showMsg }) {
             {/* Список по расам */}
             {portraits.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--color-text-muted)' }}>
-                    Нет портретов. Нажмите «+ Добавить портрет»
+                    {tr('Нет портретов. Нажмите «+ Добавить портрет»', 'No portraits. Click "+ Add portrait"')}
                 </div>
             ) : (
                 raceOrder.filter(r => byRace[r]?.length).map(r => (
                     <div key={r} style={{ marginBottom: 'var(--spacing-xxl)' }}>
                         <h3 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-lg)' }}>
-                            {RACE_NAMES[r]}
+                            {RACE_NAMES[r]()}
                             <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75em', fontWeight: 400, marginLeft: 8 }}>
-                                ({byRace[r].length} портретов)
+                                ({byRace[r].length} {tr('портретов', 'portraits')})
                             </span>
                         </h3>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 'var(--spacing-md)' }}>
@@ -1381,16 +1395,16 @@ function PortraitsTab({ showMsg }) {
                                         <div>
                                             <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 4 }}>{p.name}</div>
                                             <div style={{ color: 'var(--color-accent-secondary)', fontWeight: 600, fontSize: '0.9em' }}>
-                                                {p.pointsRequired === 0 ? '🆓 Бесплатно' : `🔒 ${p.pointsRequired} очков`}
+                                                {p.pointsRequired === 0 ? `🆓 ${tr('Бесплатно', 'Free')}` : `🔒 ${p.pointsRequired} ${tr('очков', 'points')}`}
                                             </div>
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', gap: 8 }}>
                                         <button onClick={() => openEdit(p)} style={{ flex: 1, background: 'rgba(33,150,243,0.15)', color: '#2196f3', border: '1px solid rgba(33,150,243,0.3)', padding: '6px 10px', borderRadius: 'var(--radius-sm)', fontSize: '0.85em', cursor: 'pointer' }}>
-                                            ✏️ Изменить
+                                            {`✏️ ${tr('Изменить', 'Edit')}`}
                                         </button>
                                         <button onClick={() => del(p.id, p.name)} style={{ flex: 1, background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', padding: '6px 10px', borderRadius: 'var(--radius-sm)', fontSize: '0.85em', cursor: 'pointer' }}>
-                                            🗑️ Удалить
+                                            {`🗑️ ${tr('Удалить', 'Delete')}`}
                                         </button>
                                     </div>
                                 </div>
@@ -1778,10 +1792,10 @@ function AccountsSection({ showMsg }) {
     };
 
     const unlinkBattleTag = async (acc) => {
-        if (!confirm(`Отвязать BattleTag "${acc.linkedBattleTag}" от аккаунта "${acc.username}"?`)) return;
+        if (!confirm(tr(`Отвязать BattleTag "${acc.linkedBattleTag}" от аккаунта "${acc.username}"?`, `Unlink BattleTag "${acc.linkedBattleTag}" from account "${acc.username}"?`))) return;
         try {
             await apiFetch(`/api/players/admin/force-unlink-battletag/${encodeURIComponent(acc.linkedBattleTag)}`, { method: 'DELETE' });
-            showMsg(`✅ BattleTag ${acc.linkedBattleTag} отвязан`);
+            showMsg(`✅ BattleTag ${acc.linkedBattleTag} ${tr('отвязан', 'unlinked')}`);
             loadAccounts();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
@@ -1789,16 +1803,16 @@ function AccountsSection({ showMsg }) {
     const forceUnlink = async () => {
         const tag = forceUnlinkTag.trim();
         if (!tag) return;
-        if (!confirm(`Принудительно отвязать BattleTag "${tag}" от всех аккаунтов?`)) return;
+        if (!confirm(tr(`Принудительно отвязать BattleTag "${tag}" от всех аккаунтов?`, `Force-unlink BattleTag "${tag}" from all accounts?`))) return;
         try {
             const res = await apiFetch(`/api/players/admin/force-unlink-battletag/${encodeURIComponent(tag)}`, { method: 'DELETE' });
-            showMsg(`✅ BattleTag ${tag} отвязан (изменено аккаунтов: ${res.modifiedCount})`);
+            showMsg(`✅ BattleTag ${tag} ${tr('отвязан', 'unlinked')} (${tr('изменено аккаунтов', 'accounts changed')}: ${res.modifiedCount})`);
             setForceUnlinkTag('');
             loadAccounts();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
 
-    const fmtDate = (d) => d ? new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString(getLang() === 'en' ? 'en-US' : 'ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
 
     return (
         <div>
@@ -1809,7 +1823,7 @@ function AccountsSection({ showMsg }) {
             {/* Force-unlink stuck BattleTag */}
             <div className="card-elevated" style={{ padding: 'var(--spacing-md)', marginBottom: 'var(--spacing-lg)', maxWidth: 520 }}>
                 <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', marginTop: 0, marginBottom: 8 }}>
-                    🔗 Принудительно отвязать BattleTag (если аккаунт удалён, но тег «завис»)
+                    🔗 {tr('Принудительно отвязать BattleTag', 'Force-unlink BattleTag')} ({tr('если аккаунт удалён, но тег «завис»', 'if the account was deleted but the tag is still stuck')})
                 </p>
                 <div style={{ display: 'flex', gap: 8 }}>
                     <input
@@ -1831,7 +1845,7 @@ function AccountsSection({ showMsg }) {
                             borderRadius: 'var(--radius-sm)', fontSize: '0.85em', cursor: 'pointer',
                         }}
                     >
-                        Отвязать
+                        {tr('Отвязать', 'Unlink')}
                     </button>
                 </div>
             </div>
@@ -1871,7 +1885,7 @@ function AccountsSection({ showMsg }) {
                                                     borderRadius: 'var(--radius-sm)', fontSize: '0.82em', cursor: 'pointer',
                                                 }}
                                             >
-                                                🔗 Отвязать
+                                                {`🔗 ${tr('Отвязать', 'Unlink')}`}
                                             </button>
                                         )}
                                         <button
@@ -1921,7 +1935,7 @@ function PendingResetsSection({ showMsg }) {
 
     const fmtTime = (d) => {
         const dt = new Date(d);
-        return dt.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        return dt.toLocaleString(getLang() === 'en' ? 'en-US' : 'ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     };
 
     const isExpired = (d) => new Date(d) < new Date();
@@ -2028,7 +2042,7 @@ function AdminPanel({ onLogout }) {
         showMsg('⏳ ' + t('admin.recalcing'));
         try {
             const r = await apiFetch('/api/players/admin/recalculate', { method: 'POST' });
-            showMsg(`✅ Обновлено ${r.updated}/${r.total} игроков`);
+            showMsg(`✅ ${tr('Обновлено', 'Updated')} ${r.updated}/${r.total} ${tr('игроков', 'players')}`);
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
 
@@ -2114,7 +2128,7 @@ function AdminPanel({ onLogout }) {
                     <h3 style={{ marginBottom: 'var(--spacing-lg)' }}>{t('admin.tab.tools')}</h3>
                     <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', maxWidth: 420, marginBottom: 'var(--spacing-xl)' }}>
                         <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-md)' }}>
-                            Принудительный пересчёт очков всех игроков по данным W3Champions
+                            {tr('Принудительный пересчёт очков всех игроков по данным W3Champions', 'Force recalculation of all player points from W3Champions data')}
                         </p>
                         <button className="btn btn-primary" onClick={recalc}>{t('admin.recalc')}</button>
                     </div>

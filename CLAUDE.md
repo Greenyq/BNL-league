@@ -119,7 +119,7 @@ When editing frontend files, changes are **immediately visible** on page refresh
 
 The draft assigns players to teams via a turn-based pick system:
 
-1. Admin clicks **"Начать драфт"** in the Teams tab → selects Team A and Team B
+1. Admin clicks **"Начать драфт / Start draft"** in the Teams tab → selects Team A and Team B
 2. System auto-creates a ClanWar document to store picks
 3. Admin configures tier order (who picks first in each tier)
 4. Draft proceeds: Tier B → Tier A → Tier S (snake draft)

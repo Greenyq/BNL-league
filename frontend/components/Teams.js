@@ -1,7 +1,14 @@
 // Teams — карточки команд с портретами игроков, статистикой и клан-варами
 
 const RACE_IMG  = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/images/orc.jpg', 4: '/images/nightelf.jpg', 8: '/images/undead.jpg' };
-const RACE_ABBR = { 0: 'Rnd', 1: 'Люди', 2: 'Орки', 4: 'Эльфы', 8: 'Нежить' };
+const tr = (ru, en) => getLang() === 'en' ? en : ru;
+const RACE_ABBR = race => ({
+    0: 'Rnd',
+    1: tr('Люди', 'Human'),
+    2: tr('Орки', 'Orc'),
+    4: tr('Эльфы', 'Elves'),
+    8: tr('Нежить', 'Undead'),
+}[race] || 'Rnd');
 const RACE_COLOR = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
 const TEAMS_PAGE_SIZE = 10;
 
@@ -23,7 +30,7 @@ function PlayerRow({ player, isCaptain }) {
             {/* Аватар + раса */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
                 {isWinner && (
-                    <div className="season-winner-badge" title={`Победитель сезона ${player.seasonWinner}`}>🏆</div>
+                    <div className="season-winner-badge" title={tr(`Победитель сезона ${player.seasonWinner}`, `Season ${player.seasonWinner} winner`)}>🏆</div>
                 )}
                 {portrait ? (
                     <img src={portrait} alt={player.name} className={isWinner ? 'season-winner-avatar' : ''} style={{
@@ -62,20 +69,20 @@ function PlayerRow({ player, isCaptain }) {
                         </span>
                         {isCaptain && (
                             <span style={{ fontSize: '0.65em', background: 'rgba(212,175,55,0.2)', color: 'var(--color-accent-primary)', border: '1px solid rgba(212,175,55,0.4)', borderRadius: 4, padding: '1px 5px', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                                👑 Капитан
+                                👑 {tr('Капитан', 'Captain')}
                             </span>
                         )}
                         {isWinner && (
                             <span style={{ fontSize: '0.65em', background: 'rgba(255,215,0,0.15)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.5)', borderRadius: 4, padding: '1px 5px', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                                🏆 Сезон {player.seasonWinner}
+                                🏆 {tr(`Сезон ${player.seasonWinner}`, `Season ${player.seasonWinner}`)}
                             </span>
                         )}
                     </div>
                     <div className="team-player-meta">
                         {player.battleTag}
-                        {race != null && RACE_ABBR[race] && (
+                        {race != null && RACE_ABBR(race) && (
                             <span style={{ marginLeft: 6, color: RACE_COLOR[race] || 'var(--color-text-muted)' }}>
-                                · {RACE_ABBR[race]}
+                                · {RACE_ABBR(race)}
                             </span>
                         )}
                     </div>
@@ -183,11 +190,11 @@ function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
                 {/* Сводка */}
                 <div className="team-summary">
                     <div className="team-summary-item">
-                        <span className="team-summary-label">Игроков</span>
+                        <span className="team-summary-label">{tr('Игроков', 'Players')}</span>
                         <span className="team-summary-val">{roster.length}</span>
                     </div>
                     <div className="team-summary-item">
-                        <span className="team-summary-label">Очков</span>
+                        <span className="team-summary-label">{tr('Очков', 'Points')}</span>
                         <span className="team-summary-val" style={{ color: 'var(--color-accent-primary)' }}>{totalPts}</span>
                     </div>
                     {(cwWins + cwLosses) > 0 && (
@@ -210,7 +217,7 @@ function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
                             style={{ padding: '6px 12px', fontSize: '0.82em', display: 'flex', alignItems: 'center', gap: 5 }}
                             onClick={() => onOpenDraft && onOpenDraft({ clanWarId: draftCw.id || draftCw._id })}
                         >
-                            Драфт идёт
+                            {tr('Драфт идёт', 'Draft live')}
                             <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff', display: 'inline-block', flexShrink: 0 }} />
                         </button>
                     )}
@@ -219,7 +226,7 @@ function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
                         style={{ padding: '6px 12px', fontSize: '0.82em' }}
                         onClick={() => onOpenRecruit && onOpenRecruit({ teamId: team.id, teamName: team.name, captainId: team.captainId || null })}
                     >
-                        Набор
+                        {tr('Набор', 'Recruit')}
                     </button>
                 </div>
             </div>
@@ -231,7 +238,7 @@ function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
             <div className="team-roster">
                 {roster.length === 0 ? (
                     <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '16px 0', fontSize: '0.85em' }}>
-                        Нет игроков
+                        {tr('Нет игроков', 'No players')}
                     </p>
                 ) : (
                     roster.map(p => (
@@ -246,7 +253,7 @@ function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
                     <div style={{ height: 1, background: 'rgba(212,175,55,0.15)', margin: '0 var(--spacing-lg)' }} />
                     <div style={{ padding: 'var(--spacing-md) var(--spacing-lg)' }}>
                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-                            ⚔ Клан-вары
+                            ⚔ {tr('Клан-вары', 'Clan Wars')}
                         </div>
                         {teamCWs.slice(0, 5).map((cw, i) => (
                             <TeamClanWarRow key={cw.id || i} cw={cw} teamName={team.name} />
@@ -268,8 +275,8 @@ function StartDraftModal({ teams, onStart, onClose }) {
     const adminSid = localStorage.getItem('bnl_admin_session');
 
     const submit = async () => {
-        if (!teamAId || !teamBId) return setError('Выберите обе команды');
-        if (teamAId === teamBId)  return setError('Команды должны быть разными');
+        if (!teamAId || !teamBId) return setError(tr('Выберите обе команды', 'Select both teams'));
+        if (teamAId === teamBId)  return setError(tr('Команды должны быть разными', 'Teams must be different'));
         setLoading(true); setError(null);
         try {
             const res  = await fetch('/api/draft/create', {
@@ -278,7 +285,7 @@ function StartDraftModal({ teams, onStart, onClose }) {
                 body: JSON.stringify({ teamAId, teamBId }),
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Ошибка создания драфта');
+            if (!res.ok) throw new Error(data.error || tr('Ошибка создания драфта', 'Failed to create draft'));
             onStart(data.clanWarId);
         } catch (err) { setError(err.message); setLoading(false); }
     };
@@ -288,7 +295,7 @@ function StartDraftModal({ teams, onStart, onClose }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
             <div className="card-elevated" style={{ padding: 'var(--spacing-xxl)', maxWidth: 420, width: '90%' }}>
                 <h3 style={{ color: 'var(--color-accent-primary)', marginBottom: 'var(--spacing-xl)', textAlign: 'center' }}>
-                    Начать драфт
+                    {tr('Начать драфт', 'Start draft')}
                 </h3>
                 {error && (
                     <div style={{ background: 'rgba(244,67,54,0.1)', border: '1px solid var(--color-error)', borderRadius: 6, padding: '8px 12px', color: 'var(--color-error)', marginBottom: 'var(--spacing-md)', fontSize: '0.9em' }}>
@@ -296,25 +303,25 @@ function StartDraftModal({ teams, onStart, onClose }) {
                     </div>
                 )}
                 <div style={{ marginBottom: 'var(--spacing-md)' }}>
-                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>Команда A</div>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>{tr('Команда A', 'Team A')}</div>
                     <select value={teamAId} onChange={e => setTeamAId(e.target.value)} style={sel}>
-                        <option value="">— выберите команду —</option>
+                        <option value="">{tr('— выберите команду —', '— select a team —')}</option>
                         {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
                 </div>
                 <div style={{ marginBottom: 'var(--spacing-xl)' }}>
-                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>Команда B</div>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>{tr('Команда B', 'Team B')}</div>
                     <select value={teamBId} onChange={e => setTeamBId(e.target.value)} style={sel}>
-                        <option value="">— выберите команду —</option>
+                        <option value="">{tr('— выберите команду —', '— select a team —')}</option>
                         {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                     <button className="btn btn-primary" style={{ flex: 1, padding: '10px' }} onClick={submit} disabled={loading}>
-                        {loading ? '...' : 'Начать драфт'}
+                        {loading ? '...' : tr('Начать драфт', 'Start draft')}
                     </button>
                     <button className="btn btn-secondary" style={{ flex: 1, padding: '10px' }} onClick={onClose} disabled={loading}>
-                        Отмена
+                        {tr('Отмена', 'Cancel')}
                     </button>
                 </div>
             </div>
@@ -384,7 +391,7 @@ function Teams({ onOpenRecruit, onOpenDraft }) {
             {isAdmin && (
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--spacing-lg)' }}>
                     <button className="btn btn-primary" style={{ padding: '8px 20px', fontSize: '0.9em' }} onClick={() => setShowDraftModal(true)}>
-                        Начать драфт
+                        {tr('Начать драфт', 'Start draft')}
                     </button>
                 </div>
             )}

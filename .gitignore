@@ -22,3 +22,4 @@ data/admin_session.json
 # Uploaded files (keep structure, ignore content)
 public/uploads/*
 !public/uploads/.gitkeep
+.codex
