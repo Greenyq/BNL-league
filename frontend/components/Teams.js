@@ -12,6 +12,51 @@ const RACE_ABBR = race => ({
 const RACE_COLOR = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
 const TEAMS_PAGE_SIZE = 10;
 
+function parseTeamClanWarSide(value) {
+    return String(value || '')
+        .split(' + ')
+        .map(name => name.trim())
+        .filter(Boolean);
+}
+
+function teamClanWarSideHasPlayer(side, players, needle) {
+    if (!needle) return true;
+    if (matchesNamedPlayer(side?.captain, needle)) return true;
+    return (side?.players || []).some(name => {
+        const player = findPlayerByAlias(players, name);
+        return matchesNamedPlayer(name, needle) || matchesPlayerSearch(player, needle);
+    });
+}
+
+function teamClanWarMatchHasPlayer(match, players, teamName, needle) {
+    if (!needle) return true;
+    const normalizedTeamName = normalizeSearchText(teamName);
+    const sideNames = normalizeSearchText(match?.teamAName) === normalizedTeamName
+        ? parseTeamClanWarSide(match.playerA)
+        : normalizeSearchText(match?.teamBName) === normalizedTeamName
+            ? parseTeamClanWarSide(match.playerB)
+            : parseTeamClanWarSide(match.playerA);
+
+    return sideNames.some(name => {
+        const player = findPlayerByAlias(players, name);
+        return matchesNamedPlayer(name, needle) || matchesPlayerSearch(player, needle);
+    });
+}
+
+function teamClanWarHasPlayer(cw, players, teamName, needle) {
+    if (!needle) return true;
+    const normalizedTeamName = normalizeSearchText(teamName);
+    const isTeamA = normalizeSearchText(cw.teamA?.name) === normalizedTeamName;
+    const side = isTeamA ? cw.teamA : normalizeSearchText(cw.teamB?.name) === normalizedTeamName ? cw.teamB : null;
+    if (!side) return false;
+    if (teamClanWarSideHasPlayer(side, players, needle)) return true;
+    return (cw.matches || []).some(match => teamClanWarMatchHasPlayer({
+        ...match,
+        teamAName: cw.teamA?.name,
+        teamBName: cw.teamB?.name,
+    }, players, teamName, needle));
+}
+
 // ── Строка игрока в команде ───────────────────────────────────────────────────
 function PlayerRow({ player, isCaptain }) {
     const race    = player.mainRace ?? player.race;
@@ -138,8 +183,9 @@ function TeamClanWarRow({ cw, teamName }) {
 }
 
 // ── Полная карточка команды ───────────────────────────────────────────────────
-function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
+function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft, playerFilter }) {
     useLang();
+    const playerFilterNeedle = normalizeSearchText(playerFilter);
     const rosterRaw = players.filter(p => p.teamId === team.id);
     // Captain always first in roster
     const roster = [...rosterRaw].sort((a, b) => {
@@ -152,6 +198,12 @@ function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
         cw.teamA?.name?.toLowerCase() === team.name.toLowerCase() ||
         cw.teamB?.name?.toLowerCase() === team.name.toLowerCase()
     ).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    const visibleRoster = playerFilterNeedle
+        ? roster.filter(player => matchesPlayerSearch(player, playerFilterNeedle))
+        : roster;
+    const visibleTeamCWs = playerFilterNeedle
+        ? teamCWs.filter(cw => teamClanWarHasPlayer(cw, players, team.name, playerFilterNeedle))
+        : teamCWs;
 
     // Find the most relevant clan war for draft: drafting > upcoming > ongoing > latest
     const draftCw = teamCWs.find(cw => cw.draft?.status === 'drafting')
@@ -236,26 +288,26 @@ function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
 
             {/* Состав */}
             <div className="team-roster">
-                {roster.length === 0 ? (
+                {visibleRoster.length === 0 ? (
                     <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '16px 0', fontSize: '0.85em' }}>
                         {tr('Нет игроков', 'No players')}
                     </p>
                 ) : (
-                    roster.map(p => (
+                    visibleRoster.map(p => (
                         <PlayerRow key={p.id} player={p} isCaptain={p.id === team.captainId} />
                     ))
                 )}
             </div>
 
             {/* История клан-варов */}
-            {teamCWs.length > 0 && (
+            {visibleTeamCWs.length > 0 && (
                 <>
                     <div style={{ height: 1, background: 'rgba(212,175,55,0.15)', margin: '0 var(--spacing-lg)' }} />
                     <div style={{ padding: 'var(--spacing-md) var(--spacing-lg)' }}>
                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
                             ⚔ {tr('Клан-вары', 'Clan Wars')}
                         </div>
-                        {teamCWs.slice(0, 5).map((cw, i) => (
+                        {visibleTeamCWs.slice(0, 5).map((cw, i) => (
                             <TeamClanWarRow key={cw.id || i} cw={cw} teamName={team.name} />
                         ))}
                     </div>
@@ -339,7 +391,9 @@ function Teams({ onOpenRecruit, onOpenDraft }) {
     const [error,         setError]         = React.useState(null);
     const [showDraftModal, setShowDraftModal] = React.useState(false);
     const [page,          setPage]          = React.useState(1);
+    const [playerFilter,  setPlayerFilter]  = React.useState('');
     const isAdmin = !!localStorage.getItem('bnl_admin_session');
+    const playerFilterNeedle = normalizeSearchText(playerFilter);
 
     const load = () => {
         Promise.all([
@@ -357,11 +411,26 @@ function Teams({ onOpenRecruit, onOpenDraft }) {
     };
 
     React.useEffect(() => { load(); }, []);
-    const pagination = paginateCollection(teams, page, TEAMS_PAGE_SIZE);
+    const filteredTeams = teams.filter(team => {
+        if (!playerFilterNeedle) return true;
+        const rosterPlayers = players.filter(player => player.teamId === team.id);
+        const captain = players.find(player => player.id === team.captainId);
+        if (matchesPlayerSearch(captain, playerFilterNeedle)) return true;
+        if (rosterPlayers.some(player => matchesPlayerSearch(player, playerFilterNeedle))) return true;
+        return clanWars.some(cw =>
+            (cw.teamA?.name?.toLowerCase() === team.name.toLowerCase() || cw.teamB?.name?.toLowerCase() === team.name.toLowerCase())
+            && teamClanWarHasPlayer(cw, players, team.name, playerFilterNeedle)
+        );
+    });
+    const pagination = paginateCollection(filteredTeams, page, TEAMS_PAGE_SIZE);
 
     React.useEffect(() => {
         if (page !== pagination.currentPage) setPage(pagination.currentPage);
     }, [page, pagination.currentPage]);
+
+    React.useEffect(() => {
+        setPage(1);
+    }, [playerFilterNeedle]);
 
     if (loading) return (
         <div className="animate-fade-in wow-section-page">
@@ -395,13 +464,26 @@ function Teams({ onOpenRecruit, onOpenDraft }) {
                     </button>
                 </div>
             )}
-            {teams.length === 0 ? (
-                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>{t('teams.empty')}</p>
+            <div className="wow-filter-bar" style={{ marginBottom: 18 }}>
+                <PlayerNameFilterInput value={playerFilter} onChange={setPlayerFilter} />
+            </div>
+            {filteredTeams.length === 0 ? (
+                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
+                    {playerFilterNeedle ? t('filters.no_results') : t('teams.empty')}
+                </p>
             ) : (
                 <>
                     <div className="teams-grid-v2">
                         {pagination.items.map(team => (
-                            <TeamCard key={team.id} team={team} players={players} clanWars={clanWars} onOpenRecruit={onOpenRecruit} onOpenDraft={onOpenDraft} />
+                            <TeamCard
+                                key={team.id}
+                                team={team}
+                                players={players}
+                                clanWars={clanWars}
+                                onOpenRecruit={onOpenRecruit}
+                                onOpenDraft={onOpenDraft}
+                                playerFilter={playerFilterNeedle}
+                            />
                         ))}
                     </div>
                     <PaginationControls page={pagination.currentPage} totalPages={pagination.totalPages} onPageChange={setPage} className="teams-pagination" />

@@ -71,6 +71,66 @@ function paginateCollection(items, page, pageSize) {
     };
 }
 
+function normalizeSearchText(value) {
+    return String(value == null ? '' : value).trim().toLowerCase();
+}
+
+function getBattleTagName(tag) {
+    if (typeof tag !== 'string') return '';
+    return tag.split('#')[0].trim();
+}
+
+function getPlayerSearchAliases(player) {
+    if (!player) return [];
+    return [player.name, player.battleTag, getBattleTagName(player.battleTag)]
+        .map(value => String(value || '').trim())
+        .filter(Boolean);
+}
+
+function matchesAnySearchValue(values, needle) {
+    const normalizedNeedle = normalizeSearchText(needle);
+    if (!normalizedNeedle) return true;
+    const list = Array.isArray(values) ? values : [values];
+    return list.some(value => normalizeSearchText(value).includes(normalizedNeedle));
+}
+
+function matchesNamedPlayer(value, needle) {
+    const raw = String(value || '').trim();
+    return matchesAnySearchValue([raw, getBattleTagName(raw)], needle);
+}
+
+function matchesPlayerSearch(player, needle) {
+    return matchesAnySearchValue(getPlayerSearchAliases(player), needle);
+}
+
+function playerHasAlias(player, candidate) {
+    const normalizedCandidate = normalizeSearchText(candidate);
+    if (!normalizedCandidate) return false;
+    return getPlayerSearchAliases(player).some(value => normalizeSearchText(value) === normalizedCandidate);
+}
+
+function findPlayerByAlias(players, candidate) {
+    const list = Array.isArray(players) ? players : [];
+    return list.find(player => playerHasAlias(player, candidate)) || null;
+}
+
+function PlayerNameFilterInput({ value, onChange, className = '' }) {
+    useLang();
+    const inputClass = ['wow-filter-input', className].filter(Boolean).join(' ');
+
+    return (
+        <input
+            type="text"
+            className={inputClass}
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            placeholder={t('filters.player_name_placeholder')}
+            aria-label={t('filters.player_name')}
+            spellCheck={false}
+        />
+    );
+}
+
 function PaginationControls({ page, totalPages, onPageChange, className = '' }) {
     useLang();
     if (totalPages <= 1) return null;
