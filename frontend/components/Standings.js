@@ -212,13 +212,14 @@ function DraftPoolCard({ row, index }) {
 }
 
 // ── Рейтинг команд по победам в клан-варах ────────────────────────────────────
-function TeamStandings({ page, onPageChange }) {
+function TeamStandings({ page, onPageChange, playerFilter }) {
     useLang();
     const [teams,    setTeams]    = React.useState([]);
     const [wars,     setWars]     = React.useState([]);
     const [players,  setPlayers]  = React.useState([]);
     const [loading,  setLoading]  = React.useState(true);
     const [error,    setError]    = React.useState(null);
+    const playerFilterNeedle = normalizeSearchText(playerFilter);
 
     React.useEffect(() => {
         Promise.all([
@@ -240,6 +241,7 @@ function TeamStandings({ page, onPageChange }) {
     // Compute stats for each team
     const rows = teams.map(team => {
         const name = team.name.toLowerCase();
+        const rosterPlayers = players.filter(p => p.teamId === team.id);
         const myWars = completed.filter(cw =>
             cw.teamA?.name?.toLowerCase() === name ||
             cw.teamB?.name?.toLowerCase() === name
@@ -259,9 +261,13 @@ function TeamStandings({ page, onPageChange }) {
             return sum + (isA ? (cw.clanWarScore?.b || 0) : (cw.clanWarScore?.a || 0));
         }, 0);
         const captain = players.find(p => p.id === team.captainId);
-        const roster  = players.filter(p => p.teamId === team.id).length;
-        return { team, wins, losses, matchWins, matchLosses, played: myWars.length, captain, roster };
+        const roster  = rosterPlayers.length;
+        const matchesPlayer = !playerFilterNeedle
+            || matchesPlayerSearch(captain, playerFilterNeedle)
+            || rosterPlayers.some(player => matchesPlayerSearch(player, playerFilterNeedle));
+        return { team, wins, losses, matchWins, matchLosses, played: myWars.length, captain, roster, matchesPlayer };
     })
+    .filter(row => row.matchesPlayer)
     // Sort: clan war wins desc, then match wins desc
     .sort((a, b) => b.wins - a.wins || b.matchWins - a.matchWins);
     const pagination = paginateCollection(rows, page, TEAMS_PAGE_SIZE);
@@ -349,11 +355,12 @@ function TeamStandings({ page, onPageChange }) {
 }
 
 // ── Драфт-пул: игроки с draftAvailable, разбитые по тирам ─────────────────────
-function DraftPoolStandings({ page, onPageChange }) {
+function DraftPoolStandings({ page, onPageChange, playerFilter }) {
     useLang();
     const [players, setPlayers] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [error, setError]     = React.useState(null);
+    const playerFilterNeedle = normalizeSearchText(playerFilter);
 
     React.useEffect(() => {
         fetch('/api/players')
@@ -364,6 +371,7 @@ function DraftPoolStandings({ page, onPageChange }) {
 
     // Filter only draft-available players
     const draftPlayers = players.filter(p => p.draftAvailable);
+    const filteredDraftPlayers = draftPlayers.filter(player => matchesPlayerSearch(player, playerFilterNeedle));
 
     // Tier calculation: same logic as backend
     function getEffectiveTier(p) {
@@ -375,7 +383,7 @@ function DraftPoolStandings({ page, onPageChange }) {
         return 0;
     }
 
-    const draftRows = draftPlayers
+    const draftRows = filteredDraftPlayers
         .map(player => {
             const tier = getEffectiveTier(player);
             const mmr = player.stats?.mmr ?? player.currentMmr ?? null;
@@ -403,14 +411,14 @@ function DraftPoolStandings({ page, onPageChange }) {
         </div>
     );
     if (error) return <div style={{ color: 'var(--color-error)', padding: 32 }}>⚠ {error}</div>;
-    if (draftPlayers.length === 0) {
+    if (filteredDraftPlayers.length === 0) {
         return <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>{t('standings.draftpool.empty')}</p>;
     }
 
     return (
         <div style={{ marginTop: 'var(--spacing-lg)' }}>
             <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', marginBottom: 'var(--spacing-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>{t('standings.draftpool.total')}: <strong style={{ color: 'var(--color-accent-primary)' }}>{draftPlayers.length}</strong></span>
+                <span>{t('standings.draftpool.total')}: <strong style={{ color: 'var(--color-accent-primary)' }}>{filteredDraftPlayers.length}</strong></span>
             </div>
             <div className="draft-pool-list">
                 {pagination.items.map((row, i) => {
@@ -431,7 +439,9 @@ function Standings() {
     const [loading,    setLoading]    = React.useState(true);
     const [error,      setError]      = React.useState(null);
     const [raceFilter, setRaceFilter] = React.useState(null);
+    const [playerFilter, setPlayerFilter] = React.useState('');
     const [pages,      setPages]      = React.useState({ players: 1, teams: 1, draftpool: 1 });
+    const playerFilterNeedle = normalizeSearchText(playerFilter);
 
     React.useEffect(() => {
         fetch('/api/players')
@@ -441,7 +451,9 @@ function Standings() {
     }, []);
 
     // Строим строки таблицы
-    const rows = players.flatMap(p => {
+    const rows = players
+    .filter(player => matchesPlayerSearch(player, playerFilterNeedle))
+    .flatMap(p => {
         const s = p.stats;
         if (!s) return [];
         if (raceFilter !== null) {
@@ -450,7 +462,8 @@ function Standings() {
             return [{ player: p, race: raceFilter, wins: rs.wins, losses: rs.losses, points: rs.points, mmr: rs.mmr }];
         }
         return [{ player: p, race: null, wins: s.wins, losses: s.losses, points: s.points, mmr: s.mmr }];
-    }).sort((a, b) => b.points - a.points);
+    })
+    .sort((a, b) => b.points - a.points);
     const pagedPlayers = paginateCollection(rows, pages.players, PLAYERS_PAGE_SIZE);
 
     const setModePage = (key, value) => {
@@ -460,6 +473,14 @@ function Standings() {
     React.useEffect(() => {
         setModePage('players', 1);
     }, [raceFilter]);
+
+    React.useEffect(() => {
+        setPages(prev => (
+            prev.players === 1 && prev.teams === 1 && prev.draftpool === 1
+                ? prev
+                : { players: 1, teams: 1, draftpool: 1 }
+        ));
+    }, [playerFilterNeedle]);
 
     React.useEffect(() => {
         if (pages.players !== pagedPlayers.currentPage) setModePage('players', pagedPlayers.currentPage);
@@ -487,6 +508,9 @@ function Standings() {
                         ))}
                     </div>
                 )}
+                <div className="standings-controls-group standings-controls-group--search">
+                    <PlayerNameFilterInput value={playerFilter} onChange={setPlayerFilter} />
+                </div>
                 {/* Mode toggle */}
                 <div className="standings-controls-group standings-controls-group--modes">
                     <button
@@ -511,9 +535,9 @@ function Standings() {
             </div>
 
             {mode === 'teams' ? (
-                <TeamStandings page={pages.teams} onPageChange={page => setModePage('teams', page)} />
+                <TeamStandings page={pages.teams} onPageChange={page => setModePage('teams', page)} playerFilter={playerFilterNeedle} />
             ) : mode === 'draftpool' ? (
-                <DraftPoolStandings page={pages.draftpool} onPageChange={page => setModePage('draftpool', page)} />
+                <DraftPoolStandings page={pages.draftpool} onPageChange={page => setModePage('draftpool', page)} playerFilter={playerFilterNeedle} />
             ) : (
                 <>
 

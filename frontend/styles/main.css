@@ -2391,6 +2391,11 @@ input[type="datetime-local"] {
         justify-content: flex-start;
     }
 
+    .standings-controls-group--search .wow-filter-input {
+        width: 100%;
+        min-width: 0;
+    }
+
     .standings-controls-group--modes .wow-btn {
         flex: 1 1 0;
         min-width: 0;
