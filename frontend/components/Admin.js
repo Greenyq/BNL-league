@@ -716,17 +716,46 @@ function ClanWarTab({ showMsg, players, teams }) {
     const [selected,      setSelected]      = React.useState(null);
     const [showCreate,    setShowCreate]    = React.useState(false);
     const [showScheduler, setShowScheduler] = React.useState(false);
+    const [playerFilter,  setPlayerFilter]  = React.useState('');
     const [schedForm,     setSchedForm]     = React.useState({ season: '', startDate: '', daysBetweenRounds: 7 });
     const [scheduling,    setScheduling]    = React.useState(false);
     const [form,          setForm]          = React.useState({
         season: '', date: '', teamAId: '', teamBId: '',
     });
+    const playerFilterNeedle = normalizeSearchText(playerFilter);
 
     const load = async () => {
         try { setWars(await apiFetch('/api/clan-wars')); } catch {}
     };
 
     React.useEffect(() => { load(); }, []);
+
+    const clanWarHasPlayer = (cw, needle) => {
+        if (!needle) return true;
+
+        const sideHasPlayer = side => {
+            if (matchesNamedPlayer(side?.captain, needle)) return true;
+            return (side?.players || []).some(name => {
+                const player = findPlayerByAlias(players, name);
+                return matchesNamedPlayer(name, needle) || matchesPlayerSearch(player, needle);
+            });
+        };
+
+        const matchSideHasPlayer = value => String(value || '')
+            .split(' + ')
+            .map(name => name.trim())
+            .filter(Boolean)
+            .some(name => {
+                const player = findPlayerByAlias(players, name);
+                return matchesNamedPlayer(name, needle) || matchesPlayerSearch(player, needle);
+            });
+
+        if (sideHasPlayer(cw.teamA) || sideHasPlayer(cw.teamB)) return true;
+
+        return (cw.matches || []).some(match =>
+            matchSideHasPlayer(match.playerA) || matchSideHasPlayer(match.playerB)
+        );
+    };
 
     // Build teamA / teamB objects from selected IDs
     const getTeamPayload = (teamId, players) => {
@@ -1020,12 +1049,14 @@ function ClanWarTab({ showMsg, players, teams }) {
 
     // ── List view ──────────────────────────────────────────────────────────────
     const schedPreview = buildRoundRobin(teams || []);
+    const filteredWars = wars.filter(war => clanWarHasPlayer(war, playerFilterNeedle));
 
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)', flexWrap: 'wrap', gap: 8 }}>
                 <h3 style={{ margin: 0 }}>⚔ {tr('Клан-вары', 'Clan Wars')} ({wars.length})</h3>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <PlayerNameFilterInput value={playerFilter} onChange={setPlayerFilter} className="admin-clanwar-player-filter" />
                     <button
                         className="btn btn-secondary"
                         style={{ padding: '8px 18px' }}
@@ -1210,9 +1241,11 @@ function ClanWarTab({ showMsg, players, teams }) {
             )}
 
             {/* Список */}
-            {wars.length === 0 ? (
+            {filteredWars.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--color-text-muted)' }}>
-                    {tr('Клан-варов нет. Нажмите «+ Создать клан-вар»', 'No clan wars. Click "+ Create clan war"')}
+                    {playerFilterNeedle
+                        ? t('filters.no_results')
+                        : tr('Клан-варов нет. Нажмите «+ Создать клан-вар»', 'No clan wars. Click "+ Create clan war"')}
                 </div>
             ) : (
                 <div className="standings-table-wrap">
@@ -1228,7 +1261,7 @@ function ClanWarTab({ showMsg, players, teams }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {wars.map(w => (
+                            {filteredWars.map(w => (
                                 <tr key={w.id} style={{ cursor: 'pointer' }} onClick={() => setSelected(w)}>
                                     <td style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>
                                         {w.date ? new Date(w.date).toLocaleDateString(getLang() === 'en' ? 'en-US' : 'ru-RU') : '—'}
