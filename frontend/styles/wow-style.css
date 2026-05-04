@@ -500,7 +500,7 @@ a:hover, button:hover {
 }
 .content {
   position: relative;
-  padding: 6px 0 138px;
+  padding: 6px 0 0;
 }
 
 /* Start game button (text below ornamental frame) */
