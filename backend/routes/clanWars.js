@@ -191,6 +191,87 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+// PUT /api/clan-wars/:id/matches/:matchId — update result of one internal match
+// Supports either admin auth (`x-session-id`) or player-participant auth (`x-player-session-id`).
+router.put('/:id/matches/:matchId', async (req, res) => {
+    try {
+        const adminSession = await getAdminSessionResult(req.headers['x-session-id']);
+        const isAdmin = !!adminSession.session;
+
+        let participantResult = null;
+        if (!isAdmin) {
+            participantResult = await getPlayerParticipantResult(req);
+            if (participantResult.error) {
+                return res.status(401).json({ error: participantResult.error });
+            }
+
+            const invalidKeys = Object.keys(req.body || {}).filter(key => !['score', 'winner'].includes(key));
+            if (invalidKeys.length) {
+                return res.status(403).json({ error: 'Participants can only update score and winner' });
+            }
+        }
+
+        const cw = await ClanWar.findById(req.params.id);
+        if (!cw) return res.status(404).json({ error: 'Clan war not found' });
+
+        const match = cw.matches.id(req.params.matchId);
+        if (!match) return res.status(404).json({ error: 'Match not found' });
+
+        if (!isAdmin) {
+            const aliases = getParticipantAliases(participantResult.playerUser, participantResult.linkedPlayer);
+            if (!matchIncludesParticipant(match, aliases)) {
+                return res.status(403).json({ error: 'You are not a participant in this match' });
+            }
+        }
+
+        const { score, winner, games, playerA, playerB, label, format } = req.body;
+
+        if (!isAdmin) {
+            if (score === undefined) return res.status(400).json({ error: 'Score is required' });
+
+            const safeScore = sanitizeMatchScore(score);
+            match.score = safeScore;
+            match.winner = safeScore.a >= 2 && safeScore.a > safeScore.b
+                ? 'a'
+                : safeScore.b >= 2 && safeScore.b > safeScore.a
+                    ? 'b'
+                    : null;
+        } else {
+            if (score !== undefined) match.score = sanitizeMatchScore(score);
+            if (winner !== undefined) {
+                if (!['a', 'b', null].includes(winner)) {
+                    return res.status(400).json({ error: 'Invalid winner value' });
+                }
+                match.winner = winner;
+            }
+        }
+
+        if (isAdmin) {
+            if (games   !== undefined) match.games   = games;
+            if (playerA !== undefined) match.playerA = playerA;
+            if (playerB !== undefined) match.playerB = playerB;
+            if (label   !== undefined) match.label   = label;
+            if (format  !== undefined) match.format  = format;
+        }
+
+        cw.clanWarScore.a = cw.matches.filter(m => m.winner === 'a').length;
+        cw.clanWarScore.b = cw.matches.filter(m => m.winner === 'b').length;
+
+        if (cw.clanWarScore.a >= 3) { cw.winner = 'a'; cw.status = 'completed'; }
+        else if (cw.clanWarScore.b >= 3) { cw.winner = 'b'; cw.status = 'completed'; }
+        else {
+            cw.winner = null;
+            const hasPlayedMatches = cw.matches.some(m => m.winner === 'a' || m.winner === 'b');
+            cw.status = hasPlayedMatches ? 'ongoing' : 'upcoming';
+        }
+
+        await cw.save();
+        res.json(cw);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ── Admin ─────────────────────────────────────────────────────────────────────
 router.use(checkAuth);
 
@@ -301,86 +382,6 @@ router.post('/', async (req, res) => {
     try {
         const cw = await ClanWar.create(req.body);
         res.status(201).json(cw);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// PUT /api/clan-wars/:id/matches/:matchId — update result of one internal match
-router.put('/:id/matches/:matchId', async (req, res) => {
-    try {
-        const adminSession = await getAdminSessionResult(req.headers['x-session-id']);
-        const isAdmin = !!adminSession.session;
-
-        let participantResult = null;
-        if (!isAdmin) {
-            participantResult = await getPlayerParticipantResult(req);
-            if (participantResult.error) {
-                return res.status(401).json({ error: participantResult.error });
-            }
-
-            const invalidKeys = Object.keys(req.body || {}).filter(key => !['score', 'winner'].includes(key));
-            if (invalidKeys.length) {
-                return res.status(403).json({ error: 'Participants can only update score and winner' });
-            }
-        }
-
-        const cw = await ClanWar.findById(req.params.id);
-        if (!cw) return res.status(404).json({ error: 'Clan war not found' });
-
-        const match = cw.matches.id(req.params.matchId);
-        if (!match) return res.status(404).json({ error: 'Match not found' });
-
-        if (!isAdmin) {
-            const aliases = getParticipantAliases(participantResult.playerUser, participantResult.linkedPlayer);
-            if (!matchIncludesParticipant(match, aliases)) {
-                return res.status(403).json({ error: 'You are not a participant in this match' });
-            }
-        }
-
-        const { score, winner, games, playerA, playerB, label, format } = req.body;
-
-        if (!isAdmin) {
-            if (score === undefined) return res.status(400).json({ error: 'Score is required' });
-
-            const safeScore = sanitizeMatchScore(score);
-            match.score = safeScore;
-            match.winner = safeScore.a >= 2 && safeScore.a > safeScore.b
-                ? 'a'
-                : safeScore.b >= 2 && safeScore.b > safeScore.a
-                    ? 'b'
-                    : null;
-        } else {
-            if (score !== undefined) match.score = sanitizeMatchScore(score);
-            if (winner !== undefined) {
-                if (!['a', 'b', null].includes(winner)) {
-                    return res.status(400).json({ error: 'Invalid winner value' });
-                }
-                match.winner = winner;
-            }
-        }
-
-        if (isAdmin) {
-            if (games   !== undefined) match.games   = games;
-            if (playerA !== undefined) match.playerA = playerA;
-            if (playerB !== undefined) match.playerB = playerB;
-            if (label   !== undefined) match.label   = label;
-            if (format  !== undefined) match.format  = format;
-        }
-
-        cw.clanWarScore.a = cw.matches.filter(m => m.winner === 'a').length;
-        cw.clanWarScore.b = cw.matches.filter(m => m.winner === 'b').length;
-
-        if (cw.clanWarScore.a >= 3) { cw.winner = 'a'; cw.status = 'completed'; }
-        else if (cw.clanWarScore.b >= 3) { cw.winner = 'b'; cw.status = 'completed'; }
-        else {
-            cw.winner = null;
-            const hasPlayedMatches = cw.matches.some(m => m.winner === 'a' || m.winner === 'b');
-            cw.status = hasPlayedMatches ? 'ongoing' : 'upcoming';
-        }
-
-        await cw.save();
-        res.json(cw);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

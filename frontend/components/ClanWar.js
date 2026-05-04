@@ -19,6 +19,7 @@ function getClanWarParticipantAliases(player) {
     const aliases = new Set();
 
     for (const value of [
+        player?.linkedBattleTag,
         player?.name,
         player?.battleTag,
         String(player?.battleTag || '').split('#')[0],
@@ -133,6 +134,13 @@ function clanWarHasPlayer(cw, players, teams, needle) {
         clanWarMatchSideHasPlayer(match.playerA, players, needle)
         || clanWarMatchSideHasPlayer(match.playerB, players, needle)
     );
+}
+
+function formatClanWarDate(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString(getLang() === 'en' ? 'en-US' : 'ru');
 }
 
 // ── Мини-строка игрока (для расширенного вида клан-вара) ──────────────────────
@@ -540,6 +548,44 @@ function ClanWarCard({ cw, players, teams, currentPlayer, onClanWarUpdated }) {
     );
 }
 
+function MyClanWarMatchCard({ entry, players, currentPlayer, onClanWarUpdated }) {
+    useLang();
+    const { clanWar, clanWarId, match, teamNameA, teamNameB, status, date } = entry;
+    const statusLabel = t(`cw.status.${status}`) || status;
+    const statusClass  = { upcoming: 'status-upcoming', ongoing: 'status-ongoing', completed: 'status-completed' }[status] || '';
+    const formattedDate = formatClanWarDate(date);
+
+    return (
+        <div className="cw-card">
+            <div className="cw-header" style={{ cursor: 'default' }}>
+                <span className={`cw-status ${statusClass}`}>{statusLabel}</span>
+                <span className="cw-teams">{teamNameA} &nbsp;vs&nbsp; {teamNameB}</span>
+                {formattedDate && (
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginLeft: 'auto' }}>
+                        {formattedDate}
+                    </span>
+                )}
+            </div>
+            <div style={{ padding: 'var(--spacing-md) var(--spacing-lg)' }}>
+                <CwMatchupCard
+                    match={match}
+                    players={players}
+                    nameA={teamNameA}
+                    nameB={teamNameB}
+                    canEdit={clanWarMatchHasParticipantIdentity(match, currentPlayer)}
+                    clanWarId={clanWarId}
+                    onClanWarUpdated={onClanWarUpdated}
+                />
+                {clanWar?.winner && (
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginTop: 8 }}>
+                        🏆 {clanWar.winner === 'a' ? teamNameA : teamNameB}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function ClanWar() {
     useLang();
     const [wars,    setWars]    = React.useState([]);
@@ -547,6 +593,7 @@ function ClanWar() {
     const [teams,   setTeams]   = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [error,   setError]   = React.useState(null);
+    const [mode,    setMode]    = React.useState('wars');
     const [filter,  setFilter]  = React.useState('all');
     const [page,    setPage]    = React.useState(1);
     const [playerFilter, setPlayerFilter] = React.useState('');
@@ -594,7 +641,13 @@ function ClanWar() {
                 .then(async response => {
                     const data = await response.json().catch(() => ({}));
                     if (!response.ok) throw new Error(data.error || response.statusText);
-                    setCurrentPlayer(data.playerData || null);
+                    setCurrentPlayer(data.user
+                        ? {
+                            ...(data.playerData || {}),
+                            linkedBattleTag: data.user.linkedBattleTag || null,
+                            username: data.user.username || null,
+                        }
+                        : null);
                 })
                 .catch(() => setCurrentPlayer(null));
         };
@@ -629,11 +682,32 @@ function ClanWar() {
         { id: 'completed', key: 'cw.completed' },
     ];
     const filteredWars = wars.filter(cw => clanWarHasPlayer(cw, players, teams, playerFilterNeedle));
-    const pagination = paginateCollection(filteredWars, page, CLAN_WARS_PAGE_SIZE);
+    const sortedWars = wars.slice().sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    const myMatches = currentPlayer
+        ? sortedWars.flatMap(cw => (cw.matches || [])
+            .filter(match => clanWarMatchHasParticipantIdentity(match, currentPlayer))
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+            .map(match => ({
+                clanWar: cw,
+                clanWarId: cw.id || cw._id,
+                match,
+                teamNameA: cw.teamA?.name || 'Team A',
+                teamNameB: cw.teamB?.name || 'Team B',
+                status: cw.status,
+                date: cw.date,
+            }))
+        )
+        : [];
+    const activeItems = mode === 'wars' ? filteredWars : myMatches;
+    const pagination = paginateCollection(activeItems, page, CLAN_WARS_PAGE_SIZE);
 
     React.useEffect(() => {
         setPage(1);
-    }, [filter, playerFilterNeedle]);
+    }, [mode, filter, playerFilterNeedle, currentPlayer?.id, currentPlayer?._id, currentPlayer?.linkedBattleTag]);
+
+    React.useEffect(() => {
+        setFilter('all');
+    }, [mode]);
 
     React.useEffect(() => {
         if (page !== pagination.currentPage) setPage(pagination.currentPage);
@@ -645,40 +719,77 @@ function ClanWar() {
         <div className="animate-fade-in wow-section-page">
             <WoWSectionTitle>{t('cw.title')}</WoWSectionTitle>
 
-            <div className="wow-filter-bar" style={{ marginBottom: 18 }}>
-                {FILTERS.map(f => (
+            <div className="wow-filter-bar standings-controls" style={{ marginBottom: 18 }}>
+                <div className="standings-controls-group standings-controls-group--filters">
+                    {FILTERS.map(f => (
+                        <button
+                            key={f.id}
+                            className={`wow-btn${filter === f.id ? ' active' : ''}`}
+                            onClick={() => setFilter(f.id)}
+                        >
+                            {t(f.key)}
+                        </button>
+                    ))}
+                </div>
+                {mode === 'wars' && (
+                    <div className="standings-controls-group standings-controls-group--search">
+                        <PlayerNameFilterInput value={playerFilter} onChange={setPlayerFilter} />
+                    </div>
+                )}
+                <div className="standings-controls-group standings-controls-group--modes">
                     <button
-                        key={f.id}
-                        className={`wow-btn${filter === f.id ? ' active' : ''}`}
-                        onClick={() => setFilter(f.id)}
+                        className={`wow-btn${mode === 'wars' ? ' active' : ''}`}
+                        onClick={() => setMode('wars')}
                     >
-                        {t(f.key)}
+                        {t('cw.mode.wars')}
                     </button>
-                ))}
-                <PlayerNameFilterInput value={playerFilter} onChange={setPlayerFilter} />
+                    <button
+                        className={`wow-btn${mode === 'my_matches' ? ' active' : ''}`}
+                        onClick={() => setMode('my_matches')}
+                    >
+                        {t('cw.mode.my_matches')}
+                    </button>
+                </div>
             </div>
 
             {loading ? (
                 <div className="cw-list">
                     {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 64, marginBottom: 12, borderRadius: 'var(--radius-md)' }} />)}
                 </div>
-            ) : filteredWars.length === 0 ? (
+            ) : mode === 'my_matches' && !currentPlayer ? (
                 <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
-                    {playerFilterNeedle ? t('filters.no_results') : t('cw.empty')}
+                    {t('cw.my_matches.login_required')}
+                </p>
+            ) : activeItems.length === 0 ? (
+                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
+                    {mode === 'wars'
+                        ? (playerFilterNeedle ? t('filters.no_results') : t('cw.empty'))
+                        : t('cw.my_matches.empty')}
                 </p>
             ) : (
                 <>
                 <div className="cw-list">
-                    {pagination.items.map(cw => (
-                        <ClanWarCard
-                            key={cw.id || cw._id}
-                            cw={cw}
-                            players={players}
-                            teams={teams}
-                            currentPlayer={currentPlayer}
-                            onClanWarUpdated={handleClanWarUpdated}
-                        />
-                    ))}
+                    {mode === 'wars'
+                        ? pagination.items.map(cw => (
+                            <ClanWarCard
+                                key={cw.id || cw._id}
+                                cw={cw}
+                                players={players}
+                                teams={teams}
+                                currentPlayer={currentPlayer}
+                                onClanWarUpdated={handleClanWarUpdated}
+                            />
+                        ))
+                        : pagination.items.map(entry => (
+                            <MyClanWarMatchCard
+                                key={`${entry.clanWarId}-${entry.match.id || entry.match._id || entry.match.order || entry.teamNameA + entry.teamNameB}`}
+                                entry={entry}
+                                players={players}
+                                currentPlayer={currentPlayer}
+                                onClanWarUpdated={handleClanWarUpdated}
+                            />
+                        ))
+                    }
                 </div>
                 <PaginationControls page={pagination.currentPage} totalPages={pagination.totalPages} onPageChange={setPage} />
                 </>
