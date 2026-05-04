@@ -973,6 +973,8 @@ a:hover, button:hover {
   margin-bottom: 18px;
 }
 .wow-btn {
+  box-sizing: border-box;
+  min-height: 40px;
   background: rgba(20,10,2,0.75);
   border: 1px solid #5a3a18;
   color: #c8a870;
@@ -997,6 +999,7 @@ a:hover, button:hover {
   text-shadow: 0 0 8px rgba(255,216,91,0.4);
 }
 .wow-filter-input {
+  box-sizing: border-box;
   width: min(320px, 100%);
   min-width: 0;
   max-width: 100%;
@@ -1004,7 +1007,8 @@ a:hover, button:hover {
   background: rgba(20,10,2,0.75);
   border: 1px solid #5a3a18;
   color: #f1d6a1;
-  padding: 7px 12px;
+  padding: 6px 12px;
+  min-height: 40px;
   border-radius: 3px;
   font-family: 'PT Sans', sans-serif;
   font-size: 13px;
