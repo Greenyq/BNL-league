@@ -176,6 +176,22 @@ function PaginationControls({ page, totalPages, onPageChange, className = '' }) 
     );
 }
 
+Object.assign(window, {
+    WoWSectionTitle,
+    clampPage,
+    paginateCollection,
+    normalizeSearchText,
+    getBattleTagName,
+    getPlayerSearchAliases,
+    matchesAnySearchValue,
+    matchesNamedPlayer,
+    matchesPlayerSearch,
+    playerHasAlias,
+    findPlayerByAlias,
+    PlayerNameFilterInput,
+    PaginationControls,
+});
+
 // ── App ───────────────────────────────────────────────────────────────────────
 function App() {
     const [tab,           setTab]           = React.useState(getTabFromHash);

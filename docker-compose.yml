@@ -32,7 +32,6 @@ services:
       mongodb:
         condition: service_healthy
     restart: unless-stopped
-
 volumes:
   mongodb_data:
   api_node_modules:
