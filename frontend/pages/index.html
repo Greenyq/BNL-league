@@ -71,6 +71,7 @@
                         <li><a href="#clanwar"   onclick="navigate('clanwar');   return false;">Клан-вары</a></li>
                         <li><a href="#maps"      onclick="navigate('maps');      return false;">Карты</a></li>
                         <li><a id="header-profile-link" href="#profile" onclick="navigate('profile'); return false;">Профиль</a></li>
+                        <li id="header-admin-nav-slot" hidden></li>
                     </ul>
                 </div>
 
@@ -172,9 +173,12 @@
 
 <script>
     // ── Navigation labels (RU / EN) ───────────────────────────────────────
+    var ADMIN_SESSION_KEY = 'bnl_admin_session';
+    var ADMIN_SESSION_EVENT = 'bnl-admin-session-change';
     var PLAYER_SESSION_KEY = 'bnl_player_session';
     var PLAYER_USERNAME_KEY = 'bnl_player_username';
     var PLAYER_SESSION_EVENT = 'bnl-player-session-change';
+    var pendingAdminNavRequestId = 0;
     var pendingPlayerUsernameRequest = null;
 
     var NAV_LABELS = {
@@ -254,9 +258,100 @@
         profileLink.textContent = currentLang === 'en' ? 'Login' : 'Войти';
     }
 
+    function getCurrentLang() {
+        return typeof getLang === 'function'
+            ? getLang()
+            : (localStorage.getItem('bnl_lang') || 'ru');
+    }
+
+    function setAdminLinkText(link, lang) {
+        if (!link) return;
+        link.textContent = typeof t === 'function'
+            ? t('nav.admin_panel')
+            : (lang === 'en' ? 'Admin Panel' : 'Админ панель');
+    }
+
+    function hideAdminNavLink() {
+        var slot = document.getElementById('header-admin-nav-slot');
+        if (!slot) return;
+        slot.hidden = true;
+        slot.innerHTML = '';
+        updateNavHighlight();
+    }
+
+    function showAdminNavLink(lang) {
+        var slot = document.getElementById('header-admin-nav-slot');
+        if (!slot) return;
+
+        var link = document.getElementById('header-admin-link');
+        if (!link) {
+            link = document.createElement('a');
+            link.id = 'header-admin-link';
+            link.href = '#admin';
+            link.onclick = function() {
+                navigate('admin');
+                return false;
+            };
+        }
+
+        setAdminLinkText(link, lang);
+        slot.hidden = false;
+        slot.innerHTML = '';
+        slot.appendChild(link);
+        updateNavHighlight();
+    }
+
+    function clearAdminSession() {
+        localStorage.removeItem(ADMIN_SESSION_KEY);
+    }
+
+    function refreshAdminNavVisibility(lang) {
+        var currentLang = typeof lang === 'string' ? lang : getCurrentLang();
+        var sessionId = localStorage.getItem(ADMIN_SESSION_KEY);
+
+        if (!sessionId) {
+            hideAdminNavLink();
+            return Promise.resolve(false);
+        }
+
+        var requestId = ++pendingAdminNavRequestId;
+
+        return fetch('/api/admin/verify', {
+            headers: { 'x-session-id': sessionId }
+        })
+            .then(function(r) {
+                return r.json().catch(function() { return {}; }).then(function(data) {
+                    return { ok: r.ok, data: data };
+                });
+            })
+            .then(function(result) {
+                if (requestId !== pendingAdminNavRequestId) return false;
+
+                if (result.ok && result.data && result.data.isAuthenticated) {
+                    showAdminNavLink(currentLang);
+                    return true;
+                }
+
+                if (localStorage.getItem(ADMIN_SESSION_KEY) === sessionId) {
+                    clearAdminSession();
+                }
+                hideAdminNavLink();
+                return false;
+            })
+            .catch(function() {
+                if (requestId !== pendingAdminNavRequestId) return false;
+                hideAdminNavLink();
+                return false;
+            });
+    }
+
     function updateNavText(lang) {
         var labels = NAV_LABELS[lang] || NAV_LABELS['ru'];
         document.querySelectorAll('#bnl-nav a, #footer-nav a').forEach(function(a) {
+            if (a.id === 'header-admin-link') {
+                setAdminLinkText(a, lang);
+                return;
+            }
             var tab = a.getAttribute('href').replace('#', '');
             if (labels[tab]) a.textContent = labels[tab];
         });
@@ -340,12 +435,17 @@
         updateNavText(storedLang);
         document.getElementById('lang-ru').className = storedLang === 'ru' ? 'active' : '';
         document.getElementById('lang-en').className = storedLang === 'en' ? 'active' : '';
+        refreshAdminNavVisibility(storedLang);
     })();
 
     window.addEventListener('storage', function(e) {
         if (!e.key || e.key === PLAYER_SESSION_KEY || e.key === PLAYER_USERNAME_KEY) updateHeaderProfileLink();
+        if (!e.key || e.key === ADMIN_SESSION_KEY) refreshAdminNavVisibility();
     });
     window.addEventListener(PLAYER_SESSION_EVENT, updateHeaderProfileLink);
+    window.addEventListener(ADMIN_SESSION_EVENT, function() {
+        refreshAdminNavVisibility();
+    });
     updateHeaderProfileLink();
 
     function setSeasonProgress(finished, total) {

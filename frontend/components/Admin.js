@@ -1,9 +1,17 @@
 // Admin — полная панель управления (создание/редактирование игроков и команд)
 
 const SESSION_KEY  = 'bnl_admin_session';
+const ADMIN_SESSION_EVENT = 'bnl-admin-session-change';
+const notifyAdminSessionChange = () => window.dispatchEvent(new Event(ADMIN_SESSION_EVENT));
 const getSession   = () => localStorage.getItem(SESSION_KEY);
-const setSession   = id => localStorage.setItem(SESSION_KEY, id);
-const clearSession = () => localStorage.removeItem(SESSION_KEY);
+const setSession   = id => {
+    localStorage.setItem(SESSION_KEY, id);
+    notifyAdminSessionChange();
+};
+const clearSession = () => {
+    localStorage.removeItem(SESSION_KEY);
+    notifyAdminSessionChange();
+};
 
 async function apiFetch(url, options = {}) {
     const sid = getSession();
