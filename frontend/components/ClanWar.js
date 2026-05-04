@@ -439,6 +439,16 @@ function ClanWarCard({ cw, players, teams, currentPlayer, onClanWarUpdated }) {
     const teamObjA = teams.find(t => t.name?.toLowerCase() === nameA.toLowerCase());
     const teamObjB = teams.find(t => t.name?.toLowerCase() === nameB.toLowerCase());
 
+    const renderTeamHeaderIdentity = (teamObj, fallbackName) => (
+        <span className="cw-team-inline">
+            {teamObj?.logo
+                ? <img src={teamObj.logo} alt={fallbackName} className="cw-team-inline-logo" />
+                : <span className="cw-team-inline-emoji">{teamObj?.emoji || '🛡'}</span>
+            }
+            <span>{fallbackName}</span>
+        </span>
+    );
+
     const rosterA = getClanWarRoster(teamObjA, cw.teamA, players);
     const rosterB = getClanWarRoster(teamObjB, cw.teamB, players);
 
@@ -455,7 +465,7 @@ function ClanWarCard({ cw, players, teams, currentPlayer, onClanWarUpdated }) {
         <div className="cw-card">
             <div className="cw-header" onClick={() => setOpen(!open)}>
                 <span className={`cw-status ${statusClass}`}>{statusLabel}</span>
-                <span className="cw-teams">{nameA} &nbsp;vs&nbsp; {nameB}</span>
+                <span className="cw-teams">{renderTeamHeaderIdentity(teamObjA, nameA)} <span className="cw-teams-vs">vs</span> {renderTeamHeaderIdentity(teamObjB, nameB)}</span>
                 <span className="cw-score-display">
                     {cw.clanWarScore?.a ?? 0} — {cw.clanWarScore?.b ?? 0}
                 </span>
