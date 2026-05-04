@@ -5,18 +5,24 @@ const getAdminSession = () => mongoose.model('AdminSession');
 
 const SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
+const getAdminSessionResult = async (sessionId) => {
+    if (!sessionId) return { session: null, error: 'Unauthorized' };
+
+    const session = await getAdminSession().findOne({ sessionId });
+    if (!session || !session.isLoggedIn) return { session: null, error: 'Unauthorized' };
+
+    if (Date.now() - session.timestamp > SESSION_TTL) {
+        await getAdminSession().deleteOne({ sessionId });
+        return { session: null, error: 'Session expired' };
+    }
+
+    return { session, error: null };
+};
+
 const checkAuth = async (req, res, next) => {
-    const sessionId = req.headers['x-session-id'];
-    if (!sessionId) return res.status(401).json({ error: 'Unauthorized' });
-
     try {
-        const session = await getAdminSession().findOne({ sessionId });
-        if (!session || !session.isLoggedIn) return res.status(401).json({ error: 'Unauthorized' });
-
-        if (Date.now() - session.timestamp > SESSION_TTL) {
-            await getAdminSession().deleteOne({ sessionId });
-            return res.status(401).json({ error: 'Session expired' });
-        }
+        const { session, error } = await getAdminSessionResult(req.headers['x-session-id']);
+        if (!session) return res.status(401).json({ error });
 
         next();
     } catch (err) {
@@ -24,4 +30,4 @@ const checkAuth = async (req, res, next) => {
     }
 };
 
-module.exports = { checkAuth };
+module.exports = { checkAuth, getAdminSessionResult };

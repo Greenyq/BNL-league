@@ -1,8 +1,8 @@
 const express = require('express');
 const { ClanWar } = require('../models/ClanWar');
-const { Player, PlayerStats } = require('../models/Player');
+const { Player, PlayerStats, PlayerSession, PlayerUser } = require('../models/Player');
 const { Team } = require('../models/Team');
-const { checkAuth } = require('../middleware/auth');
+const { checkAuth, getAdminSessionResult } = require('../middleware/auth');
 const {
     getCachedSeasonProgress,
     setCachedSeasonProgress,
@@ -25,6 +25,75 @@ function calculateSeasonProgress(wars) {
         progress.finished += matches.filter(match => match?.winner === 'a' || match?.winner === 'b').length;
         return progress;
     }, { finished: 0, total: 0 });
+}
+
+const escapeRegex = value => String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const normalizeParticipantName = value => String(value || '').trim().toLowerCase();
+const getBattleTagName = value => String(value || '').split('#')[0].trim();
+
+function parseClanWarSide(value) {
+    return String(value || '')
+        .split(' + ')
+        .map(name => name.trim())
+        .filter(Boolean);
+}
+
+function appendParticipantAlias(target, value) {
+    const raw = String(value || '').trim();
+    if (!raw) return;
+    target.add(normalizeParticipantName(raw));
+
+    const battleTagName = getBattleTagName(raw);
+    if (battleTagName) target.add(normalizeParticipantName(battleTagName));
+}
+
+function getParticipantAliases(playerUser, linkedPlayer) {
+    const aliases = new Set();
+    appendParticipantAlias(aliases, playerUser?.linkedBattleTag);
+    appendParticipantAlias(aliases, linkedPlayer?.battleTag);
+    appendParticipantAlias(aliases, linkedPlayer?.name);
+    return aliases;
+}
+
+function matchIncludesParticipant(match, aliases) {
+    const hasAlias = value => aliases.has(normalizeParticipantName(value)) || aliases.has(normalizeParticipantName(getBattleTagName(value)));
+    for (const playerName of [...parseClanWarSide(match?.playerA), ...parseClanWarSide(match?.playerB)]) {
+        if (hasAlias(playerName)) return true;
+    }
+    return false;
+}
+
+function sanitizeScoreValue(value) {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed) || Number.isNaN(parsed)) return 0;
+    return Math.max(0, Math.min(2, parsed));
+}
+
+function sanitizeMatchScore(score) {
+    return {
+        a: sanitizeScoreValue(score?.a),
+        b: sanitizeScoreValue(score?.b),
+    };
+}
+
+async function getPlayerParticipantResult(req) {
+    const sessionId = req.headers['x-player-session-id'];
+    if (!sessionId) return { playerUser: null, linkedPlayer: null, error: 'Not authenticated' };
+
+    const session = await PlayerSession.findOne({ sessionId });
+    if (!session || session.expiresAt < new Date()) {
+        return { playerUser: null, linkedPlayer: null, error: 'Not authenticated' };
+    }
+
+    const playerUser = await PlayerUser.findById(session.playerUserId);
+    if (!playerUser) return { playerUser: null, linkedPlayer: null, error: 'User not found' };
+    if (!playerUser.linkedBattleTag) return { playerUser, linkedPlayer: null, error: 'No BattleTag linked' };
+
+    const linkedPlayer = await Player.findOne({
+        battleTag: { $regex: new RegExp(`^${escapeRegex(playerUser.linkedBattleTag)}$`, 'i') }
+    });
+
+    return { playerUser, linkedPlayer, error: null };
 }
 
 // ── Shared helper: assign players to all match formats in one clan war ────────
@@ -240,26 +309,75 @@ router.post('/', async (req, res) => {
 // PUT /api/clan-wars/:id/matches/:matchId — update result of one internal match
 router.put('/:id/matches/:matchId', async (req, res) => {
     try {
+        const adminSession = await getAdminSessionResult(req.headers['x-session-id']);
+        const isAdmin = !!adminSession.session;
+
+        let participantResult = null;
+        if (!isAdmin) {
+            participantResult = await getPlayerParticipantResult(req);
+            if (participantResult.error) {
+                return res.status(401).json({ error: participantResult.error });
+            }
+
+            const invalidKeys = Object.keys(req.body || {}).filter(key => !['score', 'winner'].includes(key));
+            if (invalidKeys.length) {
+                return res.status(403).json({ error: 'Participants can only update score and winner' });
+            }
+        }
+
         const cw = await ClanWar.findById(req.params.id);
         if (!cw) return res.status(404).json({ error: 'Clan war not found' });
 
         const match = cw.matches.id(req.params.matchId);
         if (!match) return res.status(404).json({ error: 'Match not found' });
 
+        if (!isAdmin) {
+            const aliases = getParticipantAliases(participantResult.playerUser, participantResult.linkedPlayer);
+            if (!matchIncludesParticipant(match, aliases)) {
+                return res.status(403).json({ error: 'You are not a participant in this match' });
+            }
+        }
+
         const { score, winner, games, playerA, playerB, label, format } = req.body;
-        if (score   !== undefined) match.score  = score;
-        if (winner  !== undefined) match.winner = winner;
-        if (games   !== undefined) match.games  = games;
-        if (playerA !== undefined) match.playerA = playerA;
-        if (playerB !== undefined) match.playerB = playerB;
-        if (label   !== undefined) match.label   = label;
-        if (format  !== undefined) match.format  = format;
+
+        if (!isAdmin) {
+            if (score === undefined) return res.status(400).json({ error: 'Score is required' });
+
+            const safeScore = sanitizeMatchScore(score);
+            match.score = safeScore;
+            match.winner = safeScore.a >= 2 && safeScore.a > safeScore.b
+                ? 'a'
+                : safeScore.b >= 2 && safeScore.b > safeScore.a
+                    ? 'b'
+                    : null;
+        } else {
+            if (score !== undefined) match.score = sanitizeMatchScore(score);
+            if (winner !== undefined) {
+                if (!['a', 'b', null].includes(winner)) {
+                    return res.status(400).json({ error: 'Invalid winner value' });
+                }
+                match.winner = winner;
+            }
+        }
+
+        if (isAdmin) {
+            if (games   !== undefined) match.games   = games;
+            if (playerA !== undefined) match.playerA = playerA;
+            if (playerB !== undefined) match.playerB = playerB;
+            if (label   !== undefined) match.label   = label;
+            if (format  !== undefined) match.format  = format;
+        }
 
         cw.clanWarScore.a = cw.matches.filter(m => m.winner === 'a').length;
         cw.clanWarScore.b = cw.matches.filter(m => m.winner === 'b').length;
 
         if (cw.clanWarScore.a >= 3) { cw.winner = 'a'; cw.status = 'completed'; }
         else if (cw.clanWarScore.b >= 3) { cw.winner = 'b'; cw.status = 'completed'; }
+        else {
+            cw.winner = null;
+            const hasPlayedMatches = cw.matches.some(m => m.winner === 'a' || m.winner === 'b');
+            cw.status = hasPlayedMatches ? 'ongoing' : 'upcoming';
+        }
 
         await cw.save();
         res.json(cw);

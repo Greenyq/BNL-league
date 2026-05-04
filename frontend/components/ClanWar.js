@@ -5,6 +5,8 @@ const CW_RACE_IMG   = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/im
 const CW_RACE_COLOR = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
 const tr = (ru, en) => getLang() === 'en' ? en : ru;
 const CLAN_WARS_PAGE_SIZE = 10;
+const CW_PLAYER_SESSION_STORAGE_KEY = 'bnl_player_session';
+const CW_PLAYER_SESSION_CHANGE_EVENT = 'bnl-player-session-change';
 const CW_RACE_ABBR  = race => ({
     0: 'Rnd',
     1: tr('Люди', 'Human'),
@@ -12,6 +14,52 @@ const CW_RACE_ABBR  = race => ({
     4: tr('Эльфы', 'Elves'),
     8: tr('Нежить', 'Undead'),
 }[race] || 'Rnd');
+
+function getClanWarParticipantAliases(player) {
+    const aliases = new Set();
+
+    for (const value of [
+        player?.name,
+        player?.battleTag,
+        String(player?.battleTag || '').split('#')[0],
+    ]) {
+        const normalized = normalizeSearchText(value);
+        if (normalized) aliases.add(normalized);
+    }
+
+    return aliases;
+}
+
+function clanWarMatchHasParticipantIdentity(match, player) {
+    if (!match || !player) return false;
+    const aliases = getClanWarParticipantAliases(player);
+    const matchesAlias = value => {
+        const normalized = normalizeSearchText(value);
+        const battleTagName = normalizeSearchText(String(value || '').split('#')[0]);
+        return (!!normalized && aliases.has(normalized)) || (!!battleTagName && aliases.has(battleTagName));
+    };
+
+    return [...parseClanWarSide(match.playerA), ...parseClanWarSide(match.playerB)].some(matchesAlias);
+}
+
+function clampClanWarScore(value) {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed) || Number.isNaN(parsed)) return 0;
+    return Math.max(0, Math.min(2, parsed));
+}
+
+async function clanWarParticipantFetch(url, options = {}) {
+    const sessionId = localStorage.getItem(CW_PLAYER_SESSION_STORAGE_KEY);
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(sessionId ? { 'x-player-session-id': sessionId } : {}),
+        ...(options.headers || {}),
+    };
+    const response = await fetch(url, { ...options, headers });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || response.statusText);
+    return data;
+}
 
 function parseClanWarSide(value) {
     return String(value || '')
@@ -194,7 +242,7 @@ function CwPlayerMini({ player, side }) {
 }
 
 // ── Карточка одного матча внутри клан-вара ────────────────────────────────────
-function CwMatchupCard({ match, players, nameA, nameB }) {
+function CwMatchupCard({ match, players, nameA, nameB, canEdit = false, clanWarId = null, onClanWarUpdated = null }) {
     const findPlayer = (name) => {
         if (!name || !name.trim()) return null;
         return findPlayerByAlias(players, name.trim());
@@ -216,8 +264,44 @@ function CwMatchupCard({ match, players, nameA, nameB }) {
 
     const scoreA = match.score?.a ?? 0;
     const scoreB = match.score?.b ?? 0;
+    const [editScoreA, setEditScoreA] = React.useState(scoreA);
+    const [editScoreB, setEditScoreB] = React.useState(scoreB);
+    const [saving, setSaving] = React.useState(false);
+    const [saveFeedback, setSaveFeedback] = React.useState(null);
 
     const winnerGlow = 'rgba(76,175,80,0.07)';
+
+    React.useEffect(() => {
+        setEditScoreA(scoreA);
+        setEditScoreB(scoreB);
+        setSaveFeedback(null);
+    }, [match.id, scoreA, scoreB, match.winner]);
+
+    const saveScore = async () => {
+        if (!canEdit || !clanWarId || saving) return;
+
+        const safeScore = {
+            a: clampClanWarScore(editScoreA),
+            b: clampClanWarScore(editScoreB),
+        };
+        setSaving(true);
+        setSaveFeedback(null);
+
+        try {
+            const updatedClanWar = await clanWarParticipantFetch(`/api/clan-wars/${clanWarId}/matches/${match.id || match._id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ score: safeScore }),
+            });
+            setEditScoreA(safeScore.a);
+            setEditScoreB(safeScore.b);
+            setSaveFeedback({ type: 'ok', text: tr('Счёт сохранён', 'Score saved') });
+            onClanWarUpdated && onClanWarUpdated(updatedClanWar);
+        } catch (err) {
+            setSaveFeedback({ type: 'error', text: err.message || tr('Не удалось сохранить счёт', 'Failed to save score') });
+        } finally {
+            setSaving(false);
+        }
+    };
 
     return (
         <div style={{
@@ -271,6 +355,48 @@ function CwMatchupCard({ match, players, nameA, nameB }) {
                         <span style={{ color: winB ? 'var(--color-success)' : played ? 'var(--color-error)' : 'var(--color-text-muted)' }}>{scoreB}</span>
                     </div>
                     <div style={{ fontSize: '0.68em', color: 'var(--color-text-muted)' }}>BO3</div>
+                    {canEdit && clanWarId && (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginTop: 10 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="2"
+                                    value={editScoreA}
+                                    onChange={e => { setEditScoreA(clampClanWarScore(e.target.value)); setSaveFeedback(null); }}
+                                    style={{ width: 44, textAlign: 'center', padding: '4px 2px', fontSize: '0.9rem' }}
+                                />
+                                <span style={{ color: 'var(--color-text-muted)', fontSize: '0.78em' }}>:</span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="2"
+                                    value={editScoreB}
+                                    onChange={e => { setEditScoreB(clampClanWarScore(e.target.value)); setSaveFeedback(null); }}
+                                    style={{ width: 44, textAlign: 'center', padding: '4px 2px', fontSize: '0.9rem' }}
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                style={{ padding: '6px 10px', fontSize: '0.72em', lineHeight: 1.1 }}
+                                disabled={saving}
+                                onClick={saveScore}
+                            >
+                                {saving ? tr('Сохранение...', 'Saving...') : tr('Сохранить счёт', 'Save score')}
+                            </button>
+                            {saveFeedback && (
+                                <div style={{
+                                    fontSize: '0.68em',
+                                    color: saveFeedback.type === 'error' ? 'var(--color-error)' : 'var(--color-success)',
+                                    textAlign: 'center',
+                                    maxWidth: 120,
+                                }}>
+                                    {saveFeedback.text}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Team B side */}
@@ -291,7 +417,7 @@ function CwMatchupCard({ match, players, nameA, nameB }) {
 }
 
 // ── Карточка клан-вара ─────────────────────────────────────────────────────────
-function ClanWarCard({ cw, players, teams, playerFilter }) {
+function ClanWarCard({ cw, players, teams, playerFilter, currentPlayer, onClanWarUpdated }) {
     useLang();
     const [open, setOpen] = React.useState(false);
     const playerFilterNeedle = normalizeSearchText(playerFilter);
@@ -330,7 +456,6 @@ function ClanWarCard({ cw, players, teams, playerFilter }) {
 
     const hasDraft = !!(cw.draft?.status);
     const draftStatus = cw.draft?.status || 'pending';
-
     return (
         <div className="cw-card">
             <div className="cw-header" onClick={() => setOpen(!open)}>
@@ -408,7 +533,16 @@ function ClanWarCard({ cw, players, teams, playerFilter }) {
                         {visibleMatches.length === 0
                             ? <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>—</p>
                             : visibleMatches.map((m, i) => (
-                                <CwMatchupCard key={m._id || i} match={m} players={players} nameA={nameA} nameB={nameB} />
+                                <CwMatchupCard
+                                    key={m._id || i}
+                                    match={m}
+                                    players={players}
+                                    nameA={nameA}
+                                    nameB={nameB}
+                                    canEdit={clanWarMatchHasParticipantIdentity(m, currentPlayer)}
+                                    clanWarId={cw.id || cw._id}
+                                    onClanWarUpdated={onClanWarUpdated}
+                                />
                             ))
                         }
                     </div>
@@ -429,7 +563,18 @@ function ClanWar() {
     const [filter,  setFilter]  = React.useState('all');
     const [page,    setPage]    = React.useState(1);
     const [playerFilter, setPlayerFilter] = React.useState('');
+    const [currentPlayer, setCurrentPlayer] = React.useState(null);
     const playerFilterNeedle = normalizeSearchText(playerFilter);
+
+    const loadWars = () => {
+        setLoading(true);
+        setError(null);
+        const q = filter !== 'all' ? `?status=${filter}` : '';
+        fetch(`/api/clan-wars${q}`)
+            .then(r => r.json())
+            .then(data => { setWars(Array.isArray(data) ? data : []); setLoading(false); })
+            .catch(err  => { setError(err.message); setLoading(false); });
+    };
 
     React.useEffect(() => {
         // Load teams and players once
@@ -445,13 +590,50 @@ function ClanWar() {
     }, []);
 
     React.useEffect(() => {
-        setLoading(true);
-        const q = filter !== 'all' ? `?status=${filter}` : '';
-        fetch(`/api/clan-wars${q}`)
-            .then(r => r.json())
-            .then(data => { setWars(data); setLoading(false); })
-            .catch(err  => { setError(err.message); setLoading(false); });
+        loadWars();
     }, [filter]);
+
+    React.useEffect(() => {
+        const syncCurrentPlayer = () => {
+            const sessionId = localStorage.getItem(CW_PLAYER_SESSION_STORAGE_KEY);
+            if (!sessionId) {
+                setCurrentPlayer(null);
+                return;
+            }
+
+            fetch('/api/players/auth/me', {
+                headers: { 'x-player-session-id': sessionId }
+            })
+                .then(async response => {
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) throw new Error(data.error || response.statusText);
+                    setCurrentPlayer(data.playerData || null);
+                })
+                .catch(() => setCurrentPlayer(null));
+        };
+
+        syncCurrentPlayer();
+        window.addEventListener(CW_PLAYER_SESSION_CHANGE_EVENT, syncCurrentPlayer);
+        window.addEventListener('storage', syncCurrentPlayer);
+        return () => {
+            window.removeEventListener(CW_PLAYER_SESSION_CHANGE_EVENT, syncCurrentPlayer);
+            window.removeEventListener('storage', syncCurrentPlayer);
+        };
+    }, []);
+
+    const handleClanWarUpdated = (updatedClanWar) => {
+        setWars(prevWars => {
+            const nextWars = prevWars.map(existingWar =>
+                (existingWar.id || existingWar._id) === (updatedClanWar.id || updatedClanWar._id)
+                    ? updatedClanWar
+                    : existingWar
+            );
+
+            return filter === 'all'
+                ? nextWars
+                : nextWars.filter(existingWar => existingWar.status === filter);
+        });
+    };
 
     const FILTERS = [
         { id: 'all',       key: 'cw.all' },
@@ -507,6 +689,8 @@ function ClanWar() {
                             players={players}
                             teams={teams}
                             playerFilter={playerFilterNeedle}
+                            currentPlayer={currentPlayer}
+                            onClanWarUpdated={handleClanWarUpdated}
                         />
                     ))}
                 </div>
