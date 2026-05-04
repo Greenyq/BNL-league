@@ -417,10 +417,9 @@ function CwMatchupCard({ match, players, nameA, nameB, canEdit = false, clanWarI
 }
 
 // ── Карточка клан-вара ─────────────────────────────────────────────────────────
-function ClanWarCard({ cw, players, teams, playerFilter, currentPlayer, onClanWarUpdated }) {
+function ClanWarCard({ cw, players, teams, currentPlayer, onClanWarUpdated }) {
     useLang();
     const [open, setOpen] = React.useState(false);
-    const playerFilterNeedle = normalizeSearchText(playerFilter);
 
     const statusLabel = t(`cw.status.${cw.status}`) || cw.status;
     const statusClass  = { upcoming: 'status-upcoming', ongoing: 'status-ongoing', completed: 'status-completed' }[cw.status] || '';
@@ -434,18 +433,6 @@ function ClanWarCard({ cw, players, teams, playerFilter, currentPlayer, onClanWa
 
     const rosterA = getClanWarRoster(teamObjA, cw.teamA, players);
     const rosterB = getClanWarRoster(teamObjB, cw.teamB, players);
-    const visibleRosterA = playerFilterNeedle
-        ? rosterA.filter(player => matchesPlayerSearch(player, playerFilterNeedle))
-        : rosterA;
-    const visibleRosterB = playerFilterNeedle
-        ? rosterB.filter(player => matchesPlayerSearch(player, playerFilterNeedle))
-        : rosterB;
-    const visibleMatches = playerFilterNeedle
-        ? (cw.matches || []).filter(match =>
-            clanWarMatchSideHasPlayer(match.playerA, players, playerFilterNeedle)
-            || clanWarMatchSideHasPlayer(match.playerB, players, playerFilterNeedle)
-        )
-        : (cw.matches || []);
 
     const captainA = teamObjA?.captainId ? players.find(p => p.id === teamObjA.captainId) : null;
     const captainB = teamObjB?.captainId ? players.find(p => p.id === teamObjB.captainId) : null;
@@ -481,7 +468,7 @@ function ClanWarCard({ cw, players, teams, playerFilter, currentPlayer, onClanWa
             {open && (
                 <div>
                     {/* Team rosters */}
-                    {(visibleRosterA.length > 0 || visibleRosterB.length > 0) && (
+                    {(rosterA.length > 0 || rosterB.length > 0) && (
                         <div className="cw-teams-section">
                             <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em', textTransform: 'uppercase', letterSpacing: 1, padding: '12px var(--spacing-lg) 8px' }}>
                                 ⚔ {t('draft.teams_title')}
@@ -497,10 +484,10 @@ function ClanWarCard({ cw, players, teams, playerFilter, currentPlayer, onClanWa
                                         {nameA}
                                         {cw.teamA?.captain && <span style={{ marginLeft: 6, color: 'var(--color-text-muted)', fontSize: '0.82em' }}>👑 {cw.teamA.captain}</span>}
                                     </div>
-                                    {visibleRosterA.map(p => (
+                                    {rosterA.map(p => (
                                         <CwPlayerRow key={p.id} player={p} isCaptain={isCaptainA(p)} />
                                     ))}
-                                    {visibleRosterA.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', padding: '6px 0' }}>{tr('Нет игроков', 'No players')}</p>}
+                                    {rosterA.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', padding: '6px 0' }}>{tr('Нет игроков', 'No players')}</p>}
                                 </div>
 
                                 {/* Team B */}
@@ -513,10 +500,10 @@ function ClanWarCard({ cw, players, teams, playerFilter, currentPlayer, onClanWa
                                         {nameB}
                                         {cw.teamB?.captain && <span style={{ marginLeft: 6, color: 'var(--color-text-muted)', fontSize: '0.82em' }}>👑 {cw.teamB.captain}</span>}
                                     </div>
-                                    {visibleRosterB.map(p => (
+                                    {rosterB.map(p => (
                                         <CwPlayerRow key={p.id} player={p} isCaptain={isCaptainB(p)} />
                                     ))}
-                                    {visibleRosterB.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', padding: '6px 0' }}>{tr('Нет игроков', 'No players')}</p>}
+                                    {rosterB.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', padding: '6px 0' }}>{tr('Нет игроков', 'No players')}</p>}
                                 </div>
                             </div>
                         </div>
@@ -530,9 +517,9 @@ function ClanWarCard({ cw, players, teams, playerFilter, currentPlayer, onClanWa
                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
                             ⚔ {tr('Матчи', 'Matches')}
                         </div>
-                        {visibleMatches.length === 0
+                        {(cw.matches || []).length === 0
                             ? <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>—</p>
-                            : visibleMatches.map((m, i) => (
+                            : (cw.matches || []).map((m, i) => (
                                 <CwMatchupCard
                                     key={m._id || i}
                                     match={m}
@@ -688,7 +675,6 @@ function ClanWar() {
                             cw={cw}
                             players={players}
                             teams={teams}
-                            playerFilter={playerFilterNeedle}
                             currentPlayer={currentPlayer}
                             onClanWarUpdated={handleClanWarUpdated}
                         />

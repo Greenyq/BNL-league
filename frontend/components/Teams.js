@@ -183,9 +183,8 @@ function TeamClanWarRow({ cw, teamName }) {
 }
 
 // ── Полная карточка команды ───────────────────────────────────────────────────
-function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft, playerFilter }) {
+function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
     useLang();
-    const playerFilterNeedle = normalizeSearchText(playerFilter);
     const rosterRaw = players.filter(p => p.teamId === team.id);
     // Captain always first in roster
     const roster = [...rosterRaw].sort((a, b) => {
@@ -198,12 +197,6 @@ function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft, playerF
         cw.teamA?.name?.toLowerCase() === team.name.toLowerCase() ||
         cw.teamB?.name?.toLowerCase() === team.name.toLowerCase()
     ).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-    const visibleRoster = playerFilterNeedle
-        ? roster.filter(player => matchesPlayerSearch(player, playerFilterNeedle))
-        : roster;
-    const visibleTeamCWs = playerFilterNeedle
-        ? teamCWs.filter(cw => teamClanWarHasPlayer(cw, players, team.name, playerFilterNeedle))
-        : teamCWs;
 
     // Find the most relevant clan war for draft: drafting > upcoming > ongoing > latest
     const draftCw = teamCWs.find(cw => cw.draft?.status === 'drafting')
@@ -288,26 +281,26 @@ function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft, playerF
 
             {/* Состав */}
             <div className="team-roster">
-                {visibleRoster.length === 0 ? (
+                {roster.length === 0 ? (
                     <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '16px 0', fontSize: '0.85em' }}>
                         {tr('Нет игроков', 'No players')}
                     </p>
                 ) : (
-                    visibleRoster.map(p => (
+                    roster.map(p => (
                         <PlayerRow key={p.id} player={p} isCaptain={p.id === team.captainId} />
                     ))
                 )}
             </div>
 
             {/* История клан-варов */}
-            {visibleTeamCWs.length > 0 && (
+            {teamCWs.length > 0 && (
                 <>
                     <div style={{ height: 1, background: 'rgba(212,175,55,0.15)', margin: '0 var(--spacing-lg)' }} />
                     <div style={{ padding: 'var(--spacing-md) var(--spacing-lg)' }}>
                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72em', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
                             ⚔ {tr('Клан-вары', 'Clan Wars')}
                         </div>
-                        {visibleTeamCWs.slice(0, 5).map((cw, i) => (
+                        {teamCWs.slice(0, 5).map((cw, i) => (
                             <TeamClanWarRow key={cw.id || i} cw={cw} teamName={team.name} />
                         ))}
                     </div>
@@ -482,7 +475,6 @@ function Teams({ onOpenRecruit, onOpenDraft }) {
                                 clanWars={clanWars}
                                 onOpenRecruit={onOpenRecruit}
                                 onOpenDraft={onOpenDraft}
-                                playerFilter={playerFilterNeedle}
                             />
                         ))}
                     </div>
