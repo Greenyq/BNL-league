@@ -12,6 +12,7 @@ const LANGS = {
         'nav.maps':       'Карты',
         'nav.profile':    'Профиль',
         'nav.admin':      'Админ',
+        'nav.admin_panel':'Админ панель',
         'nav.lang':       'EN',
 
         // Hero
@@ -84,6 +85,8 @@ const LANGS = {
         'maps.title':    'Карты',
         'maps.empty':    'Карты пока не добавлены',
         'maps.download': 'Скачать',
+        'maps.show':     'Показать карты',
+        'maps.hide':     'Скрыть карты',
 
         // Profile / Auth
         'profile.title':          'Профиль',
@@ -236,6 +239,7 @@ const LANGS = {
         'nav.maps':       'Maps',
         'nav.profile':    'Profile',
         'nav.admin':      'Admin',
+        'nav.admin_panel':'Admin Panel',
         'nav.lang':       'RU',
 
         // Hero
@@ -308,6 +312,8 @@ const LANGS = {
         'maps.title':    'Maps',
         'maps.empty':    'No maps yet',
         'maps.download': 'Download',
+        'maps.show':     'Show maps',
+        'maps.hide':     'Hide maps',
 
         // Profile / Auth
         'profile.title':          'Profile',
