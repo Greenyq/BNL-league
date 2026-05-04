@@ -9,6 +9,7 @@ npm-debug.log*
 .env
 .env.*
 !.env.example
+frontend/dist/
 
 # Data files (keep structure, ignore content)
 data/teams.json

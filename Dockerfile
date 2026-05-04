@@ -13,5 +13,3 @@ COPY uploads ./uploads
 COPY src ./src
 
 EXPOSE 3000
-
-CMD ["npm", "run", "dev"]

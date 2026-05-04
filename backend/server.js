@@ -132,7 +132,8 @@ app.use('/api/maps',      mapsRouter);
 
 // ── SPA fallback ──────────────────────────────────────────────────────────────
 app.get('*', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'pages', 'index.html'));
+    const pageName = process.env.NODE_ENV === 'production' ? 'index.html' : 'index.dev.html';
+    res.sendFile(path.join(frontendPath, 'pages', pageName));
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
