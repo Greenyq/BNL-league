@@ -138,13 +138,25 @@ function PaginationControls({ page, totalPages, onPageChange, className = '' }) 
 
     const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
     const rootClass = ['pagination', className].filter(Boolean).join(' ');
+    const changePage = nextPage => {
+        const safeNextPage = clampPage(nextPage, totalPages);
+        if (safeNextPage === page) return;
+        onPageChange(safeNextPage);
+        window.requestAnimationFrame(() => {
+            const pageRoot = document.querySelector('.wow-section-page');
+            const top = pageRoot
+                ? pageRoot.getBoundingClientRect().top + window.scrollY - 16
+                : 0;
+            window.scrollTo({ top: Math.max(0, top), left: 0, behavior: 'smooth' });
+        });
+    };
 
     return (
         <nav className={rootClass} aria-label={t('pagination.label')}>
             <button
                 type="button"
                 className="pagination__btn"
-                onClick={() => onPageChange(page - 1)}
+                onClick={() => changePage(page - 1)}
                 disabled={page <= 1}
                 aria-label={t('pagination.prev')}
             >
@@ -156,7 +168,7 @@ function PaginationControls({ page, totalPages, onPageChange, className = '' }) 
                         key={pageNum}
                         type="button"
                         className={`pagination__btn pagination__page${pageNum === page ? ' is-active' : ''}`}
-                        onClick={() => onPageChange(pageNum)}
+                        onClick={() => changePage(pageNum)}
                         aria-label={`${t('pagination.page')} ${pageNum}`}
                         aria-current={pageNum === page ? 'page' : undefined}
                     >
@@ -167,7 +179,7 @@ function PaginationControls({ page, totalPages, onPageChange, className = '' }) 
             <button
                 type="button"
                 className="pagination__btn"
-                onClick={() => onPageChange(page + 1)}
+                onClick={() => changePage(page + 1)}
                 disabled={page >= totalPages}
                 aria-label={t('pagination.next')}
             >
