@@ -1924,7 +1924,7 @@ function ManageMapsTab({ showMsg }) {
                         />
                         {editingMap && (
                             <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>
-                                Current file: {editingMap.originalName} · {formatMapSize(editingMap.size)}
+                                Current file: {editingMap.originalName} · {globalThis.formatMapSize(editingMap.size)}
                             </div>
                         )}
                         <div style={{ display: 'flex', gap: 8 }}>
@@ -1995,7 +1995,7 @@ function ManageMapsTab({ showMsg }) {
                                                     <div style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{map.title}</div>
                                                     {map.description && <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.88em', marginTop: 5 }}>{map.description}</div>}
                                                     <div style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', marginTop: 5 }}>
-                                                        {map.originalName} · {formatMapSize(map.size)}
+                                                        {map.originalName} · {globalThis.formatMapSize(map.size)}
                                                     </div>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
