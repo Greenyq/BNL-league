@@ -115,6 +115,13 @@ function findPlayerByAlias(players, candidate) {
     return list.find(player => playerHasAlias(player, candidate)) || null;
 }
 
+function formatMapSize(bytes) {
+    const size = Number(bytes) || 0;
+    if (size >= 1024 * 1024) return (size / 1024 / 1024).toFixed(1) + ' MB';
+    if (size >= 1024) return Math.round(size / 1024) + ' KB';
+    return size + ' B';
+}
+
 function PlayerNameFilterInput({ value, onChange, className = '' }) {
     useLang();
     const inputClass = ['wow-filter-input', className].filter(Boolean).join(' ');
@@ -201,6 +208,7 @@ Object.assign(window, {
     matchesPlayerSearch,
     playerHasAlias,
     findPlayerByAlias,
+    formatMapSize,
     PlayerNameFilterInput,
     PaginationControls,
 });

@@ -1,12 +1,5 @@
 // Maps — public downloadable Warcraft III maps grouped by managed labels
 
-function formatMapSize(bytes) {
-    var size = Number(bytes) || 0;
-    if (size >= 1024 * 1024) return (size / 1024 / 1024).toFixed(1) + ' MB';
-    if (size >= 1024) return Math.round(size / 1024) + ' KB';
-    return size + ' B';
-}
-
 function Maps() {
     useLang();
     const [labels, setLabels] = React.useState([]);
@@ -108,7 +101,7 @@ function Maps() {
                                                             </p>
                                                         )}
                                                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.86em', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
-                                                            {map.originalName} · {formatMapSize(map.size)}
+                                                            {map.originalName} · {globalThis.formatMapSize(map.size)}
                                                         </div>
                                                     </div>
                                                     <a
