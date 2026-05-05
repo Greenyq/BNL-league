@@ -57,17 +57,63 @@ function teamClanWarHasPlayer(cw, players, teamName, needle) {
     }, players, teamName, needle));
 }
 
+function teamPlayerClanWarAliases(player) {
+    return getPlayerSearchAliases(player).map(normalizeSearchText).filter(Boolean);
+}
+
+function teamMatchSideHasPlayer(sideValue, player) {
+    const aliases = teamPlayerClanWarAliases(player);
+    return parseTeamClanWarSide(sideValue).some(name => {
+        const normalized = normalizeSearchText(name);
+        const battleName = normalizeSearchText(getBattleTagName(name));
+        return aliases.includes(normalized) || aliases.includes(battleName);
+    });
+}
+
+function calculateTeamPlayerClanWarStats(player, clanWars) {
+    return (clanWars || []).reduce((stats, cw) => {
+        for (const match of (cw.matches || [])) {
+            if (match.winner !== 'a' && match.winner !== 'b') continue;
+            const onA = teamMatchSideHasPlayer(match.playerA, player);
+            const onB = teamMatchSideHasPlayer(match.playerB, player);
+            if (!onA && !onB) continue;
+            if ((onA && match.winner === 'a') || (onB && match.winner === 'b')) stats.wins += 1;
+            else stats.losses += 1;
+        }
+        stats.points = stats.wins;
+        return stats;
+    }, { wins: 0, losses: 0, points: 0 });
+}
+
+function getTeamClanWarRecord(team, clanWars) {
+    const name = normalizeSearchText(team?.name);
+    return (clanWars || []).reduce((record, cw) => {
+        const isA = normalizeSearchText(cw.teamA?.name) === name;
+        const isB = normalizeSearchText(cw.teamB?.name) === name;
+        if (!isA && !isB) return record;
+        if (cw.status === 'completed' && cw.winner) {
+            record.played += 1;
+            if ((isA && cw.winner === 'a') || (isB && cw.winner === 'b')) record.wins += 1;
+            else record.losses += 1;
+        }
+        record.matchWins += isA ? (cw.clanWarScore?.a || 0) : (cw.clanWarScore?.b || 0);
+        record.matchLosses += isA ? (cw.clanWarScore?.b || 0) : (cw.clanWarScore?.a || 0);
+        return record;
+    }, { wins: 0, losses: 0, played: 0, matchWins: 0, matchLosses: 0 });
+}
+
 // ── Строка игрока в команде ───────────────────────────────────────────────────
-function PlayerRow({ player, isCaptain }) {
+function PlayerRow({ player, isCaptain, clanWars }) {
     const race    = player.mainRace ?? player.race;
     const stats   = player.stats || null;
     const portrait = player.selectedPortrait;
     const isWinner = !!player.seasonWinner;
+    const clanWarStats = calculateTeamPlayerClanWarStats(player, clanWars);
     const statValues = {
         mmr: stats?.mmr ?? player.currentMmr ?? null,
-        wins: stats?.wins ?? 0,
-        losses: stats?.losses ?? 0,
-        points: stats?.points ?? 0,
+        wins: clanWarStats.wins,
+        losses: clanWarStats.losses,
+        points: clanWarStats.points,
     };
 
     return (
@@ -148,7 +194,7 @@ function PlayerRow({ player, isCaptain }) {
                         <span className="team-stat-val" style={{ color: 'var(--color-error)' }}>{statValues.losses}</span>
                     </div>
                     <div className="team-stat-cell">
-                        <span className="team-stat-label">Pts</span>
+                        <span className="team-stat-label">CW</span>
                         <span className="team-stat-val" style={{ color: 'var(--color-accent-primary)', fontWeight: 800 }}>{statValues.points}</span>
                     </div>
                 </div>
@@ -205,15 +251,10 @@ function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
         || teamCWs[0] || null;
 
     const draftStatus = draftCw?.draft?.status || 'pending';
-    const cwWins   = teamCWs.filter(cw => cw.status === 'completed' && (
-        (cw.teamA?.name?.toLowerCase() === team.name.toLowerCase() && cw.winner === 'a') ||
-        (cw.teamB?.name?.toLowerCase() === team.name.toLowerCase() && cw.winner === 'b')
-    )).length;
-    const cwLosses = teamCWs.filter(cw => cw.status === 'completed' && cw.winner && (
-        (cw.teamA?.name?.toLowerCase() === team.name.toLowerCase() && cw.winner !== 'a') ||
-        (cw.teamB?.name?.toLowerCase() === team.name.toLowerCase() && cw.winner !== 'b')
-    )).length;
-    const totalPts = roster.reduce((sum, p) => sum + (p.stats?.points || 0), 0);
+    const record = getTeamClanWarRecord(team, clanWars);
+    const cwWins = record.wins;
+    const cwLosses = record.losses;
+    const totalPts = record.wins;
 
     return (
         <div className="team-card-v2">
@@ -239,7 +280,7 @@ function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
                         <span className="team-summary-val">{roster.length}</span>
                     </div>
                     <div className="team-summary-item">
-                        <span className="team-summary-label">{tr('Очков', 'Points')}</span>
+                        <span className="team-summary-label">{tr('КВ очки', 'CW points')}</span>
                         <span className="team-summary-val" style={{ color: 'var(--color-accent-primary)' }}>{totalPts}</span>
                     </div>
                     {(cwWins + cwLosses) > 0 && (
@@ -287,7 +328,7 @@ function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
                     </p>
                 ) : (
                     roster.map(p => (
-                        <PlayerRow key={p.id} player={p} isCaptain={p.id === team.captainId} />
+                        <PlayerRow key={p.id} player={p} isCaptain={p.id === team.captainId} clanWars={clanWars} />
                     ))
                 )}
             </div>
@@ -414,6 +455,13 @@ function Teams({ onOpenRecruit, onOpenDraft }) {
             (cw.teamA?.name?.toLowerCase() === team.name.toLowerCase() || cw.teamB?.name?.toLowerCase() === team.name.toLowerCase())
             && teamClanWarHasPlayer(cw, players, team.name, playerFilterNeedle)
         );
+    }).sort((a, b) => {
+        const recordA = getTeamClanWarRecord(a, clanWars);
+        const recordB = getTeamClanWarRecord(b, clanWars);
+        return recordB.wins - recordA.wins
+            || recordB.matchWins - recordA.matchWins
+            || recordA.losses - recordB.losses
+            || String(a.name || '').localeCompare(String(b.name || ''));
     });
     const pagination = paginateCollection(filteredTeams, page, TEAMS_PAGE_SIZE);
 

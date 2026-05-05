@@ -211,6 +211,40 @@ function DraftPoolCard({ row, index }) {
     );
 }
 
+function splitClanWarSide(value) {
+    return String(value || '')
+        .split(' + ')
+        .map(name => name.trim())
+        .filter(Boolean);
+}
+
+function playerClanWarAliases(player) {
+    return getPlayerSearchAliases(player).map(normalizeSearchText).filter(Boolean);
+}
+
+function sideHasClanWarPlayer(sideValue, player) {
+    const aliases = playerClanWarAliases(player);
+    return splitClanWarSide(sideValue).some(name => {
+        const normalized = normalizeSearchText(name);
+        const battleName = normalizeSearchText(getBattleTagName(name));
+        return aliases.includes(normalized) || aliases.includes(battleName);
+    });
+}
+
+function calculatePlayerClanWarStats(player, wars) {
+    return (wars || []).reduce((stats, cw) => {
+        for (const match of (cw.matches || [])) {
+            if (match.winner !== 'a' && match.winner !== 'b') continue;
+            const onA = sideHasClanWarPlayer(match.playerA, player);
+            const onB = sideHasClanWarPlayer(match.playerB, player);
+            if (!onA && !onB) continue;
+            if ((onA && match.winner === 'a') || (onB && match.winner === 'b')) stats.wins += 1;
+            else stats.losses += 1;
+        }
+        return stats;
+    }, { wins: 0, losses: 0, points: 0 });
+}
+
 // ── Рейтинг команд по победам в клан-варах ────────────────────────────────────
 function TeamStandings({ page, onPageChange, playerFilter }) {
     useLang();
@@ -436,6 +470,7 @@ function Standings() {
     useLang();
     const [mode,       setMode]       = React.useState('players'); // 'players' | 'teams' | 'draftpool'
     const [players,    setPlayers]    = React.useState([]);
+    const [wars,       setWars]       = React.useState([]);
     const [loading,    setLoading]    = React.useState(true);
     const [error,      setError]      = React.useState(null);
     const [raceFilter, setRaceFilter] = React.useState(null);
@@ -444,9 +479,15 @@ function Standings() {
     const playerFilterNeedle = normalizeSearchText(playerFilter);
 
     React.useEffect(() => {
-        fetch('/api/players')
-            .then(r => r.json())
-            .then(data => { setPlayers(data); setLoading(false); })
+        Promise.all([
+            fetch('/api/players').then(r => r.json()),
+            fetch('/api/clan-wars').then(r => r.json()),
+        ])
+            .then(([pl, cw]) => {
+                setPlayers(Array.isArray(pl) ? pl : []);
+                setWars(Array.isArray(cw) ? cw : []);
+                setLoading(false);
+            })
             .catch(err  => { setError(err.message); setLoading(false); });
     }, []);
 
@@ -454,16 +495,18 @@ function Standings() {
     const rows = players
     .filter(player => matchesPlayerSearch(player, playerFilterNeedle))
     .flatMap(p => {
+        const clanWarStats = calculatePlayerClanWarStats(p, wars);
+        clanWarStats.points = clanWarStats.wins;
         const s = p.stats;
-        if (!s) return [];
+        const mmr = s?.mmr ?? p.currentMmr ?? null;
         if (raceFilter !== null) {
-            const rs = (s.raceStats || []).find(r => r.race === raceFilter);
-            if (!rs) return [];
-            return [{ player: p, race: raceFilter, wins: rs.wins, losses: rs.losses, points: rs.points, mmr: rs.mmr }];
+            const playerRaceValue = playerRace(p);
+            if (playerRaceValue !== raceFilter && !(s?.raceStats || []).some(r => r.race === raceFilter)) return [];
+            return [{ player: p, race: raceFilter, wins: clanWarStats.wins, losses: clanWarStats.losses, points: clanWarStats.points, mmr }];
         }
-        return [{ player: p, race: null, wins: s.wins, losses: s.losses, points: s.points, mmr: s.mmr }];
+        return [{ player: p, race: null, wins: clanWarStats.wins, losses: clanWarStats.losses, points: clanWarStats.points, mmr }];
     })
-    .sort((a, b) => b.points - a.points);
+    .sort((a, b) => b.points - a.points || b.wins - a.wins || a.losses - b.losses || (b.mmr ?? 0) - (a.mmr ?? 0));
     const pagedPlayers = paginateCollection(rows, pages.players, PLAYERS_PAGE_SIZE);
 
     const setModePage = (key, value) => {
