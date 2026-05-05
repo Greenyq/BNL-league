@@ -710,6 +710,216 @@ function buildRoundRobin(ts) {
     return rounds;
 }
 
+const EMPTY_BNL_VS_ALL_FORM = {
+    season: '',
+    date: '',
+    opponentName: '',
+    scoreBnl: 0,
+    scoreOpponent: 0,
+    bnlPlayers: '',
+    opponentPlayers: '',
+    note: '',
+    status: 'completed',
+};
+
+function BnlVsAllAdminTab({ players, showMsg }) {
+    useLang();
+    const [matches, setMatches] = React.useState([]);
+    const [form, setForm] = React.useState(EMPTY_BNL_VS_ALL_FORM);
+    const [editingId, setEditingId] = React.useState(null);
+    const [showForm, setShowForm] = React.useState(false);
+    const [loading, setLoading] = React.useState(true);
+    const [saving, setSaving] = React.useState(false);
+
+    const load = React.useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await apiFetch('/api/bnl-vs-all');
+            setMatches(Array.isArray(data) ? data : []);
+        } catch {
+            setMatches([]);
+        }
+        setLoading(false);
+    }, []);
+
+    React.useEffect(() => { load(); }, [load]);
+
+    const resetForm = () => {
+        setForm(EMPTY_BNL_VS_ALL_FORM);
+        setEditingId(null);
+        setShowForm(false);
+    };
+
+    const editMatch = (match) => {
+        setEditingId(match.id);
+        setForm({
+            season: match.season || '',
+            date: match.date ? String(match.date).slice(0, 10) : '',
+            opponentName: match.opponentName || '',
+            scoreBnl: match.score?.bnl ?? 0,
+            scoreOpponent: match.score?.opponent ?? 0,
+            bnlPlayers: (match.bnlPlayers || []).join('\n'),
+            opponentPlayers: (match.opponentPlayers || []).join('\n'),
+            note: match.note || '',
+            status: match.status || 'completed',
+        });
+        setShowForm(true);
+    };
+
+    const addBnlPlayer = (player) => {
+        const name = player.name || player.battleTag?.split('#')[0] || player.battleTag;
+        if (!name) return;
+        setForm(prev => {
+            const existing = prev.bnlPlayers.split(/[\n,]+/).map(value => value.trim()).filter(Boolean);
+            if (existing.some(value => value.toLowerCase() === name.toLowerCase())) return prev;
+            return { ...prev, bnlPlayers: [...existing, name].join('\n') };
+        });
+    };
+
+    const submit = async (e) => {
+        e.preventDefault();
+        if (!form.opponentName.trim()) return showMsg(`❌ ${tr('Укажите соперника', 'Enter opponent')}`, 'error');
+        setSaving(true);
+        try {
+            const body = JSON.stringify({
+                season: form.season,
+                date: form.date || undefined,
+                opponentName: form.opponentName,
+                scoreBnl: form.scoreBnl,
+                scoreOpponent: form.scoreOpponent,
+                bnlPlayers: form.bnlPlayers,
+                opponentPlayers: form.opponentPlayers,
+                note: form.note,
+                status: form.status,
+            });
+            const url = editingId ? `/api/bnl-vs-all/${editingId}` : '/api/bnl-vs-all';
+            await apiFetch(url, { method: editingId ? 'PUT' : 'POST', body });
+            showMsg(`✅ ${editingId ? tr('Матч обновлён', 'Match updated') : tr('Матч добавлен', 'Match added')}`);
+            resetForm();
+            load();
+        } catch (err) {
+            showMsg(`❌ ${err.message}`, 'error');
+        }
+        setSaving(false);
+    };
+
+    const deleteMatch = async (match) => {
+        if (!confirm(tr(`Удалить BNL vs ${match.opponentName}?`, `Delete BNL vs ${match.opponentName}?`))) return;
+        try {
+            await apiFetch(`/api/bnl-vs-all/${match.id}`, { method: 'DELETE' });
+            showMsg(`✅ ${tr('Удалено', 'Deleted')}`);
+            load();
+        } catch (err) {
+            showMsg(`❌ ${err.message}`, 'error');
+        }
+    };
+
+    return (
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)', flexWrap: 'wrap', gap: 8 }}>
+                <h3 style={{ margin: 0 }}>BNL vs All ({matches.length})</h3>
+                <button className="btn btn-primary" style={{ padding: '8px 18px' }} onClick={() => { setShowForm(!showForm); setEditingId(null); }}>
+                    + {tr('Добавить матч', 'Add match')}
+                </button>
+            </div>
+
+            {showForm && (
+                <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-xl)' }}>
+                    <h4 style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-accent-primary)' }}>
+                        {editingId ? tr('Редактировать матч', 'Edit match') : tr('Новый матч', 'New match')}
+                    </h4>
+                    <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--spacing-md)' }}>
+                            <input type="text" placeholder={tr('Сезон', 'Season')} value={form.season} onChange={e => setForm({ ...form, season: e.target.value })} />
+                            <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '2px solid var(--color-bg-lighter)', borderRadius: 'var(--radius-md)', padding: '10px 14px', fontSize: '1em' }} />
+                            <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '2px solid var(--color-bg-lighter)', borderRadius: 'var(--radius-md)', padding: '10px 14px', fontSize: '1em' }}>
+                                <option value="upcoming">{tr('Предстоит', 'Upcoming')}</option>
+                                <option value="ongoing">{tr('Идёт', 'Ongoing')}</option>
+                                <option value="completed">{tr('Завершён', 'Completed')}</option>
+                            </select>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 1fr', gap: 'var(--spacing-md)', alignItems: 'end' }}>
+                            <div>
+                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>BNL</div>
+                                <input value="BNL" disabled style={{ width: '100%' }} />
+                            </div>
+                            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                <input type="number" min="0" value={form.scoreBnl} onChange={e => setForm({ ...form, scoreBnl: e.target.value })} style={{ width: 70, textAlign: 'center' }} />
+                                <span style={{ color: 'var(--color-text-muted)', fontWeight: 800 }}>:</span>
+                                <input type="number" min="0" value={form.scoreOpponent} onChange={e => setForm({ ...form, scoreOpponent: e.target.value })} style={{ width: 70, textAlign: 'center' }} />
+                            </div>
+                            <div>
+                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>{tr('Соперник', 'Opponent')}</div>
+                                <input required value={form.opponentName} onChange={e => setForm({ ...form, opponentName: e.target.value })} placeholder="GNL" style={{ width: '100%' }} />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-md)' }}>
+                            <div>
+                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>{tr('Игроки BNL', 'BNL players')}</div>
+                                <textarea value={form.bnlPlayers} onChange={e => setForm({ ...form, bnlPlayers: e.target.value })} rows="5" placeholder={tr('По одному игроку на строку', 'One player per line')} style={{ width: '100%', resize: 'vertical' }} />
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                                    {(players || []).slice(0, 24).map(player => (
+                                        <button key={player.id} type="button" onClick={() => addBnlPlayer(player)} style={{ padding: '3px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(212,175,55,0.3)', background: 'rgba(212,175,55,0.08)', color: 'var(--color-accent-primary)', fontSize: '0.75em', cursor: 'pointer' }}>
+                                            {player.name || player.battleTag?.split('#')[0]}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginBottom: 6 }}>{tr('Игроки соперника', 'Opponent players')}</div>
+                                <textarea value={form.opponentPlayers} onChange={e => setForm({ ...form, opponentPlayers: e.target.value })} rows="5" placeholder={tr('По одному игроку на строку', 'One player per line')} style={{ width: '100%', resize: 'vertical' }} />
+                            </div>
+                        </div>
+
+                        <textarea value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} rows="2" placeholder={tr('Заметка', 'Note')} style={{ width: '100%', resize: 'vertical' }} />
+
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? '...' : t('admin.save')}</button>
+                            <button type="button" className="btn btn-secondary" onClick={resetForm}>{t('admin.cancel')}</button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {loading ? (
+                <p style={{ color: 'var(--color-text-muted)' }}>...</p>
+            ) : matches.length === 0 ? (
+                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 32 }}>{tr('Матчей пока нет', 'No matches yet')}</p>
+            ) : (
+                <div className="standings-table-wrap">
+                    <table className="standings-table">
+                        <thead>
+                            <tr>
+                                <th>{tr('Дата', 'Date')}</th>
+                                <th>{tr('Матч', 'Match')}</th>
+                                <th>{tr('Счёт', 'Score')}</th>
+                                <th>{tr('Игроки BNL', 'BNL players')}</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {matches.map(match => (
+                                <tr key={match.id}>
+                                    <td style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>{match.date ? new Date(match.date).toLocaleDateString(getLang() === 'en' ? 'en-US' : 'ru-RU') : '-'}</td>
+                                    <td className="col-name">BNL vs {match.opponentName}</td>
+                                    <td style={{ color: 'var(--color-accent-secondary)', fontWeight: 800 }}>{match.score?.bnl ?? 0} : {match.score?.opponent ?? 0}</td>
+                                    <td style={{ color: 'var(--color-text-muted)', fontSize: '0.86em' }}>{(match.bnlPlayers || []).join(', ') || '-'}</td>
+                                    <td style={{ display: 'flex', gap: 6 }}>
+                                        <button onClick={() => editMatch(match)} style={{ background: 'rgba(33,150,243,0.15)', color: '#2196f3', border: '1px solid rgba(33,150,243,0.3)', padding: '4px 10px', borderRadius: 'var(--radius-sm)', fontSize: '0.8em', cursor: 'pointer' }}>{tr('Изм.', 'Edit')}</button>
+                                        <button onClick={() => deleteMatch(match)} style={{ background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', padding: '4px 10px', borderRadius: 'var(--radius-sm)', fontSize: '0.8em', cursor: 'pointer' }}>{t('admin.delete')}</button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+}
+
 function ClanWarTab({ showMsg, players, teams }) {
     useLang();
     const [wars,          setWars]          = React.useState([]);
@@ -2091,6 +2301,7 @@ function AdminPanel({ onLogout }) {
         { id: 'players',  key: 'admin.tab.players' },
         { id: 'teams',    key: 'admin.tab.teams' },
         { id: 'clanwars', key: 'admin.tab.clanwars' },
+        { id: 'bnlvsall', key: 'admin.tab.bnlvsall' },
         { id: 'portraits',key: 'admin.tab.portraits' },
         { id: 'maps',     label: 'Manage maps' },
         { id: 'tools',    key: 'admin.tab.tools' },
@@ -2162,6 +2373,7 @@ function AdminPanel({ onLogout }) {
             {tab === 'players'   && <PlayersTab  players={players} teams={teams} onRefresh={load} showMsg={showMsg} />}
             {tab === 'teams'     && <TeamsTab    teams={teams}   players={players} onRefresh={load} showMsg={showMsg} />}
             {tab === 'clanwars'  && <ClanWarTab  players={players} teams={teams} showMsg={showMsg} />}
+            {tab === 'bnlvsall'  && <BnlVsAllAdminTab players={players} showMsg={showMsg} />}
             {tab === 'portraits' && <PortraitsTab showMsg={showMsg} />}
             {tab === 'maps'      && <ManageMapsTab showMsg={showMsg} />}
             {tab === 'tools'   && (
