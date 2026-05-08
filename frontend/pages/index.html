@@ -69,6 +69,7 @@
                         <li><a href="#standings" onclick="navigate('standings'); return false;">Таблица</a></li>
                         <li><a href="#teams"     onclick="navigate('teams');     return false;">Команды</a></li>
                         <li><a href="#clanwar"   onclick="navigate('clanwar');   return false;">Клан-вары</a></li>
+                        <li><a href="#mymatches" onclick="navigate('mymatches'); return false;">Мои матчи</a></li>
                         <li><a href="#bnlvsall"  onclick="navigate('bnlvsall');  return false;">BNL vs All</a></li>
                         <li><a href="#maps"      onclick="navigate('maps');      return false;">Карты</a></li>
                         <li><a id="header-profile-link" href="#profile" onclick="navigate('profile'); return false;">Профиль</a></li>
@@ -140,6 +141,7 @@
                     <li><a href="#standings" onclick="navigate('standings'); return false;">Таблица</a></li>
                     <li><a href="#teams"     onclick="navigate('teams');     return false;">Команды</a></li>
                     <li><a href="#clanwar"   onclick="navigate('clanwar');   return false;">Клан-вары</a></li>
+                    <li><a href="#mymatches" onclick="navigate('mymatches'); return false;">Мои матчи</a></li>
                     <li><a href="#bnlvsall"  onclick="navigate('bnlvsall');  return false;">BNL vs All</a></li>
                     <li><a href="#maps"      onclick="navigate('maps');      return false;">Карты</a></li>
                     <li><a href="#profile"   onclick="navigate('profile');   return false;">Профиль</a></li>
@@ -173,8 +175,8 @@
     var pendingPlayerUsernameRequest = null;
 
     var NAV_LABELS = {
-        ru: { home: 'Главная', standings: 'Рейтинг', teams: 'Команды', clanwar: 'Клан-вары', bnlvsall: 'BNL vs All', maps: 'Карты', profile: 'Профиль', admin: 'Админ' },
-        en: { home: 'Home', standings: 'Standings', teams: 'Teams', clanwar: 'Clan Wars', bnlvsall: 'BNL vs All', maps: 'Maps', profile: 'Profile', admin: 'Admin' }
+        ru: { home: 'Главная', standings: 'Рейтинг', teams: 'Команды', clanwar: 'Клан-вары', mymatches: 'Мои матчи', bnlvsall: 'BNL vs All', maps: 'Карты', profile: 'Профиль', admin: 'Админ' },
+        en: { home: 'Home', standings: 'Standings', teams: 'Teams', clanwar: 'Clan Wars', mymatches: 'My matches', bnlvsall: 'BNL vs All', maps: 'Maps', profile: 'Profile', admin: 'Admin' }
     };
 
     var HEADER_PROGRESS_LABELS = {

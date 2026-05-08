@@ -7,6 +7,17 @@ const tr = (ru, en) => getLang() === 'en' ? en : ru;
 const CLAN_WARS_PAGE_SIZE = 10;
 const CW_PLAYER_SESSION_STORAGE_KEY = 'bnl_player_session';
 const CW_PLAYER_SESSION_CHANGE_EVENT = 'bnl-player-session-change';
+const CLAN_WAR_STATUS_FILTERS = [
+    { id: 'all',       key: 'cw.all' },
+    { id: 'upcoming',  key: 'cw.upcoming' },
+    { id: 'ongoing',   key: 'cw.ongoing' },
+    { id: 'completed', key: 'cw.completed' },
+];
+const MY_MATCHES_FILTERS = [
+    { id: 'all',       key: 'cw.all' },
+    { id: 'upcoming',  key: 'cw.upcoming' },
+    { id: 'completed', key: 'cw.completed' },
+];
 const CW_RACE_ABBR  = race => ({
     0: 'Rnd',
     1: tr('Люди', 'Human'),
@@ -127,6 +138,22 @@ function formatClanWarMatchGroups(wars, player) {
         .map(format => ({
             format,
             rows: rows.filter(row => row.format === format),
+        }))
+        .filter(group => group.rows.length > 0);
+}
+
+function filterMyMatchGroups(groups, filter) {
+    const list = Array.isArray(groups) ? groups : [];
+    if (filter === 'all') return list;
+
+    const matcher = filter === 'completed'
+        ? row => row?.match?.winner === 'a' || row?.match?.winner === 'b'
+        : row => row?.match?.winner == null;
+
+    return list
+        .map(group => ({
+            ...group,
+            rows: (group.rows || []).filter(matcher),
         }))
         .filter(group => group.rows.length > 0);
 }
@@ -946,24 +973,19 @@ function MyClanWarGlobalTables({ groups, players, onClanWarUpdated }) {
     );
 }
 
-function ClanWar() {
-    useLang();
+function useClanWarPageData(filter = 'all') {
     const [wars,    setWars]    = React.useState([]);
     const [players, setPlayers] = React.useState([]);
     const [teams,   setTeams]   = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [error,   setError]   = React.useState(null);
-    const [mode,    setMode]    = React.useState('wars');
-    const [filter,  setFilter]  = React.useState('all');
-    const [page,    setPage]    = React.useState(1);
-    const [playerFilter, setPlayerFilter] = React.useState('');
     const [currentPlayer, setCurrentPlayer] = React.useState(null);
-    const playerFilterNeedle = normalizeSearchText(playerFilter);
+    const activeFilter = filter || 'all';
 
     const loadWars = () => {
         setLoading(true);
         setError(null);
-        const q = filter !== 'all' ? `?status=${filter}` : '';
+        const q = activeFilter !== 'all' ? `?status=${activeFilter}` : '';
         fetch(`/api/clan-wars${q}`)
             .then(r => r.json())
             .then(data => { setWars(Array.isArray(data) ? data : []); setLoading(false); })
@@ -1029,32 +1051,44 @@ function ClanWar() {
                     : existingWar
             );
 
-            return filter === 'all'
+            return activeFilter === 'all'
                 ? nextWars
-                : nextWars.filter(existingWar => existingWar.status === filter);
+                : nextWars.filter(existingWar => existingWar.status === activeFilter);
         });
     };
 
-    const FILTERS = [
-        { id: 'all',       key: 'cw.all' },
-        { id: 'upcoming',  key: 'cw.upcoming' },
-        { id: 'ongoing',   key: 'cw.ongoing' },
-        { id: 'completed', key: 'cw.completed' },
-    ];
+    return {
+        wars,
+        players,
+        teams,
+        loading,
+        error,
+        currentPlayer,
+        handleClanWarUpdated,
+    };
+}
+
+function ClanWar() {
+    useLang();
+    const [filter,  setFilter]  = React.useState('all');
+    const [page,    setPage]    = React.useState(1);
+    const [playerFilter, setPlayerFilter] = React.useState('');
+    const playerFilterNeedle = normalizeSearchText(playerFilter);
+    const {
+        wars,
+        players,
+        teams,
+        loading,
+        error,
+        currentPlayer,
+        handleClanWarUpdated,
+    } = useClanWarPageData(filter);
     const filteredWars = wars.filter(cw => clanWarHasPlayer(cw, players, teams, playerFilterNeedle));
-    const sortedWars = wars.slice().sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-    const myMatchGroups = currentPlayer
-        ? formatClanWarMatchGroups(sortedWars, currentPlayer)
-        : [];
     const pagination = paginateCollection(filteredWars, page, CLAN_WARS_PAGE_SIZE);
 
     React.useEffect(() => {
         setPage(1);
-    }, [mode, filter, playerFilterNeedle, currentPlayer?.id, currentPlayer?._id, currentPlayer?.linkedBattleTag]);
-
-    React.useEffect(() => {
-        setFilter('all');
-    }, [mode]);
+    }, [filter, playerFilterNeedle]);
 
     React.useEffect(() => {
         if (page !== pagination.currentPage) setPage(pagination.currentPage);
@@ -1068,7 +1102,7 @@ function ClanWar() {
 
             <div className="wow-filter-bar standings-controls" style={{ marginBottom: 18 }}>
                 <div className="standings-controls-group standings-controls-group--filters">
-                    {FILTERS.map(f => (
+                    {CLAN_WAR_STATUS_FILTERS.map(f => (
                         <button
                             key={f.id}
                             className={`wow-btn${filter === f.id ? ' active' : ''}`}
@@ -1078,24 +1112,8 @@ function ClanWar() {
                         </button>
                     ))}
                 </div>
-                {mode === 'wars' && (
-                    <div className="standings-controls-group standings-controls-group--search">
-                        <PlayerNameFilterInput value={playerFilter} onChange={setPlayerFilter} />
-                    </div>
-                )}
-                <div className="standings-controls-group standings-controls-group--modes">
-                    <button
-                        className={`wow-btn${mode === 'wars' ? ' active' : ''}`}
-                        onClick={() => setMode('wars')}
-                    >
-                        {t('cw.mode.wars')}
-                    </button>
-                    <button
-                        className={`wow-btn${mode === 'my_matches' ? ' active' : ''}`}
-                        onClick={() => setMode('my_matches')}
-                    >
-                        {t('cw.mode.my_matches')}
-                    </button>
+                <div className="standings-controls-group standings-controls-group--search">
+                    <PlayerNameFilterInput value={playerFilter} onChange={setPlayerFilter} />
                 </div>
             </div>
 
@@ -1103,23 +1121,14 @@ function ClanWar() {
                 <div className="cw-list">
                     {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 64, marginBottom: 12, borderRadius: 'var(--radius-md)' }} />)}
                 </div>
-            ) : mode === 'my_matches' && !currentPlayer ? (
-                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
-                    {t('cw.my_matches.login_required')}
-                </p>
-            ) : mode === 'my_matches' && myMatchGroups.length === 0 ? (
-                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
-                    {t('cw.my_matches.empty')}
-                </p>
-            ) : mode === 'wars' && filteredWars.length === 0 ? (
+            ) : filteredWars.length === 0 ? (
                 <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
                     {playerFilterNeedle ? t('filters.no_results') : t('cw.empty')}
                 </p>
             ) : (
                 <>
-                <div className="cw-list">
-                    {mode === 'wars'
-                        ? pagination.items.map(cw => (
+                    <div className="cw-list">
+                        {pagination.items.map(cw => (
                             <ClanWarCard
                                 key={cw.id || cw._id}
                                 cw={cw}
@@ -1128,20 +1137,72 @@ function ClanWar() {
                                 currentPlayer={currentPlayer}
                                 onClanWarUpdated={handleClanWarUpdated}
                             />
-                        ))
-                        : (
-                            <MyClanWarGlobalTables
-                                groups={myMatchGroups}
-                                players={players}
-                                onClanWarUpdated={handleClanWarUpdated}
-                            />
-                        )
-                    }
-                </div>
-                {mode === 'wars' && (
+                        ))}
+                    </div>
                     <PaginationControls page={pagination.currentPage} totalPages={pagination.totalPages} onPageChange={setPage} />
-                )}
                 </>
+            )}
+        </div>
+    );
+}
+
+function MyMatchesPage() {
+    useLang();
+    const [filter, setFilter] = React.useState('all');
+    const {
+        wars,
+        players,
+        loading,
+        error,
+        currentPlayer,
+        handleClanWarUpdated,
+    } = useClanWarPageData();
+    const sortedWars = wars.slice().sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    const allMyMatchGroups = currentPlayer
+        ? formatClanWarMatchGroups(sortedWars, currentPlayer)
+        : [];
+    const myMatchGroups = filterMyMatchGroups(allMyMatchGroups, filter);
+
+    if (error) return <div style={{ color: 'var(--color-error)', padding: 32, textAlign: 'center' }}>⚠ {error}</div>;
+
+    return (
+        <div className="animate-fade-in wow-section-page">
+            <WoWSectionTitle>{t('cw.mode.my_matches')}</WoWSectionTitle>
+
+            <div className="wow-filter-bar standings-controls" style={{ marginBottom: 18 }}>
+                <div className="standings-controls-group standings-controls-group--filters">
+                    {MY_MATCHES_FILTERS.map(f => (
+                        <button
+                            key={f.id}
+                            className={`wow-btn${filter === f.id ? ' active' : ''}`}
+                            onClick={() => setFilter(f.id)}
+                        >
+                            {t(f.key)}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {loading ? (
+                <div className="cw-list">
+                    {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 64, marginBottom: 12, borderRadius: 'var(--radius-md)' }} />)}
+                </div>
+            ) : !currentPlayer ? (
+                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
+                    {t('cw.my_matches.login_required')}
+                </p>
+            ) : myMatchGroups.length === 0 ? (
+                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
+                    {t('cw.my_matches.empty')}
+                </p>
+            ) : (
+                <div className="cw-list">
+                    <MyClanWarGlobalTables
+                        groups={myMatchGroups}
+                        players={players}
+                        onClanWarUpdated={handleClanWarUpdated}
+                    />
+                </div>
             )}
         </div>
     );
