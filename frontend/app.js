@@ -6,7 +6,6 @@ const TABS = [
     { id: 'standings', labelKey: 'nav.standings' },
     { id: 'teams',     labelKey: 'nav.teams' },
     { id: 'clanwar',   labelKey: 'nav.clanwar' },
-    { id: 'mymatches', labelKey: 'nav.mymatches' },
     { id: 'bnlvsall',  labelKey: 'nav.bnlvsall' },
     { id: 'maps',      labelKey: 'nav.maps' },
     { id: 'profile',   labelKey: 'nav.profile' },
@@ -266,7 +265,6 @@ function App() {
                         : <Teams onOpenRecruit={openRecruit} onOpenDraft={openDraft} />
             )}
             {tab === 'clanwar'   && <ClanWar />}
-            {tab === 'mymatches' && <MyMatchesPage />}
             {tab === 'bnlvsall'  && <BnlVsAll />}
             {tab === 'maps'      && <Maps />}
             {tab === 'profile'   && <Profile />}

@@ -25,7 +25,7 @@ const GLOBAL_EXPORTS = {
     'i18n.js': ['getLang', 'setLang', 't', 'useLang'],
     'components/Standings.js': ['Standings'],
     'components/Teams.js': ['Teams'],
-    'components/ClanWar.js': ['ClanWar', 'MyMatchesPage'],
+    'components/ClanWar.js': ['ClanWar'],
     'components/BnlVsAll.js': ['BnlVsAll'],
     'components/Maps.js': ['Maps'],
     'components/Profile.js': ['Profile'],
