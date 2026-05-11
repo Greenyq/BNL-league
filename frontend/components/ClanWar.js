@@ -7,6 +7,17 @@ const tr = (ru, en) => getLang() === 'en' ? en : ru;
 const CLAN_WARS_PAGE_SIZE = 10;
 const CW_PLAYER_SESSION_STORAGE_KEY = 'bnl_player_session';
 const CW_PLAYER_SESSION_CHANGE_EVENT = 'bnl-player-session-change';
+const CLAN_WAR_STATUS_FILTERS = [
+    { id: 'all',       key: 'cw.all' },
+    { id: 'upcoming',  key: 'cw.upcoming' },
+    { id: 'ongoing',   key: 'cw.ongoing' },
+    { id: 'completed', key: 'cw.completed' },
+];
+const MY_MATCHES_FILTERS = [
+    { id: 'all',       key: 'cw.all' },
+    { id: 'upcoming',  key: 'cw.upcoming' },
+    { id: 'completed', key: 'cw.completed' },
+];
 const CW_RACE_ABBR  = race => ({
     0: 'Rnd',
     1: tr('Люди', 'Human'),
@@ -31,22 +42,35 @@ function getClanWarParticipantAliases(player) {
     return aliases;
 }
 
+function clanWarAliasesMatchValue(aliases, value) {
+    const normalized = normalizeSearchText(value);
+    const battleTagName = normalizeSearchText(String(value || '').split('#')[0]);
+    return (!!normalized && aliases.has(normalized)) || (!!battleTagName && aliases.has(battleTagName));
+}
+
 function clanWarMatchHasParticipantIdentity(match, player) {
     if (!match || !player) return false;
     const aliases = getClanWarParticipantAliases(player);
-    const matchesAlias = value => {
-        const normalized = normalizeSearchText(value);
-        const battleTagName = normalizeSearchText(String(value || '').split('#')[0]);
-        return (!!normalized && aliases.has(normalized)) || (!!battleTagName && aliases.has(battleTagName));
-    };
-
-    return [...parseClanWarSide(match.playerA), ...parseClanWarSide(match.playerB)].some(matchesAlias);
+    return [...parseClanWarSide(match.playerA), ...parseClanWarSide(match.playerB)].some(value => clanWarAliasesMatchValue(aliases, value));
 }
 
 function clampClanWarScore(value) {
     const parsed = Number.parseInt(value, 10);
     if (!Number.isFinite(parsed) || Number.isNaN(parsed)) return 0;
     return Math.max(0, Math.min(2, parsed));
+}
+
+function getClanWarWinnerFromScore(score) {
+    const scoreA = clampClanWarScore(score?.a);
+    const scoreB = clampClanWarScore(score?.b);
+    if (scoreA >= 2 && scoreA > scoreB) return 'a';
+    if (scoreB >= 2 && scoreB > scoreA) return 'b';
+    return null;
+}
+
+function getClanWarResolvedMatchWinner(match) {
+    if (match?.winner === 'a' || match?.winner === 'b') return match.winner;
+    return getClanWarWinnerFromScore(match?.score);
 }
 
 async function clanWarParticipantFetch(url, options = {}) {
@@ -67,6 +91,95 @@ function parseClanWarSide(value) {
         .split(' + ')
         .map(name => name.trim())
         .filter(Boolean);
+}
+
+function getClanWarMatchParticipantSide(match, player) {
+    if (!match || !player) return null;
+    const aliases = getClanWarParticipantAliases(player);
+    if (parseClanWarSide(match.playerA).some(value => clanWarAliasesMatchValue(aliases, value))) return 'a';
+    if (parseClanWarSide(match.playerB).some(value => clanWarAliasesMatchValue(aliases, value))) return 'b';
+    return null;
+}
+
+function getClanWarMyMatchRow(clanWar, match, player) {
+    const participantSide = getClanWarMatchParticipantSide(match, player);
+    if (!participantSide) return null;
+
+    const teamNameA = clanWar.teamA?.name || 'Team A';
+    const teamNameB = clanWar.teamB?.name || 'Team B';
+    const aliases = getClanWarParticipantAliases(player);
+    const ownSidePlayers = parseClanWarSide(participantSide === 'a' ? match.playerA : match.playerB);
+    const opponentPlayers = parseClanWarSide(participantSide === 'a' ? match.playerB : match.playerA);
+    const teammates = ownSidePlayers.filter(name => !clanWarAliasesMatchValue(aliases, name));
+
+    return {
+        clanWarId: clanWar.id || clanWar._id,
+        clanWarLabel: `${teamNameA} vs ${teamNameB}`,
+        clanWarDate: clanWar.date,
+        clanWarDateLabel: formatClanWarDate(clanWar.date),
+        sortDate: new Date(clanWar.date || 0).getTime(),
+        match,
+        matchId: match.id || match._id || `${clanWar.id || clanWar._id}-${match.order || match.label || match.format}`,
+        matchOrder: match.order ?? 0,
+        format: match.format || '1v1',
+        label: match.label || tr(`Матч ${match.order}`, `Match ${match.order}`),
+        participantSide,
+        ownBansFirst: participantSide === 'a',
+        opponentBansFirst: participantSide === 'b',
+        opponentTeamName: participantSide === 'a'
+            ? teamNameB
+            : teamNameA,
+        opponents: opponentPlayers,
+        teammates,
+    };
+}
+
+function formatClanWarMatchGroups(wars, player) {
+    const formatOrder = ['1v1', '2v2', '3v3'];
+    const rows = wars.flatMap(clanWar => (clanWar.matches || [])
+        .filter(match => clanWarMatchHasParticipantIdentity(match, player))
+        .map(match => getClanWarMyMatchRow(clanWar, match, player))
+        .filter(Boolean)
+    );
+
+    rows.sort((a, b) => {
+        if (b.sortDate !== a.sortDate) return b.sortDate - a.sortDate;
+        return a.matchOrder - b.matchOrder;
+    });
+
+    return formatOrder
+        .map(format => ({
+            format,
+            rows: rows.filter(row => row.format === format),
+        }))
+        .filter(group => group.rows.length > 0);
+}
+
+function filterMyMatchGroups(groups, filter) {
+    const list = Array.isArray(groups) ? groups : [];
+    if (filter === 'all') return list;
+
+    const matcher = filter === 'completed'
+        ? row => row?.match?.winner === 'a' || row?.match?.winner === 'b'
+        : row => row?.match?.winner == null;
+
+    return list
+        .map(group => ({
+            ...group,
+            rows: (group.rows || []).filter(matcher),
+        }))
+        .filter(group => group.rows.length > 0);
+}
+
+function getClanWarMatchDisplayPlayer(name, players) {
+    const player = findPlayerByAlias(players, name);
+    const race = player?.mainRace ?? player?.race ?? null;
+    const mmr = player?.stats?.mmr ?? player?.currentMmr ?? null;
+    return {
+        name,
+        race,
+        mmr,
+    };
 }
 
 function getClanWarRoster(teamObj, cwTeam, players) {
@@ -259,9 +372,10 @@ function CwMatchupCard({ match, players, nameA, nameB, canEdit = false, clanWarI
     const sideA = parseClanWarSide(match.playerA);
     const sideB = parseClanWarSide(match.playerB);
 
-    const winA  = match.winner === 'a';
-    const winB  = match.winner === 'b';
-    const played = match.winner != null;
+    const resolvedWinner = getClanWarResolvedMatchWinner(match);
+    const winA  = resolvedWinner === 'a';
+    const winB  = resolvedWinner === 'b';
+    const played = resolvedWinner != null;
 
     // Determine tier from first player on side A
     const p0    = sideA[0] ? findPlayer(sideA[0]) : null;
@@ -278,7 +392,6 @@ function CwMatchupCard({ match, players, nameA, nameB, canEdit = false, clanWarI
     const [saveFeedback, setSaveFeedback] = React.useState(null);
 
     const winnerGlow = 'rgba(76,175,80,0.07)';
-
     React.useEffect(() => {
         setEditScoreA(scoreA);
         setEditScoreB(scoreB);
@@ -333,9 +446,9 @@ function CwMatchupCard({ match, players, nameA, nameB, canEdit = false, clanWarI
                 {tierLabel && (
                     <span style={{ fontSize: '0.75em', fontWeight: 800, color: tierColor }}>Tier {tierLabel}</span>
                 )}
-                {match.winner && (
+                {resolvedWinner && (
                     <span style={{ marginLeft: 'auto', color: 'var(--color-success)', fontSize: '0.82em', fontWeight: 700 }}>
-                        ✓ {match.winner === 'a' ? nameA : nameB}
+                        ✓ {resolvedWinner === 'a' ? nameA : nameB}
                     </span>
                 )}
             </div>
@@ -344,6 +457,13 @@ function CwMatchupCard({ match, players, nameA, nameB, canEdit = false, clanWarI
             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12, padding: '10px 16px' }}>
                 {/* Team A side */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, borderRadius: 8, padding: winA ? '6px 8px' : 0, background: winA ? winnerGlow : 'transparent' }}>
+                    {sideA.length > 0 && (
+                        <div>
+                            <span className="cw-ban-order">
+                                🗺 {t('cw.bans_first')}
+                            </span>
+                        </div>
+                    )}
                     {sideA.length === 0
                         ? <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>—</span>
                         : sideA.map((name, i) => {
@@ -409,6 +529,13 @@ function CwMatchupCard({ match, players, nameA, nameB, canEdit = false, clanWarI
 
                 {/* Team B side */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end', borderRadius: 8, padding: winB ? '6px 8px' : 0, background: winB ? winnerGlow : 'transparent' }}>
+                    {sideB.length > 0 && (
+                        <div>
+                            <span className="cw-ban-order is-second">
+                                🗺 {t('cw.bans_second')}
+                            </span>
+                        </div>
+                    )}
                     {sideB.length === 0
                         ? <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>—</span>
                         : sideB.map((name, i) => {
@@ -562,62 +689,318 @@ function ClanWarCard({ cw, players, teams, currentPlayer, onClanWarUpdated }) {
     );
 }
 
-function MyClanWarMatchCard({ entry, players, currentPlayer, onClanWarUpdated }) {
-    useLang();
-    const { clanWar, clanWarId, match, teamNameA, teamNameB, status, date } = entry;
-    const statusLabel = t(`cw.status.${status}`) || status;
-    const statusClass  = { upcoming: 'status-upcoming', ongoing: 'status-ongoing', completed: 'status-completed' }[status] || '';
-    const formattedDate = formatClanWarDate(date);
+function ClanWarMatchPlayerList({ names, players }) {
+    if (!names.length) return <span className="cw-my-match-primary">—</span>;
 
     return (
-        <div className="cw-card">
-            <div className="cw-header" style={{ cursor: 'default' }}>
-                <span className={`cw-status ${statusClass}`}>{statusLabel}</span>
-                <span className="cw-teams">{teamNameA} &nbsp;vs&nbsp; {teamNameB}</span>
-                {formattedDate && (
-                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginLeft: 'auto' }}>
-                        {formattedDate}
-                    </span>
-                )}
-            </div>
-            <div style={{ padding: 'var(--spacing-md) var(--spacing-lg)' }}>
-                <CwMatchupCard
-                    match={match}
-                    players={players}
-                    nameA={teamNameA}
-                    nameB={teamNameB}
-                    canEdit={clanWarMatchHasParticipantIdentity(match, currentPlayer)}
-                    clanWarId={clanWarId}
-                    onClanWarUpdated={onClanWarUpdated}
-                />
-                {clanWar?.winner && (
-                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginTop: 8 }}>
-                        🏆 {clanWar.winner === 'a' ? teamNameA : teamNameB}
-                    </div>
-                )}
+        <div className="cw-my-player-list">
+            {names.map((name, index) => {
+                const entry = getClanWarMatchDisplayPlayer(name, players);
+                const raceColor = CW_RACE_COLOR[entry.race] || 'var(--color-text-primary)';
+                return (
+                    <React.Fragment key={`${name}-${index}`}>
+                        {index > 0 && <span className="cw-my-player-separator">, </span>}
+                        <span className="cw-my-player-entry">
+                            <span className="cw-my-player-name" style={{ color: raceColor }}>{entry.name}</span>
+                            {entry.race != null && (
+                                <span className="cw-my-player-race" style={{ color: raceColor }}>
+                                    · {CW_RACE_ABBR(entry.race)}
+                                </span>
+                            )}
+                            {entry.mmr != null && (
+                                <span className="cw-my-player-mmr">
+                                    {' '}· {entry.mmr}
+                                </span>
+                            )}
+                        </span>
+                    </React.Fragment>
+                );
+            })}
+        </div>
+    );
+}
+
+function MyClanWarTable({ format, rows, players, onClanWarUpdated }) {
+    useLang();
+    const [editingMatchId, setEditingMatchId] = React.useState(null);
+    const [editOwnScore, setEditOwnScore] = React.useState(0);
+    const [editOpponentScore, setEditOpponentScore] = React.useState(0);
+    const [saving, setSaving] = React.useState(false);
+    const [saveFeedback, setSaveFeedback] = React.useState(null);
+    const isTeamMatch = format !== '1v1';
+    const [isMobileViewport, setIsMobileViewport] = React.useState(() => (
+        typeof window !== 'undefined' ? window.matchMedia('(max-width: 700px)').matches : false
+    ));
+
+    React.useEffect(() => {
+        if (editingMatchId && !rows.some(row => row.matchId === editingMatchId)) {
+            setEditingMatchId(null);
+            setSaveFeedback(null);
+        }
+    }, [rows, editingMatchId]);
+
+    React.useEffect(() => {
+        if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+
+        const mediaQuery = window.matchMedia('(max-width: 700px)');
+        const handleChange = event => setIsMobileViewport(event.matches);
+        setIsMobileViewport(mediaQuery.matches);
+
+        if (mediaQuery.addEventListener) {
+            mediaQuery.addEventListener('change', handleChange);
+            return () => mediaQuery.removeEventListener('change', handleChange);
+        }
+
+        mediaQuery.addListener(handleChange);
+        return () => mediaQuery.removeListener(handleChange);
+    }, []);
+
+    const beginEditing = (row) => {
+        if (saving) return;
+        setEditingMatchId(row.matchId);
+        setEditOwnScore(row.participantSide === 'a' ? (row.match.score?.a ?? 0) : (row.match.score?.b ?? 0));
+        setEditOpponentScore(row.participantSide === 'a' ? (row.match.score?.b ?? 0) : (row.match.score?.a ?? 0));
+        setSaveFeedback(null);
+    };
+
+    const cancelEditing = () => {
+        if (saving) return;
+        setEditingMatchId(null);
+        setSaveFeedback(null);
+    };
+
+    const handleScoreInputFocus = (event) => {
+        event.target.select();
+    };
+
+    const getDraftScore = (row) => {
+        const safeOwnScore = clampClanWarScore(editOwnScore);
+        const safeOpponentScore = clampClanWarScore(editOpponentScore);
+        return row.participantSide === 'a'
+            ? { a: safeOwnScore, b: safeOpponentScore }
+            : { a: safeOpponentScore, b: safeOwnScore };
+    };
+
+    const hasDraftScoreChanges = (row) => {
+        const nextScore = getDraftScore(row);
+        return nextScore.a !== (row.match.score?.a ?? 0) || nextScore.b !== (row.match.score?.b ?? 0);
+    };
+
+    const saveScore = async (row, { closeOnSuccess = true } = {}) => {
+        if (saving) return;
+
+        const safeScore = getDraftScore(row);
+
+        setSaving(true);
+        setSaveFeedback(null);
+
+        try {
+            const updatedClanWar = await clanWarParticipantFetch(`/api/clan-wars/${row.clanWarId}/matches/${row.match.id || row.match._id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ score: safeScore }),
+            });
+            if (closeOnSuccess) setEditingMatchId(null);
+            setSaveFeedback(null);
+            onClanWarUpdated && onClanWarUpdated(updatedClanWar);
+        } catch (err) {
+            setSaveFeedback({ type: 'error', text: err.message || t('cw.my_matches.score.failed') });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleMobileEditorBlur = async (event, row) => {
+        if (!isMobileViewport || editingMatchId !== row.matchId || saving) return;
+        const editorNode = event.currentTarget;
+
+        window.requestAnimationFrame(async () => {
+            if (editorNode.contains(document.activeElement)) return;
+            if (!hasDraftScoreChanges(row)) {
+                setEditingMatchId(null);
+                setSaveFeedback(null);
+                return;
+            }
+
+            await saveScore(row, { closeOnSuccess: true });
+        });
+    };
+
+    return (
+        <div className="cw-my-format-block">
+            <div className="cw-my-format-title">{format}</div>
+            <div className="standings-table-wrap cw-my-table-wrap">
+                <table className={`standings-table cw-my-table ${isTeamMatch ? 'cw-my-table--team' : 'cw-my-table--solo'}`}>
+                    <thead>
+                        <tr>
+                            <th>{t('cw.my_matches.table.clan_war')}</th>
+                            <th>{t(isTeamMatch ? 'cw.my_matches.table.opponents' : 'cw.my_matches.table.player')}</th>
+                            {isTeamMatch && <th>{t('cw.my_matches.table.teammates')}</th>}
+                            <th>{t('cw.my_matches.table.score')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map(row => {
+                            const isEditing = editingMatchId === row.matchId;
+                            const scoreA = row.match.score?.a ?? 0;
+                            const scoreB = row.match.score?.b ?? 0;
+                            const currentScore = row.participantSide === 'a'
+                                ? `${scoreA}:${scoreB}`
+                                : `${scoreB}:${scoreA}`;
+                            const resolvedWinner = getClanWarResolvedMatchWinner(row.match);
+                            const rowPlayed = resolvedWinner != null;
+                            const didWin = resolvedWinner === row.participantSide;
+
+                            return (
+                                <tr key={row.matchId} className={`cw-my-match-row${didWin ? ' is-win' : rowPlayed ? ' is-loss' : ''}${isEditing ? ' is-editing' : ''}`}>
+                                    <td className="cw-my-match-cell" data-label={t('cw.my_matches.table.clan_war')}>
+                                        <div className="cw-my-match-primary">{row.clanWarLabel}</div>
+                                        {row.clanWarDateLabel && (
+                                            <div className="cw-my-match-meta">{row.clanWarDateLabel}</div>
+                                        )}
+                                    </td>
+                                    <td className="cw-my-match-cell" data-label={t(isTeamMatch ? 'cw.my_matches.table.opponents' : 'cw.my_matches.table.player')}>
+                                        <ClanWarMatchPlayerList names={row.opponents} players={players} />
+                                        <div className="cw-my-match-meta">{row.label}</div>
+                                        <div className="cw-my-mobile-context">
+                                            <div className="cw-my-match-meta">
+                                                {row.clanWarLabel}
+                                                {row.clanWarDateLabel ? ` · ${row.clanWarDateLabel}` : ''}
+                                            </div>
+                                            {isTeamMatch && row.teammates.length > 0 && (
+                                                <div className="cw-my-match-meta">
+                                                    {t('cw.my_matches.table.teammates')}: {row.teammates.join(', ')}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className={`cw-ban-order cw-my-ban-order${row.opponentBansFirst ? '' : ' is-second'}`}>
+                                            {t(row.opponentBansFirst ? 'cw.bans_first' : 'cw.bans_second')}
+                                        </div>
+                                    </td>
+                                    {isTeamMatch && (
+                                        <td className="cw-my-match-cell" data-label={t('cw.my_matches.table.teammates')}>
+                                            <ClanWarMatchPlayerList names={row.teammates} players={players} />
+                                        </td>
+                                    )}
+                                    <td className="cw-my-match-cell cw-my-match-cell--score" data-label={t('cw.my_matches.table.score')}>
+                                        {isEditing ? (
+                                            <div
+                                                className={`cw-my-score-editor${isMobileViewport ? ' cw-my-score-editor--mobile' : ''}`}
+                                                onBlur={e => handleMobileEditorBlur(e, row)}
+                                            >
+                                                <div className="cw-my-score-editor-inputs">
+                                                    <label className="cw-my-score-editor-field">
+                                                        <span>{t('cw.my_matches.score.you')}</span>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="2"
+                                                            inputMode="numeric"
+                                                            value={editOwnScore}
+                                                            onFocus={handleScoreInputFocus}
+                                                            onChange={e => { setEditOwnScore(clampClanWarScore(e.target.value)); setSaveFeedback(null); }}
+                                                        />
+                                                    </label>
+                                                    <span className="cw-my-score-editor-divider">:</span>
+                                                    <label className="cw-my-score-editor-field">
+                                                        <span>{t('cw.my_matches.score.them')}</span>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="2"
+                                                            inputMode="numeric"
+                                                            value={editOpponentScore}
+                                                            onFocus={handleScoreInputFocus}
+                                                            onChange={e => { setEditOpponentScore(clampClanWarScore(e.target.value)); setSaveFeedback(null); }}
+                                                        />
+                                                    </label>
+                                                </div>
+                                                {!isMobileViewport && (
+                                                    <div className="cw-my-score-editor-actions">
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-secondary"
+                                                            disabled={saving}
+                                                            onClick={() => saveScore(row)}
+                                                        >
+                                                            {saving ? t('cw.my_matches.score.saving') : t('cw.my_matches.score.save')}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-secondary cw-my-cancel-button"
+                                                            disabled={saving}
+                                                            onClick={cancelEditing}
+                                                        >
+                                                            {t('cw.my_matches.score.cancel')}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {isMobileViewport && (
+                                                    <div className="cw-my-match-meta cw-my-match-meta--editor">
+                                                        {saving ? t('cw.my_matches.score.saving') : t('cw.my_matches.score.edit')}
+                                                    </div>
+                                                )}
+                                                {saveFeedback && (
+                                                    <div className="cw-my-match-feedback is-error">
+                                                        {saveFeedback.text}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                className={`cw-my-score-button${didWin ? ' is-win' : rowPlayed ? ' is-loss' : ''}`}
+                                                disabled={saving}
+                                                onClick={() => beginEditing(row)}
+                                                aria-expanded={isEditing}
+                                            >
+                                                <span className="cw-my-score-button-value">{currentScore}</span>
+                                                <span className="cw-my-score-button-hint">{t('cw.my_matches.score.edit')}</span>
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
             </div>
         </div>
     );
 }
 
-function ClanWar() {
+function MyClanWarGlobalTables({ groups, players, onClanWarUpdated }) {
     useLang();
+
+    return (
+        <div className="cw-card cw-my-card">
+            <div className="cw-my-card-body">
+                {groups.map(group => (
+                    <MyClanWarTable
+                        key={group.format}
+                        format={group.format}
+                        rows={group.rows}
+                        players={players}
+                        onClanWarUpdated={onClanWarUpdated}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function useClanWarPageData(filter = 'all') {
     const [wars,    setWars]    = React.useState([]);
     const [players, setPlayers] = React.useState([]);
     const [teams,   setTeams]   = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [error,   setError]   = React.useState(null);
-    const [mode,    setMode]    = React.useState('wars');
-    const [filter,  setFilter]  = React.useState('all');
-    const [page,    setPage]    = React.useState(1);
-    const [playerFilter, setPlayerFilter] = React.useState('');
     const [currentPlayer, setCurrentPlayer] = React.useState(null);
-    const playerFilterNeedle = normalizeSearchText(playerFilter);
+    const activeFilter = filter || 'all';
 
     const loadWars = () => {
         setLoading(true);
         setError(null);
-        const q = filter !== 'all' ? `?status=${filter}` : '';
+        const q = activeFilter !== 'all' ? `?status=${activeFilter}` : '';
         fetch(`/api/clan-wars${q}`)
             .then(r => r.json())
             .then(data => { setWars(Array.isArray(data) ? data : []); setLoading(false); })
@@ -683,45 +1066,44 @@ function ClanWar() {
                     : existingWar
             );
 
-            return filter === 'all'
+            return activeFilter === 'all'
                 ? nextWars
-                : nextWars.filter(existingWar => existingWar.status === filter);
+                : nextWars.filter(existingWar => existingWar.status === activeFilter);
         });
     };
 
-    const FILTERS = [
-        { id: 'all',       key: 'cw.all' },
-        { id: 'upcoming',  key: 'cw.upcoming' },
-        { id: 'ongoing',   key: 'cw.ongoing' },
-        { id: 'completed', key: 'cw.completed' },
-    ];
+    return {
+        wars,
+        players,
+        teams,
+        loading,
+        error,
+        currentPlayer,
+        handleClanWarUpdated,
+    };
+}
+
+function ClanWar() {
+    useLang();
+    const [filter,  setFilter]  = React.useState('all');
+    const [page,    setPage]    = React.useState(1);
+    const [playerFilter, setPlayerFilter] = React.useState('');
+    const playerFilterNeedle = normalizeSearchText(playerFilter);
+    const {
+        wars,
+        players,
+        teams,
+        loading,
+        error,
+        currentPlayer,
+        handleClanWarUpdated,
+    } = useClanWarPageData(filter);
     const filteredWars = wars.filter(cw => clanWarHasPlayer(cw, players, teams, playerFilterNeedle));
-    const sortedWars = wars.slice().sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-    const myMatches = currentPlayer
-        ? sortedWars.flatMap(cw => (cw.matches || [])
-            .filter(match => clanWarMatchHasParticipantIdentity(match, currentPlayer))
-            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-            .map(match => ({
-                clanWar: cw,
-                clanWarId: cw.id || cw._id,
-                match,
-                teamNameA: cw.teamA?.name || 'Team A',
-                teamNameB: cw.teamB?.name || 'Team B',
-                status: cw.status,
-                date: cw.date,
-            }))
-        )
-        : [];
-    const activeItems = mode === 'wars' ? filteredWars : myMatches;
-    const pagination = paginateCollection(activeItems, page, CLAN_WARS_PAGE_SIZE);
+    const pagination = paginateCollection(filteredWars, page, CLAN_WARS_PAGE_SIZE);
 
     React.useEffect(() => {
         setPage(1);
-    }, [mode, filter, playerFilterNeedle, currentPlayer?.id, currentPlayer?._id, currentPlayer?.linkedBattleTag]);
-
-    React.useEffect(() => {
-        setFilter('all');
-    }, [mode]);
+    }, [filter, playerFilterNeedle]);
 
     React.useEffect(() => {
         if (page !== pagination.currentPage) setPage(pagination.currentPage);
@@ -735,7 +1117,7 @@ function ClanWar() {
 
             <div className="wow-filter-bar standings-controls" style={{ marginBottom: 18 }}>
                 <div className="standings-controls-group standings-controls-group--filters">
-                    {FILTERS.map(f => (
+                    {CLAN_WAR_STATUS_FILTERS.map(f => (
                         <button
                             key={f.id}
                             className={`wow-btn${filter === f.id ? ' active' : ''}`}
@@ -745,24 +1127,8 @@ function ClanWar() {
                         </button>
                     ))}
                 </div>
-                {mode === 'wars' && (
-                    <div className="standings-controls-group standings-controls-group--search">
-                        <PlayerNameFilterInput value={playerFilter} onChange={setPlayerFilter} />
-                    </div>
-                )}
-                <div className="standings-controls-group standings-controls-group--modes">
-                    <button
-                        className={`wow-btn${mode === 'wars' ? ' active' : ''}`}
-                        onClick={() => setMode('wars')}
-                    >
-                        {t('cw.mode.wars')}
-                    </button>
-                    <button
-                        className={`wow-btn${mode === 'my_matches' ? ' active' : ''}`}
-                        onClick={() => setMode('my_matches')}
-                    >
-                        {t('cw.mode.my_matches')}
-                    </button>
+                <div className="standings-controls-group standings-controls-group--search">
+                    <PlayerNameFilterInput value={playerFilter} onChange={setPlayerFilter} />
                 </div>
             </div>
 
@@ -770,21 +1136,14 @@ function ClanWar() {
                 <div className="cw-list">
                     {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 64, marginBottom: 12, borderRadius: 'var(--radius-md)' }} />)}
                 </div>
-            ) : mode === 'my_matches' && !currentPlayer ? (
+            ) : filteredWars.length === 0 ? (
                 <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
-                    {t('cw.my_matches.login_required')}
-                </p>
-            ) : activeItems.length === 0 ? (
-                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
-                    {mode === 'wars'
-                        ? (playerFilterNeedle ? t('filters.no_results') : t('cw.empty'))
-                        : t('cw.my_matches.empty')}
+                    {playerFilterNeedle ? t('filters.no_results') : t('cw.empty')}
                 </p>
             ) : (
                 <>
-                <div className="cw-list">
-                    {mode === 'wars'
-                        ? pagination.items.map(cw => (
+                    <div className="cw-list">
+                        {pagination.items.map(cw => (
                             <ClanWarCard
                                 key={cw.id || cw._id}
                                 cw={cw}
@@ -793,20 +1152,72 @@ function ClanWar() {
                                 currentPlayer={currentPlayer}
                                 onClanWarUpdated={handleClanWarUpdated}
                             />
-                        ))
-                        : pagination.items.map(entry => (
-                            <MyClanWarMatchCard
-                                key={`${entry.clanWarId}-${entry.match.id || entry.match._id || entry.match.order || entry.teamNameA + entry.teamNameB}`}
-                                entry={entry}
-                                players={players}
-                                currentPlayer={currentPlayer}
-                                onClanWarUpdated={handleClanWarUpdated}
-                            />
-                        ))
-                    }
-                </div>
-                <PaginationControls page={pagination.currentPage} totalPages={pagination.totalPages} onPageChange={setPage} />
+                        ))}
+                    </div>
+                    <PaginationControls page={pagination.currentPage} totalPages={pagination.totalPages} onPageChange={setPage} />
                 </>
+            )}
+        </div>
+    );
+}
+
+function MyMatchesPage() {
+    useLang();
+    const [filter, setFilter] = React.useState('all');
+    const {
+        wars,
+        players,
+        loading,
+        error,
+        currentPlayer,
+        handleClanWarUpdated,
+    } = useClanWarPageData();
+    const sortedWars = wars.slice().sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    const allMyMatchGroups = currentPlayer
+        ? formatClanWarMatchGroups(sortedWars, currentPlayer)
+        : [];
+    const myMatchGroups = filterMyMatchGroups(allMyMatchGroups, filter);
+
+    if (error) return <div style={{ color: 'var(--color-error)', padding: 32, textAlign: 'center' }}>⚠ {error}</div>;
+
+    return (
+        <div className="animate-fade-in wow-section-page">
+            <WoWSectionTitle>{t('cw.mode.my_matches')}</WoWSectionTitle>
+
+            <div className="wow-filter-bar standings-controls" style={{ marginBottom: 18 }}>
+                <div className="standings-controls-group standings-controls-group--filters">
+                    {MY_MATCHES_FILTERS.map(f => (
+                        <button
+                            key={f.id}
+                            className={`wow-btn${filter === f.id ? ' active' : ''}`}
+                            onClick={() => setFilter(f.id)}
+                        >
+                            {t(f.key)}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {loading ? (
+                <div className="cw-list">
+                    {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 64, marginBottom: 12, borderRadius: 'var(--radius-md)' }} />)}
+                </div>
+            ) : !currentPlayer ? (
+                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
+                    {t('cw.my_matches.login_required')}
+                </p>
+            ) : myMatchGroups.length === 0 ? (
+                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
+                    {t('cw.my_matches.empty')}
+                </p>
+            ) : (
+                <div className="cw-list">
+                    <MyClanWarGlobalTables
+                        groups={myMatchGroups}
+                        players={players}
+                        onClanWarUpdated={handleClanWarUpdated}
+                    />
+                </div>
             )}
         </div>
     );

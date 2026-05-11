@@ -979,6 +979,14 @@ function ClanWarTab({ showMsg, players, teams }) {
         };
     };
 
+    const resolveClanWarMatchWinner = (match, explicitWinner = match?.winner) => {
+        const scoreA = Math.max(0, Math.min(2, Number.parseInt(match?.score?.a ?? 0, 10) || 0));
+        const scoreB = Math.max(0, Math.min(2, Number.parseInt(match?.score?.b ?? 0, 10) || 0));
+        if (scoreA >= 2 && scoreA > scoreB) return 'a';
+        if (scoreB >= 2 && scoreB > scoreA) return 'b';
+        return explicitWinner === 'a' || explicitWinner === 'b' ? explicitWinner : null;
+    };
+
     const createWar = async (e) => {
         e.preventDefault();
         if (!form.teamAId || !form.teamBId) return showMsg(`❌ ${tr('Выберите обе команды', 'Select both teams')}`, 'error');
@@ -1025,6 +1033,16 @@ function ClanWarTab({ showMsg, players, teams }) {
             let cur = copy;
             for (let i = 0; i < keys.length - 1; i++) cur = cur[keys[i]];
             cur[keys[keys.length - 1]] = val;
+
+            if (keys[0] === 'matches' && Number.isInteger(Number.parseInt(keys[1], 10))) {
+                const match = copy.matches[Number.parseInt(keys[1], 10)];
+                if (keys[2] === 'score') {
+                    match.winner = resolveClanWarMatchWinner(match, null);
+                } else if (keys[2] === 'winner') {
+                    match.winner = resolveClanWarMatchWinner(match, match.winner);
+                }
+            }
+
             return copy;
         });
     };
@@ -1038,7 +1056,7 @@ function ClanWarTab({ showMsg, players, teams }) {
                     playerA: match.playerA,
                     playerB: match.playerB,
                     score:   match.score,
-                    winner:  match.winner,
+                    winner:  resolveClanWarMatchWinner(match, match.winner),
                     label:   match.label,
                     format:  match.format,
                 }),
@@ -1924,7 +1942,7 @@ function ManageMapsTab({ showMsg }) {
                         />
                         {editingMap && (
                             <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>
-                                Current file: {editingMap.originalName} · {formatMapSize(editingMap.size)}
+                                Current file: {editingMap.originalName} · {globalThis.formatMapSize(editingMap.size)}
                             </div>
                         )}
                         <div style={{ display: 'flex', gap: 8 }}>
@@ -1995,7 +2013,7 @@ function ManageMapsTab({ showMsg }) {
                                                     <div style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{map.title}</div>
                                                     {map.description && <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.88em', marginTop: 5 }}>{map.description}</div>}
                                                     <div style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', marginTop: 5 }}>
-                                                        {map.originalName} · {formatMapSize(map.size)}
+                                                        {map.originalName} · {globalThis.formatMapSize(map.size)}
                                                     </div>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
