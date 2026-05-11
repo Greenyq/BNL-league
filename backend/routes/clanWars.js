@@ -22,7 +22,7 @@ function calculateSeasonProgress(wars) {
     return wars.reduce((progress, war) => {
         const matches = Array.isArray(war.matches) ? war.matches : [];
         progress.total += matches.length;
-        progress.finished += matches.filter(match => match?.winner === 'a' || match?.winner === 'b').length;
+        progress.finished += matches.filter(match => getResolvedMatchWinner(match) != null).length;
         return progress;
     }, { finished: 0, total: 0 });
 }
@@ -74,6 +74,18 @@ function sanitizeMatchScore(score) {
         a: sanitizeScoreValue(score?.a),
         b: sanitizeScoreValue(score?.b),
     };
+}
+
+function getWinnerFromScore(score) {
+    const safeScore = sanitizeMatchScore(score);
+    if (safeScore.a >= 2 && safeScore.a > safeScore.b) return 'a';
+    if (safeScore.b >= 2 && safeScore.b > safeScore.a) return 'b';
+    return null;
+}
+
+function getResolvedMatchWinner(match, explicitWinner = match?.winner) {
+    if (explicitWinner === 'a' || explicitWinner === 'b') return explicitWinner;
+    return getWinnerFromScore(match?.score);
 }
 
 async function getPlayerParticipantResult(req) {
@@ -171,7 +183,7 @@ router.get('/progress', async (req, res) => {
         const cached = getCachedSeasonProgress();
         if (cached) return res.json(cached);
 
-        const wars = await ClanWar.find({}, { 'matches.winner': 1 }).lean();
+        const wars = await ClanWar.find({}, { 'matches.winner': 1, 'matches.score': 1 }).lean();
         const progress = calculateSeasonProgress(wars);
         setCachedSeasonProgress(progress);
         res.json(progress);
@@ -231,19 +243,15 @@ router.put('/:id/matches/:matchId', async (req, res) => {
 
             const safeScore = sanitizeMatchScore(score);
             match.score = safeScore;
-            match.winner = safeScore.a >= 2 && safeScore.a > safeScore.b
-                ? 'a'
-                : safeScore.b >= 2 && safeScore.b > safeScore.a
-                    ? 'b'
-                    : null;
+            match.winner = getResolvedMatchWinner({ score: safeScore }, null);
         } else {
             if (score !== undefined) match.score = sanitizeMatchScore(score);
             if (winner !== undefined) {
                 if (!['a', 'b', null].includes(winner)) {
                     return res.status(400).json({ error: 'Invalid winner value' });
                 }
-                match.winner = winner;
             }
+            match.winner = getResolvedMatchWinner(match, winner !== undefined ? winner : match.winner);
         }
 
         if (isAdmin) {
@@ -254,14 +262,14 @@ router.put('/:id/matches/:matchId', async (req, res) => {
             if (format  !== undefined) match.format  = format;
         }
 
-        cw.clanWarScore.a = cw.matches.filter(m => m.winner === 'a').length;
-        cw.clanWarScore.b = cw.matches.filter(m => m.winner === 'b').length;
+        cw.clanWarScore.a = cw.matches.filter(m => getResolvedMatchWinner(m) === 'a').length;
+        cw.clanWarScore.b = cw.matches.filter(m => getResolvedMatchWinner(m) === 'b').length;
 
         if (cw.clanWarScore.a >= 3) { cw.winner = 'a'; cw.status = 'completed'; }
         else if (cw.clanWarScore.b >= 3) { cw.winner = 'b'; cw.status = 'completed'; }
         else {
             cw.winner = null;
-            const hasPlayedMatches = cw.matches.some(m => m.winner === 'a' || m.winner === 'b');
+            const hasPlayedMatches = cw.matches.some(m => getResolvedMatchWinner(m) != null);
             cw.status = hasPlayedMatches ? 'ongoing' : 'upcoming';
         }
 

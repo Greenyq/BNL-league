@@ -49,6 +49,19 @@ function clampClanWarScore(value) {
     return Math.max(0, Math.min(2, parsed));
 }
 
+function getClanWarWinnerFromScore(score) {
+    const scoreA = clampClanWarScore(score?.a);
+    const scoreB = clampClanWarScore(score?.b);
+    if (scoreA >= 2 && scoreA > scoreB) return 'a';
+    if (scoreB >= 2 && scoreB > scoreA) return 'b';
+    return null;
+}
+
+function getClanWarResolvedMatchWinner(match) {
+    if (match?.winner === 'a' || match?.winner === 'b') return match.winner;
+    return getClanWarWinnerFromScore(match?.score);
+}
+
 async function clanWarParticipantFetch(url, options = {}) {
     const sessionId = localStorage.getItem(CW_PLAYER_SESSION_STORAGE_KEY);
     const headers = {
@@ -332,9 +345,10 @@ function CwMatchupCard({ match, players, nameA, nameB, canEdit = false, clanWarI
     const sideA = parseClanWarSide(match.playerA);
     const sideB = parseClanWarSide(match.playerB);
 
-    const winA  = match.winner === 'a';
-    const winB  = match.winner === 'b';
-    const played = match.winner != null;
+    const resolvedWinner = getClanWarResolvedMatchWinner(match);
+    const winA  = resolvedWinner === 'a';
+    const winB  = resolvedWinner === 'b';
+    const played = resolvedWinner != null;
 
     // Determine tier from first player on side A
     const p0    = sideA[0] ? findPlayer(sideA[0]) : null;
@@ -405,9 +419,9 @@ function CwMatchupCard({ match, players, nameA, nameB, canEdit = false, clanWarI
                 {tierLabel && (
                     <span style={{ fontSize: '0.75em', fontWeight: 800, color: tierColor }}>Tier {tierLabel}</span>
                 )}
-                {match.winner && (
+                {resolvedWinner && (
                     <span style={{ marginLeft: 'auto', color: 'var(--color-success)', fontSize: '0.82em', fontWeight: 700 }}>
-                        ✓ {match.winner === 'a' ? nameA : nameB}
+                        ✓ {resolvedWinner === 'a' ? nameA : nameB}
                     </span>
                 )}
             </div>
@@ -805,8 +819,9 @@ function MyClanWarTable({ format, rows, players, onClanWarUpdated }) {
                             const currentScore = row.participantSide === 'a'
                                 ? `${scoreA}:${scoreB}`
                                 : `${scoreB}:${scoreA}`;
-                            const rowPlayed = row.match.winner != null;
-                            const didWin = row.match.winner === row.participantSide;
+                            const resolvedWinner = getClanWarResolvedMatchWinner(row.match);
+                            const rowPlayed = resolvedWinner != null;
+                            const didWin = resolvedWinner === row.participantSide;
 
                             return (
                                 <tr key={row.matchId} className={`cw-my-match-row${didWin ? ' is-win' : rowPlayed ? ' is-loss' : ''}${isEditing ? ' is-editing' : ''}`}>
