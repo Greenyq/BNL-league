@@ -2384,6 +2384,11 @@ input[type="datetime-local"] {
     flex-wrap: wrap;
 }
 
+.standings-controls-group--formats {
+    margin-left: auto;
+    justify-content: flex-end;
+}
+
 .pagination {
     display: flex;
     align-items: center;
@@ -2746,6 +2751,11 @@ input[type="datetime-local"] {
     }
 
     .standings-controls-group--filters {
+        justify-content: flex-start;
+    }
+
+    .standings-controls-group--formats {
+        margin-left: 0;
         justify-content: flex-start;
     }
 

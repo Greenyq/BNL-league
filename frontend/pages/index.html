@@ -68,8 +68,23 @@
                         <li><a href="#home"      onclick="navigate('home');      return false;">Главная</a></li>
                         <li><a href="#standings" onclick="navigate('standings'); return false;">Таблица</a></li>
                         <li><a href="#teams"     onclick="navigate('teams');     return false;">Команды</a></li>
-                        <li><a href="#clanwar"   onclick="navigate('clanwar');   return false;">Клан-вары</a></li>
-                        <li><a href="#mymatches" onclick="navigate('mymatches'); return false;">Мои матчи</a></li>
+                        <li class="menu-item menu-item--has-submenu" id="header-clanwars-menu">
+                            <button
+                                id="header-clanwars-toggle"
+                                class="menu-group-toggle"
+                                type="button"
+                                data-nav-label="clanwar"
+                                aria-expanded="false"
+                                aria-controls="header-clanwars-submenu"
+                                onclick="toggleClanWarsMenu(event); return false;"
+                            >
+                                Клан-вары
+                            </button>
+                            <ul id="header-clanwars-submenu" class="menu-submenu" hidden>
+                                <li><a href="#clanwar" data-nav-label="clanwar" onclick="navigate('clanwar'); return false;">Клан-вары</a></li>
+                                <li><a href="#mymatches" data-nav-label="mymatches" onclick="navigate('mymatches'); return false;">Мои матчи</a></li>
+                            </ul>
+                        </li>
                         <li><a href="#bnlvsall"  onclick="navigate('bnlvsall');  return false;">BNL vs All</a></li>
                         <li><a href="#maps"      onclick="navigate('maps');      return false;">Карты</a></li>
                         <li><a id="header-profile-link" href="#profile" onclick="navigate('profile'); return false;">Профиль</a></li>
@@ -340,13 +355,15 @@
 
     function updateNavText(lang) {
         var labels = NAV_LABELS[lang] || NAV_LABELS['ru'];
-        document.querySelectorAll('#bnl-nav a, #footer-nav a').forEach(function(a) {
-            if (a.id === 'header-admin-link') {
-                setAdminLinkText(a, lang);
+        document.querySelectorAll('#bnl-nav a, #bnl-nav button[data-nav-label], #footer-nav a').forEach(function(node) {
+            if (node.id === 'header-admin-link') {
+                setAdminLinkText(node, lang);
                 return;
             }
-            var tab = a.getAttribute('href').replace('#', '');
-            if (labels[tab]) a.textContent = labels[tab];
+            var tab = node.tagName === 'BUTTON'
+                ? node.getAttribute('data-nav-label')
+                : (node.getAttribute('href') || '').replace('#', '');
+            if (labels[tab]) node.textContent = labels[tab];
         });
         updateHeaderProfileLink(lang);
         updateOnlineLabel(lang);
@@ -363,6 +380,28 @@
     }
 
     // ── Navigation helper (sync hash + highlight) ─────────────────────────
+    function setClanWarsMenuOpen(isOpen) {
+        var menuItem = document.getElementById('header-clanwars-menu');
+        var toggle = document.getElementById('header-clanwars-toggle');
+        var submenu = document.getElementById('header-clanwars-submenu');
+        if (!menuItem || !toggle || !submenu) return;
+
+        menuItem.classList.toggle('is-open', !!isOpen);
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        submenu.hidden = !isOpen;
+    }
+
+    function closeClanWarsMenu() {
+        setClanWarsMenuOpen(false);
+    }
+
+    function toggleClanWarsMenu(event) {
+        if (event) event.stopPropagation();
+        var menuItem = document.getElementById('header-clanwars-menu');
+        if (!menuItem) return;
+        setClanWarsMenuOpen(!menuItem.classList.contains('is-open'));
+    }
+
     function scrollPageToTop() {
         window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }
@@ -372,6 +411,7 @@
         var toggle = document.getElementById('header-menu-toggle');
         if (row) row.classList.remove('is-open');
         if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        closeClanWarsMenu();
     }
 
     function toggleHeaderMenu() {
@@ -380,6 +420,7 @@
         if (!row || !toggle) return;
         var isOpen = row.classList.toggle('is-open');
         toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        if (!isOpen) closeClanWarsMenu();
     }
 
     function navigate(tab) {
@@ -394,19 +435,49 @@
 
     function updateNavHighlight() {
         var hash = window.location.hash.replace('#', '') || 'home';
+        var isClanWarsRoute = hash === 'clanwar' || hash === 'mymatches';
         var links = document.querySelectorAll('#bnl-nav a');
         links.forEach(function(a) {
-            var aTab = a.getAttribute('href').replace('#', '');
-            if (aTab === hash) {
-                a.classList.add('nav-active');
-            } else {
-                a.classList.remove('nav-active');
-            }
+            var href = a.getAttribute('href') || '';
+            var aTab = href.replace('#', '');
+            a.classList.toggle('nav-active', aTab === hash);
         });
+
+        var clanWarsToggle = document.getElementById('header-clanwars-toggle');
+        if (clanWarsToggle) clanWarsToggle.classList.toggle('nav-active', isClanWarsRoute);
     }
+
+    document.addEventListener('click', function(event) {
+        var menuItem = document.getElementById('header-clanwars-menu');
+        if (menuItem && !menuItem.contains(event.target)) closeClanWarsMenu();
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeClanWarsMenu();
+            closeHeaderMenu();
+        }
+    });
+
+    document.addEventListener('focusin', function(event) {
+        var menuItem = document.getElementById('header-clanwars-menu');
+        if (menuItem && !menuItem.contains(event.target)) closeClanWarsMenu();
+    });
+
+    document.addEventListener('mouseover', function(event) {
+        if (window.innerWidth <= 1170) return;
+        var menuItem = document.getElementById('header-clanwars-menu');
+        if (menuItem && !menuItem.contains(event.target)) closeClanWarsMenu();
+    });
+
+    document.addEventListener('touchstart', function(event) {
+        var menuItem = document.getElementById('header-clanwars-menu');
+        if (menuItem && !menuItem.contains(event.target)) closeClanWarsMenu();
+    });
 
     window.addEventListener('hashchange', function() {
         scrollPageToTop();
+        closeClanWarsMenu();
         updateNavHighlight();
     });
     window.addEventListener('resize', function() {

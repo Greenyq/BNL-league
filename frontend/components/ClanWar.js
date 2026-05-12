@@ -5,6 +5,7 @@ const CW_RACE_IMG   = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/im
 const CW_RACE_COLOR = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
 const tr = (ru, en) => getLang() === 'en' ? en : ru;
 const CLAN_WARS_PAGE_SIZE = 10;
+const MY_MATCHES_PAGE_SIZE = 5;
 const CW_PLAYER_SESSION_STORAGE_KEY = 'bnl_player_session';
 const CW_PLAYER_SESSION_CHANGE_EVENT = 'bnl-player-session-change';
 const CLAN_WAR_STATUS_FILTERS = [
@@ -18,6 +19,7 @@ const MY_MATCHES_FILTERS = [
     { id: 'upcoming',  key: 'cw.upcoming' },
     { id: 'completed', key: 'cw.completed' },
 ];
+const MY_MATCHES_FORMAT_FILTERS = ['1v1', '2v2', '3v3'];
 const CW_RACE_ABBR  = race => ({
     0: 'Rnd',
     1: tr('Люди', 'Human'),
@@ -169,6 +171,12 @@ function filterMyMatchGroups(groups, filter) {
             rows: (group.rows || []).filter(matcher),
         }))
         .filter(group => group.rows.length > 0);
+}
+
+function filterMyMatchGroupsByFormat(groups, selectedFormat) {
+    const list = Array.isArray(groups) ? groups : [];
+    if (!selectedFormat) return [];
+    return list.filter(group => group.format === selectedFormat);
 }
 
 function getClanWarMatchDisplayPlayer(name, players) {
@@ -1164,6 +1172,8 @@ function ClanWar() {
 function MyMatchesPage() {
     useLang();
     const [filter, setFilter] = React.useState('all');
+    const [selectedFormat, setSelectedFormat] = React.useState(MY_MATCHES_FORMAT_FILTERS[0]);
+    const [page, setPage] = React.useState(1);
     const {
         wars,
         players,
@@ -1176,7 +1186,23 @@ function MyMatchesPage() {
     const allMyMatchGroups = currentPlayer
         ? formatClanWarMatchGroups(sortedWars, currentPlayer)
         : [];
-    const myMatchGroups = filterMyMatchGroups(allMyMatchGroups, filter);
+    const statusFilteredMatchGroups = filterMyMatchGroups(allMyMatchGroups, filter);
+    const myMatchGroups = filterMyMatchGroupsByFormat(statusFilteredMatchGroups, selectedFormat);
+    const activeFormatGroup = myMatchGroups[0] || null;
+    const pagination = paginateCollection(activeFormatGroup?.rows || [], page, MY_MATCHES_PAGE_SIZE);
+    const paginatedMatchGroups = activeFormatGroup
+        ? [{ ...activeFormatGroup, rows: pagination.items }]
+        : [];
+    const hasMatchesAtAll = allMyMatchGroups.length > 0;
+    const hasMatchesAfterStatusFilter = statusFilteredMatchGroups.length > 0;
+
+    React.useEffect(() => {
+        setPage(1);
+    }, [filter, selectedFormat]);
+
+    React.useEffect(() => {
+        if (page !== pagination.currentPage) setPage(pagination.currentPage);
+    }, [page, pagination.currentPage]);
 
     if (error) return <div style={{ color: 'var(--color-error)', padding: 32, textAlign: 'center' }}>⚠ {error}</div>;
 
@@ -1196,6 +1222,17 @@ function MyMatchesPage() {
                         </button>
                     ))}
                 </div>
+                <div className="standings-controls-group standings-controls-group--formats">
+                    {MY_MATCHES_FORMAT_FILTERS.map(format => (
+                        <button
+                            key={format}
+                            className={`wow-btn${selectedFormat === format ? ' active' : ''}`}
+                            onClick={() => setSelectedFormat(format)}
+                        >
+                            {format}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {loading ? (
@@ -1208,16 +1245,19 @@ function MyMatchesPage() {
                 </p>
             ) : myMatchGroups.length === 0 ? (
                 <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
-                    {t('cw.my_matches.empty')}
+                    {hasMatchesAtAll && hasMatchesAfterStatusFilter ? t('filters.no_results') : t('cw.my_matches.empty')}
                 </p>
             ) : (
-                <div className="cw-list">
-                    <MyClanWarGlobalTables
-                        groups={myMatchGroups}
-                        players={players}
-                        onClanWarUpdated={handleClanWarUpdated}
-                    />
-                </div>
+                <>
+                    <div className="cw-list">
+                        <MyClanWarGlobalTables
+                            groups={paginatedMatchGroups}
+                            players={players}
+                            onClanWarUpdated={handleClanWarUpdated}
+                        />
+                    </div>
+                    <PaginationControls page={pagination.currentPage} totalPages={pagination.totalPages} onPageChange={setPage} />
+                </>
             )}
         </div>
     );
