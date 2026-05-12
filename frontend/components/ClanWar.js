@@ -5,8 +5,10 @@ const CW_RACE_IMG   = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/im
 const CW_RACE_COLOR = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
 const tr = (ru, en) => getLang() === 'en' ? en : ru;
 const CLAN_WARS_PAGE_SIZE = 10;
+const CLAN_WAR_MATCHES_PAGE_SIZE = 15;
 const CW_PLAYER_SESSION_STORAGE_KEY = 'bnl_player_session';
 const CW_PLAYER_SESSION_CHANGE_EVENT = 'bnl-player-session-change';
+const CLAN_WAR_MATCH_FORMATS = ['1v1', '2v2', '3v3'];
 const CLAN_WAR_STATUS_FILTERS = [
     { id: 'all',       key: 'cw.all' },
     { id: 'upcoming',  key: 'cw.upcoming' },
@@ -126,6 +128,9 @@ function getClanWarMyMatchRow(clanWar, match, player) {
         participantSide,
         ownBansFirst: participantSide === 'a',
         opponentBansFirst: participantSide === 'b',
+        ownTeamName: participantSide === 'a'
+            ? teamNameA
+            : teamNameB,
         opponentTeamName: participantSide === 'a'
             ? teamNameB
             : teamNameA,
@@ -134,11 +139,29 @@ function getClanWarMyMatchRow(clanWar, match, player) {
     };
 }
 
-function formatClanWarMatchGroups(wars, player) {
-    const formatOrder = ['1v1', '2v2', '3v3'];
-    const rows = wars.flatMap(clanWar => (clanWar.matches || [])
-        .filter(match => clanWarMatchHasParticipantIdentity(match, player))
-        .map(match => getClanWarMyMatchRow(clanWar, match, player))
+function getClanWarAllMatchRow(clanWar, match) {
+    const teamNameA = clanWar.teamA?.name || 'Team A';
+    const teamNameB = clanWar.teamB?.name || 'Team B';
+
+    return {
+        clanWarId: clanWar.id || clanWar._id,
+        clanWarLabel: `${teamNameA} vs ${teamNameB}`,
+        clanWarDate: clanWar.date,
+        clanWarDateLabel: formatClanWarDate(clanWar.date),
+        sortDate: new Date(clanWar.date || 0).getTime(),
+        match,
+        matchId: match.id || match._id || `${clanWar.id || clanWar._id}-${match.order || match.label || match.format}`,
+        matchOrder: match.order ?? 0,
+        format: match.format || '1v1',
+        label: match.label || tr(`Матч ${match.order}`, `Match ${match.order}`),
+        sideAPlayers: parseClanWarSide(match.playerA),
+        sideBPlayers: parseClanWarSide(match.playerB),
+    };
+}
+
+function buildClanWarMatchGroups(wars, rowBuilder) {
+    const rows = (Array.isArray(wars) ? wars : []).flatMap(clanWar => (clanWar.matches || [])
+        .map(match => rowBuilder(clanWar, match))
         .filter(Boolean)
     );
 
@@ -147,7 +170,7 @@ function formatClanWarMatchGroups(wars, player) {
         return a.matchOrder - b.matchOrder;
     });
 
-    return formatOrder
+    return CLAN_WAR_MATCH_FORMATS
         .map(format => ({
             format,
             rows: rows.filter(row => row.format === format),
@@ -155,7 +178,15 @@ function formatClanWarMatchGroups(wars, player) {
         .filter(group => group.rows.length > 0);
 }
 
-function filterMyMatchGroups(groups, filter) {
+function formatClanWarMatchGroups(wars, player) {
+    return buildClanWarMatchGroups(wars, (clanWar, match) => getClanWarMyMatchRow(clanWar, match, player));
+}
+
+function formatAllClanWarMatchGroups(wars) {
+    return buildClanWarMatchGroups(wars, getClanWarAllMatchRow);
+}
+
+function filterClanWarMatchGroupsByStatus(groups, filter) {
     const list = Array.isArray(groups) ? groups : [];
     if (filter === 'all') return list;
 
@@ -167,6 +198,61 @@ function filterMyMatchGroups(groups, filter) {
         .map(group => ({
             ...group,
             rows: (group.rows || []).filter(matcher),
+        }))
+        .filter(group => group.rows.length > 0);
+}
+
+function filterClanWarMatchGroupsByFormat(groups, selectedFormat) {
+    const list = Array.isArray(groups) ? groups : [];
+    if (!selectedFormat) return [];
+    return list.filter(group => group.format === selectedFormat);
+}
+
+function paginateClanWarMatchGroups(groups, page, pageSize) {
+    const activeGroup = Array.isArray(groups) ? (groups[0] || null) : null;
+    const pagination = paginateCollection(activeGroup?.rows || [], page, pageSize);
+    return {
+        pagination,
+        groups: activeGroup ? [{ ...activeGroup, rows: pagination.items }] : [],
+    };
+}
+
+function clanWarMatchRowMatchesPlayer(row, needle, mode) {
+    const normalizedNeedle = normalizeSearchText(needle);
+    if (!normalizedNeedle) return true;
+    if (!row) return false;
+
+    const values = mode === 'all'
+        ? [...(row.sideAPlayers || []), ...(row.sideBPlayers || [])]
+        : [...(row.opponents || []), ...(row.teammates || [])];
+
+    return values.some(value => matchesNamedPlayer(value, normalizedNeedle));
+}
+
+function clanWarMatchRowMatchesTeam(row, needle) {
+    const normalizedNeedle = normalizeSearchText(needle);
+    if (!normalizedNeedle) return true;
+    if (!row) return false;
+
+    return matchesAnySearchValue(
+        [row.clanWarLabel, row.ownTeamName, row.opponentTeamName],
+        normalizedNeedle
+    );
+}
+
+function filterClanWarMatchGroupsByRowFilters(groups, { playerNeedle = '', teamNeedle = '', mode = 'all' } = {}) {
+    const list = Array.isArray(groups) ? groups : [];
+    const normalizedPlayerNeedle = normalizeSearchText(playerNeedle);
+    const normalizedTeamNeedle = normalizeSearchText(teamNeedle);
+    if (!normalizedPlayerNeedle && !normalizedTeamNeedle) return list;
+
+    return list
+        .map(group => ({
+            ...group,
+            rows: (group.rows || []).filter(row => (
+                clanWarMatchRowMatchesPlayer(row, normalizedPlayerNeedle, mode)
+                && clanWarMatchRowMatchesTeam(row, normalizedTeamNeedle)
+            )),
         }))
         .filter(group => group.rows.length > 0);
 }
@@ -988,6 +1074,80 @@ function MyClanWarGlobalTables({ groups, players, onClanWarUpdated }) {
     );
 }
 
+function AllClanWarTable({ format, rows, players }) {
+    useLang();
+    const isTeamMatch = format !== '1v1';
+
+    return (
+        <div className="cw-my-format-block">
+            <div className="cw-my-format-title">{format}</div>
+            <div className="standings-table-wrap cw-my-table-wrap">
+                <table className={`standings-table cw-my-table ${isTeamMatch ? 'cw-my-table--team' : 'cw-my-table--solo'}`}>
+                    <thead>
+                        <tr>
+                            <th>{t('cw.my_matches.table.clan_war')}</th>
+                            <th>{t('cw.matches.table.side_a')}</th>
+                            <th>{t('cw.matches.table.side_b')}</th>
+                            <th>{t('cw.my_matches.table.score')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map(row => {
+                            const scoreA = row.match.score?.a ?? 0;
+                            const scoreB = row.match.score?.b ?? 0;
+                            const resolvedWinner = getClanWarResolvedMatchWinner(row.match);
+
+                            return (
+                                <tr key={row.matchId} className="cw-my-match-row">
+                                    <td className="cw-my-match-cell" data-label={t('cw.my_matches.table.clan_war')}>
+                                        <div className="cw-my-match-primary">{row.clanWarLabel}</div>
+                                        {row.clanWarDateLabel && (
+                                            <div className="cw-my-match-meta">{row.clanWarDateLabel}</div>
+                                        )}
+                                    </td>
+                                    <td className="cw-my-match-cell" data-label={t('cw.matches.table.side_a')}>
+                                        <ClanWarMatchPlayerList names={row.sideAPlayers} players={players} />
+                                        <div className="cw-my-match-meta">{row.label}</div>
+                                    </td>
+                                    <td className="cw-my-match-cell" data-label={t('cw.matches.table.side_b')}>
+                                        <ClanWarMatchPlayerList names={row.sideBPlayers} players={players} />
+                                    </td>
+                                    <td className="cw-my-match-cell cw-my-match-cell--score" data-label={t('cw.my_matches.table.score')}>
+                                        <div className="cw-my-match-primary">
+                                            <span style={{ color: resolvedWinner === 'a' ? 'var(--color-success)' : resolvedWinner === 'b' ? 'var(--color-error)' : 'var(--color-text-primary)' }}>{scoreA}</span>
+                                            <span className="cw-my-player-separator"> : </span>
+                                            <span style={{ color: resolvedWinner === 'b' ? 'var(--color-success)' : resolvedWinner === 'a' ? 'var(--color-error)' : 'var(--color-text-primary)' }}>{scoreB}</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
+function AllClanWarGlobalTables({ groups, players }) {
+    useLang();
+
+    return (
+        <div className="cw-card cw-my-card">
+            <div className="cw-my-card-body">
+                {groups.map(group => (
+                    <AllClanWarTable
+                        key={group.format}
+                        format={group.format}
+                        rows={group.rows}
+                        players={players}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+}
+
 function useClanWarPageData(filter = 'all') {
     const [wars,    setWars]    = React.useState([]);
     const [players, setPlayers] = React.useState([]);
@@ -1164,6 +1324,10 @@ function ClanWar() {
 function MyMatchesPage() {
     useLang();
     const [filter, setFilter] = React.useState('all');
+    const [selectedFormat, setSelectedFormat] = React.useState(CLAN_WAR_MATCH_FORMATS[0]);
+    const [page, setPage] = React.useState(1);
+    const [playerFilter, setPlayerFilter] = React.useState('');
+    const [teamFilter, setTeamFilter] = React.useState('');
     const {
         wars,
         players,
@@ -1176,7 +1340,25 @@ function MyMatchesPage() {
     const allMyMatchGroups = currentPlayer
         ? formatClanWarMatchGroups(sortedWars, currentPlayer)
         : [];
-    const myMatchGroups = filterMyMatchGroups(allMyMatchGroups, filter);
+    const statusFilteredMatchGroups = filterClanWarMatchGroupsByStatus(allMyMatchGroups, filter);
+    const formatFilteredMatchGroups = filterClanWarMatchGroupsByFormat(statusFilteredMatchGroups, selectedFormat);
+    const myMatchGroups = filterClanWarMatchGroupsByRowFilters(formatFilteredMatchGroups, {
+        playerNeedle: playerFilter,
+        teamNeedle: teamFilter,
+        mode: 'personal',
+    });
+    const { groups: paginatedMatchGroups, pagination } = paginateClanWarMatchGroups(myMatchGroups, page, CLAN_WAR_MATCHES_PAGE_SIZE);
+    const hasMatchesAtAll = allMyMatchGroups.length > 0;
+    const playerFilterNeedle = normalizeSearchText(playerFilter);
+    const teamFilterNeedle = normalizeSearchText(teamFilter);
+
+    React.useEffect(() => {
+        setPage(1);
+    }, [filter, selectedFormat, playerFilterNeedle, teamFilterNeedle]);
+
+    React.useEffect(() => {
+        if (page !== pagination.currentPage) setPage(pagination.currentPage);
+    }, [page, pagination.currentPage]);
 
     if (error) return <div style={{ color: 'var(--color-error)', padding: 32, textAlign: 'center' }}>⚠ {error}</div>;
 
@@ -1196,6 +1378,21 @@ function MyMatchesPage() {
                         </button>
                     ))}
                 </div>
+                <div className="standings-controls-group standings-controls-group--formats">
+                    {CLAN_WAR_MATCH_FORMATS.map(format => (
+                        <button
+                            key={format}
+                            className={`wow-btn${selectedFormat === format ? ' active' : ''}`}
+                            onClick={() => setSelectedFormat(format)}
+                        >
+                            {format}
+                        </button>
+                    ))}
+                </div>
+                <div className="standings-controls-group standings-controls-group--match-search">
+                    <PlayerNameFilterInput value={playerFilter} onChange={setPlayerFilter} />
+                    <TeamNameFilterInput value={teamFilter} onChange={setTeamFilter} />
+                </div>
             </div>
 
             {loading ? (
@@ -1208,16 +1405,112 @@ function MyMatchesPage() {
                 </p>
             ) : myMatchGroups.length === 0 ? (
                 <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
-                    {t('cw.my_matches.empty')}
+                    {hasMatchesAtAll ? t('filters.no_results') : t('cw.my_matches.empty')}
                 </p>
             ) : (
-                <div className="cw-list">
-                    <MyClanWarGlobalTables
-                        groups={myMatchGroups}
-                        players={players}
-                        onClanWarUpdated={handleClanWarUpdated}
-                    />
+                <>
+                    <div className="cw-list">
+                        <MyClanWarGlobalTables
+                            groups={paginatedMatchGroups}
+                            players={players}
+                            onClanWarUpdated={handleClanWarUpdated}
+                        />
+                    </div>
+                    <PaginationControls page={pagination.currentPage} totalPages={pagination.totalPages} onPageChange={setPage} />
+                </>
+            )}
+        </div>
+    );
+}
+
+function MatchesPage() {
+    useLang();
+    const [filter, setFilter] = React.useState('all');
+    const [selectedFormat, setSelectedFormat] = React.useState(CLAN_WAR_MATCH_FORMATS[0]);
+    const [page, setPage] = React.useState(1);
+    const [playerFilter, setPlayerFilter] = React.useState('');
+    const [teamFilter, setTeamFilter] = React.useState('');
+    const {
+        wars,
+        players,
+        loading,
+        error,
+    } = useClanWarPageData();
+    const sortedWars = wars.slice().sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    const allMatchGroups = formatAllClanWarMatchGroups(sortedWars);
+    const statusFilteredMatchGroups = filterClanWarMatchGroupsByStatus(allMatchGroups, filter);
+    const formatFilteredMatchGroups = filterClanWarMatchGroupsByFormat(statusFilteredMatchGroups, selectedFormat);
+    const matchGroups = filterClanWarMatchGroupsByRowFilters(formatFilteredMatchGroups, {
+        playerNeedle: playerFilter,
+        teamNeedle: teamFilter,
+        mode: 'all',
+    });
+    const { groups: paginatedMatchGroups, pagination } = paginateClanWarMatchGroups(matchGroups, page, CLAN_WAR_MATCHES_PAGE_SIZE);
+    const hasMatchesAtAll = allMatchGroups.length > 0;
+    const playerFilterNeedle = normalizeSearchText(playerFilter);
+    const teamFilterNeedle = normalizeSearchText(teamFilter);
+
+    React.useEffect(() => {
+        setPage(1);
+    }, [filter, selectedFormat, playerFilterNeedle, teamFilterNeedle]);
+
+    React.useEffect(() => {
+        if (page !== pagination.currentPage) setPage(pagination.currentPage);
+    }, [page, pagination.currentPage]);
+
+    if (error) return <div style={{ color: 'var(--color-error)', padding: 32, textAlign: 'center' }}>⚠ {error}</div>;
+
+    return (
+        <div className="animate-fade-in wow-section-page">
+            <WoWSectionTitle>{t('cw.mode.matches')}</WoWSectionTitle>
+
+            <div className="wow-filter-bar standings-controls" style={{ marginBottom: 18 }}>
+                <div className="standings-controls-group standings-controls-group--filters">
+                    {MY_MATCHES_FILTERS.map(f => (
+                        <button
+                            key={f.id}
+                            className={`wow-btn${filter === f.id ? ' active' : ''}`}
+                            onClick={() => setFilter(f.id)}
+                        >
+                            {t(f.key)}
+                        </button>
+                    ))}
                 </div>
+                <div className="standings-controls-group standings-controls-group--formats">
+                    {CLAN_WAR_MATCH_FORMATS.map(format => (
+                        <button
+                            key={format}
+                            className={`wow-btn${selectedFormat === format ? ' active' : ''}`}
+                            onClick={() => setSelectedFormat(format)}
+                        >
+                            {format}
+                        </button>
+                    ))}
+                </div>
+                <div className="standings-controls-group standings-controls-group--match-search">
+                    <PlayerNameFilterInput value={playerFilter} onChange={setPlayerFilter} />
+                    <TeamNameFilterInput value={teamFilter} onChange={setTeamFilter} />
+                </div>
+            </div>
+
+            {loading ? (
+                <div className="cw-list">
+                    {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 64, marginBottom: 12, borderRadius: 'var(--radius-md)' }} />)}
+                </div>
+            ) : matchGroups.length === 0 ? (
+                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>
+                    {hasMatchesAtAll ? t('filters.no_results') : t('cw.matches.empty')}
+                </p>
+            ) : (
+                <>
+                    <div className="cw-list">
+                        <AllClanWarGlobalTables
+                            groups={paginatedMatchGroups}
+                            players={players}
+                        />
+                    </div>
+                    <PaginationControls page={pagination.currentPage} totalPages={pagination.totalPages} onPageChange={setPage} />
+                </>
             )}
         </div>
     );

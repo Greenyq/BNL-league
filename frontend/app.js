@@ -1,5 +1,5 @@
 // BNL League — app entry point (JSX via Babel CDN)
-// Хэш-роутинг / Hash routing: /#home, /#standings, /#teams, /#clanwar, /#maps, /#profile, /#admin
+// Хэш-роутинг / Hash routing: /#home, /#standings, /#teams, /#clanwar, /#mymatches, /#matches, /#maps, /#profile, /#admin
 
 const TABS = [
     { id: 'home',      labelKey: 'nav.home' },
@@ -7,6 +7,7 @@ const TABS = [
     { id: 'teams',     labelKey: 'nav.teams' },
     { id: 'clanwar',   labelKey: 'nav.clanwar' },
     { id: 'mymatches', labelKey: 'nav.mymatches' },
+    { id: 'matches',   labelKey: 'nav.matches' },
     { id: 'bnlvsall',  labelKey: 'nav.bnlvsall' },
     { id: 'maps',      labelKey: 'nav.maps' },
     { id: 'profile',   labelKey: 'nav.profile' },
@@ -140,6 +141,23 @@ function PlayerNameFilterInput({ value, onChange, className = '' }) {
     );
 }
 
+function TeamNameFilterInput({ value, onChange, className = '' }) {
+    useLang();
+    const inputClass = ['wow-filter-input', className].filter(Boolean).join(' ');
+
+    return (
+        <input
+            type="text"
+            className={inputClass}
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            placeholder={t('filters.team_name_placeholder')}
+            aria-label={t('filters.team_name')}
+            spellCheck={false}
+        />
+    );
+}
+
 function PaginationControls({ page, totalPages, onPageChange, className = '' }) {
     useLang();
     if (totalPages <= 1) return null;
@@ -211,6 +229,7 @@ Object.assign(window, {
     findPlayerByAlias,
     formatMapSize,
     PlayerNameFilterInput,
+    TeamNameFilterInput,
     PaginationControls,
 });
 
@@ -267,6 +286,7 @@ function App() {
             )}
             {tab === 'clanwar'   && <ClanWar />}
             {tab === 'mymatches' && <MyMatchesPage />}
+            {tab === 'matches'   && <MatchesPage />}
             {tab === 'bnlvsall'  && <BnlVsAll />}
             {tab === 'maps'      && <Maps />}
             {tab === 'profile'   && <Profile />}
