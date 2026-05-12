@@ -83,6 +83,7 @@
                             <ul id="header-clanwars-submenu" class="menu-submenu" hidden>
                                 <li><a href="#clanwar" data-nav-label="clanwar" onclick="navigate('clanwar'); return false;">Клан-вары</a></li>
                                 <li><a href="#mymatches" data-nav-label="mymatches" onclick="navigate('mymatches'); return false;">Мои матчи</a></li>
+                                <li><a href="#matches" data-nav-label="matches" onclick="navigate('matches'); return false;">Матчи</a></li>
                             </ul>
                         </li>
                         <li><a href="#bnlvsall"  onclick="navigate('bnlvsall');  return false;">BNL vs All</a></li>
@@ -202,8 +203,8 @@
     var pendingPlayerUsernameRequest = null;
 
     var NAV_LABELS = {
-        ru: { home: 'Главная', standings: 'Рейтинг', teams: 'Команды', clanwar: 'Клан-вары', mymatches: 'Мои матчи', bnlvsall: 'BNL vs All', maps: 'Карты', profile: 'Профиль', admin: 'Админ' },
-        en: { home: 'Home', standings: 'Standings', teams: 'Teams', clanwar: 'Clan Wars', mymatches: 'My matches', bnlvsall: 'BNL vs All', maps: 'Maps', profile: 'Profile', admin: 'Admin' }
+        ru: { home: 'Главная', standings: 'Рейтинг', teams: 'Команды', clanwar: 'Клан-вары', mymatches: 'Мои матчи', matches: 'Матчи', bnlvsall: 'BNL vs All', maps: 'Карты', profile: 'Профиль', admin: 'Админ' },
+        en: { home: 'Home', standings: 'Standings', teams: 'Teams', clanwar: 'Clan Wars', mymatches: 'My matches', matches: 'Matches', bnlvsall: 'BNL vs All', maps: 'Maps', profile: 'Profile', admin: 'Admin' }
     };
 
     var HEADER_PROGRESS_LABELS = {
@@ -447,7 +448,7 @@
 
     function updateNavHighlight() {
         var hash = window.location.hash.replace('#', '') || 'home';
-        var isClanWarsRoute = hash === 'clanwar' || hash === 'mymatches';
+        var isClanWarsRoute = hash === 'clanwar' || hash === 'mymatches' || hash === 'matches';
         var links = document.querySelectorAll('#bnl-nav a');
         links.forEach(function(a) {
             var href = a.getAttribute('href') || '';

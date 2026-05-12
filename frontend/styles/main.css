@@ -2389,6 +2389,11 @@ input[type="datetime-local"] {
     justify-content: flex-end;
 }
 
+.standings-controls-group--match-search {
+    flex: 1 0 100%;
+    justify-content: flex-start;
+}
+
 .pagination {
     display: flex;
     align-items: center;
@@ -2756,6 +2761,10 @@ input[type="datetime-local"] {
 
     .standings-controls-group--formats {
         margin-left: 0;
+        justify-content: flex-start;
+    }
+
+    .standings-controls-group--match-search {
         justify-content: flex-start;
     }
 
