@@ -465,12 +465,6 @@
         if (menuItem && !menuItem.contains(event.target)) closeClanWarsMenu();
     });
 
-    document.addEventListener('mouseover', function(event) {
-        if (window.innerWidth <= 1170) return;
-        var menuItem = document.getElementById('header-clanwars-menu');
-        if (menuItem && !menuItem.contains(event.target)) closeClanWarsMenu();
-    });
-
     document.addEventListener('touchstart', function(event) {
         var menuItem = document.getElementById('header-clanwars-menu');
         if (menuItem && !menuItem.contains(event.target)) closeClanWarsMenu();
