@@ -775,11 +775,18 @@ function ClanWarCard({ cw, players, teams, currentPlayer, onClanWarUpdated }) {
     );
 }
 
-function ClanWarMatchPlayerList({ names, players }) {
-    if (!names.length) return <span className="cw-my-match-primary">—</span>;
+function ClanWarMatchPlayerList({ names, players, emphasis = 'normal' }) {
+    const isPrimary = emphasis === 'primary';
+    if (!names.length) {
+        return (
+            <span className={isPrimary ? 'cw-my-player-fallback cw-my-player-fallback--primary' : 'cw-my-player-fallback'}>
+                —
+            </span>
+        );
+    }
 
     return (
-        <div className="cw-my-player-list">
+        <div className={`cw-my-player-list${isPrimary ? ' cw-my-player-list--primary' : ''}`}>
             {names.map((name, index) => {
                 const entry = getClanWarMatchDisplayPlayer(name, players);
                 const raceColor = CW_RACE_COLOR[entry.race] || 'var(--color-text-primary)';
@@ -939,13 +946,13 @@ function MyClanWarTable({ format, rows, players, onClanWarUpdated }) {
                             return (
                                 <tr key={row.matchId} className={`cw-my-match-row${didWin ? ' is-win' : rowPlayed ? ' is-loss' : ''}${isEditing ? ' is-editing' : ''}`}>
                                     <td className="cw-my-match-cell" data-label={t('cw.my_matches.table.clan_war')}>
-                                        <div className="cw-my-match-primary">{row.clanWarLabel}</div>
+                                        <div className="cw-my-clan-war-title">{row.clanWarLabel}</div>
                                         {row.clanWarDateLabel && (
                                             <div className="cw-my-match-meta">{row.clanWarDateLabel}</div>
                                         )}
                                     </td>
                                     <td className="cw-my-match-cell" data-label={t(isTeamMatch ? 'cw.my_matches.table.opponents' : 'cw.my_matches.table.player')}>
-                                        <ClanWarMatchPlayerList names={row.opponents} players={players} />
+                                        <ClanWarMatchPlayerList names={row.opponents} players={players} emphasis="primary" />
                                         <div className="cw-my-match-meta">{row.label}</div>
                                         <div className="cw-my-mobile-context">
                                             <div className="cw-my-match-meta">
