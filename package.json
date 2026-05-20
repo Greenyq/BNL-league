@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
+    "seed:clanwars": "node scripts/seed-clan-wars.js",
     "build:frontend": "node scripts/build-frontend.js",
     "build:prod": "npm ci && npm run build:frontend",
     "build": "docker compose build",

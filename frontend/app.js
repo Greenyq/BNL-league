@@ -1,11 +1,13 @@
 // BNL League — app entry point (JSX via Babel CDN)
-// Хэш-роутинг / Hash routing: /#home, /#standings, /#teams, /#clanwar, /#maps, /#profile, /#admin
+// Хэш-роутинг / Hash routing: /#home, /#standings, /#teams, /#clanwar, /#mymatches, /#matches, /#maps, /#profile, /#admin
 
 const TABS = [
     { id: 'home',      labelKey: 'nav.home' },
     { id: 'standings', labelKey: 'nav.standings' },
     { id: 'teams',     labelKey: 'nav.teams' },
     { id: 'clanwar',   labelKey: 'nav.clanwar' },
+    { id: 'mymatches', labelKey: 'nav.mymatches' },
+    { id: 'matches',   labelKey: 'nav.matches' },
     { id: 'bnlvsall',  labelKey: 'nav.bnlvsall' },
     { id: 'maps',      labelKey: 'nav.maps' },
     { id: 'profile',   labelKey: 'nav.profile' },
@@ -115,6 +117,13 @@ function findPlayerByAlias(players, candidate) {
     return list.find(player => playerHasAlias(player, candidate)) || null;
 }
 
+function formatMapSize(bytes) {
+    const size = Number(bytes) || 0;
+    if (size >= 1024 * 1024) return (size / 1024 / 1024).toFixed(1) + ' MB';
+    if (size >= 1024) return Math.round(size / 1024) + ' KB';
+    return size + ' B';
+}
+
 function PlayerNameFilterInput({ value, onChange, className = '' }) {
     useLang();
     const inputClass = ['wow-filter-input', className].filter(Boolean).join(' ');
@@ -127,6 +136,23 @@ function PlayerNameFilterInput({ value, onChange, className = '' }) {
             onChange={e => onChange(e.target.value)}
             placeholder={t('filters.player_name_placeholder')}
             aria-label={t('filters.player_name')}
+            spellCheck={false}
+        />
+    );
+}
+
+function TeamNameFilterInput({ value, onChange, className = '' }) {
+    useLang();
+    const inputClass = ['wow-filter-input', className].filter(Boolean).join(' ');
+
+    return (
+        <input
+            type="text"
+            className={inputClass}
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            placeholder={t('filters.team_name_placeholder')}
+            aria-label={t('filters.team_name')}
             spellCheck={false}
         />
     );
@@ -201,7 +227,9 @@ Object.assign(window, {
     matchesPlayerSearch,
     playerHasAlias,
     findPlayerByAlias,
+    formatMapSize,
     PlayerNameFilterInput,
+    TeamNameFilterInput,
     PaginationControls,
 });
 
@@ -257,6 +285,8 @@ function App() {
                         : <Teams onOpenRecruit={openRecruit} onOpenDraft={openDraft} />
             )}
             {tab === 'clanwar'   && <ClanWar />}
+            {tab === 'mymatches' && <MyMatchesPage />}
+            {tab === 'matches'   && <MatchesPage />}
             {tab === 'bnlvsall'  && <BnlVsAll />}
             {tab === 'maps'      && <Maps />}
             {tab === 'profile'   && <Profile />}
