@@ -10,6 +10,18 @@ const rankClass   = i => i === 0 ? 'top-1' : i === 1 ? 'top-2' : i === 2 ? 'top-
 const rankIcon    = i => i === 0 ? 'I' : i === 1 ? 'II' : i === 2 ? 'III' : i + 1;
 const playerRace  = player => player?.mainRace ?? player?.race ?? null;
 
+function getStandingsTeamCaptain(team, players) {
+    return (players || []).find(player => player.id === team?.captainId) || null;
+}
+
+function getStandingsTeamRosterPlayers(team, players) {
+    const rosterById = new Map();
+    (players || [])
+        .filter(player => player.teamId === team?.id || player.id === team?.captainId)
+        .forEach(player => rosterById.set(player.id, player));
+    return [...rosterById.values()];
+}
+
 function PlayerStandingsMobileCard({ row, index }) {
     const race = row.race ?? playerRace(row.player);
     const portrait = row.player.selectedPortrait;
@@ -275,7 +287,7 @@ function TeamStandings({ page, onPageChange, playerFilter }) {
     // Compute stats for each team
     const rows = teams.map(team => {
         const name = team.name.toLowerCase();
-        const rosterPlayers = players.filter(p => p.teamId === team.id);
+        const rosterPlayers = getStandingsTeamRosterPlayers(team, players);
         const myWars = completed.filter(cw =>
             cw.teamA?.name?.toLowerCase() === name ||
             cw.teamB?.name?.toLowerCase() === name
@@ -294,7 +306,7 @@ function TeamStandings({ page, onPageChange, playerFilter }) {
             const isA = cw.teamA?.name?.toLowerCase() === name;
             return sum + (isA ? (cw.clanWarScore?.b || 0) : (cw.clanWarScore?.a || 0));
         }, 0);
-        const captain = players.find(p => p.id === team.captainId);
+        const captain = getStandingsTeamCaptain(team, players);
         const roster  = rosterPlayers.length;
         const matchesPlayer = !playerFilterNeedle
             || matchesPlayerSearch(captain, playerFilterNeedle)
@@ -303,7 +315,7 @@ function TeamStandings({ page, onPageChange, playerFilter }) {
     })
     .filter(row => row.matchesPlayer)
     // Sort: clan war wins desc, then match wins desc
-    .sort((a, b) => b.wins - a.wins || b.matchWins - a.matchWins);
+    .sort((a, b) => b.wins - a.wins || b.matchWins - a.matchWins || a.losses - b.losses || String(a.team.name || '').localeCompare(String(b.team.name || '')));
     const pagination = paginateCollection(rows, page, TEAMS_PAGE_SIZE);
 
     React.useEffect(() => {
