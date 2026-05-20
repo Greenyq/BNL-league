@@ -87,16 +87,23 @@ function teamMatchSideHasPlayer(sideValue, player) {
     });
 }
 
-function calculateTeamPlayerClanWarStats(player, clanWars) {
+function calculateTeamPlayerClanWarStats(player, clanWars, team) {
+    const teamName = normalizeSearchText(team?.name);
+
     return (clanWars || []).reduce((stats, cw) => {
         if (cw.status !== 'completed') return stats;
+
+        const isTeamA = normalizeSearchText(cw.teamA?.name) === teamName;
+        const isTeamB = normalizeSearchText(cw.teamB?.name) === teamName;
+        if (teamName && !isTeamA && !isTeamB) return stats;
 
         for (const match of (cw.matches || [])) {
             if (match.winner !== 'a' && match.winner !== 'b') continue;
             const onA = teamMatchSideHasPlayer(match.playerA, player);
             const onB = teamMatchSideHasPlayer(match.playerB, player);
-            if (!onA && !onB) continue;
-            if ((onA && match.winner === 'a') || (onB && match.winner === 'b')) stats.wins += 1;
+            const playerSide = isTeamA ? (onA ? 'a' : null) : isTeamB ? (onB ? 'b' : null) : onA ? 'a' : onB ? 'b' : null;
+            if (!playerSide) continue;
+            if (match.winner === playerSide) stats.wins += 1;
             else stats.losses += 1;
         }
         stats.points = stats.wins;
@@ -122,12 +129,12 @@ function getTeamClanWarRecord(team, clanWars) {
 }
 
 // ── Строка игрока в команде ───────────────────────────────────────────────────
-function PlayerRow({ player, isCaptain, clanWars }) {
+function PlayerRow({ player, isCaptain, clanWars, team }) {
     const race    = player.mainRace ?? player.race;
     const stats   = player.stats || null;
     const portrait = player.selectedPortrait;
     const isWinner = !!player.seasonWinner;
-    const clanWarStats = calculateTeamPlayerClanWarStats(player, clanWars);
+    const clanWarStats = calculateTeamPlayerClanWarStats(player, clanWars, team);
     const statValues = {
         mmr: stats?.mmr ?? player.currentMmr ?? null,
         wins: clanWarStats.wins,
@@ -347,7 +354,7 @@ function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
                     </p>
                 ) : (
                     roster.map(p => (
-                        <PlayerRow key={p.id} player={p} isCaptain={p.id === team.captainId} clanWars={clanWars} />
+                        <PlayerRow key={p.id} player={p} isCaptain={p.id === team.captainId} clanWars={clanWars} team={team} />
                     ))
                 )}
             </div>
