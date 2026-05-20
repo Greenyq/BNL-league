@@ -12,6 +12,23 @@ const RACE_ABBR = race => ({
 const RACE_COLOR = { 1: '#a8d8ea', 2: '#ff7043', 4: '#66bb6a', 8: '#b0b0b0' };
 const TEAMS_PAGE_SIZE = 10;
 
+function getTeamCaptain(team, players) {
+    return (players || []).find(player => player.id === team?.captainId) || null;
+}
+
+function getTeamRosterPlayers(team, players) {
+    const rosterById = new Map();
+    (players || [])
+        .filter(player => player.teamId === team?.id || player.id === team?.captainId)
+        .forEach(player => rosterById.set(player.id, player));
+
+    return [...rosterById.values()].sort((a, b) => {
+        if (a.id === team?.captainId) return -1;
+        if (b.id === team?.captainId) return 1;
+        return String(a.name || a.battleTag || '').localeCompare(String(b.name || b.battleTag || ''));
+    });
+}
+
 function parseTeamClanWarSide(value) {
     return String(value || '')
         .split(' + ')
@@ -72,6 +89,8 @@ function teamMatchSideHasPlayer(sideValue, player) {
 
 function calculateTeamPlayerClanWarStats(player, clanWars) {
     return (clanWars || []).reduce((stats, cw) => {
+        if (cw.status !== 'completed') return stats;
+
         for (const match of (cw.matches || [])) {
             if (match.winner !== 'a' && match.winner !== 'b') continue;
             const onA = teamMatchSideHasPlayer(match.playerA, player);
@@ -91,11 +110,11 @@ function getTeamClanWarRecord(team, clanWars) {
         const isA = normalizeSearchText(cw.teamA?.name) === name;
         const isB = normalizeSearchText(cw.teamB?.name) === name;
         if (!isA && !isB) return record;
-        if (cw.status === 'completed' && cw.winner) {
-            record.played += 1;
-            if ((isA && cw.winner === 'a') || (isB && cw.winner === 'b')) record.wins += 1;
-            else record.losses += 1;
-        }
+        if (cw.status !== 'completed' || !cw.winner) return record;
+
+        record.played += 1;
+        if ((isA && cw.winner === 'a') || (isB && cw.winner === 'b')) record.wins += 1;
+        else record.losses += 1;
         record.matchWins += isA ? (cw.clanWarScore?.a || 0) : (cw.clanWarScore?.b || 0);
         record.matchLosses += isA ? (cw.clanWarScore?.b || 0) : (cw.clanWarScore?.a || 0);
         return record;
@@ -186,15 +205,15 @@ function PlayerRow({ player, isCaptain, clanWars }) {
                         <span className="team-stat-val" style={{ color: 'var(--color-accent-secondary)' }}>{statValues.mmr ?? '—'}</span>
                     </div>
                     <div className="team-stat-cell">
-                        <span className="team-stat-label">W</span>
+                        <span className="team-stat-label" title={tr('Победы в лиге', 'League wins')}>{tr('ЛВ', 'LW')}</span>
                         <span className="team-stat-val" style={{ color: 'var(--color-success)' }}>{statValues.wins}</span>
                     </div>
                     <div className="team-stat-cell">
-                        <span className="team-stat-label">L</span>
+                        <span className="team-stat-label" title={tr('Поражения в лиге', 'League losses')}>{tr('ЛП', 'LL')}</span>
                         <span className="team-stat-val" style={{ color: 'var(--color-error)' }}>{statValues.losses}</span>
                     </div>
                     <div className="team-stat-cell">
-                        <span className="team-stat-label">CW</span>
+                        <span className="team-stat-label" title={tr('Очки в лиге', 'League points')}>{tr('Лига', 'Lg')}</span>
                         <span className="team-stat-val" style={{ color: 'var(--color-accent-primary)', fontWeight: 800 }}>{statValues.points}</span>
                     </div>
                 </div>
@@ -231,14 +250,8 @@ function TeamClanWarRow({ cw, teamName }) {
 // ── Полная карточка команды ───────────────────────────────────────────────────
 function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
     useLang();
-    const rosterRaw = players.filter(p => p.teamId === team.id);
-    // Captain always first in roster
-    const roster = [...rosterRaw].sort((a, b) => {
-        if (a.id === team.captainId) return -1;
-        if (b.id === team.captainId) return 1;
-        return 0;
-    });
-    const captain  = players.find(p => p.id === team.captainId);
+    const roster = getTeamRosterPlayers(team, players);
+    const captain  = getTeamCaptain(team, players);
     const teamCWs  = clanWars.filter(cw =>
         cw.teamA?.name?.toLowerCase() === team.name.toLowerCase() ||
         cw.teamB?.name?.toLowerCase() === team.name.toLowerCase()
@@ -282,6 +295,12 @@ function TeamCard({ team, players, clanWars, onOpenRecruit, onOpenDraft }) {
                     <div className="team-summary-item">
                         <span className="team-summary-label">{tr('КВ очки', 'CW points')}</span>
                         <span className="team-summary-val" style={{ color: 'var(--color-accent-primary)' }}>{totalPts}</span>
+                    </div>
+                    <div className="team-summary-item">
+                        <span className="team-summary-label">{tr('Матчи', 'Matches')}</span>
+                        <span className="team-summary-val" style={{ color: 'var(--color-accent-secondary)' }}>
+                            {record.matchWins}:{record.matchLosses}
+                        </span>
                     </div>
                     {(cwWins + cwLosses) > 0 && (
                         <div className="team-summary-item">
@@ -447,8 +466,8 @@ function Teams({ onOpenRecruit, onOpenDraft }) {
     React.useEffect(() => { load(); }, []);
     const filteredTeams = teams.filter(team => {
         if (!playerFilterNeedle) return true;
-        const rosterPlayers = players.filter(player => player.teamId === team.id);
-        const captain = players.find(player => player.id === team.captainId);
+        const rosterPlayers = getTeamRosterPlayers(team, players);
+        const captain = getTeamCaptain(team, players);
         if (matchesPlayerSearch(captain, playerFilterNeedle)) return true;
         if (rosterPlayers.some(player => matchesPlayerSearch(player, playerFilterNeedle))) return true;
         return clanWars.some(cw =>
