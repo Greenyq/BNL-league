@@ -17,6 +17,7 @@ const portraitsRouter = require('./routes/portraits');
 const draftRouter     = require('./routes/draft');
 const mapsRouter      = require('./routes/maps');
 const bnlVsAllRouter  = require('./routes/bnlVsAll');
+const chronoscopeRouter = require('./routes/chronoscope');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -131,6 +132,7 @@ app.use('/api/portraits', portraitsRouter);
 app.use('/api/draft',     draftRouter);
 app.use('/api/maps',      mapsRouter);
 app.use('/api/bnl-vs-all', bnlVsAllRouter);
+app.use('/api/chronoscope', chronoscopeRouter);
 
 // ── SPA fallback ──────────────────────────────────────────────────────────────
 app.get('*', (req, res) => {

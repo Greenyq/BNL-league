@@ -104,6 +104,16 @@ on every match update.
 
 ---
 
+## Chronoscope integration
+
+Set `CHRONOSCOPE_SHARED_KEY` to require the `x-chronoscope-key` header. If the key is unset, the snapshot endpoint is public read-only.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/chronoscope/snapshot` | Read-only BNL health snapshot for Chronoscope traces |
+
+---
+
 ## Go Stats Processor (port 3001)
 
 | Method | Path | Description |
