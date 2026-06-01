@@ -7,8 +7,8 @@ const TABS = [
     // Team season is closed; keep these routes hidden for the permanent individual season.
     // { id: 'teams',     labelKey: 'nav.teams' },
     // { id: 'clanwar',   labelKey: 'nav.clanwar' },
-    { id: 'mymatches', labelKey: 'nav.mymatches' },
-    { id: 'matches',   labelKey: 'nav.matches' },
+    // { id: 'mymatches', labelKey: 'nav.mymatches' },
+    // { id: 'matches',   labelKey: 'nav.matches' },
     // { id: 'bnlvsall',  labelKey: 'nav.bnlvsall' },
     { id: 'maps',      labelKey: 'nav.maps' },
     { id: 'profile',   labelKey: 'nav.profile' },
@@ -274,8 +274,6 @@ function App() {
             {tab === 'home'      && <HomePage />}
             {tab === 'standings' && <Standings />}
             {/* Team/clan-war routes are closed with the finished team season. */}
-            {tab === 'mymatches' && <MyMatchesPage />}
-            {tab === 'matches'   && <MatchesPage />}
             {tab === 'maps'      && <Maps />}
             {tab === 'profile'   && <Profile />}
             {tab === 'admin'     && <Admin />}

@@ -67,25 +67,7 @@
                     <ul id="bnl-nav">
                         <li><a href="#home"      onclick="navigate('home');      return false;">Главная</a></li>
                         <li><a href="#standings" onclick="navigate('standings'); return false;">Таблица</a></li>
-                        <!-- Team season closed: teams/clan-war links hidden. -->
-                        <li class="menu-item menu-item--has-submenu" id="header-clanwars-menu" hidden>
-                            <button
-                                id="header-clanwars-toggle"
-                                class="menu-group-toggle"
-                                type="button"
-                                data-nav-label="clanwar"
-                                aria-expanded="false"
-                                aria-controls="header-clanwars-submenu"
-                                onclick="toggleClanWarsMenu(event); return false;"
-                            >
-                                Клан-вары
-                            </button>
-                            <ul id="header-clanwars-submenu" class="menu-submenu" hidden>
-                                <li><a href="#clanwar" data-nav-label="clanwar" onclick="navigate('clanwar'); return false;">Клан-вары</a></li>
-                                <li><a href="#mymatches" data-nav-label="mymatches" onclick="navigate('mymatches'); return false;">Мои матчи</a></li>
-                                <li><a href="#matches" data-nav-label="matches" onclick="navigate('matches'); return false;">Матчи</a></li>
-                            </ul>
-                        </li>
+                        <!-- Team season closed: clan-war tab removed. -->
                         <!-- BNL vs All is hidden with the closed team season. -->
                         <li><a href="#maps"      onclick="navigate('maps');      return false;">Карты</a></li>
                         <li><a id="header-profile-link" href="#profile" onclick="navigate('profile'); return false;">Профиль</a></li>
@@ -156,7 +138,7 @@
                     <li><a href="#home"      onclick="navigate('home');      return false;">Главная</a></li>
                     <li><a href="#standings" onclick="navigate('standings'); return false;">Таблица</a></li>
                     <!-- Team season closed: teams/clan-war links hidden. -->
-                    <li><a href="#mymatches" onclick="navigate('mymatches'); return false;">Мои матчи</a></li>
+                    <!-- Clan-war match pages are hidden with the closed team season. -->
                     <!-- BNL vs All is hidden with the closed team season. -->
                     <li><a href="#maps"      onclick="navigate('maps');      return false;">Карты</a></li>
                     <li><a href="#profile"   onclick="navigate('profile');   return false;">Профиль</a></li>
