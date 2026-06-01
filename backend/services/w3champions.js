@@ -4,20 +4,26 @@ const { PlayerCache } = require('../models/Player');
 const W3C_BASE = 'https://website-backend.w3champions.com/api';
 const HEADERS  = { 'User-Agent': 'BNL-League-App', 'Accept': 'application/json' };
 
-const STAGE1_START = new Date('2026-02-09T00:00:00Z');
-const STAGE1_END   = new Date('2026-02-23T00:00:00Z'); // Feb 22 inclusive
+const PERMANENT_SEASON_START = new Date(process.env.BNL_SEASON_START || '2026-05-30T00:00:00Z');
+const MATCH_PAGE_SIZE = 100;
+const MAX_MATCH_PAGES = 5;
 
 // Fetch and cache match history for one player.
-// Returns the filtered match array (Stage 1 only).
+// Returns matches from the permanent BNL season window.
 async function loadMatchDataForPlayer(player, { season = 24, gateway = 20 } = {}) {
     try {
-        const url = `${W3C_BASE}/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=${gateway}&season=${season}&pageSize=100`;
-        const { data } = await axios.get(url, { headers: HEADERS, timeout: 12000 });
+        const matchData = [];
+        for (let page = 0; page < MAX_MATCH_PAGES; page++) {
+            const offset = page * MATCH_PAGE_SIZE;
+            const url = `${W3C_BASE}/matches/search?playerId=${encodeURIComponent(player.battleTag)}&gateway=${gateway}&season=${season}&offset=${offset}&pageSize=${MATCH_PAGE_SIZE}`;
+            const { data } = await axios.get(url, { headers: HEADERS, timeout: 12000 });
+            const matches = data.matches || [];
 
-        const matchData = (data.matches || []).filter(m => {
-            const d = new Date(m.startTime);
-            return d >= STAGE1_START && d < STAGE1_END;
-        });
+            matchData.push(...matches.filter(m => new Date(m.startTime) >= PERMANENT_SEASON_START));
+
+            const reachedOlderMatches = matches.some(m => new Date(m.startTime) < PERMANENT_SEASON_START);
+            if (matches.length < MATCH_PAGE_SIZE || reachedOlderMatches) break;
+        }
 
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1-hour TTL
         await PlayerCache.findOneAndUpdate(
@@ -71,4 +77,4 @@ async function searchPlayers(query, { pageSize = 20 } = {}) {
     }
 }
 
-module.exports = { loadMatchDataForPlayer, fetchPlayerMmr, searchPlayer, searchPlayers, STAGE1_START, STAGE1_END };
+module.exports = { loadMatchDataForPlayer, fetchPlayerMmr, searchPlayer, searchPlayers, PERMANENT_SEASON_START };
