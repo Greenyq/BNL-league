@@ -93,7 +93,9 @@ function PlayerStandingsMobileCard({ row, index }) {
                     </div>
                     <div className="standings-mobile-stat">
                         <span className="standings-mobile-stat-label">{t('standings.points')}</span>
-                        <span className="standings-mobile-stat-value standings-mobile-stat-value--points">{row.points}</span>
+                        <span className="standings-mobile-stat-value standings-mobile-stat-value--points">
+                            <span className="points-pill points-pill--compact">{row.points ?? 0}</span>
+                        </span>
                     </div>
                 </div>
                 <div className="standings-achievements-row">
@@ -680,7 +682,9 @@ function Standings() {
                                                     </td>
                                                     <td className="col-wins">{row.wins}</td>
                                                     <td className="col-losses">{row.losses}</td>
-                                                    <td className="col-points">{row.points}</td>
+                                                    <td className="col-points">
+                                                        <span className="points-pill">{row.points ?? 0}</span>
+                                                    </td>
                                                     <td className="col-achievements">
                                                         {achievementPreview(row.achievements).map(key => (
                                                             <span key={key} className="achievement-pill">{key}</span>
@@ -689,7 +693,7 @@ function Standings() {
                                                             <span className="achievement-pill achievement-pill--more">+{row.achievements.length - 3}</span>
                                                         )}
                                                         {(!row.achievements || row.achievements.length === 0) && (
-                                                            <span className="achievement-pill achievement-pill--empty">-</span>
+                                                            <span className="achievement-pill achievement-pill--empty">{tr('Нет ачивок', 'No achievements')}</span>
                                                         )}
                                                     </td>
                                                 </tr>
