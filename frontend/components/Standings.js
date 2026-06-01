@@ -5,10 +5,14 @@ const RACE_IMG    = { 0: '/images/random.svg', 1: '/images/human.jpg', 2: '/imag
 const PLAYERS_PAGE_SIZE = 10;
 const TEAMS_PAGE_SIZE = 10;
 const DRAFT_POOL_PAGE_SIZE = 10;
+const TIER_LABELS = { 0: '-', 1: 'C', 2: 'B', 3: 'A', 4: 'S' };
+const TIER_CLASSES = { 0: 'u', 1: 'c', 2: 'b', 3: 'a', 4: 's' };
 const tr = (ru, en) => getLang() === 'en' ? en : ru;
 const rankClass   = i => i === 0 ? 'top-1' : i === 1 ? 'top-2' : i === 2 ? 'top-3' : '';
 const rankIcon    = i => i === 0 ? 'I' : i === 1 ? 'II' : i === 2 ? 'III' : i + 1;
 const playerRace  = player => player?.mainRace ?? player?.race ?? null;
+const tierLabel = tier => TIER_LABELS[Number(tier) || 0] || '-';
+const tierClass = tier => TIER_CLASSES[Number(tier) || 0] || 'u';
 
 function getStandingsTeamCaptain(team, players) {
     return (players || []).find(player => player.id === team?.captainId) || null;
@@ -30,7 +34,7 @@ function PlayerStandingsMobileCard({ row, index }) {
     const isWinner = !!row.player.seasonWinner;
 
     return (
-        <div className={`standings-mobile-card${isWinner ? ' season-winner-card' : ''}`}>
+        <div className={`standings-mobile-card${isWinner ? ' season-winner-card' : ''}${row.tierPromoted ? ' tier-promoted-card' : ''}`}>
             <div className="standings-mobile-rank-wrap">
                 <div className={`standings-mobile-rank ${rankClass(index)}`}>{rankIcon(index)}</div>
             </div>
@@ -61,9 +65,17 @@ function PlayerStandingsMobileCard({ row, index }) {
                     </div>
                 </div>
                 <div className="standings-mobile-subrow">
+                    <span className={`standings-mobile-pill tier-pill tier-pill--${tierClass(row.tier)}`}>
+                        {tierLabel(row.tier)}
+                    </span>
                     <span className="standings-mobile-pill">
                         {race != null ? t(`race.${race}`) : '—'}
                     </span>
+                    {row.tierPromoted && (
+                        <span className="standings-mobile-pill tier-promotion-pill">
+                            {tr('Повышение', 'Promoted')}
+                        </span>
+                    )}
                 </div>
                 <div className="standings-mobile-stats">
                     <div className="standings-mobile-stat">
@@ -422,10 +434,12 @@ function DraftPoolStandings({ page, onPageChange, playerFilter }) {
     // Tier calculation: same logic as backend
     function getEffectiveTier(p) {
         if (p.tierOverride) return p.tierOverride;
+        if (p.stats?.tier != null) return p.stats.tier;
         const mmr = p.stats?.mmr || p.currentMmr || 0;
-        if (mmr >= 1700) return 3;
-        if (mmr >= 1400) return 2;
-        if (mmr >= 1000) return 1;
+        if (mmr >= 1800) return 4;
+        if (mmr >= 1500) return 3;
+        if (mmr >= 1200) return 2;
+        if (mmr >= 800)  return 1;
         return 0;
     }
 
@@ -436,8 +450,8 @@ function DraftPoolStandings({ page, onPageChange, playerFilter }) {
             return {
                 player,
                 tier,
-                tierClass: tier === 3 ? 's' : tier === 2 ? 'a' : tier === 1 ? 'b' : 'u',
-                tierLabel: tier === 3 ? 'S' : tier === 2 ? 'A' : tier === 1 ? 'B' : '—',
+                tierClass: tierClass(tier),
+                tierLabel: tierLabel(tier),
                 mmr,
                 wins: player.stats?.wins ?? 0,
                 losses: player.stats?.losses ?? 0,
@@ -493,7 +507,7 @@ function Standings() {
     React.useEffect(() => {
         Promise.all([
             fetch('/api/players').then(r => r.json()),
-            fetch('/api/clan-wars').then(r => r.json()),
+            Promise.resolve([]),
         ])
             .then(([pl, cw]) => {
                 setPlayers(Array.isArray(pl) ? pl : []);
@@ -507,18 +521,34 @@ function Standings() {
     const rows = players
     .filter(player => matchesPlayerSearch(player, playerFilterNeedle))
     .flatMap(p => {
-        const clanWarStats = calculatePlayerClanWarStats(p, wars);
-        clanWarStats.points = clanWarStats.wins;
         const s = p.stats;
-        const mmr = s?.mmr ?? p.currentMmr ?? null;
         if (raceFilter !== null) {
+            const raceStat = (s?.raceStats || []).find(r => Number(r.race) === Number(raceFilter));
             const playerRaceValue = playerRace(p);
-            if (playerRaceValue !== raceFilter && !(s?.raceStats || []).some(r => r.race === raceFilter)) return [];
-            return [{ player: p, race: raceFilter, wins: clanWarStats.wins, losses: clanWarStats.losses, points: clanWarStats.points, mmr }];
+            if (!raceStat && playerRaceValue !== raceFilter) return [];
+            return [{
+                player: p,
+                race: raceFilter,
+                wins: raceStat?.wins ?? 0,
+                losses: raceStat?.losses ?? 0,
+                points: raceStat?.points ?? 0,
+                mmr: raceStat?.mmr ?? s?.mmr ?? p.currentMmr ?? null,
+                tier: raceStat?.tier ?? s?.tier ?? 0,
+                tierPromoted: !!s?.tierPromoted
+            }];
         }
-        return [{ player: p, race: null, wins: clanWarStats.wins, losses: clanWarStats.losses, points: clanWarStats.points, mmr }];
+        return [{
+            player: p,
+            race: playerRace(p),
+            wins: s?.wins ?? 0,
+            losses: s?.losses ?? 0,
+            points: s?.points ?? 0,
+            mmr: s?.mmr ?? p.currentMmr ?? null,
+            tier: s?.tier ?? 0,
+            tierPromoted: !!s?.tierPromoted
+        }];
     })
-    .sort((a, b) => b.points - a.points || b.wins - a.wins || a.losses - b.losses || (b.mmr ?? 0) - (a.mmr ?? 0));
+    .sort((a, b) => b.points - a.points || b.wins - a.wins || (b.mmr ?? 0) - (a.mmr ?? 0) || a.losses - b.losses);
     const pagedPlayers = paginateCollection(rows, pages.players, PLAYERS_PAGE_SIZE);
 
     const setModePage = (key, value) => {
@@ -574,12 +604,7 @@ function Standings() {
                     >
                         {t('standings.mode.players')}
                     </button>
-                    <button
-                        className={`wow-btn${mode === 'teams' ? ' active' : ''}`}
-                        onClick={() => setMode('teams')}
-                    >
-                        {t('standings.mode.teams')}
-                    </button>
+                    {/* Team standings are closed for the finished team season. */}
                     <button
                         className={`wow-btn${mode === 'draftpool' ? ' active' : ''}`}
                         onClick={() => setMode('draftpool')}
@@ -590,7 +615,7 @@ function Standings() {
             </div>
 
             {mode === 'teams' ? (
-                <TeamStandings page={pages.teams} onPageChange={page => setModePage('teams', page)} playerFilter={playerFilterNeedle} />
+                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>{tr('Командный сезон закрыт.', 'Team season is closed.')}</p>
             ) : mode === 'draftpool' ? (
                 <DraftPoolStandings page={pages.draftpool} onPageChange={page => setModePage('draftpool', page)} playerFilter={playerFilterNeedle} />
             ) : (
@@ -613,6 +638,7 @@ function Standings() {
                                             <th>{t('standings.rank')}</th>
                                             <th>{t('standings.player')}</th>
                                             <th>{t('standings.race')}</th>
+                                            <th>{tr('Тир', 'Tier')}</th>
                                             <th>{t('standings.mmr')}</th>
                                             <th>{t('standings.wins')}</th>
                                             <th>{t('standings.losses')}</th>
@@ -628,7 +654,7 @@ function Standings() {
                                             const avatarSrc = portrait || raceImg || null;
                                             const isWinner = !!row.player.seasonWinner;
                                             return (
-                                                <tr key={`${row.player.battleTag}-${row.race}`}>
+                                                <tr key={`${row.player.battleTag}-${row.race}`} className={row.tierPromoted ? 'tier-promoted-row' : ''}>
                                                     <td className={`col-rank ${rankClass(rank)}`}>{rankIcon(rank)}</td>
                                                     <td className="col-name" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                                         {avatarSrc && (
@@ -646,6 +672,10 @@ function Standings() {
                                                     </td>
                                                     <td style={{ color: 'var(--color-text-muted)' }}>
                                                         {row.race !== null ? t(`race.${row.race}`) : '—'}
+                                                    </td>
+                                                    <td>
+                                                        <span className={`tier-pill tier-pill--${tierClass(row.tier)}`}>{tierLabel(row.tier)}</span>
+                                                        {row.tierPromoted && <span className="tier-promotion-pill">{tr('Повышение', 'Promoted')}</span>}
                                                     </td>
                                                     <td style={{ color: 'var(--color-accent-secondary)', fontWeight: 600 }}>
                                                         {row.mmr ?? '—'}

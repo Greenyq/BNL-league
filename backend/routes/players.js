@@ -3,6 +3,7 @@ const bcrypt   = require('bcrypt');
 const crypto   = require('crypto');
 const { Player, PlayerStats, PlayerCache, ManualPointsAdjustment,
         PlayerUser, PlayerSession, PasswordReset } = require('../models/Player');
+const { Portrait } = require('../models/Portrait');
 const { checkAuth } = require('../middleware/auth');
 const { recalculateAllPlayerStats } = require('../services/scoring');
 const { searchPlayer, searchPlayers } = require('../services/w3champions');
@@ -233,9 +234,26 @@ router.put('/auth/select-portrait', async (req, res) => {
         const playerUser = await PlayerUser.findById(session.playerUserId);
         if (!playerUser?.linkedBattleTag) return res.status(400).json({ error: 'Must link BattleTag first' });
 
+        const player = await playerWithStats(playerUser.linkedBattleTag);
+        if (!player) return res.status(404).json({ error: 'Player not found - re-link your BattleTag' });
+
+        const portraitDoc = await Portrait.findOne({ imageUrl: portrait });
+        if (!portraitDoc) return res.status(404).json({ error: 'Portrait not found' });
+
+        const mainRace = player.mainRace ?? player.race;
+        if (mainRace == null) return res.status(400).json({ error: 'Select main race first' });
+        if (Number(portraitDoc.race) !== Number(mainRace)) {
+            return res.status(403).json({ error: 'Portrait is not available for your main race' });
+        }
+
+        const playerPoints = player.stats?.points || 0;
+        if (playerPoints < (portraitDoc.pointsRequired || 0)) {
+            return res.status(403).json({ error: 'Not enough points for this portrait' });
+        }
+
         const updated = await Player.findOneAndUpdate(
             playerQ(playerUser.linkedBattleTag),
-            { selectedPortrait: portrait, updatedAt: Date.now() },
+            { selectedPortrait: portrait, selectedPortraitId: portraitDoc.id, updatedAt: Date.now() },
             { new: true }
         );
         if (!updated) return res.status(404).json({ error: 'Player not found — re-link your BattleTag' });
@@ -248,6 +266,7 @@ router.put('/auth/select-portrait', async (req, res) => {
 // Toggle draft availability (requires linked BattleTag)
 router.put('/auth/toggle-draft', async (req, res) => {
     try {
+        return res.status(403).json({ error: 'Prospect pool is admin-managed' });
         const session = await getPlayerSession(req);
         if (!session) return res.status(401).json({ error: 'Not authenticated' });
 

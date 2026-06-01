@@ -17,7 +17,7 @@ const playerSchema = new mongoose.Schema({
     discordTag:        { type: String },
     selectedPortraitId:       { type: String },
     selectedPortrait:         { type: String }, // URL of selected portrait image
-    tierOverride:             { type: Number, default: null }, // null=auto, 1=B, 2=A, 3=S
+    tierOverride:             { type: Number, default: null }, // null=auto, 1=C, 2=B, 3=A, 4=S
     seasonWinner:             { type: Number, default: null }, // null=no, 1=season1, 2=season2, ...
     draftAvailable:           { type: Boolean, default: false },
     draftAvailableUpdatedAt:  { type: Date },
@@ -42,6 +42,11 @@ const playerStatsSchema = new mongoose.Schema({
     wins:              { type: Number, default: 0 },
     losses:            { type: Number, default: 0 },
     mmr:               { type: Number, default: 0 },
+    tier:              { type: Number, default: 0 }, // 0=unranked, 1=C, 2=B, 3=A, 4=S
+    previousTier:      { type: Number, default: 0 },
+    bestTierAchieved:  { type: Number, default: 0 },
+    tierPromoted:      { type: Boolean, default: false },
+    tierPromotedAt:    { type: Date },
     maxPointsAchieved: { type: Number, default: 0 },
     raceStats: [{
         race:         Number,
@@ -49,6 +54,7 @@ const playerStatsSchema = new mongoose.Schema({
         wins:         Number,
         losses:       Number,
         mmr:          Number,
+        tier:         Number,
         achievements: [String],
         matchCount:   Number,
         matchHistory: [{

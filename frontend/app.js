@@ -4,11 +4,12 @@
 const TABS = [
     { id: 'home',      labelKey: 'nav.home' },
     { id: 'standings', labelKey: 'nav.standings' },
-    { id: 'teams',     labelKey: 'nav.teams' },
-    { id: 'clanwar',   labelKey: 'nav.clanwar' },
+    // Team season is closed; keep these routes hidden for the permanent individual season.
+    // { id: 'teams',     labelKey: 'nav.teams' },
+    // { id: 'clanwar',   labelKey: 'nav.clanwar' },
     { id: 'mymatches', labelKey: 'nav.mymatches' },
     { id: 'matches',   labelKey: 'nav.matches' },
-    { id: 'bnlvsall',  labelKey: 'nav.bnlvsall' },
+    // { id: 'bnlvsall',  labelKey: 'nav.bnlvsall' },
     { id: 'maps',      labelKey: 'nav.maps' },
     { id: 'profile',   labelKey: 'nav.profile' },
     { id: 'admin',     labelKey: 'nav.admin' },
@@ -272,22 +273,9 @@ function App() {
         <div className="app">
             {tab === 'home'      && <HomePage />}
             {tab === 'standings' && <Standings />}
-            {tab === 'teams'     && (
-                recruitTarget
-                    ? <TeamRecruitView
-                        teamId={recruitTarget.teamId}
-                        teamName={recruitTarget.teamName}
-                        captainId={recruitTarget.captainId}
-                        onBack={closeRecruit}
-                      />
-                    : draftTarget
-                        ? <DraftView clanWarId={draftTarget.clanWarId} onBack={closeDraft} />
-                        : <Teams onOpenRecruit={openRecruit} onOpenDraft={openDraft} />
-            )}
-            {tab === 'clanwar'   && <ClanWar />}
+            {/* Team/clan-war routes are closed with the finished team season. */}
             {tab === 'mymatches' && <MyMatchesPage />}
             {tab === 'matches'   && <MatchesPage />}
-            {tab === 'bnlvsall'  && <BnlVsAll />}
             {tab === 'maps'      && <Maps />}
             {tab === 'profile'   && <Profile />}
             {tab === 'admin'     && <Admin />}
