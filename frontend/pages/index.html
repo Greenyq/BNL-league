@@ -67,8 +67,8 @@
                     <ul id="bnl-nav">
                         <li><a href="#home"      onclick="navigate('home');      return false;">Главная</a></li>
                         <li><a href="#standings" onclick="navigate('standings'); return false;">Таблица</a></li>
-                        <li><a href="#teams"     onclick="navigate('teams');     return false;">Команды</a></li>
-                        <li class="menu-item menu-item--has-submenu" id="header-clanwars-menu">
+                        <!-- Team season closed: teams/clan-war links hidden. -->
+                        <li class="menu-item menu-item--has-submenu" id="header-clanwars-menu" hidden>
                             <button
                                 id="header-clanwars-toggle"
                                 class="menu-group-toggle"
@@ -86,7 +86,7 @@
                                 <li><a href="#matches" data-nav-label="matches" onclick="navigate('matches'); return false;">Матчи</a></li>
                             </ul>
                         </li>
-                        <li><a href="#bnlvsall"  onclick="navigate('bnlvsall');  return false;">BNL vs All</a></li>
+                        <!-- BNL vs All is hidden with the closed team season. -->
                         <li><a href="#maps"      onclick="navigate('maps');      return false;">Карты</a></li>
                         <li><a id="header-profile-link" href="#profile" onclick="navigate('profile'); return false;">Профиль</a></li>
                         <li id="header-admin-nav-slot" hidden></li>
@@ -155,10 +155,9 @@
                 <ul id="footer-nav">
                     <li><a href="#home"      onclick="navigate('home');      return false;">Главная</a></li>
                     <li><a href="#standings" onclick="navigate('standings'); return false;">Таблица</a></li>
-                    <li><a href="#teams"     onclick="navigate('teams');     return false;">Команды</a></li>
-                    <li><a href="#clanwar"   onclick="navigate('clanwar');   return false;">Клан-вары</a></li>
+                    <!-- Team season closed: teams/clan-war links hidden. -->
                     <li><a href="#mymatches" onclick="navigate('mymatches'); return false;">Мои матчи</a></li>
-                    <li><a href="#bnlvsall"  onclick="navigate('bnlvsall');  return false;">BNL vs All</a></li>
+                    <!-- BNL vs All is hidden with the closed team season. -->
                     <li><a href="#maps"      onclick="navigate('maps');      return false;">Карты</a></li>
                     <li><a href="#profile"   onclick="navigate('profile');   return false;">Профиль</a></li>
                 </ul>

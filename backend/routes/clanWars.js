@@ -9,6 +9,8 @@ const {
 } = require('../services/seasonProgressCache');
 
 const router = express.Router();
+const TEAM_SEASON_CLOSED = true;
+const TEAM_SEASON_CLOSED_MESSAGE = 'Team season is closed';
 
 const DEFAULT_MATCHES = [
     { order: 1, format: '1v1', label: 'Дуэль I',                     playerA: '', playerB: '', score: { a: 0, b: 0 }, winner: null, games: [] },
@@ -207,6 +209,7 @@ router.get('/:id', async (req, res) => {
 // Supports either admin auth (`x-session-id`) or player-participant auth (`x-player-session-id`).
 router.put('/:id/matches/:matchId', async (req, res) => {
     try {
+        if (TEAM_SEASON_CLOSED) return res.status(403).json({ error: TEAM_SEASON_CLOSED_MESSAGE });
         const adminSession = await getAdminSessionResult(req.headers['x-session-id']);
         const isAdmin = !!adminSession.session;
 
@@ -286,6 +289,7 @@ router.use(checkAuth);
 // POST /api/clan-wars/schedule — generate full round-robin for a season
 router.post('/schedule', async (req, res) => {
     try {
+        if (TEAM_SEASON_CLOSED) return res.status(403).json({ error: TEAM_SEASON_CLOSED_MESSAGE });
         const { season, startDate, daysBetweenRounds = 7 } = req.body;
         if (!season) return res.status(400).json({ error: 'season is required' });
 
@@ -362,6 +366,7 @@ router.post('/schedule', async (req, res) => {
 // POST /api/clan-wars/auto-assign-all — auto-assign players in ALL clan wars at once
 router.post('/auto-assign-all', async (req, res) => {
     try {
+        if (TEAM_SEASON_CLOSED) return res.status(403).json({ error: TEAM_SEASON_CLOSED_MESSAGE });
         const allClanWars = await ClanWar.find();
         const allPlayers  = await Player.find();
         const allStats    = await PlayerStats.find();
@@ -388,6 +393,7 @@ router.post('/auto-assign-all', async (req, res) => {
 // POST /api/clan-wars — create a new clan war
 router.post('/', async (req, res) => {
     try {
+        if (TEAM_SEASON_CLOSED) return res.status(403).json({ error: TEAM_SEASON_CLOSED_MESSAGE });
         const cw = await ClanWar.create(req.body);
         res.status(201).json(cw);
     } catch (err) {
@@ -398,6 +404,7 @@ router.post('/', async (req, res) => {
 // DELETE /api/clan-wars — delete ALL clan wars
 router.delete('/', async (req, res) => {
     try {
+        if (TEAM_SEASON_CLOSED) return res.status(403).json({ error: TEAM_SEASON_CLOSED_MESSAGE });
         const result = await ClanWar.deleteMany({});
         res.json({ success: true, deleted: result.deletedCount });
     } catch (err) {
@@ -408,6 +415,7 @@ router.delete('/', async (req, res) => {
 // DELETE /api/clan-wars/:id — delete one clan war
 router.delete('/:id', async (req, res) => {
     try {
+        if (TEAM_SEASON_CLOSED) return res.status(403).json({ error: TEAM_SEASON_CLOSED_MESSAGE });
         await ClanWar.findByIdAndDelete(req.params.id);
         res.json({ success: true });
     } catch (err) {
@@ -418,6 +426,7 @@ router.delete('/:id', async (req, res) => {
 // PUT /api/clan-wars/:id — update top-level fields (status, date, teams, etc.)
 router.put('/:id', async (req, res) => {
     try {
+        if (TEAM_SEASON_CLOSED) return res.status(403).json({ error: TEAM_SEASON_CLOSED_MESSAGE });
         const cw = await ClanWar.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!cw) return res.status(404).json({ error: 'Clan war not found' });
         res.json(cw);
@@ -429,6 +438,7 @@ router.put('/:id', async (req, res) => {
 // POST /api/clan-wars/:id/auto-assign — auto-assign players in one clan war
 router.post('/:id/auto-assign', async (req, res) => {
     try {
+        if (TEAM_SEASON_CLOSED) return res.status(403).json({ error: TEAM_SEASON_CLOSED_MESSAGE });
         const cw = await ClanWar.findById(req.params.id);
         if (!cw) return res.status(404).json({ error: 'Clan war not found' });
 

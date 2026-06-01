@@ -160,7 +160,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                     race:       w3cResult.race,
                     mainRace:   w3cResult.race,
                     currentMmr: w3cResult.currentMmr,
-                    teamId:     teamId || undefined,
+                    // Team season is closed; new players join the permanent individual pool only.
                 }),
             });
             showMsg(`✅ ${tr(`Игрок ${w3cResult.name} добавлен`, `Player ${w3cResult.name} added`)}`);
@@ -196,7 +196,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                 method: 'PUT',
                 body: JSON.stringify({ tierOverride: tier }),
             });
-            const tierName = { 1: 'B', 2: 'A', 3: 'S' }[tier] || tr('Авто', 'Auto');
+            const tierName = { 1: 'C', 2: 'B', 3: 'A', 4: 'S' }[tier] || tr('Авто', 'Auto');
             showMsg(`✅ ${tr('Тир', 'Tier')}: ${p.name} → ${tierName}`);
             onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
@@ -205,12 +205,14 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
     // Calculate auto tier from MMR
     const autoTier = (p) => {
         const mmr = p.stats?.mmr || p.currentMmr || 0;
-        if (mmr >= 1700) return 3;
-        if (mmr >= 1400) return 2;
-        if (mmr >= 1000) return 1;
+        if (p.stats?.tier != null) return p.stats.tier;
+        if (mmr >= 1800) return 4;
+        if (mmr >= 1500) return 3;
+        if (mmr >= 1200) return 2;
+        if (mmr >= 800) return 1;
         return null;
     };
-    const tierLabel = (num) => ({ 1: 'B', 2: 'A', 3: 'S' }[num] || '—');
+    const tierLabel = (num) => ({ 1: 'C', 2: 'B', 3: 'A', 4: 'S' }[num] || '—');
 
     const toggleDraft = async (p) => {
         try {
@@ -218,7 +220,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                 method: 'PUT',
                 body: JSON.stringify({ draftAvailable: !p.draftAvailable }),
             });
-            showMsg(`✅ ${tr('Драфт', 'Draft')}: ${p.name} → ${!p.draftAvailable ? tr('доступен', 'available') : tr('недоступен', 'unavailable')}`);
+            showMsg(`✅ ${tr('Пул', 'Pool')}: ${p.name} → ${!p.draftAvailable ? tr('добавлен', 'added') : tr('убран', 'removed')}`);
             onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
@@ -297,7 +299,8 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                                 ✓ {t('admin.found')}: <strong>{w3cResult.battleTag}</strong> · MMR {w3cResult.currentMmr || '—'}
                             </div>
 
-                            <div style={{ display: 'flex', gap: 'var(--spacing-md)', alignItems: 'center', flexWrap: 'wrap', marginBottom: 'var(--spacing-md)' }}>
+                            {/* Team assignment is closed with the team season. */}
+                            <div style={{ display: 'none' }}>
                                 <label style={{ color: 'var(--color-text-muted)', fontSize: '0.9em', whiteSpace: 'nowrap' }}>
                                     {t('admin.assign_team')}:
                                 </label>
@@ -333,8 +336,7 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                             <th>{t('standings.player')}</th>
                             <th>MMR</th>
                             <th>{tr('Тир', 'Tier')}</th>
-                            <th>{t('admin.assign_team')}</th>
-                            <th>⚔ {tr('Драфт', 'Draft')}</th>
+                            <th>{tr('Пул', 'Pool')}</th>
                             <th>🏆 {tr('Сезон', 'Season')}</th>
                             <th></th>
                         </tr>
@@ -357,12 +359,13 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                                         }}
                                     >
                                         <option value="">{tr('Авто', 'Auto')} ({tierLabel(autoTier(p))})</option>
-                                        <option value="3">S (1700+)</option>
-                                        <option value="2">A (1400–1700)</option>
-                                        <option value="1">B (1000–1400)</option>
+                                        <option value="4">S (1800+)</option>
+                                        <option value="3">A (1500-1800)</option>
+                                        <option value="2">B (1200-1500)</option>
+                                        <option value="1">C (800-1200)</option>
                                     </select>
                                 </td>
-                                <td>
+                                <td style={{ display: 'none' }}>
                                     {editId === p.id ? (
                                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                                             <select
@@ -2317,9 +2320,10 @@ function AdminPanel({ onLogout }) {
 
     const TABS_ADMIN = [
         { id: 'players',  key: 'admin.tab.players' },
-        { id: 'teams',    key: 'admin.tab.teams' },
-        { id: 'clanwars', key: 'admin.tab.clanwars' },
-        { id: 'bnlvsall', key: 'admin.tab.bnlvsall' },
+        // Team season is closed; team/clan-war admin tabs are intentionally hidden.
+        // { id: 'teams',    key: 'admin.tab.teams' },
+        // { id: 'clanwars', key: 'admin.tab.clanwars' },
+        // { id: 'bnlvsall', key: 'admin.tab.bnlvsall' },
         { id: 'portraits',key: 'admin.tab.portraits' },
         { id: 'maps',     label: 'Manage maps' },
         { id: 'tools',    key: 'admin.tab.tools' },
@@ -2389,9 +2393,7 @@ function AdminPanel({ onLogout }) {
             </div>
 
             {tab === 'players'   && <PlayersTab  players={players} teams={teams} onRefresh={load} showMsg={showMsg} />}
-            {tab === 'teams'     && <TeamsTab    teams={teams}   players={players} onRefresh={load} showMsg={showMsg} />}
-            {tab === 'clanwars'  && <ClanWarTab  players={players} teams={teams} showMsg={showMsg} />}
-            {tab === 'bnlvsall'  && <BnlVsAllAdminTab players={players} showMsg={showMsg} />}
+            {/* Team season tabs are closed but component code remains for future reuse. */}
             {tab === 'portraits' && <PortraitsTab showMsg={showMsg} />}
             {tab === 'maps'      && <ManageMapsTab showMsg={showMsg} />}
             {tab === 'tools'   && (

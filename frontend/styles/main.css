@@ -2533,6 +2533,43 @@ input[type="datetime-local"] {
 .standings-table td.col-wins  { color: var(--color-success); font-weight: 700; }
 .standings-table td.col-losses { color: var(--color-error); font-weight: 700; }
 
+.tier-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 24px;
+    border-radius: 4px;
+    padding: 0 8px;
+    font-weight: 800;
+    border: 1px solid rgba(255,255,255,0.14);
+    background: rgba(255,255,255,0.05);
+    color: var(--color-text-muted);
+}
+
+.tier-pill--s { color: #ffd86b; border-color: rgba(255,216,107,0.55); background: rgba(255,216,107,0.13); }
+.tier-pill--a { color: #d9b9ff; border-color: rgba(217,185,255,0.48); background: rgba(217,185,255,0.11); }
+.tier-pill--b { color: #75c7ff; border-color: rgba(117,199,255,0.45); background: rgba(117,199,255,0.11); }
+.tier-pill--c { color: #7ee08a; border-color: rgba(126,224,138,0.45); background: rgba(126,224,138,0.11); }
+
+.tier-promoted-row td,
+.tier-promoted-card {
+    box-shadow: inset 0 0 0 1px rgba(76,175,80,0.45), 0 0 22px rgba(76,175,80,0.14);
+}
+
+.tier-promotion-pill {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 0.72em;
+    font-weight: 800;
+    color: var(--color-success);
+    border: 1px solid rgba(76,175,80,0.45);
+    background: rgba(76,175,80,0.12);
+}
+
 .standings-note {
     color: var(--color-text-muted);
     font-size: 0.78em;
