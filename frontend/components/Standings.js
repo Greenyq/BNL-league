@@ -13,6 +13,7 @@ const rankIcon    = i => i === 0 ? 'I' : i === 1 ? 'II' : i === 2 ? 'III' : i + 
 const playerRace  = player => player?.mainRace ?? player?.race ?? null;
 const tierLabel = tier => TIER_LABELS[Number(tier) || 0] || '-';
 const tierClass = tier => TIER_CLASSES[Number(tier) || 0] || 'u';
+const achievementPreview = achievements => (Array.isArray(achievements) ? achievements : []).slice(0, 3);
 
 function getStandingsTeamCaptain(team, players) {
     return (players || []).find(player => player.id === team?.captainId) || null;
@@ -94,6 +95,17 @@ function PlayerStandingsMobileCard({ row, index }) {
                         <span className="standings-mobile-stat-label">{t('standings.points')}</span>
                         <span className="standings-mobile-stat-value standings-mobile-stat-value--points">{row.points}</span>
                     </div>
+                </div>
+                <div className="standings-achievements-row">
+                    {achievementPreview(row.achievements).map(key => (
+                        <span key={key} className="achievement-pill">{key}</span>
+                    ))}
+                    {(row.achievements || []).length > 3 && (
+                        <span className="achievement-pill achievement-pill--more">+{row.achievements.length - 3}</span>
+                    )}
+                    {(!row.achievements || row.achievements.length === 0) && (
+                        <span className="achievement-pill achievement-pill--empty">{tr('Нет ачивок', 'No achievements')}</span>
+                    )}
                 </div>
             </div>
         </div>
@@ -281,8 +293,8 @@ function TeamStandings({ page, onPageChange, playerFilter }) {
 
     React.useEffect(() => {
         Promise.all([
-            fetch('/api/teams').then(r => r.json()),
-            fetch('/api/clan-wars').then(r => r.json()),
+            Promise.resolve([]),
+            Promise.resolve([]),
             fetch('/api/players').then(r => r.json()),
         ])
             .then(([tm, cw, pl]) => {
@@ -494,14 +506,14 @@ function DraftPoolStandings({ page, onPageChange, playerFilter }) {
 // ── Рейтинг игроков (оригинал) ────────────────────────────────────────────────
 function Standings() {
     useLang();
-    const [mode,       setMode]       = React.useState('players'); // 'players' | 'teams' | 'draftpool'
+    const [mode,       setMode]       = React.useState('players');
     const [players,    setPlayers]    = React.useState([]);
     const [wars,       setWars]       = React.useState([]);
     const [loading,    setLoading]    = React.useState(true);
     const [error,      setError]      = React.useState(null);
     const [raceFilter, setRaceFilter] = React.useState(null);
     const [playerFilter, setPlayerFilter] = React.useState('');
-    const [pages,      setPages]      = React.useState({ players: 1, teams: 1, draftpool: 1 });
+    const [pages,      setPages]      = React.useState({ players: 1 });
     const playerFilterNeedle = normalizeSearchText(playerFilter);
 
     React.useEffect(() => {
@@ -534,17 +546,21 @@ function Standings() {
                 points: raceStat?.points ?? 0,
                 mmr: raceStat?.mmr ?? s?.mmr ?? p.currentMmr ?? null,
                 tier: raceStat?.tier ?? s?.tier ?? 0,
+                achievements: raceStat?.achievements ?? [],
                 tierPromoted: !!s?.tierPromoted
             }];
         }
+        const primaryRace = playerRace(p);
+        const primaryRaceStat = (s?.raceStats || []).find(r => primaryRace != null && Number(r.race) === Number(primaryRace));
         return [{
             player: p,
-            race: playerRace(p),
+            race: primaryRace,
             wins: s?.wins ?? 0,
             losses: s?.losses ?? 0,
             points: s?.points ?? 0,
             mmr: s?.mmr ?? p.currentMmr ?? null,
             tier: s?.tier ?? 0,
+            achievements: primaryRaceStat?.achievements ?? (s?.raceStats || []).flatMap(r => r.achievements || []),
             tierPromoted: !!s?.tierPromoted
         }];
     })
@@ -561,9 +577,9 @@ function Standings() {
 
     React.useEffect(() => {
         setPages(prev => (
-            prev.players === 1 && prev.teams === 1 && prev.draftpool === 1
+            prev.players === 1
                 ? prev
-                : { players: 1, teams: 1, draftpool: 1 }
+                : { players: 1 }
         ));
     }, [playerFilterNeedle]);
 
@@ -596,29 +612,10 @@ function Standings() {
                 <div className="standings-controls-group standings-controls-group--search">
                     <PlayerNameFilterInput value={playerFilter} onChange={setPlayerFilter} />
                 </div>
-                {/* Mode toggle */}
-                <div className="standings-controls-group standings-controls-group--modes">
-                    <button
-                        className={`wow-btn${mode === 'players' ? ' active' : ''}`}
-                        onClick={() => setMode('players')}
-                    >
-                        {t('standings.mode.players')}
-                    </button>
-                    {/* Team standings are closed for the finished team season. */}
-                    <button
-                        className={`wow-btn${mode === 'draftpool' ? ' active' : ''}`}
-                        onClick={() => setMode('draftpool')}
-                    >
-                        {t('standings.mode.draftpool')}
-                    </button>
-                </div>
+                {/* Draft and team modes are closed; standings show the permanent player ladder. */}
             </div>
 
-            {mode === 'teams' ? (
-                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>{tr('Командный сезон закрыт.', 'Team season is closed.')}</p>
-            ) : mode === 'draftpool' ? (
-                <DraftPoolStandings page={pages.draftpool} onPageChange={page => setModePage('draftpool', page)} playerFilter={playerFilterNeedle} />
-            ) : (
+            {(
                 <>
 
                     {loading ? (
@@ -643,6 +640,7 @@ function Standings() {
                                             <th>{t('standings.wins')}</th>
                                             <th>{t('standings.losses')}</th>
                                             <th>{t('standings.points')}</th>
+                                            <th>{tr('Ачивки', 'Achievements')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -683,6 +681,17 @@ function Standings() {
                                                     <td className="col-wins">{row.wins}</td>
                                                     <td className="col-losses">{row.losses}</td>
                                                     <td className="col-points">{row.points}</td>
+                                                    <td className="col-achievements">
+                                                        {achievementPreview(row.achievements).map(key => (
+                                                            <span key={key} className="achievement-pill">{key}</span>
+                                                        ))}
+                                                        {(row.achievements || []).length > 3 && (
+                                                            <span className="achievement-pill achievement-pill--more">+{row.achievements.length - 3}</span>
+                                                        )}
+                                                        {(!row.achievements || row.achievements.length === 0) && (
+                                                            <span className="achievement-pill achievement-pill--empty">-</span>
+                                                        )}
+                                                    </td>
                                                 </tr>
                                             );
                                         })}

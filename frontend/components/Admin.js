@@ -348,7 +348,9 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                                 <td className="col-name">{p.name}</td>
                                 <td style={{ color: 'var(--color-accent-secondary)' }}>{p.currentMmr || '—'}</td>
                                 <td>
+                                    <span className={`tier-pill tier-pill--${({ 1: 'c', 2: 'b', 3: 'a', 4: 's' }[autoTier(p)] || 'u')}`}>{tierLabel(autoTier(p))}</span>
                                     <select
+                                        hidden
                                         value={p.tierOverride || ''}
                                         onChange={e => setTierOverride(p, e.target.value ? Number(e.target.value) : null)}
                                         style={{

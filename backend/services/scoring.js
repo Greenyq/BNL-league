@@ -15,7 +15,7 @@ const cron = require('node-cron');
 const { Player, PlayerCache, PlayerStats, ManualPointsAdjustment } = require('../models/Player');
 const { loadMatchDataForPlayer, fetchPlayerMmr } = require('./w3champions');
 
-const PERMANENT_SEASON_START = new Date(process.env.BNL_SEASON_START || '2026-05-31T00:00:00Z');
+const PERMANENT_SEASON_START = new Date(process.env.BNL_SEASON_START || '2026-05-30T00:00:00Z');
 
 function getTierFromMmr(mmr = 0) {
     const value = Number(mmr) || 0;
