@@ -13,9 +13,18 @@
 
 const cron = require('node-cron');
 const { Player, PlayerCache, PlayerStats, ManualPointsAdjustment } = require('../models/Player');
-const { ClanWar } = require('../models/ClanWar');
-const { Team }    = require('../models/Team');
 const { loadMatchDataForPlayer, fetchPlayerMmr } = require('./w3champions');
+
+const PERMANENT_SEASON_START = new Date(process.env.BNL_SEASON_START || '2026-05-31T00:00:00Z');
+
+function getTierFromMmr(mmr = 0) {
+    const value = Number(mmr) || 0;
+    if (value >= 1800) return { value: 4, label: 'S' };
+    if (value >= 1500) return { value: 3, label: 'A' };
+    if (value >= 1200) return { value: 2, label: 'B' };
+    if (value >= 800)  return { value: 1, label: 'C' };
+    return { value: 0, label: '-' };
+}
 
 // ── Achievement bonus table ───────────────────────────────────────────────────
 const ACHIEVEMENT_BONUSES = {
@@ -122,17 +131,14 @@ function determineAchievements(wins, losses, points, totalGames, matchHistory = 
 }
 
 // ── processMatches ────────────────────────────────────────────────────────────
-function processMatches(battleTag, matches, allBnlBattleTags = new Set()) {
+function processMatches(battleTag, matches, allBnlBattleTags = new Set(), mainRace = null) {
     if (!matches || matches.length === 0) {
-        return [{ race: 0, mmr: 0, wins: 0, losses: 0, points: 0, achievements: [], matchCount: 0 }];
+        return [{ race: mainRace || 0, mmr: 0, tier: 0, wins: 0, losses: 0, points: 0, achievements: [], matchCount: 0 }];
     }
-
-    const STAGE1_START = new Date('2026-02-09T00:00:00Z');
-    const STAGE1_END   = new Date('2026-02-23T00:00:00Z');
 
     let filtered = matches.filter(m => {
         const d = new Date(m.startTime);
-        return d >= STAGE1_START && d < STAGE1_END;
+        return d >= PERMANENT_SEASON_START;
     });
 
     // Sort oldest→newest
@@ -155,13 +161,14 @@ function processMatches(battleTag, matches, allBnlBattleTags = new Set()) {
         if (!playerTeam || !player || player.race == null) continue;
 
         const race = player.race;
+        if (mainRace !== null && mainRace !== undefined && mainRace !== 0 && Number(race) !== Number(mainRace)) continue;
         byRace[race] = byRace[race] || [];
         byRace[race].push(match);
         mmrByRace[race] = player.currentMmr || mmrByRace[race] || 0;
     }
 
     if (Object.keys(byRace).length === 0) {
-        return [{ race: 0, mmr: 0, wins: 0, losses: 0, points: 0, achievements: [], matchCount: 0 }];
+        return [{ race: mainRace || 0, mmr: 0, tier: 0, wins: 0, losses: 0, points: 0, achievements: [], matchCount: 0 }];
     }
 
     return Object.entries(byRace).map(([race, raceMatches]) => {
@@ -206,6 +213,7 @@ function processMatches(battleTag, matches, allBnlBattleTags = new Set()) {
         return {
             race: raceInt,
             mmr: mmrByRace[race],
+            tier: getTierFromMmr(mmrByRace[race]).value,
             wins, losses,
             points: totalPoints,
             achievements: achs,
@@ -238,6 +246,8 @@ async function recalculateAllPlayerStats() {
     //    Each internal match win gives 1 point to all players in the winning team.
     //    Final score 3-2 → team A members +3 pts, team B members +2 pts.
     const cwPointsMap = {};
+    // Team season is closed. Clan-war/team points stay out of the permanent ladder.
+    /*
     try {
         const completedCWs = await ClanWar.find({ status: 'completed' });
         const allTeams     = await Team.find();
@@ -261,8 +271,9 @@ async function recalculateAllPlayerStats() {
             }
         }
     } catch (err) {
-        console.error('⚠ Clan war points calc failed:', err.message);
+        console.error('Clan war points calc failed:', err.message);
     }
+    */
 
     // 3. Load fresh match data and compute stats
     for (const player of players) {
@@ -271,24 +282,42 @@ async function recalculateAllPlayerStats() {
             const cache = await PlayerCache.findOne({ battleTag: player.battleTag });
 
             if (!cache || !cache.matchData?.length) {
-                const cwBonus = cwPointsMap[player.battleTag] || 0;
+                const tierInfo = getTierFromMmr(player.currentMmr || 0);
+                const existing = await PlayerStats.findOne({ battleTag: player.battleTag });
+                const previousTier = existing?.tier || 0;
+                const bestTierAchieved = Math.max(existing?.bestTierAchieved || 0, tierInfo.value);
+                const tierPromoted = tierInfo.value > previousTier;
                 await PlayerStats.findOneAndUpdate(
                     { battleTag: player.battleTag },
-                    { battleTag: player.battleTag, points: cwBonus, wins: 0, losses: 0, mmr: player.currentMmr || 0, raceStats: [], updatedAt: new Date() },
+                    {
+                        battleTag: player.battleTag,
+                        points: 0,
+                        wins: 0,
+                        losses: 0,
+                        mmr: player.currentMmr || 0,
+                        tier: tierInfo.value,
+                        previousTier,
+                        bestTierAchieved,
+                        tierPromoted,
+                        tierPromotedAt: tierPromoted ? new Date() : existing?.tierPromotedAt,
+                        raceStats: [],
+                        updatedAt: new Date()
+                    },
                     { upsert: true }
                 );
                 updated++;
                 continue;
             }
 
-            const profiles = processMatches(player.battleTag, cache.matchData, allTags);
+            const primaryRace = player.mainRace ?? player.race ?? null;
+            const profiles = processMatches(player.battleTag, cache.matchData, allTags, primaryRace);
 
             let totalWins = 0, totalLosses = 0, totalPoints = 0;
             const raceStats = profiles.map(pr => {
                 totalWins   += pr.wins;
                 totalLosses += pr.losses;
                 totalPoints += pr.points;
-                return { race: pr.race, points: pr.points, wins: pr.wins, losses: pr.losses, mmr: pr.mmr, achievements: pr.achievements, matchCount: pr.matchCount, matchHistory: pr.matchHistory || [] };
+                return { race: pr.race, points: pr.points, wins: pr.wins, losses: pr.losses, mmr: pr.mmr, tier: pr.tier, achievements: pr.achievements, matchCount: pr.matchCount, matchHistory: pr.matchHistory || [] };
             });
 
             // Points floor: 0 always; 500 if ever reached 500
@@ -304,12 +333,30 @@ async function recalculateAllPlayerStats() {
                 totalPoints = Math.max(0, totalPoints + delta);
             }
 
-            // Clan war match-win bonus points
-            totalPoints += cwPointsMap[player.battleTag] || 0;
+            const primaryProfile = raceStats.find(r => primaryRace != null && r.race === Number(primaryRace)) || raceStats[0] || null;
+            const primaryMmr = primaryProfile?.mmr || player.currentMmr || 0;
+            const tierInfo = getTierFromMmr(primaryMmr);
+            const previousTier = existing?.tier || 0;
+            const bestTierAchieved = Math.max(existing?.bestTierAchieved || 0, tierInfo.value);
+            const tierPromoted = tierInfo.value > previousTier;
 
             await PlayerStats.findOneAndUpdate(
                 { battleTag: player.battleTag },
-                { battleTag: player.battleTag, points: totalPoints, wins: totalWins, losses: totalLosses, mmr: player.currentMmr || 0, maxPointsAchieved: maxAch, raceStats, updatedAt: new Date() },
+                {
+                    battleTag: player.battleTag,
+                    points: totalPoints,
+                    wins: totalWins,
+                    losses: totalLosses,
+                    mmr: primaryMmr,
+                    tier: tierInfo.value,
+                    previousTier,
+                    bestTierAchieved,
+                    tierPromoted,
+                    tierPromotedAt: tierPromoted ? new Date() : existing?.tierPromotedAt,
+                    maxPointsAchieved: maxAch,
+                    raceStats,
+                    updatedAt: new Date()
+                },
                 { upsert: true }
             );
             updated++;
@@ -333,4 +380,4 @@ function initializeScheduler() {
     return job;
 }
 
-module.exports = { processMatches, determineAchievements, recalculateAllPlayerStats, initializeScheduler, ACHIEVEMENT_BONUSES };
+module.exports = { processMatches, determineAchievements, recalculateAllPlayerStats, initializeScheduler, ACHIEVEMENT_BONUSES, getTierFromMmr };

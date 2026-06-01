@@ -300,12 +300,11 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
     // Use linkedBattleTag from user object as fallback when playerData hasn't loaded yet
     const linkedTag = playerData?.battleTag || user?.linkedBattleTag || null;
     const currentPortrait = selectedPort || null;
-    // Portraits filtered by selected race (+ race=0 which is universal).
-    // selectedRace===null means no race chosen → show all.
-    // selectedRace===0 (Random) means show all as well.
-    const visiblePortraits = (selectedRace !== null && selectedRace !== 0)
-        ? allPortraits.filter(p => p.race === 0 || p.race === selectedRace)
-        : allPortraits;
+    const playerPoints = playerData?.stats?.points ?? 0;
+    // Portraits are tied to the selected main race for the permanent season.
+    const visiblePortraits = selectedRace !== null
+        ? allPortraits.filter(p => Number(p.race) === Number(selectedRace))
+        : [];
     const PORTRAIT_RACE_ORDER = [0, 1, 2, 4, 8];
     const portraitsByRace = visiblePortraits.reduce((acc, p) => {
         if (!acc[p.race]) acc[p.race] = [];
@@ -382,12 +381,11 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
             {linkedTag && (
                 <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-lg)' }}>
                     <h4 style={{ marginBottom: 'var(--spacing-sm)', color: 'var(--color-accent-primary)' }}>
-                        {t('profile.draftTitle')}
+                        {tr('Пул перспективных игроков', 'Prospect pool')}
                     </h4>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', flexWrap: 'wrap' }}>
                         <button
-                            onClick={toggleDraft}
-                            disabled={draftLoading}
+                            disabled
                             style={{
                                 padding: '8px 22px',
                                 borderRadius: 'var(--radius-sm)',
@@ -396,15 +394,15 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                                 border: `2px solid ${draftAvailable ? 'var(--color-success)' : 'rgba(255,255,255,0.15)'}`,
                                 background: draftAvailable ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.05)',
                                 color: draftAvailable ? 'var(--color-success)' : 'var(--color-text-muted)',
-                                cursor: 'pointer',
+                                cursor: 'default',
                                 transition: 'all 0.2s',
                                 letterSpacing: 0.5,
                             }}
                         >
-                            {draftLoading ? '...' : (draftAvailable ? `✔ ${t('profile.draftOn')}` : `✗ ${t('profile.draftOff')}`)}
+                            {draftAvailable ? tr('В пуле', 'In pool') : tr('Не в пуле', 'Not in pool')}
                         </button>
                         <span style={{ color: 'var(--color-text-muted)', fontSize: '0.82em' }}>
-                            {t('profile.draftDesc')}
+                            {tr('Добавляет только админ из панели игроков.', 'Only an admin can add players from the player panel.')}
                         </span>
                     </div>
                 </div>
@@ -439,13 +437,17 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                     <h4 style={{ marginBottom: 8, color: 'var(--color-accent-primary)' }}>🖼 {t('profile.portraitTitle')}</h4>
                     <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85em', marginBottom: 'var(--spacing-lg)' }}>
                         {t('profile.portraitDesc')}
-                        {(selectedRace !== null && selectedRace !== 0) && <span style={{ color: 'var(--color-accent-secondary)', marginLeft: 6 }}>
-                            · {t(`race.${selectedRace}`)} + {t('race.0')}
+                        {selectedRace !== null && <span style={{ color: 'var(--color-accent-secondary)', marginLeft: 6 }}>
+                            · {t(`race.${selectedRace}`)}
                         </span>}
                     </p>
 
                     {allPortraits.length === 0 && (
                         <p style={{ color: 'var(--color-text-muted)' }}>{tr('Портреты ещё не добавлены администратором', 'Portraits have not been added by an admin yet')}</p>
+                    )}
+
+                    {allPortraits.length > 0 && selectedRace === null && (
+                        <p style={{ color: 'var(--color-text-muted)' }}>{tr('Сначала выбери основную расу.', 'Choose your main race first.')}</p>
                     )}
 
                     {/* Все портреты по расам, без замков */}
@@ -455,20 +457,30 @@ function PlayerProfile({ user, playerData: initPlayerData, onLogout }) {
                                 {PORTRAIT_RACE_LABELS[r]()}
                             </div>
                             <div style={{ display: 'flex', gap: 'var(--spacing-md)', flexWrap: 'wrap' }}>
-                                {portraitsByRace[r].map(p => (
-                                    <div key={p.id} onClick={() => savePortrait(p.imageUrl)} style={{ cursor: 'pointer', textAlign: 'center' }}>
+                                {portraitsByRace[r].map(p => {
+                                    const required = Number(p.pointsRequired || 0);
+                                    const unlocked = playerPoints >= required;
+                                    return (
+                                    <div key={p.id} onClick={() => unlocked && savePortrait(p.imageUrl)} style={{ cursor: unlocked ? 'pointer' : 'not-allowed', textAlign: 'center', opacity: unlocked ? 1 : 0.48 }}>
                                         <img src={p.imageUrl} alt={p.name} style={{
                                             width: 80, height: 80, borderRadius: '50%', objectFit: 'cover',
                                             border: selectedPort === p.imageUrl ? '3px solid var(--color-accent-primary)' : '3px solid rgba(255,255,255,0.08)',
                                             boxShadow: selectedPort === p.imageUrl ? '0 0 24px rgba(212,175,55,0.7)' : 'none',
                                             transform: selectedPort === p.imageUrl ? 'scale(1.1)' : 'scale(1)',
+                                            filter: unlocked ? 'none' : 'grayscale(1)',
                                             transition: 'all 0.2s',
                                         }} />
                                         <div style={{ fontSize: '0.78em', marginTop: 5, color: selectedPort === p.imageUrl ? 'var(--color-accent-primary)' : 'var(--color-text-muted)', fontWeight: selectedPort === p.imageUrl ? 700 : 400 }}>
                                             {p.name}
                                         </div>
+                                        {!unlocked && (
+                                            <div style={{ fontSize: '0.7em', color: 'var(--color-accent-secondary)', marginTop: 2 }}>
+                                                {required} pts
+                                            </div>
+                                        )}
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     ))}
