@@ -14,6 +14,54 @@ const playerRace  = player => player?.mainRace ?? player?.race ?? null;
 const tierLabel = tier => TIER_LABELS[Number(tier) || 0] || '-';
 const tierClass = tier => TIER_CLASSES[Number(tier) || 0] || 'u';
 const achievementPreview = achievements => (Array.isArray(achievements) ? achievements : []).slice(0, 3);
+const ACHIEVEMENTS = {
+    winStreak3: { points: 30, ru: 'Серия побед x3', en: 'Win streak x3', ruDesc: '3 победы подряд.', enDesc: 'Win 3 matches in a row.' },
+    winStreak5: { points: 50, ru: 'Серия побед x5', en: 'Win streak x5', ruDesc: '5 побед подряд.', enDesc: 'Win 5 matches in a row.' },
+    winStreak10: { points: 100, ru: 'Серия побед x10', en: 'Win streak x10', ruDesc: '10 побед подряд.', enDesc: 'Win 10 matches in a row.' },
+    winStreak15: { points: 150, ru: 'Серия побед x15', en: 'Win streak x15', ruDesc: '15 побед подряд.', enDesc: 'Win 15 matches in a row.' },
+    loseStreak3: { points: 10, ru: 'Упорство x3', en: 'Resilience x3', ruDesc: '3 поражения подряд.', enDesc: 'Lose 3 matches in a row.' },
+    loseStreak10: { points: 25, ru: 'Упорство x10', en: 'Resilience x10', ruDesc: '10 поражений подряд.', enDesc: 'Lose 10 matches in a row.' },
+    giantSlayer: { points: 25, ru: 'Охотник на гигантов', en: 'Giant slayer', ruDesc: 'Победа над соперником с MMR выше на 50+.', enDesc: 'Beat an opponent with 50+ higher MMR.' },
+    titanSlayer: { points: 50, ru: 'Убийца титанов', en: 'Titan slayer', ruDesc: 'Победа над соперником с MMR выше на 100+.', enDesc: 'Beat an opponent with 100+ higher MMR.' },
+    davidVsGoliath: { points: 100, ru: 'Давид против Голиафа', en: 'David vs Goliath', ruDesc: 'Победа над соперником с MMR выше на 200+.', enDesc: 'Beat an opponent with 200+ higher MMR.' },
+    warrior: { points: 30, ru: 'Воин', en: 'Warrior', ruDesc: '50 побед за сезон.', enDesc: 'Win 50 matches in the season.' },
+    centurion: { points: 50, ru: 'Центурион', en: 'Centurion', ruDesc: '100 побед за сезон.', enDesc: 'Win 100 matches in the season.' },
+    centurionSupreme: { points: 80, ru: 'Верховный центурион', en: 'Supreme centurion', ruDesc: '200 побед за сезон.', enDesc: 'Win 200 matches in the season.' },
+    noMercy: { points: 40, ru: 'Без пощады', en: 'No mercy', ruDesc: '50 побед за сезон.', enDesc: 'Win 50 matches in the season.' },
+    gladiator: { points: 20, ru: 'Гладиатор', en: 'Gladiator', ruDesc: '10 побед за сезон.', enDesc: 'Win 10 matches in the season.' },
+    perfectWeek: { points: 50, ru: 'Идеальная неделя', en: 'Perfect week', ruDesc: '20 побед за сезон.', enDesc: 'Win 20 matches in the season.' },
+    goldRush: { points: 30, ru: 'Золотая гонка', en: 'Gold rush', ruDesc: '1000 очков за сезон.', enDesc: 'Reach 1000 season points.' },
+    platinumRush: { points: 60, ru: 'Платиновая гонка', en: 'Platinum rush', ruDesc: '2000 очков за сезон.', enDesc: 'Reach 2000 season points.' },
+    comeback: { points: 20, ru: 'Камбэк', en: 'Comeback', ruDesc: 'Победа после серии из 3+ поражений.', enDesc: 'Win after a streak of 3+ losses.' },
+    persistent: { points: 40, ru: 'Несломленный', en: 'Persistent', ruDesc: '5 побед после серии из 5 поражений.', enDesc: 'Win 5 after a streak of 5 losses.' },
+    veteran: { points: 35, ru: 'Ветеран', en: 'Veteran', ruDesc: '500 игр за сезон.', enDesc: 'Play 500 matches in the season.' },
+    marathonRunner: { points: 30, ru: 'Марафонец', en: 'Marathon runner', ruDesc: '100 игр за сезон.', enDesc: 'Play 100 matches in the season.' },
+    mmrMillionaire: { points: 50, ru: 'MMR миллионер', en: 'MMR millionaire', ruDesc: 'Достичь 2000 MMR.', enDesc: 'Reach 2000 MMR.' },
+    eliteWarrior: { points: 100, ru: 'Элитный воин', en: 'Elite warrior', ruDesc: 'Достичь 2200 MMR.', enDesc: 'Reach 2200 MMR.' },
+    bnlRobber: { points: 30, ru: 'BNL грабитель', en: 'BNL robber', ruDesc: 'Победа против игрока из BNL.', enDesc: 'Beat a BNL player.' },
+    bnlVictim: { points: -10, ru: 'Жертва BNL', en: 'BNL victim', ruDesc: 'Поражение от игрока из BNL.', enDesc: 'Lose to a BNL player.' },
+    bnlRivalry: { points: 25, ru: 'BNL соперник', en: 'BNL rivalry', ruDesc: '5 побед против игроков из BNL.', enDesc: 'Win 5 matches against BNL players.' },
+    bnlDominator: { points: 60, ru: 'BNL доминатор', en: 'BNL dominator', ruDesc: '10 побед против игроков из BNL.', enDesc: 'Win 10 matches against BNL players.' },
+};
+
+const achievementInfo = key => ACHIEVEMENTS[key] || { points: 0, ru: key, en: key, ruDesc: key, enDesc: key };
+const achievementTitle = key => {
+    const info = achievementInfo(key);
+    return tr(info.ru, info.en);
+};
+const achievementDescription = key => {
+    const info = achievementInfo(key);
+    return tr(info.ruDesc, info.enDesc);
+};
+const achievementPointLabel = key => {
+    const points = achievementInfo(key).points || 0;
+    return `${points > 0 ? '+' : ''}${points} ${tr('очков', 'pts')}`;
+};
+const groupAchievements = achievements => {
+    const counts = new Map();
+    (Array.isArray(achievements) ? achievements : []).forEach(key => counts.set(key, (counts.get(key) || 0) + 1));
+    return [...counts.entries()].map(([key, count]) => ({ key, count }));
+};
 
 function getStandingsTeamCaptain(team, players) {
     return (players || []).find(player => player.id === team?.captainId) || null;
@@ -27,7 +75,89 @@ function getStandingsTeamRosterPlayers(team, players) {
     return [...rosterById.values()];
 }
 
-function PlayerStandingsMobileCard({ row, index }) {
+function AchievementPills({ achievements, onOpen }) {
+    const list = Array.isArray(achievements) ? achievements : [];
+    if (!list.length) {
+        return <span className="achievement-pill achievement-pill--empty">{tr('Нет ачивок', 'No achievements')}</span>;
+    }
+
+    return (
+        <>
+            {achievementPreview(list).map((key, index) => (
+                <button
+                    key={`${key}-${index}`}
+                    type="button"
+                    className="achievement-pill achievement-pill--button"
+                    title={`${achievementTitle(key)} · ${achievementPointLabel(key)}`}
+                    onClick={() => onOpen(list)}
+                >
+                    {achievementTitle(key)}
+                </button>
+            ))}
+            {list.length > 3 && (
+                <button
+                    type="button"
+                    className="achievement-pill achievement-pill--more achievement-pill--button"
+                    onClick={() => onOpen(list)}
+                >
+                    +{list.length - 3}
+                </button>
+            )}
+        </>
+    );
+}
+
+function AchievementModal({ row, onClose }) {
+    React.useEffect(() => {
+        if (!row) return undefined;
+        const onKeyDown = event => {
+            if (event.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [row, onClose]);
+
+    if (!row) return null;
+
+    const achievements = Array.isArray(row.achievements) ? row.achievements : [];
+    const grouped = groupAchievements(achievements);
+    const totalBonus = achievements.reduce((sum, key) => sum + (achievementInfo(key).points || 0), 0);
+    const playerName = row.player?.name || row.player?.battleTag || tr('Игрок', 'Player');
+
+    return (
+        <div className="achievement-modal-overlay" onClick={onClose}>
+            <div className="achievement-modal" role="dialog" aria-modal="true" aria-label={tr('Ачивки игрока', 'Player achievements')} onClick={event => event.stopPropagation()}>
+                <div className="achievement-modal-header">
+                    <div>
+                        <div className="achievement-modal-kicker">{tr('Ачивки', 'Achievements')}</div>
+                        <h3>{playerName}</h3>
+                    </div>
+                    <button type="button" className="achievement-modal-close" onClick={onClose} aria-label={tr('Закрыть', 'Close')}>×</button>
+                </div>
+                <div className="achievement-modal-summary">
+                    <span>{achievements.length} {tr('всего', 'total')}</span>
+                    <span>{totalBonus > 0 ? '+' : ''}{totalBonus} {tr('очков', 'pts')}</span>
+                </div>
+                <div className="achievement-modal-list">
+                    {grouped.map(({ key, count }) => (
+                        <div key={key} className="achievement-modal-item">
+                            <div className="achievement-modal-item-main">
+                                <div className="achievement-modal-title">
+                                    {achievementTitle(key)}
+                                    {count > 1 && <span className="achievement-count">×{count}</span>}
+                                </div>
+                                <div className="achievement-modal-desc">{achievementDescription(key)}</div>
+                            </div>
+                            <div className="achievement-modal-points">{achievementPointLabel(key)}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function PlayerStandingsMobileCard({ row, index, onOpenAchievements }) {
     const race = row.race ?? playerRace(row.player);
     const portrait = row.player.selectedPortrait;
     const raceImg = race != null ? RACE_IMG[race] : null;
@@ -99,15 +229,7 @@ function PlayerStandingsMobileCard({ row, index }) {
                     </div>
                 </div>
                 <div className="standings-achievements-row">
-                    {achievementPreview(row.achievements).map(key => (
-                        <span key={key} className="achievement-pill">{key}</span>
-                    ))}
-                    {(row.achievements || []).length > 3 && (
-                        <span className="achievement-pill achievement-pill--more">+{row.achievements.length - 3}</span>
-                    )}
-                    {(!row.achievements || row.achievements.length === 0) && (
-                        <span className="achievement-pill achievement-pill--empty">{tr('Нет ачивок', 'No achievements')}</span>
-                    )}
+                    <AchievementPills achievements={row.achievements} onOpen={() => onOpenAchievements(row)} />
                 </div>
             </div>
         </div>
@@ -516,6 +638,7 @@ function Standings() {
     const [raceFilter, setRaceFilter] = React.useState(null);
     const [playerFilter, setPlayerFilter] = React.useState('');
     const [pages,      setPages]      = React.useState({ players: 1 });
+    const [achievementRow, setAchievementRow] = React.useState(null);
     const playerFilterNeedle = normalizeSearchText(playerFilter);
 
     React.useEffect(() => {
@@ -686,15 +809,7 @@ function Standings() {
                                                         <span className="points-pill">{row.points ?? 0}</span>
                                                     </td>
                                                     <td className="col-achievements">
-                                                        {achievementPreview(row.achievements).map(key => (
-                                                            <span key={key} className="achievement-pill">{key}</span>
-                                                        ))}
-                                                        {(row.achievements || []).length > 3 && (
-                                                            <span className="achievement-pill achievement-pill--more">+{row.achievements.length - 3}</span>
-                                                        )}
-                                                        {(!row.achievements || row.achievements.length === 0) && (
-                                                            <span className="achievement-pill achievement-pill--empty">{tr('Нет ачивок', 'No achievements')}</span>
-                                                        )}
+                                                        <AchievementPills achievements={row.achievements} onOpen={() => setAchievementRow(row)} />
                                                     </td>
                                                 </tr>
                                             );
@@ -705,7 +820,7 @@ function Standings() {
                             <div className="standings-mobile-list standings-mobile-only">
                                 {pagedPlayers.items.map((row, i) => {
                                     const rank = (pagedPlayers.currentPage - 1) * PLAYERS_PAGE_SIZE + i;
-                                    return <PlayerStandingsMobileCard key={`${row.player.battleTag}-${row.race}`} row={row} index={rank} />;
+                                    return <PlayerStandingsMobileCard key={`${row.player.battleTag}-${row.race}`} row={row} index={rank} onOpenAchievements={setAchievementRow} />;
                                 })}
                             </div>
                             <PaginationControls
@@ -717,6 +832,7 @@ function Standings() {
                     )}
                 </>
             )}
+            <AchievementModal row={achievementRow} onClose={() => setAchievementRow(null)} />
         </div>
     );
 }
