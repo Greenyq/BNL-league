@@ -123,6 +123,16 @@ app.get('/api/matches/:battleTag', async (req, res) => {
     }
 });
 
+// ── Health check ──────────────────────────────────────────────────────────────
+app.get('/health', (req, res) => {
+    const connected = mongoose.connection.readyState === 1;
+    res.status(connected ? 200 : 503).json({
+        status: connected ? 'ok' : 'unavailable',
+        database: connected ? 'connected' : 'disconnected',
+        timestamp: new Date().toISOString()
+    });
+});
+
 // ── API routes ────────────────────────────────────────────────────────────────
 app.use('/api/players',   playersRouter);
 app.use('/api/teams',     teamsRouter);
@@ -142,8 +152,8 @@ app.get('*', (req, res) => {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 mongoose.connection.once('open', () => {
-    app.listen(PORT, () => {
-        console.log(`🚀 BNL server running on http://localhost:${PORT}`);
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 BNL server running on 0.0.0.0:${PORT}`);
         initializeScheduler();
     });
 });
