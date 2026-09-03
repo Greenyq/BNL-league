@@ -633,6 +633,7 @@ function Standings() {
     const [mode,       setMode]       = React.useState('ladder');
     const [players,    setPlayers]    = React.useState([]);
     const [duels,      setDuels]      = React.useState([]);
+    const [stage2,     setStage2]     = React.useState([]);
     const [wars,       setWars]       = React.useState([]);
     const [loading,    setLoading]    = React.useState(true);
     const [error,      setError]      = React.useState(null);
@@ -646,10 +647,12 @@ function Standings() {
         Promise.all([
             fetch('/api/players').then(r => r.json()),
             fetch('/api/duels').then(r => r.json()),
+            fetch('/api/duels/stage2').then(r => r.json()),
         ])
-            .then(([pl, duelData]) => {
+            .then(([pl, duelData, stage2Data]) => {
                 setPlayers(Array.isArray(pl) ? pl : []);
                 setDuels(Array.isArray(duelData) ? duelData : []);
+                setStage2(Array.isArray(stage2Data) ? stage2Data : []);
                 setLoading(false);
             })
             .catch(err  => { setError(err.message); setLoading(false); });
@@ -668,6 +671,15 @@ function Standings() {
         }
         return map;
     }, {});
+    for (const participant of stage2) {
+        duelStats[(participant.battleTag || '').toLowerCase()] = {
+            wins: participant.qualifierWins || 0,
+            losses: participant.qualifierLosses || 0,
+            points: participant.qualifierWins || 0,
+            matches: participant.qualifierGames || 0,
+            status: participant.status || 'qualifier'
+        };
+    }
 
     // Build independent rows for Stage 1 (ladder) and Stage 2 (duels).
     const rows = players
@@ -691,6 +703,7 @@ function Standings() {
                 wins: mode === 'duels' ? ds.wins : (raceStat?.wins ?? 0),
                 losses: mode === 'duels' ? ds.losses : (raceStat?.losses ?? 0),
                 duelMatches: ds.matches,
+                stage2Status: ds.status,
                 tierPromoted: !!s?.tierPromoted
             }];
         }
@@ -708,6 +721,7 @@ function Standings() {
             tier: s?.tier ?? 0,
             achievements: mode === 'duels' ? [] : (primaryRaceStat?.achievements ?? (s?.raceStats || []).flatMap(r => r.achievements || [])),
             duelMatches: ds.matches,
+            stage2Status: ds.status,
             tierPromoted: !!s?.tierPromoted
         }];
     })
@@ -789,7 +803,7 @@ function Standings() {
                                             {mode === 'ladder' && <th>{t('standings.mmr')}</th>}
                                             <th>{t('standings.wins')}</th>
                                             <th>{t('standings.losses')}</th>
-                                            <th>{t('standings.points')}</th>
+                                            <th>{mode === 'duels' ? tr('Прогресс', 'Progress') : t('standings.points')}</th>
                                             {mode === 'duels' && <th>{tr('Дуэлей', 'Duels')}</th>}
                                             {mode === 'ladder' && <th>{tr('Ачивки', 'Achievements')}</th>}
                                         </tr>
@@ -833,10 +847,10 @@ function Standings() {
                                                     <td className="col-losses">{row.losses}</td>
                                                     <td className="col-points">
                                                         <span className="points-pill">
-                                                            {row.points ?? 0}
+                                                            {mode === 'duels' ? `${row.duelMatches}/5` : (row.points ?? 0)}
                                                         </span>
                                                     </td>
-                                                    {mode === 'duels' && <td>{row.duelMatches}</td>}
+                                                    {mode === 'duels' && <td>{({ qualifier: tr('Квалификация', 'Qualifier'), upper: tr('Верхняя', 'Upper'), lower: tr('Нижняя', 'Lower'), king: tr('Царь горы', 'King of the Hill'), s_bracket: tr('Сетка S', 'S bracket'), eliminated: tr('Вылетел', 'Eliminated') })[row.stage2Status] || '—'}</td>}
                                                     {mode === 'ladder' && <td className="col-achievements">
                                                         <AchievementPills achievements={row.achievements} onOpen={() => setAchievementRow(row)} />
                                                     </td>}
