@@ -2277,6 +2277,63 @@ function PendingResetsSection({ showMsg }) {
 }
 
 // ── Панель ────────────────────────────────────────────────────────────────────
+function DuelsTab({ players, showMsg, onRefresh }) {
+    useLang();
+    const initial = { playerAId: '', playerBId: '', winner: 'A', pointsA: 30, pointsB: -15, score: '', notes: '', playedAt: new Date().toISOString().slice(0, 10) };
+    const [form, setForm] = React.useState(initial);
+    const [duels, setDuels] = React.useState([]);
+    const [saving, setSaving] = React.useState(false);
+    const tier = p => p?.tierOverride || p?.stats?.tier || 0;
+    const tierName = n => ({ 1: 'C', 2: 'B', 3: 'A', 4: 'S' }[n] || '—');
+    const loadDuels = React.useCallback(() => fetch('/api/duels').then(r => r.json()).then(d => setDuels(Array.isArray(d) ? d : [])), []);
+    React.useEffect(() => { loadDuels(); }, [loadDuels]);
+
+    React.useEffect(() => {
+        const a = players.find(p => p.id === form.playerAId), b = players.find(p => p.id === form.playerBId);
+        if (!a || !b || !tier(a) || !tier(b)) return;
+        apiFetch(`/api/duels/suggestion?tierA=${tier(a)}&tierB=${tier(b)}&winner=${form.winner}`)
+            .then(s => setForm(old => ({ ...old, pointsA: s.pointsA, pointsB: s.pointsB })))
+            .catch(() => {});
+    }, [form.playerAId, form.playerBId, form.winner, players]);
+
+    const submit = async e => {
+        e.preventDefault(); setSaving(true);
+        try {
+            await apiFetch('/api/duels', { method: 'POST', body: JSON.stringify({ ...form, pointsA: Number(form.pointsA), pointsB: Number(form.pointsB) }) });
+            showMsg(`✅ ${tr('Дуэль сохранена', 'Duel saved')}`);
+            setForm(initial); await loadDuels(); onRefresh();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+        setSaving(false);
+    };
+    const remove = async id => {
+        if (!confirm(tr('Удалить эту дуэль?', 'Delete this duel?'))) return;
+        try { await apiFetch(`/api/duels/${id}`, { method: 'DELETE' }); await loadDuels(); onRefresh(); }
+        catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+    const playerOption = p => `${p.name} (${tierName(tier(p))})`;
+
+    return <div>
+        <h3>{tr('Этап 2 — Дуэли', 'Stage 2 — Duels')}</h3>
+        <form className="card-elevated" onSubmit={submit} style={{ padding: 'var(--spacing-xl)', display: 'grid', gap: 12, marginBottom: 24 }}>
+            <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{tr('Система предлагает очки по разнице тиров. Перед сохранением админ может изменить оба значения.', 'The system suggests points from the tier difference. Admin can change both values before saving.')}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 12 }}>
+                <select required value={form.playerAId} onChange={e => setForm({ ...form, playerAId: e.target.value })}><option value="">{tr('Игрок A', 'Player A')}</option>{players.filter(p => p.id !== form.playerBId).map(p => <option key={p.id} value={p.id}>{playerOption(p)}</option>)}</select>
+                <select required value={form.playerBId} onChange={e => setForm({ ...form, playerBId: e.target.value })}><option value="">{tr('Игрок B', 'Player B')}</option>{players.filter(p => p.id !== form.playerAId).map(p => <option key={p.id} value={p.id}>{playerOption(p)}</option>)}</select>
+                <select value={form.winner} onChange={e => setForm({ ...form, winner: e.target.value })}><option value="A">{tr('Победил игрок A', 'Player A won')}</option><option value="B">{tr('Победил игрок B', 'Player B won')}</option></select>
+                <input type="date" required value={form.playedAt} onChange={e => setForm({ ...form, playedAt: e.target.value })} />
+                <input type="number" step="1" min="-1000" max="1000" required value={form.pointsA} onChange={e => setForm({ ...form, pointsA: e.target.value })} placeholder={tr('Очки игрока A', 'Player A points')} />
+                <input type="number" step="1" min="-1000" max="1000" required value={form.pointsB} onChange={e => setForm({ ...form, pointsB: e.target.value })} placeholder={tr('Очки игрока B', 'Player B points')} />
+                <input value={form.score} maxLength="30" onChange={e => setForm({ ...form, score: e.target.value })} placeholder={tr('Счёт, например 2:1', 'Score, e.g. 2:1')} />
+                <input value={form.notes} maxLength="500" onChange={e => setForm({ ...form, notes: e.target.value })} placeholder={tr('Комментарий', 'Notes')} />
+            </div>
+            <button className="btn btn-primary" disabled={saving}>{saving ? '...' : tr('Сохранить дуэль', 'Save duel')}</button>
+        </form>
+        <div className="standings-table-wrap"><table className="standings-table"><thead><tr><th>{tr('Дата', 'Date')}</th><th>{tr('Дуэль', 'Duel')}</th><th>{tr('Счёт', 'Score')}</th><th>{tr('Очки', 'Points')}</th><th></th></tr></thead><tbody>
+            {duels.map(d => <tr key={d.id}><td>{new Date(d.playedAt).toLocaleDateString()}</td><td>{d.playerA.name} ({tierName(d.playerA.tier)}) vs {d.playerB.name} ({tierName(d.playerB.tier)})</td><td>{d.score || '—'}</td><td>{d.playerA.points > 0 ? '+' : ''}{d.playerA.points} / {d.playerB.points > 0 ? '+' : ''}{d.playerB.points}</td><td><button onClick={() => remove(d.id)} className="btn btn-secondary">{t('admin.delete')}</button></td></tr>)}
+        </tbody></table></div>
+    </div>;
+}
+
 function AdminPanel({ onLogout }) {
     useLang();
     const [tab,     setTab]     = React.useState('players');
@@ -2322,6 +2379,7 @@ function AdminPanel({ onLogout }) {
 
     const TABS_ADMIN = [
         { id: 'players',  key: 'admin.tab.players' },
+        { id: 'duels',    label: tr('Дуэли', 'Duels') },
         // Team season is closed; team/clan-war admin tabs are intentionally hidden.
         // { id: 'teams',    key: 'admin.tab.teams' },
         // { id: 'clanwars', key: 'admin.tab.clanwars' },
@@ -2395,6 +2453,7 @@ function AdminPanel({ onLogout }) {
             </div>
 
             {tab === 'players'   && <PlayersTab  players={players} teams={teams} onRefresh={load} showMsg={showMsg} />}
+            {tab === 'duels'     && <DuelsTab players={players} onRefresh={load} showMsg={showMsg} />}
             {/* Team season tabs are closed but component code remains for future reuse. */}
             {tab === 'portraits' && <PortraitsTab showMsg={showMsg} />}
             {tab === 'maps'      && <ManageMapsTab showMsg={showMsg} />}
