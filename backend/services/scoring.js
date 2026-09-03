@@ -2,9 +2,9 @@
  * BNL Scoring Engine
  *
  * Points per match (based on MMR difference: opponentMMR − playerMMR):
- *   Win  vs stronger (diff ≥ +20): 30 pts
- *   Win  vs equal   (diff ±19)   : 50 pts
- *   Win  vs weaker  (diff ≤ −20) : 70 pts
+ *   Win  vs stronger (diff ≥ +20): 50 pts
+ *   Win  vs equal   (diff ±19)   : 40 pts
+ *   Win  vs weaker  (diff ≤ −20) : 30 pts
  *   Loss to stronger (diff ≥ +20): −20 pts
  *   Loss to equal   (diff ±19)   : −30 pts
  *   Loss to weaker  (diff ≤ −20) : −40 pts
@@ -14,8 +14,24 @@
 const cron = require('node-cron');
 const { Player, PlayerCache, PlayerStats, ManualPointsAdjustment } = require('../models/Player');
 const { loadMatchDataForPlayer, fetchPlayerMmr } = require('./w3champions');
+const { Duel } = require('../models/Duel');
 
 const PERMANENT_SEASON_START = new Date(process.env.BNL_SEASON_START || '2026-05-30T00:00:00Z');
+
+function getLadderMatchPoints(mmrDifference, won) {
+    const diff = Number(mmrDifference) || 0; // opponent MMR - player MMR
+    if (won) {
+        if (diff >= 200) return 70;
+        if (diff >= 100) return 60;
+        if (diff >= 20) return 50;
+        if (diff >= -19) return 40;
+        return 30;
+    }
+    if (diff <= -200) return -50;
+    if (diff <= -20) return -40;
+    if (diff <= 19) return -30;
+    return -20;
+}
 
 function getTierFromMmr(mmr = 0) {
     const value = Number(mmr) || 0;
@@ -195,11 +211,11 @@ function processMatches(battleTag, matches, allBnlBattleTags = new Set(), mainRa
             let pts = 0;
             if (won) {
                 wins++;
-                pts = diff >= 20 ? 30 : diff >= -19 ? 50 : 70;
+                pts = getLadderMatchPoints(diff, true);
                 matchHistory.push({ result: 'win',  mmrDiff: diff, playerMMR: pMmr, opponentMMR: oppMmr, isBnlMatch: isBnl, opponentTag: opp.battleTag });
             } else {
                 losses++;
-                pts = diff <= -20 ? -40 : diff <= 19 ? -30 : -20;
+                pts = getLadderMatchPoints(diff, false);
                 matchHistory.push({ result: 'loss', mmrDiff: diff, playerMMR: pMmr, opponentMMR: oppMmr, isBnlMatch: isBnl, opponentTag: opp.battleTag });
             }
 
@@ -240,6 +256,11 @@ async function recalculateAllPlayerStats() {
     }
 
     const allTags = new Set(players.map(p => p.battleTag));
+    const duelTotals = {};
+    for (const duel of await Duel.find({})) {
+        duelTotals[duel.playerA.battleTag.toLowerCase()] = (duelTotals[duel.playerA.battleTag.toLowerCase()] || 0) + duel.playerA.points;
+        duelTotals[duel.playerB.battleTag.toLowerCase()] = (duelTotals[duel.playerB.battleTag.toLowerCase()] || 0) + duel.playerB.points;
+    }
     let updated = 0;
 
     // 2. Pre-calculate clan war match-win points per player
@@ -291,7 +312,9 @@ async function recalculateAllPlayerStats() {
                     { battleTag: player.battleTag },
                     {
                         battleTag: player.battleTag,
-                        points: 0,
+                        points: duelTotals[player.battleTag.toLowerCase()] || 0,
+                        ladderPoints: 0,
+                        duelPoints: duelTotals[player.battleTag.toLowerCase()] || 0,
                         wins: 0,
                         losses: 0,
                         mmr: player.currentMmr || 0,
@@ -332,6 +355,9 @@ async function recalculateAllPlayerStats() {
                 const delta = adjustments.reduce((s, a) => s + a.amount, 0);
                 totalPoints = Math.max(0, totalPoints + delta);
             }
+            const ladderPoints = totalPoints;
+            const duelPoints = duelTotals[player.battleTag.toLowerCase()] || 0;
+            totalPoints = Math.max(0, ladderPoints + duelPoints);
 
             const primaryProfile = raceStats.find(r => primaryRace != null && r.race === Number(primaryRace)) || raceStats[0] || null;
             const primaryMmr = primaryProfile?.mmr || player.currentMmr || 0;
@@ -345,6 +371,8 @@ async function recalculateAllPlayerStats() {
                 {
                     battleTag: player.battleTag,
                     points: totalPoints,
+                    ladderPoints,
+                    duelPoints,
                     wins: totalWins,
                     losses: totalLosses,
                     mmr: primaryMmr,
@@ -380,4 +408,4 @@ function initializeScheduler() {
     return job;
 }
 
-module.exports = { processMatches, determineAchievements, recalculateAllPlayerStats, initializeScheduler, ACHIEVEMENT_BONUSES, getTierFromMmr };
+module.exports = { processMatches, determineAchievements, recalculateAllPlayerStats, initializeScheduler, ACHIEVEMENT_BONUSES, getTierFromMmr, getLadderMatchPoints };
