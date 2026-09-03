@@ -45,6 +45,7 @@ const stage2ParticipantSchema = new mongoose.Schema({
     upperLosses:     { type: Number, default: 0 },
     lowerWins:       { type: Number, default: 0 },
     lowerLosses:     { type: Number, default: 0 },
+    kingQualified:   { type: Boolean, default: false },
     mapWins:         { type: Number, default: 0 },
     mapLosses:       { type: Number, default: 0 },
     opponents:       { type: [String], default: [] },
