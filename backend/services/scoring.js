@@ -14,7 +14,6 @@
 const cron = require('node-cron');
 const { Player, PlayerCache, PlayerStats, ManualPointsAdjustment } = require('../models/Player');
 const { loadMatchDataForPlayer, fetchPlayerMmr } = require('./w3champions');
-const { Duel } = require('../models/Duel');
 
 const PERMANENT_SEASON_START = new Date(process.env.BNL_SEASON_START || '2026-05-30T00:00:00Z');
 
@@ -256,11 +255,6 @@ async function recalculateAllPlayerStats() {
     }
 
     const allTags = new Set(players.map(p => p.battleTag));
-    const duelTotals = {};
-    for (const duel of await Duel.find({})) {
-        duelTotals[duel.playerA.battleTag.toLowerCase()] = (duelTotals[duel.playerA.battleTag.toLowerCase()] || 0) + duel.playerA.points;
-        duelTotals[duel.playerB.battleTag.toLowerCase()] = (duelTotals[duel.playerB.battleTag.toLowerCase()] || 0) + duel.playerB.points;
-    }
     let updated = 0;
 
     // 2. Pre-calculate clan war match-win points per player
@@ -312,9 +306,9 @@ async function recalculateAllPlayerStats() {
                     { battleTag: player.battleTag },
                     {
                         battleTag: player.battleTag,
-                        points: duelTotals[player.battleTag.toLowerCase()] || 0,
+                        points: 0,
                         ladderPoints: 0,
-                        duelPoints: duelTotals[player.battleTag.toLowerCase()] || 0,
+                        duelPoints: 0,
                         wins: 0,
                         losses: 0,
                         mmr: player.currentMmr || 0,
@@ -356,8 +350,6 @@ async function recalculateAllPlayerStats() {
                 totalPoints = Math.max(0, totalPoints + delta);
             }
             const ladderPoints = totalPoints;
-            const duelPoints = duelTotals[player.battleTag.toLowerCase()] || 0;
-            totalPoints = Math.max(0, ladderPoints + duelPoints);
 
             const primaryProfile = raceStats.find(r => primaryRace != null && r.race === Number(primaryRace)) || raceStats[0] || null;
             const primaryMmr = primaryProfile?.mmr || player.currentMmr || 0;
@@ -370,9 +362,9 @@ async function recalculateAllPlayerStats() {
                 { battleTag: player.battleTag },
                 {
                     battleTag: player.battleTag,
-                    points: totalPoints,
+                    points: ladderPoints,
                     ladderPoints,
-                    duelPoints,
+                    duelPoints: 0,
                     wins: totalWins,
                     losses: totalLosses,
                     mmr: primaryMmr,
