@@ -287,6 +287,8 @@ function TeamStandingsMobileCard({ row, index }) {
 
 function Stage2Arena({ participants }) {
     const [expanded, setExpanded] = React.useState(false);
+    const arenaRef = React.useRef(null);
+    const panRef = React.useRef(null);
     React.useEffect(() => {
         if (!expanded) return undefined;
         const previousOverflow = document.body.style.overflow;
@@ -298,6 +300,30 @@ function Stage2Arena({ participants }) {
             document.removeEventListener('keydown', closeOnEscape);
         };
     }, [expanded]);
+    React.useEffect(() => {
+        if (!expanded || !arenaRef.current) return;
+        const arena = arenaRef.current;
+        arena.scrollLeft = Math.max(0, (arena.scrollWidth - arena.clientWidth) / 2);
+        arena.scrollTop = Math.max(0, (arena.scrollHeight - arena.clientHeight) / 2);
+    }, [expanded]);
+    const startPan = event => {
+        if (!expanded || event.button !== 0) return;
+        const arena = arenaRef.current;
+        panRef.current = { x: event.clientX, y: event.clientY, left: arena.scrollLeft, top: arena.scrollTop };
+        arena.setPointerCapture(event.pointerId);
+        arena.classList.add('is-panning');
+    };
+    const movePan = event => {
+        if (!panRef.current || !arenaRef.current) return;
+        arenaRef.current.scrollLeft = panRef.current.left - (event.clientX - panRef.current.x);
+        arenaRef.current.scrollTop = panRef.current.top - (event.clientY - panRef.current.y);
+    };
+    const stopPan = event => {
+        if (!panRef.current) return;
+        panRef.current = null;
+        arenaRef.current?.classList.remove('is-panning');
+        if (arenaRef.current?.hasPointerCapture(event.pointerId)) arenaRef.current.releasePointerCapture(event.pointerId);
+    };
     const groups = {
         upperB: participants.filter(p => p.tier === 'B' && p.status === 'upper'),
         upperA: participants.filter(p => p.tier === 'A' && p.status === 'upper'),
@@ -364,7 +390,16 @@ function Stage2Arena({ participants }) {
         <button type="button" className="stage2-expand-button" aria-expanded={expanded} onClick={event => { event.stopPropagation(); setExpanded(value => !value); }}>
             {expanded ? `× ${tr('Закрыть', 'Close')}` : `⛶ ${tr('Развернуть карту', 'Expand map')}`}
         </button>
-        <div className="stage2-arena" onClick={() => { if (!expanded) setExpanded(true); }}>
+        <div
+            ref={arenaRef}
+            className="stage2-arena"
+            onClick={() => { if (!expanded) setExpanded(true); }}
+            onPointerDown={startPan}
+            onPointerMove={movePan}
+            onPointerUp={stopPan}
+            onPointerCancel={stopPan}
+            onPointerLeave={stopPan}
+        >
             <svg className="stage2-map-svg" viewBox="0 0 1200 760" role="img" aria-label={tr('Карта второго этапа', 'Stage 2 tournament map')}>
                 <defs>
                     <filter id="stage2-glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
