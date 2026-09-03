@@ -669,6 +669,8 @@ function Standings() {
                 wins: raceStat?.wins ?? 0,
                 losses: raceStat?.losses ?? 0,
                 points: raceStat?.points ?? 0,
+                ladderPoints: raceStat?.points ?? 0,
+                duelPoints: 0,
                 mmr: raceStat?.mmr ?? s?.mmr ?? p.currentMmr ?? null,
                 tier: raceStat?.tier ?? s?.tier ?? 0,
                 achievements: raceStat?.achievements ?? [],
@@ -683,6 +685,8 @@ function Standings() {
             wins: s?.wins ?? 0,
             losses: s?.losses ?? 0,
             points: s?.points ?? 0,
+            ladderPoints: s?.ladderPoints ?? s?.points ?? 0,
+            duelPoints: s?.duelPoints ?? 0,
             mmr: s?.mmr ?? p.currentMmr ?? null,
             tier: s?.tier ?? 0,
             achievements: primaryRaceStat?.achievements ?? (s?.raceStats || []).flatMap(r => r.achievements || []),
@@ -806,7 +810,10 @@ function Standings() {
                                                     <td className="col-wins">{row.wins}</td>
                                                     <td className="col-losses">{row.losses}</td>
                                                     <td className="col-points">
-                                                        <span className="points-pill">{row.points ?? 0}</span>
+                                                        <span className="points-pill" title={`${tr('Ладдер', 'Ladder')}: ${row.ladderPoints || 0} · ${tr('Дуэли', 'Duels')}: ${row.duelPoints || 0}`}>
+                                                            {row.points ?? 0}
+                                                        </span>
+                                                        {raceFilter === null && <div style={{ color: 'var(--color-text-muted)', fontSize: '0.68em', marginTop: 3, whiteSpace: 'nowrap' }}>L {row.ladderPoints || 0} + D {row.duelPoints || 0}</div>}
                                                     </td>
                                                     <td className="col-achievements">
                                                         <AchievementPills achievements={row.achievements} onOpen={() => setAchievementRow(row)} />
