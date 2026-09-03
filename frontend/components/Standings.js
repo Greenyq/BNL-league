@@ -294,46 +294,47 @@ function Stage2Arena({ participants }) {
         center: participants.filter(p => ['s_bracket', 'king'].includes(p.status)),
         eliminated: participants.filter(p => p.status === 'eliminated')
     };
-    const positioned = [];
-    const route = (list, status, fromX, toX, y) => list.forEach((player, index) => {
-        const winsField = status === 'upper' ? 'upperWins' : 'lowerWins';
-        const wins = Math.min(3, Math.max(0, Number(player[winsField]) || 0));
-        const pairOffset = (index % 2 ? 1 : -1) * (2.25 + Math.floor(index / 2) * 1.2);
-        positioned.push({ player, wins, x: fromX + ((toX - fromX) * wins / 3), y: y + pairOffset });
-    });
-    route(groups.upperB, 'upper', 8, 42, 35);
-    route(groups.upperA, 'upper', 92, 58, 35);
-    route(groups.lowerB, 'lower', 8, 42, 66);
-    route(groups.lowerA, 'lower', 92, 58, 66);
-    groups.center.forEach((player, index) => {
-        const ring = [[50,42],[57,46],[57,55],[50,59],[43,55],[43,46]];
-        const [x, y] = player.status === 'king' ? [50,50] : ring[index % ring.length];
-        positioned.push({ player, wins: null, x, y });
-    });
-
-    const checkpoints = (side, y, reverse = false) => [0,1,2,3].map(step => {
-        const x = reverse ? 92 - (34 * step / 3) : 8 + (34 * step / 3);
-        return <span key={`${side}-${step}`} className={`stage2-checkpoint stage2-checkpoint--${side}`} style={{ '--stage2-x': `${x}%`, '--stage2-y': `${y}%` }}>{step === 3 ? tr('АРЕНА', 'ARENA') : step}</span>;
-    });
+    const playerPiece = (player, wins) => <div key={player.id} className={`stage2-player-piece stage2-player-piece--${String(player.tier).toLowerCase()}`}>
+        <span className="stage2-piece-token">{player.tier}</span>
+        <span className="stage2-piece-name">{player.name}</span>
+        <strong>{wins}/3</strong>
+    </div>;
+    const bracket = (className, title, list, winsField, reverse = false) => {
+        const steps = reverse ? [3, 2, 1, 0] : [0, 1, 2, 3];
+        return <section className={`stage2-bracket ${className}`}>
+            <h4>{title}</h4>
+            <div className="stage2-bracket-steps">
+                {steps.map((step, visualIndex) => {
+                    const atStep = step === 3 ? [] : list.filter(player => Math.min(2, Number(player[winsField]) || 0) === step);
+                    return <div key={step} className={`stage2-step stage2-step--${visualIndex + 1}`}>
+                        <div className="stage2-step-head">{step === 3 ? tr('В ЦЕНТР', 'CENTER') : `${step} ${tr('ПОБ.', 'WINS')}`}</div>
+                        <div className="stage2-step-players">
+                            {atStep.map(player => playerPiece(player, step))}
+                            {!atStep.length && step !== 3 && <span className="stage2-step-empty">—</span>}
+                            {step === 3 && <span className="stage2-portal">◆</span>}
+                        </div>
+                    </div>;
+                })}
+            </div>
+        </section>;
+    };
     return <div className="stage2-arena-wrap">
         <div className="stage2-arena">
-            <div className="stage2-board-title stage2-board-title--b">{tr('ВЕРХНЯЯ B', 'B UPPER')}</div>
-            <div className="stage2-board-title stage2-board-title--a">{tr('ВЕРХНЯЯ A', 'A UPPER')}</div>
-            <div className="stage2-board-title stage2-board-title--lb">{tr('НИЖНЯЯ B', 'B LOWER')}</div>
-            <div className="stage2-board-title stage2-board-title--la">{tr('НИЖНЯЯ A', 'A LOWER')}</div>
-            <div className="stage2-arena-core"><span>S</span><small>{tr('ЦАРЬ ГОРЫ', 'KING OF THE HILL')}</small></div>
-            <div className="stage2-road stage2-road--upper" />
-            <div className="stage2-road stage2-road--lower" />
-            {checkpoints('upper-b', 35)}
-            {checkpoints('upper-a', 35, true)}
-            {checkpoints('lower-b', 66)}
-            {checkpoints('lower-a', 66, true)}
-            {positioned.map(({ player, wins, x, y }) => <div key={player.id} className={`stage2-player-piece stage2-player-piece--${String(player.tier).toLowerCase()}${player.status === 'king' ? ' is-king' : ''}`} style={{ '--stage2-x': `${x}%`, '--stage2-y': `${y}%` }} title={`${player.name}${wins === null ? '' : ` — ${wins}/3`}`}>
-                <span className="stage2-piece-token">{player.status === 'king' ? '♛' : player.tier}</span>
-                <span className="stage2-piece-name">{player.name}</span>
-                {wins !== null && <strong>{wins}/3</strong>}
-            </div>)}
-            {!positioned.length && <div className="stage2-board-empty">{tr('Игроки появятся на дорогах после старта этапа', 'Players will appear on the roads when Stage 2 begins')}</div>}
+            <div className="stage2-board-layout">
+                {bracket('stage2-upper-b', tr('Верхняя сетка B', 'B Upper Bracket'), groups.upperB, 'upperWins')}
+                {bracket('stage2-upper-a', tr('Верхняя сетка A', 'A Upper Bracket'), groups.upperA, 'upperWins', true)}
+                <section className="stage2-arena-core">
+                    <div className="stage2-core-title"><span>S</span><small>{tr('ЦАРЬ ГОРЫ', 'KING OF THE HILL')}</small></div>
+                    <div className="stage2-center-players">
+                        {groups.center.map(player => <div key={player.id} className={`stage2-center-piece${player.status === 'king' ? ' is-king' : ''}`}>
+                            <span>{player.status === 'king' ? '♛' : 'S'}</span>{player.name}
+                        </div>)}
+                        {!groups.center.length && <span className="stage2-step-empty">—</span>}
+                    </div>
+                </section>
+                {bracket('stage2-lower-b', tr('Нижняя сетка B', 'B Lower Bracket'), groups.lowerB, 'lowerWins')}
+                {bracket('stage2-lower-a', tr('Нижняя сетка A', 'A Lower Bracket'), groups.lowerA, 'lowerWins', true)}
+            </div>
         </div>
         {!!groups.eliminated.length && <div className="stage2-eliminated"><strong>{tr('Вылетели', 'Eliminated')}:</strong> {groups.eliminated.map(p => p.name).join(', ')}</div>}
     </div>;
@@ -854,7 +855,7 @@ function Standings() {
                         <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 48 }}>{t('standings.empty')}</p>
                     ) : (
                         <>
-                            <div className="standings-desktop-only standings-table-wrap">
+                            <div className={`standings-desktop-only standings-table-wrap${mode === 'ladder' ? ' stage1-table-hidden' : ''}`}>
                                 <table className="standings-table">
                                     <thead>
                                         <tr>
@@ -922,7 +923,7 @@ function Standings() {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="standings-mobile-list standings-mobile-only">
+                            <div className={mode === 'ladder' ? 'standings-card-grid' : 'standings-mobile-list standings-mobile-only'}>
                                 {pagedPlayers.items.map((row, i) => {
                                     const rank = (pagedPlayers.currentPage - 1) * PLAYERS_PAGE_SIZE + i;
                                     return <PlayerStandingsMobileCard key={`${row.player.battleTag}-${row.race}`} row={row} index={rank} mode={mode} onOpenAchievements={setAchievementRow} />;

@@ -2528,29 +2528,42 @@ input[type="datetime-local"] {
 }
 
 .stage2-arena-wrap { margin-bottom: var(--spacing-xl); }
-.stage2-arena { position: relative; isolation: isolate; overflow: hidden; aspect-ratio: 16/9; min-height: 560px; border: 1px solid rgba(212,175,55,.52); border-radius: var(--radius-lg); background: #080d12 url('../images/stage2-fantasy-map.jpg') center/cover no-repeat; box-shadow: inset 0 0 100px rgba(0,0,0,.72), 0 18px 50px rgba(0,0,0,.35); }
+.stage2-arena { position:relative; isolation:isolate; overflow:hidden; min-height:650px; padding:clamp(14px,2vw,26px); border:1px solid rgba(212,175,55,.52); border-radius:var(--radius-lg); background:#080d12 url('../images/stage2-fantasy-map.jpg') center/cover no-repeat; box-shadow:inset 0 0 100px rgba(0,0,0,.72),0 18px 50px rgba(0,0,0,.35); }
 .stage2-arena::before { content: ''; position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at center, rgba(3,8,14,.08) 0 24%, rgba(3,8,14,.34) 58%, rgba(0,0,0,.64) 100%); pointer-events: none; }
-.stage2-road { position:absolute; z-index:0; left:8%; right:8%; height:8px; border-top:2px solid rgba(244,205,111,.68); border-bottom:1px solid rgba(65,34,12,.75); background:linear-gradient(90deg,rgba(79,194,224,.45),rgba(255,218,125,.75) 50%,rgba(244,91,61,.45)); box-shadow:0 0 12px rgba(240,201,105,.34); }
-.stage2-road--upper { top:35%; } .stage2-road--lower { top:66%; }
-.stage2-board-title { position:absolute; z-index:2; padding:4px 10px; border-radius:4px; color:#f4dfa5; background:rgba(3,8,13,.74); font-family:'ElenBold',serif; font-size:clamp(.7rem,1.1vw,.95rem); letter-spacing:.06em; text-shadow:0 2px 3px #000; }
-.stage2-board-title--b { left:4%; top:23%; color:#83e8ff; } .stage2-board-title--a { right:4%; top:23%; color:#ff9a7e; }
-.stage2-board-title--lb { left:4%; top:73%; color:#83e8ff; } .stage2-board-title--la { right:4%; top:73%; color:#ff9a7e; }
-.stage2-arena-core { position:absolute; z-index:1; left:50%; top:50%; width:clamp(104px,15vw,190px); aspect-ratio:1; transform:translate(-50%,-50%); display:grid; place-content:center; text-align:center; border:2px solid rgba(255,220,124,.75); border-radius:50%; background:radial-gradient(circle,rgba(18,49,66,.82),rgba(5,11,17,.72) 65%,rgba(255,187,65,.28)); box-shadow:0 0 12px #ffd15c,0 0 45px rgba(255,194,72,.48),inset 0 0 30px rgba(83,204,255,.35); animation:stage2-core-glow 3s ease-in-out infinite; }
-.stage2-arena-core span { color:#ffe69a; font-family:'ElenBold',serif; font-size:clamp(2rem,5vw,4.5rem); line-height:.8; text-shadow:0 0 12px #ffc43d; }
-.stage2-arena-core small { margin-top:10px; color:#f4dfa5; font-size:clamp(.55rem,.8vw,.75rem); }
-.stage2-checkpoint { position:absolute; z-index:1; left:var(--stage2-x); top:var(--stage2-y); transform:translate(-50%,-50%); display:grid; place-items:center; width:28px; height:28px; border:2px solid #c9a65b; border-radius:50%; background:#18232a; color:#ffe3a0; font-size:.68rem; box-shadow:0 0 0 3px rgba(0,0,0,.52),0 0 10px rgba(234,196,97,.35); }
-.stage2-player-piece { position:absolute; z-index:4; left:var(--stage2-x); top:var(--stage2-y); transform:translate(-50%,-50%); width:clamp(94px,10vw,145px); min-height:36px; display:grid; grid-template-columns:27px minmax(0,1fr) auto; align-items:center; gap:5px; padding:4px 7px 4px 4px; border:1px solid #c8a66b; border-radius:5px; background:linear-gradient(180deg,rgba(45,33,20,.96),rgba(16,18,20,.96)); color:#f7e5b4; box-shadow:0 5px 10px rgba(0,0,0,.6),inset 0 0 10px rgba(255,210,112,.08); transition:left 1.45s cubic-bezier(.22,.8,.25,1),top 1.45s cubic-bezier(.22,.8,.25,1),box-shadow .5s ease; will-change:left,top; }
+.stage2-board-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(140px,18%) minmax(0,1fr); grid-template-areas:'upperB core upperA' 'lowerB core lowerA'; gap:18px 14px; min-height:600px; align-items:center; }
+.stage2-bracket { min-width:0; padding:10px; border:1px solid rgba(212,175,55,.35); border-radius:8px; background:rgba(3,8,13,.76); backdrop-filter:blur(3px); box-shadow:0 8px 24px rgba(0,0,0,.35); }
+.stage2-upper-b { grid-area:upperB; } .stage2-upper-a { grid-area:upperA; } .stage2-lower-b { grid-area:lowerB; } .stage2-lower-a { grid-area:lowerA; }
+.stage2-bracket h4 { margin:0 0 8px; text-align:center; color:#f4dfa5; font-family:'ElenBold',serif; font-size:.86rem; letter-spacing:.04em; }
+.stage2-upper-b h4,.stage2-lower-b h4 { color:#83e8ff; } .stage2-upper-a h4,.stage2-lower-a h4 { color:#ff9a7e; }
+.stage2-bracket-steps { position:relative; display:grid; grid-template-columns:repeat(4,minmax(65px,1fr)); gap:6px; align-items:start; }
+.stage2-bracket-steps::before { content:''; position:absolute; left:8%; right:8%; top:31px; height:2px; background:#c8a45e; box-shadow:0 0 8px rgba(255,214,102,.5); }
+.stage2-step { position:relative; z-index:1; min-width:0; }
+.stage2-step--2 { margin-top:13px; } .stage2-step--3 { margin-top:26px; } .stage2-step--4 { margin-top:39px; }
+.stage2-step-head { display:grid; place-items:center; min-height:26px; margin:0 auto 5px; padding:2px 5px; border:1px solid #c9a65b; border-radius:4px; background:#152027; color:#ffe3a0; font-size:.58rem; text-align:center; white-space:nowrap; }
+.stage2-step-players { display:flex; flex-direction:column; gap:4px; max-height:124px; min-height:34px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#8e6e34 rgba(0,0,0,.3); }
+.stage2-player-piece { position:relative; width:100%; min-height:29px; display:grid; grid-template-columns:21px minmax(0,1fr) auto; align-items:center; gap:4px; padding:3px 5px 3px 3px; border:1px solid #c8a66b; border-radius:4px; background:linear-gradient(180deg,rgba(45,33,20,.96),rgba(16,18,20,.96)); color:#f7e5b4; box-shadow:0 3px 7px rgba(0,0,0,.55); animation:stage2-piece-arrive .65s cubic-bezier(.2,.8,.25,1); }
 .stage2-player-piece--b { border-color:#65cae8; } .stage2-player-piece--a { border-color:#e77b63; }
-.stage2-player-piece--s,.stage2-player-piece.is-king { border-color:#ffe072; box-shadow:0 0 18px rgba(255,209,78,.72),0 6px 12px rgba(0,0,0,.65); }
-.stage2-piece-token { display:grid; place-items:center; width:27px; height:27px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#ffe9a5,#8c541d 65%,#281305); color:#171006; font-family:'ElenBold',serif; box-shadow:0 0 8px rgba(255,210,85,.62); animation:stage2-token-float 2.4s ease-in-out infinite; }
-.stage2-piece-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:clamp(.65rem,.85vw,.82rem); text-shadow:0 1px 2px #000; }
-.stage2-player-piece strong { color:#ffe27e; font-size:.72rem; }
-.stage2-board-empty { position:absolute; z-index:5; left:50%; bottom:8%; transform:translateX(-50%); width:min(80%,520px); padding:10px 16px; text-align:center; color:#d5c28d; background:rgba(4,8,12,.78); border:1px solid rgba(212,175,55,.4); border-radius:5px; }
+.stage2-piece-token { display:grid; place-items:center; width:21px; height:21px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#ffe9a5,#8c541d 65%,#281305); color:#171006; font-family:'ElenBold',serif; font-size:.65rem; }
+.stage2-piece-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.64rem; text-shadow:0 1px 2px #000; }
+.stage2-player-piece strong { color:#ffe27e; font-size:.58rem; }
+.stage2-step-empty,.stage2-portal { display:grid; place-items:center; min-height:29px; color:#9e9273; }
+.stage2-portal { color:#ffe071; font-size:1.15rem; text-shadow:0 0 10px #ffbc34; animation:stage2-core-glow 2s ease-in-out infinite; }
+.stage2-arena-core { grid-area:core; align-self:center; min-width:0; padding:13px 8px; text-align:center; border:2px solid rgba(255,220,124,.75); border-radius:18px; background:radial-gradient(circle,rgba(18,49,66,.88),rgba(5,11,17,.86) 68%); box-shadow:0 0 30px rgba(255,194,72,.46),inset 0 0 25px rgba(83,204,255,.25); animation:stage2-core-glow 3s ease-in-out infinite; }
+.stage2-core-title { display:flex; flex-direction:column; align-items:center; }
+.stage2-core-title span { color:#ffe69a; font-family:'ElenBold',serif; font-size:3rem; line-height:.85; text-shadow:0 0 12px #ffc43d; }
+.stage2-core-title small { margin-top:7px; color:#f4dfa5; font-size:.58rem; }
+.stage2-center-players { display:flex; flex-direction:column; gap:5px; max-height:330px; margin-top:12px; overflow-y:auto; }
+.stage2-center-piece { display:flex; align-items:center; gap:5px; min-width:0; padding:5px 6px; border:1px solid rgba(255,224,114,.48); border-radius:4px; background:rgba(10,12,15,.8); color:#f4dfa5; font-size:.65rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.stage2-center-piece span { flex:none; font-size:.75rem; color:#ffe071; } .stage2-center-piece.is-king { box-shadow:0 0 11px rgba(255,209,78,.55); }
 .stage2-eliminated { margin-top: 12px; color: var(--color-text-muted); font-size: .86em; }
-@keyframes stage2-token-float { 0%,100% { transform:translateY(0) rotate(-2deg); } 50% { transform:translateY(-3px) rotate(2deg); } }
+@keyframes stage2-piece-arrive { from { opacity:0; transform:translateX(-10px) scale(.96); } to { opacity:1; transform:none; } }
 @keyframes stage2-core-glow { 0%,100% { filter:brightness(.9); } 50% { filter:brightness(1.2); } }
-@media (prefers-reduced-motion:reduce) { .stage2-player-piece { transition:none; } .stage2-piece-token,.stage2-arena-core { animation:none; } }
-@media (max-width:760px) { .stage2-arena { aspect-ratio:4/5; min-height:540px; background-size:cover; } .stage2-player-piece { width:92px; } .stage2-piece-name { font-size:.64rem; } }
+@media (prefers-reduced-motion:reduce) { .stage2-player-piece,.stage2-portal,.stage2-arena-core { animation:none; } }
+@media (max-width:980px) { .stage2-board-layout { grid-template-columns:1fr; grid-template-areas:'upperB' 'upperA' 'core' 'lowerB' 'lowerA'; min-height:0; } .stage2-arena-core { width:min(100%,300px); justify-self:center; } .stage2-step-players { max-height:145px; } }
+
+.stage1-table-hidden { display:none !important; }
+.standings-card-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--spacing-md); }
+@media (max-width:760px) { .standings-card-grid { grid-template-columns:1fr; } .stage2-arena { min-height:0; padding:10px; } .stage2-bracket-steps { gap:3px; } .stage2-bracket { padding:7px; } }
 
 .points-pill {
     display: inline-flex;
