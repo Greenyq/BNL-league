@@ -2528,12 +2528,13 @@ input[type="datetime-local"] {
 }
 
 .stage2-arena-wrap { margin-bottom: var(--spacing-xl); }
-.stage2-arena { display: grid; grid-template-columns: minmax(160px,1fr) minmax(240px,1.5fr) minmax(160px,1fr); grid-template-areas: ". losersA ." "tierB center tierA" ". losersB ."; gap: 14px; align-items: stretch; }
-.stage2-lane { padding: 14px; border: 1px solid rgba(212,175,55,.28); border-radius: var(--radius-md); background: rgba(8,12,20,.72); min-height: 120px; }
+.stage2-arena { position: relative; isolation: isolate; overflow: hidden; display: grid; grid-template-columns: minmax(160px,1fr) minmax(240px,1.5fr) minmax(160px,1fr); grid-template-areas: ". losersA ." "tierB center tierA" ". losersB ."; gap: 14px; align-items: stretch; min-height: 620px; padding: clamp(18px,3vw,42px); border: 1px solid rgba(212,175,55,.35); border-radius: var(--radius-lg); background: #080d12 url('../images/stage2-fantasy-map.png') center/cover no-repeat; box-shadow: inset 0 0 90px rgba(0,0,0,.72), 0 18px 50px rgba(0,0,0,.35); }
+.stage2-arena::before { content: ''; position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at center, rgba(3,8,14,.08) 0 24%, rgba(3,8,14,.34) 58%, rgba(0,0,0,.64) 100%); pointer-events: none; }
+.stage2-lane { padding: 14px; border: 1px solid rgba(212,175,55,.38); border-radius: var(--radius-md); background: linear-gradient(180deg,rgba(7,11,18,.82),rgba(7,11,18,.68)); backdrop-filter: blur(3px); min-height: 120px; box-shadow: 0 8px 22px rgba(0,0,0,.3); }
 .stage2-lane h4 { margin: 0 0 10px; text-align: center; color: var(--color-accent-primary); }
 .stage2-losers-a { grid-area: losersA; }
 .stage2-tier-b { grid-area: tierB; }
-.stage2-center { grid-area: center; border-color: rgba(255,215,0,.65); box-shadow: 0 0 24px rgba(255,190,0,.12); }
+.stage2-center { grid-area: center; align-self: center; border-color: rgba(255,215,0,.75); background: radial-gradient(circle,rgba(21,24,29,.58),rgba(7,10,16,.82)); box-shadow: 0 0 32px rgba(255,190,0,.2); }
 .stage2-tier-a { grid-area: tierA; }
 .stage2-losers-b { grid-area: losersB; }
 .stage2-player-list { display: grid; gap: 7px; }
@@ -2541,7 +2542,7 @@ input[type="datetime-local"] {
 .stage2-player-chip.is-king { color: #ffd86b; border: 1px solid rgba(255,216,107,.55); }
 .stage2-empty { display: block; text-align: center; color: var(--color-text-muted); }
 .stage2-eliminated { margin-top: 12px; color: var(--color-text-muted); font-size: .86em; }
-@media (max-width: 760px) { .stage2-arena { grid-template-columns: 1fr; grid-template-areas: "tierB" "losersB" "center" "tierA" "losersA"; } }
+@media (max-width: 760px) { .stage2-arena { grid-template-columns: 1fr; grid-template-areas: "tierB" "losersB" "center" "tierA" "losersA"; min-height: 0; background-position: center; } }
 
 .points-pill {
     display: inline-flex;
