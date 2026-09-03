@@ -356,7 +356,7 @@ function Stage2Arena({ participants }) {
                 const magnitude = Math.hypot(dx, dy) || 1;
                 const nx = -dy / magnitude, ny = dx / magnitude;
                 visible.forEach((player, index) => {
-                    const spread = (index - (visible.length - 1) / 2) * 38;
+                    const spread = (index - (visible.length - 1) / 2) * 52;
                     next.push({ id: player.id, player, x: point.x + nx * spread, y: point.y + ny * spread, wins: step, route });
                 });
                 if (bucket.length > visible.length) next.push({ id: `more-${route.id}-${step}`, count: bucket.length - visible.length, x: point.x + nx * 78, y: point.y + ny * 78, route });
@@ -373,7 +373,7 @@ function Stage2Arena({ participants }) {
     }, [participants]);
 
     const renderPiece = piece => <g key={piece.id} className="stage2-svg-piece" style={{ transform: `translate(${piece.x}px, ${piece.y}px)` }}>
-        <foreignObject x="-64" y="-22" width="128" height="44">
+        <foreignObject x="-72" y="-21" width="144" height="42">
             {piece.count ? <div className="stage2-map-overflow">+{piece.count}</div> : <div className={`stage2-map-card stage2-map-card--${String(piece.player.tier).toLowerCase()}${piece.player.status === 'king' ? ' is-king' : ''}${piece.route?.bracket === 'lower' ? ' is-lower' : ''}`}>
                 <span className="stage2-piece-token">{piece.player.status === 'king' ? '♛' : piece.player.tier}</span>
                 <span className="stage2-piece-name">{piece.player.name}</span>
