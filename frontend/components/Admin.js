@@ -2312,7 +2312,7 @@ function DuelsTab({ players, showMsg, onRefresh }) {
         <h3>{tr('Этап 2 — Дуэли', 'Stage 2 — Duels')}</h3>
         <button type="button" className="btn btn-secondary" onClick={initialize} style={{ marginBottom: 16 }}>{tr('Подготовить участников этапа 2', 'Initialize Stage 2 participants')}</button>
         <form className="card-elevated" onSubmit={submit} style={{ padding: 'var(--spacing-xl)', display: 'grid', gap: 12, marginBottom: 24 }}>
-            <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{tr('Первые пять BO3 играются против разных соперников своего тира. Три победы переводят в верхнюю сетку.', 'The first five BO3 matches are against unique opponents in the same tier. Three wins advance to the upper bracket.')}</p>
+            <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{tr('В основной сетке три победы BO3 переводят в центр S, а поражение — в лузер-сетку. В лузер-сетке также нужны три победы; поражение означает вылет.', 'Three BO3 wins in the main bracket advance to the S center; a loss moves the player to the losers bracket. The losers bracket also requires three wins; a loss eliminates the player.')}</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 12 }}>
                 <select required value={form.playerAId} onChange={e => setForm({ ...form, playerAId: e.target.value })}><option value="">{tr('Игрок A', 'Player A')}</option>{players.filter(p => p.id !== form.playerBId).map(p => <option key={p.id} value={p.id}>{playerOption(p)}</option>)}</select>
                 <select required value={form.playerBId} onChange={e => setForm({ ...form, playerBId: e.target.value })}><option value="">{tr('Игрок B', 'Player B')}</option>{players.filter(p => p.id !== form.playerAId).map(p => <option key={p.id} value={p.id}>{playerOption(p)}</option>)}</select>
@@ -2323,8 +2323,8 @@ function DuelsTab({ players, showMsg, onRefresh }) {
             </div>
             <button className="btn btn-primary" disabled={saving}>{saving ? '...' : tr('Сохранить дуэль', 'Save duel')}</button>
         </form>
-        <div className="standings-table-wrap"><table className="standings-table"><thead><tr><th>{tr('Дата', 'Date')}</th><th>{tr('Дуэль', 'Duel')}</th><th>{tr('Счёт', 'Score')}</th><th>{tr('Очки', 'Points')}</th><th></th></tr></thead><tbody>
-            {duels.map(d => <tr key={d.id}><td>{new Date(d.playedAt).toLocaleDateString()}</td><td>{d.playerA.name} ({tierName(d.playerA.tier)}) vs {d.playerB.name} ({tierName(d.playerB.tier)})</td><td>{d.score || '—'}</td><td>{d.playerA.points > 0 ? '+' : ''}{d.playerA.points} / {d.playerB.points > 0 ? '+' : ''}{d.playerB.points}</td><td><button onClick={() => remove(d.id)} className="btn btn-secondary">{t('admin.delete')}</button></td></tr>)}
+        <div className="standings-table-wrap"><table className="standings-table"><thead><tr><th>{tr('Дата', 'Date')}</th><th>{tr('Дуэль', 'Duel')}</th><th>{tr('Счёт', 'Score')}</th><th>{tr('Сетка', 'Bracket')}</th></tr></thead><tbody>
+            {duels.map(d => <tr key={d.id}><td>{new Date(d.playedAt).toLocaleDateString()}</td><td>{d.playerA.name} ({tierName(d.playerA.tier)}) vs {d.playerB.name} ({tierName(d.playerB.tier)})</td><td>{d.score || '—'}</td><td>{({ upper: tr('Основная', 'Main'), lower: tr('Лузер', 'Losers'), s_bracket: 'S', king: tr('Царь горы', 'King of the Hill') })[d.phase] || d.phase}</td></tr>)}
         </tbody></table></div>
     </div>;
 }
