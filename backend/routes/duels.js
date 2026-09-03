@@ -8,6 +8,26 @@ const { suggestDuelPoints } = require('../services/duelScoring');
 const router = express.Router();
 const tierOf = (player, stats) => player.tierOverride || stats?.tier || getTierFromMmr(stats?.mmr || player.currentMmr || 0).value;
 
+async function advanceCompletedTierBrackets(tier) {
+    if (!['A', 'B'].includes(tier)) return;
+    if (await Stage2Participant.exists({ tier, status: 'qualifier' })) return;
+
+    const upper = await Stage2Participant.find({ tier, status: 'upper' });
+    if (upper.length === 1) {
+        upper[0].status = 's_bracket';
+        upper[0].updatedAt = new Date();
+        await upper[0].save();
+    }
+
+    const remainingUpper = await Stage2Participant.countDocuments({ tier, status: 'upper' });
+    const lower = await Stage2Participant.find({ tier, status: 'lower' });
+    if (remainingUpper === 0 && lower.length === 1) {
+        lower[0].status = 's_bracket';
+        lower[0].updatedAt = new Date();
+        await lower[0].save();
+    }
+}
+
 router.get('/', async (req, res) => {
     try { res.json(await Duel.find().sort({ playedAt: -1, createdAt: -1 })); }
     catch (err) { res.status(500).json({ error: 'Failed to fetch duels' }); }
@@ -102,6 +122,7 @@ router.post('/', checkAuth, async (req, res) => {
         }
         pa.updatedAt = pb.updatedAt = new Date();
         await Promise.all([pa.save(), pb.save()]);
+        await advanceCompletedTierBrackets(groupA);
         res.status(201).json(duel);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
