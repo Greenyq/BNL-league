@@ -336,9 +336,9 @@ function Stage2Arena({ participants }) {
     const [pieces, setPieces] = React.useState([]);
     const paths = [
         { id: 'upperB', list: groups.upperB, wins: 'upperWins', tier: 'B', bracket: 'upper', d: 'M70 250 C170 205 215 290 320 235 S455 225 525 330' },
-        { id: 'lowerB', list: groups.lowerB, wins: 'lowerWins', tier: 'B', bracket: 'lower', d: 'M70 600 C180 650 245 555 340 610 S470 560 535 435' },
+        { id: 'lowerB', list: groups.lowerB, wins: 'lowerWins', tier: 'B', bracket: 'lower', d: 'M70 570 C180 615 245 525 340 570 S470 535 535 435' },
         { id: 'upperA', list: groups.upperA, wins: 'upperWins', tier: 'A', bracket: 'upper', d: 'M1130 250 C1030 205 985 290 880 235 S745 225 675 330' },
-        { id: 'lowerA', list: groups.lowerA, wins: 'lowerWins', tier: 'A', bracket: 'lower', d: 'M1130 600 C1020 650 955 555 860 610 S730 560 665 435' }
+        { id: 'lowerA', list: groups.lowerA, wins: 'lowerWins', tier: 'A', bracket: 'lower', d: 'M1130 570 C1020 615 955 525 860 570 S730 535 665 435' }
     ];
     React.useLayoutEffect(() => {
         const next = [];
@@ -374,7 +374,7 @@ function Stage2Arena({ participants }) {
 
     const renderPiece = piece => <g key={piece.id} className="stage2-svg-piece" style={{ transform: `translate(${piece.x}px, ${piece.y}px)` }}>
         <foreignObject x="-72" y="-21" width="144" height="42">
-            {piece.count ? <div className="stage2-map-overflow">+{piece.count}</div> : <div className={`stage2-map-card stage2-map-card--${String(piece.player.tier).toLowerCase()}${piece.player.status === 'king' ? ' is-king' : ''}${piece.route?.bracket === 'lower' ? ' is-lower' : ''}`}>
+            {piece.count ? <div className="stage2-map-overflow">+{piece.count}</div> : <div className={`stage2-map-card stage2-map-card--${String(piece.player.tier).toLowerCase()}${piece.player.status === 'king' ? ' is-king' : ''}${piece.route?.bracket === 'lower' ? ' is-lower' : ''}${piece.center ? ' is-center' : ''}`}>
                 <span className="stage2-piece-token">{piece.player.status === 'king' ? '♛' : piece.player.tier}</span>
                 <span className="stage2-piece-name">{piece.player.name}</span>
                 {!piece.center && <strong>{piece.wins}/3</strong>}
@@ -400,7 +400,7 @@ function Stage2Arena({ participants }) {
             onPointerCancel={stopPan}
             onPointerLeave={stopPan}
         >
-            <svg className="stage2-map-svg" viewBox="0 0 1200 760" role="img" aria-label={tr('Карта второго этапа', 'Stage 2 tournament map')}>
+            <svg className="stage2-map-svg" viewBox="0 0 1200 675" role="img" aria-label={tr('Карта второго этапа', 'Stage 2 tournament map')}>
                 <defs>
                     <filter id="stage2-glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
                     <radialGradient id="stage2-arena-glow"><stop offset="0" stopColor="#ffe08a" stopOpacity=".28"/><stop offset="1" stopColor="#1a2430" stopOpacity=".05"/></radialGradient>
@@ -415,10 +415,10 @@ function Stage2Arena({ participants }) {
                     <path d={route.d} className="stage2-svg-road"/>
                     <path d={route.d} className="stage2-svg-road-flow"/>
                 </g>)}
-                <text x="72" y="185" className="stage2-svg-label stage2-svg-label--b">{tr('ВЕРХНЯЯ B', 'B UPPER')}</text>
-                <text x="72" y="690" className="stage2-svg-label stage2-svg-label--b">{tr('НИЖНЯЯ B', 'B LOWER')}</text>
-                <text x="1128" y="185" className="stage2-svg-label stage2-svg-label--a">{tr('ВЕРХНЯЯ A', 'A UPPER')}</text>
-                <text x="1128" y="690" className="stage2-svg-label stage2-svg-label--a">{tr('НИЖНЯЯ A', 'A LOWER')}</text>
+                <text x="72" y="105" className="stage2-svg-label stage2-svg-label--b">{tr('ВЕРХНЯЯ B', 'B UPPER')}</text>
+                <text x="72" y="455" className="stage2-svg-label stage2-svg-label--b">{tr('НИЖНЯЯ B', 'B LOWER')}</text>
+                <text x="1128" y="105" className="stage2-svg-label stage2-svg-label--a">{tr('ВЕРХНЯЯ A', 'A UPPER')}</text>
+                <text x="1128" y="455" className="stage2-svg-label stage2-svg-label--a">{tr('НИЖНЯЯ A', 'A LOWER')}</text>
                 <g className="stage2-svg-pieces">{pieces.map(renderPiece)}</g>
             </svg>
         </div>
