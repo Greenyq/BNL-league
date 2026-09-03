@@ -8,26 +8,6 @@ const { suggestDuelPoints } = require('../services/duelScoring');
 const router = express.Router();
 const tierOf = (player, stats) => player.tierOverride || stats?.tier || getTierFromMmr(stats?.mmr || player.currentMmr || 0).value;
 
-async function advanceCompletedTierBrackets(tier) {
-    if (!['A', 'B'].includes(tier)) return;
-    if (await Stage2Participant.exists({ tier, status: 'qualifier' })) return;
-
-    const upper = await Stage2Participant.find({ tier, status: 'upper' });
-    if (upper.length === 1) {
-        upper[0].status = 's_bracket';
-        upper[0].updatedAt = new Date();
-        await upper[0].save();
-    }
-
-    const remainingUpper = await Stage2Participant.countDocuments({ tier, status: 'upper' });
-    const lower = await Stage2Participant.find({ tier, status: 'lower' });
-    if (remainingUpper === 0 && lower.length === 1) {
-        lower[0].status = 's_bracket';
-        lower[0].updatedAt = new Date();
-        await lower[0].save();
-    }
-}
-
 router.get('/', async (req, res) => {
     try { res.json(await Duel.find().sort({ playedAt: -1, createdAt: -1 })); }
     catch (err) { res.status(500).json({ error: 'Failed to fetch duels' }); }
@@ -48,11 +28,21 @@ router.post('/stage2/initialize', checkAuth, async (req, res) => {
             const numericTier = tierOf(player, statsByTag[player.battleTag.toLowerCase()]);
             const tier = ({ 2: 'B', 3: 'A', 4: 'S' })[numericTier];
             if (!tier) continue;
-            await Stage2Participant.findOneAndUpdate(
+            const participant = await Stage2Participant.findOneAndUpdate(
                 { playerId: player.id },
-                { $setOnInsert: { playerId: player.id, battleTag: player.battleTag, name: player.name, tier, status: tier === 'S' ? 's_bracket' : 'qualifier' } },
-                { upsert: true }
+                {
+                    $set: { battleTag: player.battleTag, name: player.name, tier },
+                    $setOnInsert: { playerId: player.id, status: tier === 'S' ? 's_bracket' : 'upper' }
+                },
+                { upsert: true, new: true }
             );
+            // Migrate participants created by the previous five-match qualifier draft.
+            if (participant.status === 'qualifier') {
+                participant.status = tier === 'S' ? 's_bracket' : 'upper';
+                participant.upperWins = 0;
+                participant.lowerWins = 0;
+                await participant.save();
+            }
             initialized++;
         }
         res.json({ initialized });
@@ -86,11 +76,7 @@ router.post('/', checkAuth, async (req, res) => {
         if (!pa || !pb) return res.status(400).json({ error: 'Initialize Stage 2 first' });
         const isKingMatch = pa.status === 'king' || pb.status === 'king';
         if (!isKingMatch && (pa.status !== pb.status || groupA !== groupB)) return res.status(400).json({ error: 'Players must be in the same tier and bracket' });
-        const phase = isKingMatch ? 'king' : (pa.status === 'qualifier' ? 'qualifier' : pa.status);
-        if (phase === 'qualifier') {
-            if (pa.qualifierGames >= 5 || pb.qualifierGames >= 5) return res.status(400).json({ error: 'A player has already completed five qualifiers' });
-            if (pa.opponents.includes(b.id) || pb.opponents.includes(a.id)) return res.status(400).json({ error: 'Qualifier opponents must be unique' });
-        }
+        const phase = isKingMatch ? 'king' : pa.status;
         const scoreMatch = String(score || '').trim().match(/^(\d+)\s*[:\-]\s*(\d+)$/);
         if (!scoreMatch) return res.status(400).json({ error: 'Enter a BO3 score such as 2:0 or 2:1' });
         const mapsA = Number(scoreMatch[1]), mapsB = Number(scoreMatch[2]);
@@ -104,15 +90,14 @@ router.post('/', checkAuth, async (req, res) => {
             winner, score: `${mapsA}:${mapsB}`, notes, playedAt: playedAt || new Date()
         });
         const winnerP = winner === 'A' ? pa : pb, loserP = winner === 'A' ? pb : pa;
-        if (phase === 'qualifier') {
-            pa.qualifierGames++; pb.qualifierGames++;
-            pa.opponents.push(b.id); pb.opponents.push(a.id);
-            pa.mapWins += mapsA; pa.mapLosses += mapsB; pb.mapWins += mapsB; pb.mapLosses += mapsA;
-            winnerP.qualifierWins++; loserP.qualifierLosses++;
-            for (const p of [pa, pb]) if (p.qualifierGames === 5) p.status = p.qualifierWins >= 3 ? 'upper' : 'lower';
-        } else if (phase === 'upper') {
+        pa.mapWins += mapsA; pa.mapLosses += mapsB; pb.mapWins += mapsB; pb.mapLosses += mapsA;
+        if (phase === 'upper') {
+            winnerP.upperWins++;
+            if (winnerP.upperWins >= 3) winnerP.status = 's_bracket';
             loserP.status = 'lower';
         } else if (phase === 'lower') {
+            winnerP.lowerWins++;
+            if (winnerP.lowerWins >= 3) winnerP.status = 's_bracket';
             loserP.status = 'eliminated';
         } else if (phase === 's_bracket') {
             loserP.status = 's_bracket'; winnerP.status = 'king';
@@ -122,7 +107,6 @@ router.post('/', checkAuth, async (req, res) => {
         }
         pa.updatedAt = pb.updatedAt = new Date();
         await Promise.all([pa.save(), pb.save()]);
-        await advanceCompletedTierBrackets(groupA);
         res.status(201).json(duel);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
