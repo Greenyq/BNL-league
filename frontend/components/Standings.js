@@ -286,6 +286,18 @@ function TeamStandingsMobileCard({ row, index }) {
 }
 
 function Stage2Arena({ participants }) {
+    const [expanded, setExpanded] = React.useState(false);
+    React.useEffect(() => {
+        if (!expanded) return undefined;
+        const previousOverflow = document.body.style.overflow;
+        const closeOnEscape = event => { if (event.key === 'Escape') setExpanded(false); };
+        document.body.style.overflow = 'hidden';
+        document.addEventListener('keydown', closeOnEscape);
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            document.removeEventListener('keydown', closeOnEscape);
+        };
+    }, [expanded]);
     const groups = {
         upperB: participants.filter(p => p.tier === 'B' && p.status === 'upper'),
         upperA: participants.filter(p => p.tier === 'A' && p.status === 'upper'),
@@ -318,8 +330,11 @@ function Stage2Arena({ participants }) {
             </div>
         </section>;
     };
-    return <div className="stage2-arena-wrap">
-        <div className="stage2-arena">
+    return <div className={`stage2-arena-wrap${expanded ? ' is-expanded' : ''}`}>
+        <div className="stage2-arena" onClick={() => { if (!expanded) setExpanded(true); }}>
+            <button type="button" className="stage2-expand-button" aria-expanded={expanded} onClick={event => { event.stopPropagation(); setExpanded(value => !value); }}>
+                {expanded ? `× ${tr('Закрыть', 'Close')}` : `⛶ ${tr('Развернуть карту', 'Expand map')}`}
+            </button>
             <div className="stage2-board-layout">
                 {bracket('stage2-upper-b', tr('Верхняя сетка B', 'B Upper Bracket'), groups.upperB, 'upperWins')}
                 {bracket('stage2-upper-a', tr('Верхняя сетка A', 'A Upper Bracket'), groups.upperA, 'upperWins', true)}
@@ -735,7 +750,7 @@ function Standings() {
         const progressWins = participant.status === 'lower' ? participant.lowerWins : participant.status === 'upper' ? participant.upperWins : 0;
         duelStats[(participant.battleTag || '').toLowerCase()] = {
             wins: progressWins,
-            losses: participant.status === 'lower' ? 1 : 0,
+            losses: (Number(participant.upperLosses) || 0) + (Number(participant.lowerLosses) || 0),
             points: progressWins,
             matches: progressWins,
             status: participant.status || 'qualifier'
