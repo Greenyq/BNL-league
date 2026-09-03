@@ -355,11 +355,16 @@ function Stage2Arena({ participants }) {
             </div>}
         </foreignObject>
     </g>;
-    return <div className={`stage2-arena-wrap${expanded ? ' is-expanded' : ''}`}>
+    return <div
+        className={`stage2-arena-wrap${expanded ? ' is-expanded' : ''}`}
+        onClick={event => {
+            if (expanded && event.target === event.currentTarget) setExpanded(false);
+        }}
+    >
+        <button type="button" className="stage2-expand-button" aria-expanded={expanded} onClick={event => { event.stopPropagation(); setExpanded(value => !value); }}>
+            {expanded ? `× ${tr('Закрыть', 'Close')}` : `⛶ ${tr('Развернуть карту', 'Expand map')}`}
+        </button>
         <div className="stage2-arena" onClick={() => { if (!expanded) setExpanded(true); }}>
-            <button type="button" className="stage2-expand-button" aria-expanded={expanded} onClick={event => { event.stopPropagation(); setExpanded(value => !value); }}>
-                {expanded ? `× ${tr('Закрыть', 'Close')}` : `⛶ ${tr('Развернуть карту', 'Expand map')}`}
-            </button>
             <svg className="stage2-map-svg" viewBox="0 0 1200 760" role="img" aria-label={tr('Карта второго этапа', 'Stage 2 tournament map')}>
                 <defs>
                     <filter id="stage2-glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
