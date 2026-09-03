@@ -2533,7 +2533,7 @@ input[type="datetime-local"] {
 .stage2-expand-button:hover,.stage2-expand-button:focus-visible { background:rgba(57,40,17,.96); outline:2px solid rgba(255,224,132,.42); }
 .stage2-arena-wrap.is-expanded { position:fixed; z-index:2147483000; inset:0; display:grid; place-items:center; box-sizing:border-box; margin:0; padding:2vh 2vw; overflow:hidden; overscroll-behavior:contain; background:rgba(0,0,0,.9); }
 .stage2-arena-wrap.is-expanded .stage2-expand-button { position:fixed; z-index:2147483001; top:14px; right:14px; min-height:42px; padding:9px 14px; border-color:#ffe08a; background:#24130e; font-size:.82rem; }
-.stage2-arena-wrap.is-expanded .stage2-arena { width:min(96vw,1800px); height:94vh; min-height:0; padding:52px 16px 14px; overflow:auto; border-radius:8px; cursor:grab; scrollbar-color:#c29a4a rgba(4,8,12,.82); scrollbar-width:thin; touch-action:none; user-select:none; }
+.stage2-arena-wrap.is-expanded .stage2-arena { width:min(96vw,1800px); height:94vh; min-height:0; padding:52px 16px 14px; overflow:auto; border-radius:8px; background-size:contain; cursor:grab; scrollbar-color:#c29a4a rgba(4,8,12,.82); scrollbar-width:thin; touch-action:none; user-select:none; }
 .stage2-arena-wrap.is-expanded .stage2-arena.is-panning { cursor:grabbing; }
 .stage2-arena-wrap.is-expanded .stage2-board-layout { height:100%; min-height:0; }
 .stage2-arena-wrap.is-expanded .stage2-step-players { max-height:calc(24vh - 54px); }
@@ -2590,20 +2590,20 @@ input[type="datetime-local"] {
 .stage2-svg-label { fill:#f4dfa5; font-family:'ElenBold',serif; font-size:18px; letter-spacing:1px; paint-order:stroke; stroke:#071017; stroke-width:6px; }
 .stage2-svg-label--b { fill:#83e8ff; } .stage2-svg-label--a { fill:#ff9a7e; text-anchor:end; }
 .stage2-svg-piece { transition:transform 1.35s cubic-bezier(.2,.82,.22,1); will-change:transform; }
-.stage2-map-card { width:128px; height:44px; display:grid; grid-template-columns:28px minmax(0,1fr) auto; align-items:center; gap:6px; padding:5px 7px 5px 5px; border:1.5px solid #c8a66b; border-radius:7px; background:linear-gradient(155deg,rgba(42,31,19,.97),rgba(11,15,18,.98)); color:#f7e5b4; box-shadow:0 5px 13px rgba(0,0,0,.65); font-family:Arial,sans-serif; }
+.stage2-map-card { box-sizing:border-box; width:144px; height:42px; display:grid; grid-template-columns:28px minmax(0,1fr) 24px; align-items:center; gap:6px; padding:5px 8px 5px 5px; border:1px solid #c8a66b; border-radius:3px; background:linear-gradient(180deg,rgba(37,34,29,.98),rgba(10,12,14,.99)); color:#f7e5b4; box-shadow:inset 0 0 0 2px rgba(222,198,144,.12),inset 0 -8px 16px rgba(0,0,0,.28),0 4px 10px rgba(0,0,0,.72); font-family:Arial,sans-serif; }
 .stage2-map-card--b { border-color:#65cae8; } .stage2-map-card--a { border-color:#e77b63; } .stage2-map-card--s { border-color:#ffe072; }
 .stage2-map-card.is-lower { filter:saturate(.45) brightness(.78); border-style:dashed; }
 .stage2-map-card.is-king { border-color:#ffe072; box-shadow:0 0 18px rgba(255,209,78,.8),0 5px 13px rgba(0,0,0,.65); }
-.stage2-map-card .stage2-piece-token { width:28px; height:28px; font-size:.72rem; }
-.stage2-map-card .stage2-piece-name { font-size:.72rem; }
-.stage2-map-card strong { color:#ffe27e; font-size:.65rem; }
+.stage2-map-card .stage2-piece-token { width:26px; height:26px; font-size:.68rem; box-shadow:inset 0 1px 3px rgba(255,255,255,.35),0 1px 4px rgba(0,0,0,.75); }
+.stage2-map-card .stage2-piece-name { overflow:hidden; color:#f0dfb3; font-size:.68rem; font-weight:700; line-height:1; text-overflow:ellipsis; white-space:nowrap; }
+.stage2-map-card strong { min-width:24px; color:#ffe27e; font-size:.62rem; text-align:right; }
 .stage2-map-overflow { width:44px; height:30px; margin:7px auto; display:grid; place-items:center; border:1px solid #d7ba70; border-radius:15px; background:rgba(6,10,14,.92); color:#ffe49a; font:bold .72rem Arial,sans-serif; box-shadow:0 0 12px rgba(255,210,90,.35); }
-.stage2-arena-wrap.is-expanded .stage2-map-svg { display:block; width:max(1400px,135vw); height:auto; min-height:887px; }
+.stage2-arena-wrap.is-expanded .stage2-map-svg { display:block; width:100%; height:100%; min-height:0; object-fit:contain; }
 @keyframes stage2-road-flow { to { stroke-dashoffset:-28; } }
 @keyframes stage2-aura-pulse { 0%,100% { opacity:.55; } 50% { opacity:1; } }
 @keyframes stage2-ring-spin { to { transform:rotate(360deg); } }
 @media (prefers-reduced-motion:reduce) { .stage2-svg-piece,.stage2-svg-road-flow,.stage2-svg-arena-aura,.stage2-svg-arena-ring { animation:none; transition:none; } }
-@media (max-width:760px) { .stage2-arena { overflow-x:auto; } .stage2-map-svg { width:900px; min-height:570px; } .stage2-arena-wrap.is-expanded .stage2-map-svg { width:900px; height:auto; min-height:570px; } }
+@media (max-width:760px) { .stage2-arena { overflow-x:auto; } .stage2-map-svg { width:900px; min-height:570px; } .stage2-arena-wrap.is-expanded .stage2-map-svg { width:100%; height:100%; min-height:0; } }
 
 .stage1-table-hidden { display:none !important; }
 .standings-card-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--spacing-md); }
