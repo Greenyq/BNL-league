@@ -15,7 +15,7 @@ const cron = require('node-cron');
 const { Player, PlayerCache, PlayerStats, ManualPointsAdjustment } = require('../models/Player');
 const { loadMatchDataForPlayer, fetchPlayerMmr } = require('./w3champions');
 
-const PERMANENT_SEASON_START = new Date(process.env.BNL_SEASON_START || '2026-05-30T00:00:00Z');
+const PERMANENT_SEASON_START = new Date(process.env.BNL_SEASON_START || '2026-09-03T00:00:00Z');
 
 function getLadderMatchPoints(mmrDifference, won) {
     const diff = Number(mmrDifference) || 0; // opponent MMR - player MMR
