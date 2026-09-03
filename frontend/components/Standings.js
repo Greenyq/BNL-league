@@ -285,6 +285,37 @@ function TeamStandingsMobileCard({ row, index }) {
     );
 }
 
+function Stage2Arena({ participants }) {
+    const groups = {
+        upperB: participants.filter(p => p.tier === 'B' && p.status === 'upper'),
+        upperA: participants.filter(p => p.tier === 'A' && p.status === 'upper'),
+        lowerA: participants.filter(p => p.tier === 'A' && p.status === 'lower'),
+        lowerB: participants.filter(p => p.tier === 'B' && p.status === 'lower'),
+        center: participants.filter(p => ['s_bracket', 'king'].includes(p.status)),
+        eliminated: participants.filter(p => p.status === 'eliminated')
+    };
+    const lane = (className, title, list, winsField) => <section className={`stage2-lane ${className}`}>
+        <h4>{title}</h4>
+        <div className="stage2-player-list">
+            {list.map(p => <div key={p.id} className={`stage2-player-chip${p.status === 'king' ? ' is-king' : ''}`}>
+                <span>{p.status === 'king' ? '👑 ' : ''}{p.name}</span>
+                {winsField && <strong>{p[winsField] || 0}/3</strong>}
+            </div>)}
+            {!list.length && <span className="stage2-empty">—</span>}
+        </div>
+    </section>;
+    return <div className="stage2-arena-wrap">
+        <div className="stage2-arena">
+            {lane('stage2-losers-a', tr('Лузер-сетка A', 'A Losers'), groups.lowerA, 'lowerWins')}
+            {lane('stage2-tier-b', tr('Тир B', 'Tier B'), groups.upperB, 'upperWins')}
+            {lane('stage2-center', tr('Центр S — Царь горы', 'S Center — King of the Hill'), groups.center, null)}
+            {lane('stage2-tier-a', tr('Тир A', 'Tier A'), groups.upperA, 'upperWins')}
+            {lane('stage2-losers-b', tr('Лузер-сетка B', 'B Losers'), groups.lowerB, 'lowerWins')}
+        </div>
+        {!!groups.eliminated.length && <div className="stage2-eliminated"><strong>{tr('Вылетели', 'Eliminated')}:</strong> {groups.eliminated.map(p => p.name).join(', ')}</div>}
+    </div>;
+}
+
 function DraftPoolCard({ row, index }) {
     const player = row.player;
     const race = playerRace(player);
@@ -672,11 +703,12 @@ function Standings() {
         return map;
     }, {});
     for (const participant of stage2) {
+        const progressWins = participant.status === 'lower' ? participant.lowerWins : participant.status === 'upper' ? participant.upperWins : 0;
         duelStats[(participant.battleTag || '').toLowerCase()] = {
-            wins: participant.qualifierWins || 0,
-            losses: participant.qualifierLosses || 0,
-            points: participant.qualifierWins || 0,
-            matches: participant.qualifierGames || 0,
+            wins: progressWins,
+            losses: participant.status === 'lower' ? 1 : 0,
+            points: progressWins,
+            matches: progressWins,
             status: participant.status || 'qualifier'
         };
     }
@@ -782,6 +814,8 @@ function Standings() {
             {(
                 <>
 
+                    {mode === 'duels' && <Stage2Arena participants={stage2} />}
+
                     {loading ? (
                         <div>
                             {[1,2,3,4,5].map(i => (
@@ -847,7 +881,7 @@ function Standings() {
                                                     <td className="col-losses">{row.losses}</td>
                                                     <td className="col-points">
                                                         <span className="points-pill">
-                                                            {mode === 'duels' ? `${row.duelMatches}/5` : (row.points ?? 0)}
+                                                            {mode === 'duels' ? `${row.points || 0}/3` : (row.points ?? 0)}
                                                         </span>
                                                     </td>
                                                     {mode === 'duels' && <td>{({ qualifier: tr('Квалификация', 'Qualifier'), upper: tr('Верхняя', 'Upper'), lower: tr('Нижняя', 'Lower'), king: tr('Царь горы', 'King of the Hill'), s_bracket: tr('Сетка S', 'S bracket'), eliminated: tr('Вылетел', 'Eliminated') })[row.stage2Status] || '—'}</td>}
