@@ -2279,7 +2279,7 @@ function PendingResetsSection({ showMsg }) {
 // ── Панель ────────────────────────────────────────────────────────────────────
 function DuelsTab({ players, showMsg, onRefresh }) {
     useLang();
-    const initial = { playerAId: '', playerBId: '', winner: 'A', pointsA: 30, pointsB: -15, score: '', notes: '', playedAt: new Date().toISOString().slice(0, 10) };
+    const initial = { playerAId: '', playerBId: '', winner: 'A', score: '', notes: '', playedAt: new Date().toISOString().slice(0, 10) };
     const [form, setForm] = React.useState(initial);
     const [duels, setDuels] = React.useState([]);
     const [saving, setSaving] = React.useState(false);
@@ -2288,18 +2288,10 @@ function DuelsTab({ players, showMsg, onRefresh }) {
     const loadDuels = React.useCallback(() => fetch('/api/duels').then(r => r.json()).then(d => setDuels(Array.isArray(d) ? d : [])), []);
     React.useEffect(() => { loadDuels(); }, [loadDuels]);
 
-    React.useEffect(() => {
-        const a = players.find(p => p.id === form.playerAId), b = players.find(p => p.id === form.playerBId);
-        if (!a || !b || !tier(a) || !tier(b)) return;
-        apiFetch(`/api/duels/suggestion?tierA=${tier(a)}&tierB=${tier(b)}&winner=${form.winner}`)
-            .then(s => setForm(old => ({ ...old, pointsA: s.pointsA, pointsB: s.pointsB })))
-            .catch(() => {});
-    }, [form.playerAId, form.playerBId, form.winner, players]);
-
     const submit = async e => {
         e.preventDefault(); setSaving(true);
         try {
-            await apiFetch('/api/duels', { method: 'POST', body: JSON.stringify({ ...form, pointsA: Number(form.pointsA), pointsB: Number(form.pointsB) }) });
+            await apiFetch('/api/duels', { method: 'POST', body: JSON.stringify(form) });
             showMsg(`✅ ${tr('Дуэль сохранена', 'Duel saved')}`);
             setForm(initial); await loadDuels(); onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
@@ -2311,18 +2303,21 @@ function DuelsTab({ players, showMsg, onRefresh }) {
         catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
     const playerOption = p => `${p.name} (${tierName(tier(p))})`;
+    const initialize = async () => {
+        try { const r = await apiFetch('/api/duels/stage2/initialize', { method: 'POST' }); showMsg(`✅ ${tr('Участников подготовлено', 'Participants initialized')}: ${r.initialized}`); }
+        catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
 
     return <div>
         <h3>{tr('Этап 2 — Дуэли', 'Stage 2 — Duels')}</h3>
+        <button type="button" className="btn btn-secondary" onClick={initialize} style={{ marginBottom: 16 }}>{tr('Подготовить участников этапа 2', 'Initialize Stage 2 participants')}</button>
         <form className="card-elevated" onSubmit={submit} style={{ padding: 'var(--spacing-xl)', display: 'grid', gap: 12, marginBottom: 24 }}>
-            <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{tr('Система предлагает очки по разнице тиров. Перед сохранением админ может изменить оба значения.', 'The system suggests points from the tier difference. Admin can change both values before saving.')}</p>
+            <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{tr('Первые пять BO3 играются против разных соперников своего тира. Три победы переводят в верхнюю сетку.', 'The first five BO3 matches are against unique opponents in the same tier. Three wins advance to the upper bracket.')}</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 12 }}>
                 <select required value={form.playerAId} onChange={e => setForm({ ...form, playerAId: e.target.value })}><option value="">{tr('Игрок A', 'Player A')}</option>{players.filter(p => p.id !== form.playerBId).map(p => <option key={p.id} value={p.id}>{playerOption(p)}</option>)}</select>
                 <select required value={form.playerBId} onChange={e => setForm({ ...form, playerBId: e.target.value })}><option value="">{tr('Игрок B', 'Player B')}</option>{players.filter(p => p.id !== form.playerAId).map(p => <option key={p.id} value={p.id}>{playerOption(p)}</option>)}</select>
                 <select value={form.winner} onChange={e => setForm({ ...form, winner: e.target.value })}><option value="A">{tr('Победил игрок A', 'Player A won')}</option><option value="B">{tr('Победил игрок B', 'Player B won')}</option></select>
                 <input type="date" required value={form.playedAt} onChange={e => setForm({ ...form, playedAt: e.target.value })} />
-                <input type="number" step="1" min="-1000" max="1000" required value={form.pointsA} onChange={e => setForm({ ...form, pointsA: e.target.value })} placeholder={tr('Очки игрока A', 'Player A points')} />
-                <input type="number" step="1" min="-1000" max="1000" required value={form.pointsB} onChange={e => setForm({ ...form, pointsB: e.target.value })} placeholder={tr('Очки игрока B', 'Player B points')} />
                 <input value={form.score} maxLength="30" onChange={e => setForm({ ...form, score: e.target.value })} placeholder={tr('Счёт, например 2:1', 'Score, e.g. 2:1')} />
                 <input value={form.notes} maxLength="500" onChange={e => setForm({ ...form, notes: e.target.value })} placeholder={tr('Комментарий', 'Notes')} />
             </div>
