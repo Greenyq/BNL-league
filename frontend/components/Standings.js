@@ -157,7 +157,7 @@ function AchievementModal({ row, onClose }) {
     );
 }
 
-function PlayerStandingsMobileCard({ row, index, onOpenAchievements }) {
+function PlayerStandingsMobileCard({ row, index, onOpenAchievements, mode = 'ladder' }) {
     const race = row.race ?? playerRace(row.player);
     const portrait = row.player.selectedPortrait;
     const raceImg = race != null ? RACE_IMG[race] : null;
@@ -199,20 +199,20 @@ function PlayerStandingsMobileCard({ row, index, onOpenAchievements }) {
                     <span className={`standings-mobile-pill tier-pill tier-pill--${tierClass(row.tier)}`}>
                         {tierLabel(row.tier)}
                     </span>
-                    <span className="standings-mobile-pill">
+                    {mode === 'ladder' && <span className="standings-mobile-pill">
                         {race != null ? t(`race.${race}`) : '—'}
-                    </span>
-                    {row.tierPromoted && (
+                    </span>}
+                    {mode === 'ladder' && row.tierPromoted && (
                         <span className="standings-mobile-pill tier-promotion-pill">
                             {tr('Повышение', 'Promoted')}
                         </span>
                     )}
                 </div>
                 <div className="standings-mobile-stats">
-                    <div className="standings-mobile-stat">
+                    {mode === 'ladder' && <div className="standings-mobile-stat">
                         <span className="standings-mobile-stat-label">{t('standings.mmr')}</span>
                         <span className="standings-mobile-stat-value standings-mobile-stat-value--mmr">{row.mmr ?? '—'}</span>
-                    </div>
+                    </div>}
                     <div className="standings-mobile-stat">
                         <span className="standings-mobile-stat-label">{t('standings.wins')}</span>
                         <span className="standings-mobile-stat-value standings-mobile-stat-value--wins">{row.wins}</span>
@@ -228,9 +228,9 @@ function PlayerStandingsMobileCard({ row, index, onOpenAchievements }) {
                         </span>
                     </div>
                 </div>
-                <div className="standings-achievements-row">
+                {mode === 'ladder' && <div className="standings-achievements-row">
                     <AchievementPills achievements={row.achievements} onOpen={() => onOpenAchievements(row)} />
-                </div>
+                </div>}
             </div>
         </div>
     );
@@ -630,8 +630,9 @@ function DraftPoolStandings({ page, onPageChange, playerFilter }) {
 // ── Рейтинг игроков (оригинал) ────────────────────────────────────────────────
 function Standings() {
     useLang();
-    const [mode,       setMode]       = React.useState('players');
+    const [mode,       setMode]       = React.useState('ladder');
     const [players,    setPlayers]    = React.useState([]);
+    const [duels,      setDuels]      = React.useState([]);
     const [wars,       setWars]       = React.useState([]);
     const [loading,    setLoading]    = React.useState(true);
     const [error,      setError]      = React.useState(null);
@@ -644,21 +645,36 @@ function Standings() {
     React.useEffect(() => {
         Promise.all([
             fetch('/api/players').then(r => r.json()),
-            Promise.resolve([]),
+            fetch('/api/duels').then(r => r.json()),
         ])
-            .then(([pl, cw]) => {
+            .then(([pl, duelData]) => {
                 setPlayers(Array.isArray(pl) ? pl : []);
-                setWars(Array.isArray(cw) ? cw : []);
+                setDuels(Array.isArray(duelData) ? duelData : []);
                 setLoading(false);
             })
             .catch(err  => { setError(err.message); setLoading(false); });
     }, []);
 
-    // Строим строки таблицы
+    const duelStats = duels.reduce((map, duel) => {
+        for (const side of ['A', 'B']) {
+            const entry = duel[`player${side}`];
+            if (!entry?.battleTag) continue;
+            const key = entry.battleTag.toLowerCase();
+            const current = map[key] || { wins: 0, losses: 0, points: 0, matches: 0 };
+            current.points += Number(entry.points) || 0;
+            current.matches++;
+            if (duel.winner === side) current.wins++; else current.losses++;
+            map[key] = current;
+        }
+        return map;
+    }, {});
+
+    // Build independent rows for Stage 1 (ladder) and Stage 2 (duels).
     const rows = players
     .filter(player => matchesPlayerSearch(player, playerFilterNeedle))
     .flatMap(p => {
         const s = p.stats;
+        const ds = duelStats[(p.battleTag || '').toLowerCase()] || { wins: 0, losses: 0, points: 0, matches: 0 };
         if (raceFilter !== null) {
             const raceStat = (s?.raceStats || []).find(r => Number(r.race) === Number(raceFilter));
             const playerRaceValue = playerRace(p);
@@ -666,14 +682,15 @@ function Standings() {
             return [{
                 player: p,
                 race: raceFilter,
-                wins: raceStat?.wins ?? 0,
-                losses: raceStat?.losses ?? 0,
-                points: raceStat?.points ?? 0,
+                points: mode === 'duels' ? ds.points : (raceStat?.points ?? 0),
                 ladderPoints: raceStat?.points ?? 0,
-                duelPoints: 0,
+                duelPoints: ds.points,
                 mmr: raceStat?.mmr ?? s?.mmr ?? p.currentMmr ?? null,
                 tier: raceStat?.tier ?? s?.tier ?? 0,
-                achievements: raceStat?.achievements ?? [],
+                achievements: mode === 'duels' ? [] : (raceStat?.achievements ?? []),
+                wins: mode === 'duels' ? ds.wins : (raceStat?.wins ?? 0),
+                losses: mode === 'duels' ? ds.losses : (raceStat?.losses ?? 0),
+                duelMatches: ds.matches,
                 tierPromoted: !!s?.tierPromoted
             }];
         }
@@ -682,14 +699,15 @@ function Standings() {
         return [{
             player: p,
             race: primaryRace,
-            wins: s?.wins ?? 0,
-            losses: s?.losses ?? 0,
-            points: s?.points ?? 0,
+            wins: mode === 'duels' ? ds.wins : (s?.wins ?? 0),
+            losses: mode === 'duels' ? ds.losses : (s?.losses ?? 0),
+            points: mode === 'duels' ? ds.points : (s?.ladderPoints ?? s?.points ?? 0),
             ladderPoints: s?.ladderPoints ?? s?.points ?? 0,
             duelPoints: s?.duelPoints ?? 0,
             mmr: s?.mmr ?? p.currentMmr ?? null,
             tier: s?.tier ?? 0,
-            achievements: primaryRaceStat?.achievements ?? (s?.raceStats || []).flatMap(r => r.achievements || []),
+            achievements: mode === 'duels' ? [] : (primaryRaceStat?.achievements ?? (s?.raceStats || []).flatMap(r => r.achievements || [])),
+            duelMatches: ds.matches,
             tierPromoted: !!s?.tierPromoted
         }];
     })
@@ -702,7 +720,7 @@ function Standings() {
 
     React.useEffect(() => {
         setModePage('players', 1);
-    }, [raceFilter]);
+    }, [raceFilter, mode]);
 
     React.useEffect(() => {
         setPages(prev => (
@@ -725,7 +743,7 @@ function Standings() {
             {/* Single row: race filters (left) + mode buttons (right) */}
             <div className="wow-filter-bar standings-controls">
                 {/* Race filter — only visible in players mode */}
-                {mode === 'players' && (
+                {mode === 'ladder' && (
                     <div className="standings-controls-group standings-controls-group--filters">
                         {RACE_KEYS.map(r => (
                             <button
@@ -741,7 +759,10 @@ function Standings() {
                 <div className="standings-controls-group standings-controls-group--search">
                     <PlayerNameFilterInput value={playerFilter} onChange={setPlayerFilter} />
                 </div>
-                {/* Draft and team modes are closed; standings show the permanent player ladder. */}
+                <div className="standings-controls-group">
+                    <button className={`wow-btn${mode === 'ladder' ? ' active' : ''}`} onClick={() => setMode('ladder')}>{tr('Этап 1 — Ладдер', 'Stage 1 — Ladder')}</button>
+                    <button className={`wow-btn${mode === 'duels' ? ' active' : ''}`} onClick={() => { setMode('duels'); setRaceFilter(null); }}>{tr('Этап 2 — Дуэли', 'Stage 2 — Duels')}</button>
+                </div>
             </div>
 
             {(
@@ -763,13 +784,14 @@ function Standings() {
                                         <tr>
                                             <th>{t('standings.rank')}</th>
                                             <th>{t('standings.player')}</th>
-                                            <th>{t('standings.race')}</th>
+                                            {mode === 'ladder' && <th>{t('standings.race')}</th>}
                                             <th>{tr('Тир', 'Tier')}</th>
-                                            <th>{t('standings.mmr')}</th>
+                                            {mode === 'ladder' && <th>{t('standings.mmr')}</th>}
                                             <th>{t('standings.wins')}</th>
                                             <th>{t('standings.losses')}</th>
                                             <th>{t('standings.points')}</th>
-                                            <th>{tr('Ачивки', 'Achievements')}</th>
+                                            {mode === 'duels' && <th>{tr('Дуэлей', 'Duels')}</th>}
+                                            {mode === 'ladder' && <th>{tr('Ачивки', 'Achievements')}</th>}
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -797,27 +819,27 @@ function Standings() {
                                                             </span>
                                                         )}
                                                     </td>
-                                                    <td style={{ color: 'var(--color-text-muted)' }}>
+                                                    {mode === 'ladder' && <td style={{ color: 'var(--color-text-muted)' }}>
                                                         {row.race !== null ? t(`race.${row.race}`) : '—'}
-                                                    </td>
+                                                    </td>}
                                                     <td>
                                                         <span className={`tier-pill tier-pill--${tierClass(row.tier)}`}>{tierLabel(row.tier)}</span>
                                                         {row.tierPromoted && <span className="tier-promotion-pill">{tr('Повышение', 'Promoted')}</span>}
                                                     </td>
-                                                    <td style={{ color: 'var(--color-accent-secondary)', fontWeight: 600 }}>
+                                                    {mode === 'ladder' && <td style={{ color: 'var(--color-accent-secondary)', fontWeight: 600 }}>
                                                         {row.mmr ?? '—'}
-                                                    </td>
+                                                    </td>}
                                                     <td className="col-wins">{row.wins}</td>
                                                     <td className="col-losses">{row.losses}</td>
                                                     <td className="col-points">
-                                                        <span className="points-pill" title={`${tr('Ладдер', 'Ladder')}: ${row.ladderPoints || 0} · ${tr('Дуэли', 'Duels')}: ${row.duelPoints || 0}`}>
+                                                        <span className="points-pill">
                                                             {row.points ?? 0}
                                                         </span>
-                                                        {raceFilter === null && <div style={{ color: 'var(--color-text-muted)', fontSize: '0.68em', marginTop: 3, whiteSpace: 'nowrap' }}>L {row.ladderPoints || 0} + D {row.duelPoints || 0}</div>}
                                                     </td>
-                                                    <td className="col-achievements">
+                                                    {mode === 'duels' && <td>{row.duelMatches}</td>}
+                                                    {mode === 'ladder' && <td className="col-achievements">
                                                         <AchievementPills achievements={row.achievements} onOpen={() => setAchievementRow(row)} />
-                                                    </td>
+                                                    </td>}
                                                 </tr>
                                             );
                                         })}
@@ -827,7 +849,7 @@ function Standings() {
                             <div className="standings-mobile-list standings-mobile-only">
                                 {pagedPlayers.items.map((row, i) => {
                                     const rank = (pagedPlayers.currentPage - 1) * PLAYERS_PAGE_SIZE + i;
-                                    return <PlayerStandingsMobileCard key={`${row.player.battleTag}-${row.race}`} row={row} index={rank} onOpenAchievements={setAchievementRow} />;
+                                    return <PlayerStandingsMobileCard key={`${row.player.battleTag}-${row.race}`} row={row} index={rank} mode={mode} onOpenAchievements={setAchievementRow} />;
                                 })}
                             </div>
                             <PaginationControls
