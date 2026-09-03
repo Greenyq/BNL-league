@@ -39,6 +39,8 @@ playerCacheSchema.set('toJSON', toJSON);
 const playerStatsSchema = new mongoose.Schema({
     battleTag:         { type: String, required: true, unique: true, index: true },
     points:            { type: Number, default: 0 },
+    ladderPoints:      { type: Number, default: 0 },
+    duelPoints:        { type: Number, default: 0 },
     wins:              { type: Number, default: 0 },
     losses:            { type: Number, default: 0 },
     mmr:               { type: Number, default: 0 },
