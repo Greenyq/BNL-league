@@ -286,6 +286,18 @@ function TeamStandingsMobileCard({ row, index }) {
 }
 
 function Stage2Arena({ participants }) {
+    const [expanded, setExpanded] = React.useState(false);
+    React.useEffect(() => {
+        if (!expanded) return undefined;
+        const previousOverflow = document.body.style.overflow;
+        const closeOnEscape = event => { if (event.key === 'Escape') setExpanded(false); };
+        document.body.style.overflow = 'hidden';
+        document.addEventListener('keydown', closeOnEscape);
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            document.removeEventListener('keydown', closeOnEscape);
+        };
+    }, [expanded]);
     const groups = {
         upperB: participants.filter(p => p.tier === 'B' && p.status === 'upper'),
         upperA: participants.filter(p => p.tier === 'A' && p.status === 'upper'),
@@ -294,47 +306,81 @@ function Stage2Arena({ participants }) {
         center: participants.filter(p => ['s_bracket', 'king'].includes(p.status)),
         eliminated: participants.filter(p => p.status === 'eliminated')
     };
-    const playerPiece = (player, wins) => <div key={player.id} className={`stage2-player-piece stage2-player-piece--${String(player.tier).toLowerCase()}`}>
-        <span className="stage2-piece-token">{player.tier}</span>
-        <span className="stage2-piece-name">{player.name}</span>
-        <strong>{wins}/3</strong>
-    </div>;
-    const bracket = (className, title, list, winsField, reverse = false) => {
-        const steps = reverse ? [3, 2, 1, 0] : [0, 1, 2, 3];
-        return <section className={`stage2-bracket ${className}`}>
-            <h4>{title}</h4>
-            <div className="stage2-bracket-steps">
-                {steps.map((step, visualIndex) => {
-                    const atStep = step === 3 ? [] : list.filter(player => Math.min(2, Number(player[winsField]) || 0) === step);
-                    return <div key={step} className={`stage2-step stage2-step--${visualIndex + 1}`}>
-                        <div className="stage2-step-head">{step === 3 ? tr('В ЦЕНТР', 'CENTER') : `${step} ${tr('ПОБ.', 'WINS')}`}</div>
-                        <div className="stage2-step-players">
-                            {atStep.map(player => playerPiece(player, step))}
-                            {!atStep.length && step !== 3 && <span className="stage2-step-empty">—</span>}
-                            {step === 3 && <span className="stage2-portal">◆</span>}
-                        </div>
-                    </div>;
-                })}
-            </div>
-        </section>;
-    };
-    return <div className="stage2-arena-wrap">
-        <div className="stage2-arena">
-            <div className="stage2-board-layout">
-                {bracket('stage2-upper-b', tr('Верхняя сетка B', 'B Upper Bracket'), groups.upperB, 'upperWins')}
-                {bracket('stage2-upper-a', tr('Верхняя сетка A', 'A Upper Bracket'), groups.upperA, 'upperWins', true)}
-                <section className="stage2-arena-core">
-                    <div className="stage2-core-title"><span>S</span><small>{tr('ЦАРЬ ГОРЫ', 'KING OF THE HILL')}</small></div>
-                    <div className="stage2-center-players">
-                        {groups.center.map(player => <div key={player.id} className={`stage2-center-piece${player.status === 'king' ? ' is-king' : ''}`}>
-                            <span>{player.status === 'king' ? '♛' : 'S'}</span>{player.name}
-                        </div>)}
-                        {!groups.center.length && <span className="stage2-step-empty">—</span>}
-                    </div>
-                </section>
-                {bracket('stage2-lower-b', tr('Нижняя сетка B', 'B Lower Bracket'), groups.lowerB, 'lowerWins')}
-                {bracket('stage2-lower-a', tr('Нижняя сетка A', 'A Lower Bracket'), groups.lowerA, 'lowerWins', true)}
-            </div>
+    const pathRefs = React.useRef({});
+    const [pieces, setPieces] = React.useState([]);
+    const paths = [
+        { id: 'upperB', list: groups.upperB, wins: 'upperWins', tier: 'B', bracket: 'upper', d: 'M70 250 C170 205 215 290 320 235 S455 225 525 330' },
+        { id: 'lowerB', list: groups.lowerB, wins: 'lowerWins', tier: 'B', bracket: 'lower', d: 'M70 600 C180 650 245 555 340 610 S470 560 535 435' },
+        { id: 'upperA', list: groups.upperA, wins: 'upperWins', tier: 'A', bracket: 'upper', d: 'M1130 250 C1030 205 985 290 880 235 S745 225 675 330' },
+        { id: 'lowerA', list: groups.lowerA, wins: 'lowerWins', tier: 'A', bracket: 'lower', d: 'M1130 600 C1020 650 955 555 860 610 S730 560 665 435' }
+    ];
+    React.useLayoutEffect(() => {
+        const next = [];
+        for (const route of paths) {
+            const path = pathRefs.current[route.id];
+            if (!path) continue;
+            const length = path.getTotalLength();
+            for (let step = 0; step < 3; step++) {
+                const bucket = route.list.filter(player => Math.min(2, Number(player[route.wins]) || 0) === step);
+                const visible = bucket.slice(0, 4);
+                const fraction = .08 + step * .39;
+                const point = path.getPointAtLength(length * fraction);
+                const nearby = path.getPointAtLength(Math.min(length, length * fraction + 4));
+                const dx = nearby.x - point.x, dy = nearby.y - point.y;
+                const magnitude = Math.hypot(dx, dy) || 1;
+                const nx = -dy / magnitude, ny = dx / magnitude;
+                visible.forEach((player, index) => {
+                    const spread = (index - (visible.length - 1) / 2) * 38;
+                    next.push({ id: player.id, player, x: point.x + nx * spread, y: point.y + ny * spread, wins: step, route });
+                });
+                if (bucket.length > visible.length) next.push({ id: `more-${route.id}-${step}`, count: bucket.length - visible.length, x: point.x + nx * 78, y: point.y + ny * 78, route });
+            }
+        }
+        const centerVisible = groups.center.slice(0, 8);
+        centerVisible.forEach((player, index) => {
+            const angle = -Math.PI / 2 + index * (Math.PI * 2 / Math.max(centerVisible.length, 1));
+            const radius = player.status === 'king' ? 0 : 92;
+            next.push({ id: player.id, player, x: 600 + Math.cos(angle) * radius, y: 380 + Math.sin(angle) * radius, center: true });
+        });
+        if (groups.center.length > centerVisible.length) next.push({ id: 'more-center', count: groups.center.length - centerVisible.length, x: 600, y: 500, center: true });
+        setPieces(next);
+    }, [participants]);
+
+    const renderPiece = piece => <g key={piece.id} className="stage2-svg-piece" style={{ transform: `translate(${piece.x}px, ${piece.y}px)` }}>
+        <foreignObject x="-64" y="-22" width="128" height="44">
+            {piece.count ? <div className="stage2-map-overflow">+{piece.count}</div> : <div className={`stage2-map-card stage2-map-card--${String(piece.player.tier).toLowerCase()}${piece.player.status === 'king' ? ' is-king' : ''}${piece.route?.bracket === 'lower' ? ' is-lower' : ''}`}>
+                <span className="stage2-piece-token">{piece.player.status === 'king' ? '♛' : piece.player.tier}</span>
+                <span className="stage2-piece-name">{piece.player.name}</span>
+                {!piece.center && <strong>{piece.wins}/3</strong>}
+            </div>}
+        </foreignObject>
+    </g>;
+    return <div className={`stage2-arena-wrap${expanded ? ' is-expanded' : ''}`}>
+        <div className="stage2-arena" onClick={() => { if (!expanded) setExpanded(true); }}>
+            <button type="button" className="stage2-expand-button" aria-expanded={expanded} onClick={event => { event.stopPropagation(); setExpanded(value => !value); }}>
+                {expanded ? `× ${tr('Закрыть', 'Close')}` : `⛶ ${tr('Развернуть карту', 'Expand map')}`}
+            </button>
+            <svg className="stage2-map-svg" viewBox="0 0 1200 760" role="img" aria-label={tr('Карта второго этапа', 'Stage 2 tournament map')}>
+                <defs>
+                    <filter id="stage2-glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                    <radialGradient id="stage2-arena-glow"><stop offset="0" stopColor="#ffe08a" stopOpacity=".28"/><stop offset="1" stopColor="#1a2430" stopOpacity=".05"/></radialGradient>
+                </defs>
+                <circle cx="600" cy="380" r="142" fill="url(#stage2-arena-glow)" className="stage2-svg-arena-aura"/>
+                <circle cx="600" cy="380" r="82" className="stage2-svg-arena"/>
+                <circle cx="600" cy="380" r="58" className="stage2-svg-arena-ring"/>
+                <text x="600" y="370" className="stage2-svg-s">S</text>
+                <text x="600" y="402" className="stage2-svg-arena-label">{tr('ЦАРЬ ГОРЫ', 'KING OF THE HILL')}</text>
+                {paths.map(route => <g key={route.id} className={`stage2-svg-route stage2-svg-route--${route.tier.toLowerCase()} stage2-svg-route--${route.bracket}`}>
+                    <path ref={node => { pathRefs.current[route.id] = node; }} d={route.d} className="stage2-svg-road-shadow"/>
+                    <path d={route.d} className="stage2-svg-road"/>
+                    <path d={route.d} className="stage2-svg-road-flow"/>
+                </g>)}
+                <text x="72" y="185" className="stage2-svg-label stage2-svg-label--b">{tr('ВЕРХНЯЯ B', 'B UPPER')}</text>
+                <text x="72" y="690" className="stage2-svg-label stage2-svg-label--b">{tr('НИЖНЯЯ B', 'B LOWER')}</text>
+                <text x="1128" y="185" className="stage2-svg-label stage2-svg-label--a">{tr('ВЕРХНЯЯ A', 'A UPPER')}</text>
+                <text x="1128" y="690" className="stage2-svg-label stage2-svg-label--a">{tr('НИЖНЯЯ A', 'A LOWER')}</text>
+                <g className="stage2-svg-pieces">{pieces.map(renderPiece)}</g>
+            </svg>
         </div>
         {!!groups.eliminated.length && <div className="stage2-eliminated"><strong>{tr('Вылетели', 'Eliminated')}:</strong> {groups.eliminated.map(p => p.name).join(', ')}</div>}
     </div>;
@@ -735,7 +781,7 @@ function Standings() {
         const progressWins = participant.status === 'lower' ? participant.lowerWins : participant.status === 'upper' ? participant.upperWins : 0;
         duelStats[(participant.battleTag || '').toLowerCase()] = {
             wins: progressWins,
-            losses: participant.status === 'lower' ? 1 : 0,
+            losses: (Number(participant.upperLosses) || 0) + (Number(participant.lowerLosses) || 0),
             points: progressWins,
             matches: progressWins,
             status: participant.status || 'qualifier'

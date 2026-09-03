@@ -2528,7 +2528,15 @@ input[type="datetime-local"] {
 }
 
 .stage2-arena-wrap { margin-bottom: var(--spacing-xl); }
-.stage2-arena { position:relative; isolation:isolate; overflow:hidden; min-height:650px; padding:clamp(14px,2vw,26px); border:1px solid rgba(212,175,55,.52); border-radius:var(--radius-lg); background:#080d12 url('../images/stage2-fantasy-map.jpg') center/cover no-repeat; box-shadow:inset 0 0 100px rgba(0,0,0,.72),0 18px 50px rgba(0,0,0,.35); }
+.stage2-arena { position:relative; isolation:isolate; overflow:hidden; min-height:650px; padding:clamp(46px,5vw,60px) clamp(14px,2vw,26px) clamp(14px,2vw,26px); border:1px solid rgba(212,175,55,.52); border-radius:var(--radius-lg); background:#080d12 url('../images/stage2-fantasy-map.jpg') center/cover no-repeat; box-shadow:inset 0 0 100px rgba(0,0,0,.72),0 18px 50px rgba(0,0,0,.35); cursor:zoom-in; }
+.stage2-expand-button { position:absolute; z-index:20; top:10px; right:10px; min-height:34px; padding:6px 11px; border:1px solid rgba(255,220,124,.65); border-radius:5px; background:rgba(5,9,13,.86); color:#ffe29a; font:inherit; font-size:.72rem; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.45); }
+.stage2-expand-button:hover,.stage2-expand-button:focus-visible { background:rgba(57,40,17,.96); outline:2px solid rgba(255,224,132,.42); }
+.stage2-arena-wrap.is-expanded { position:fixed; z-index:10000; inset:0; display:grid; place-items:center; margin:0; padding:2vh 2vw; background:rgba(0,0,0,.9); }
+.stage2-arena-wrap.is-expanded .stage2-arena { width:96vw; height:96vh; min-height:0; border-radius:8px; cursor:default; }
+.stage2-arena-wrap.is-expanded .stage2-board-layout { height:100%; min-height:0; }
+.stage2-arena-wrap.is-expanded .stage2-step-players { max-height:calc(24vh - 54px); }
+.stage2-arena-wrap.is-expanded .stage2-center-players { max-height:62vh; }
+.stage2-arena-wrap.is-expanded .stage2-eliminated { display:none; }
 .stage2-arena::before { content: ''; position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at center, rgba(3,8,14,.08) 0 24%, rgba(3,8,14,.34) 58%, rgba(0,0,0,.64) 100%); pointer-events: none; }
 .stage2-board-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(140px,18%) minmax(0,1fr); grid-template-areas:'upperB core upperA' 'lowerB core lowerA'; gap:18px 14px; min-height:600px; align-items:center; }
 .stage2-bracket { min-width:0; padding:10px; border:1px solid rgba(212,175,55,.35); border-radius:8px; background:rgba(3,8,13,.76); backdrop-filter:blur(3px); box-shadow:0 8px 24px rgba(0,0,0,.35); }
@@ -2559,7 +2567,41 @@ input[type="datetime-local"] {
 @keyframes stage2-piece-arrive { from { opacity:0; transform:translateX(-10px) scale(.96); } to { opacity:1; transform:none; } }
 @keyframes stage2-core-glow { 0%,100% { filter:brightness(.9); } 50% { filter:brightness(1.2); } }
 @media (prefers-reduced-motion:reduce) { .stage2-player-piece,.stage2-portal,.stage2-arena-core { animation:none; } }
-@media (max-width:980px) { .stage2-board-layout { grid-template-columns:1fr; grid-template-areas:'upperB' 'upperA' 'core' 'lowerB' 'lowerA'; min-height:0; } .stage2-arena-core { width:min(100%,300px); justify-self:center; } .stage2-step-players { max-height:145px; } }
+@media (max-width:980px) { .stage2-board-layout { grid-template-columns:1fr; grid-template-areas:'upperB' 'upperA' 'core' 'lowerB' 'lowerA'; min-height:0; } .stage2-arena-core { width:min(100%,300px); justify-self:center; } .stage2-step-players { max-height:145px; } .stage2-arena-wrap.is-expanded .stage2-arena { overflow-y:auto; } .stage2-arena-wrap.is-expanded .stage2-board-layout { height:auto; } }
+
+/* Stage 2 campaign map: real SVG roads with data-driven player pieces. */
+.stage2-map-svg { display:block; width:100%; min-height:560px; overflow:visible; }
+.stage2-svg-road-shadow { fill:none; stroke:#05080a; stroke-width:13; stroke-linecap:round; opacity:.7; }
+.stage2-svg-road { fill:none; stroke-width:6; stroke-linecap:round; opacity:.72; }
+.stage2-svg-road-flow { fill:none; stroke-width:1.8; stroke-linecap:round; stroke-dasharray:2 12; opacity:.95; animation:stage2-road-flow 1.1s linear infinite; }
+.stage2-svg-route--b.stage2-svg-route--upper .stage2-svg-road { stroke:#64dff2; }
+.stage2-svg-route--b.stage2-svg-route--upper .stage2-svg-road-flow { stroke:#d1faff; }
+.stage2-svg-route--a.stage2-svg-route--upper .stage2-svg-road { stroke:#ef8267; }
+.stage2-svg-route--a.stage2-svg-route--upper .stage2-svg-road-flow { stroke:#ffd0bd; }
+.stage2-svg-route--lower .stage2-svg-road { stroke:#69717f; opacity:.55; }
+.stage2-svg-route--lower .stage2-svg-road-flow { stroke:#c2c8d0; opacity:.5; }
+.stage2-svg-arena-aura { animation:stage2-aura-pulse 3s ease-in-out infinite; }
+.stage2-svg-arena { fill:rgba(7,13,19,.86); stroke:#ebc45f; stroke-width:3; filter:url(#stage2-glow); }
+.stage2-svg-arena-ring { fill:none; stroke:#79d7ed; stroke-width:1.5; stroke-dasharray:4 8; opacity:.68; animation:stage2-ring-spin 18s linear infinite; transform-origin:600px 380px; }
+.stage2-svg-s { fill:#ffe69a; font-family:'ElenBold',serif; font-size:58px; text-anchor:middle; text-shadow:0 0 12px #ffc43d; }
+.stage2-svg-arena-label { fill:#f4dfa5; font-family:'ElenBold',serif; font-size:11px; text-anchor:middle; letter-spacing:1px; }
+.stage2-svg-label { fill:#f4dfa5; font-family:'ElenBold',serif; font-size:18px; letter-spacing:1px; paint-order:stroke; stroke:#071017; stroke-width:6px; }
+.stage2-svg-label--b { fill:#83e8ff; } .stage2-svg-label--a { fill:#ff9a7e; text-anchor:end; }
+.stage2-svg-piece { transition:transform 1.35s cubic-bezier(.2,.82,.22,1); will-change:transform; }
+.stage2-map-card { width:128px; height:44px; display:grid; grid-template-columns:28px minmax(0,1fr) auto; align-items:center; gap:6px; padding:5px 7px 5px 5px; border:1.5px solid #c8a66b; border-radius:7px; background:linear-gradient(155deg,rgba(42,31,19,.97),rgba(11,15,18,.98)); color:#f7e5b4; box-shadow:0 5px 13px rgba(0,0,0,.65); font-family:Arial,sans-serif; }
+.stage2-map-card--b { border-color:#65cae8; } .stage2-map-card--a { border-color:#e77b63; } .stage2-map-card--s { border-color:#ffe072; }
+.stage2-map-card.is-lower { filter:saturate(.45) brightness(.78); border-style:dashed; }
+.stage2-map-card.is-king { border-color:#ffe072; box-shadow:0 0 18px rgba(255,209,78,.8),0 5px 13px rgba(0,0,0,.65); }
+.stage2-map-card .stage2-piece-token { width:28px; height:28px; font-size:.72rem; }
+.stage2-map-card .stage2-piece-name { font-size:.72rem; }
+.stage2-map-card strong { color:#ffe27e; font-size:.65rem; }
+.stage2-map-overflow { width:44px; height:30px; margin:7px auto; display:grid; place-items:center; border:1px solid #d7ba70; border-radius:15px; background:rgba(6,10,14,.92); color:#ffe49a; font:bold .72rem Arial,sans-serif; box-shadow:0 0 12px rgba(255,210,90,.35); }
+.stage2-arena-wrap.is-expanded .stage2-map-svg { width:100%; height:100%; min-height:0; }
+@keyframes stage2-road-flow { to { stroke-dashoffset:-28; } }
+@keyframes stage2-aura-pulse { 0%,100% { opacity:.55; } 50% { opacity:1; } }
+@keyframes stage2-ring-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) { .stage2-svg-piece,.stage2-svg-road-flow,.stage2-svg-arena-aura,.stage2-svg-arena-ring { animation:none; transition:none; } }
+@media (max-width:760px) { .stage2-arena { overflow-x:auto; } .stage2-map-svg { width:900px; min-height:570px; } .stage2-arena-wrap.is-expanded .stage2-map-svg { width:900px; height:auto; min-height:570px; } }
 
 .stage1-table-hidden { display:none !important; }
 .standings-card-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--spacing-md); }

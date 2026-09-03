@@ -13,8 +13,84 @@ router.get('/', async (req, res) => {
     catch (err) { res.status(500).json({ error: 'Failed to fetch duels' }); }
 });
 
+async function repairLegacyUpperDemotions() {
+    const legacyPlayers = await Stage2Participant.find({ status: 'lower', upperLosses: { $exists: false } });
+    for (const participant of legacyPlayers) {
+        const duels = await Duel.find({
+            $or: [
+                { 'playerA.playerId': participant.playerId },
+                { 'playerB.playerId': participant.playerId }
+            ]
+        }).select('phase winner playerA.playerId playerB.playerId');
+        const upperLosses = duels.filter(duel => {
+            if (duel.phase !== 'upper') return false;
+            const side = duel.playerA.playerId === participant.playerId ? 'A' : 'B';
+            return duel.winner !== side;
+        }).length;
+        const playedLower = duels.some(duel => duel.phase === 'lower');
+        participant.upperLosses = upperLosses;
+        if (!playedLower && upperLosses < 2) participant.status = 'upper';
+        await participant.save();
+    }
+}
+
+const sendOutOfCenter = participant => {
+    if (participant.tier === 'S') {
+        participant.status = 'eliminated';
+    } else {
+        participant.status = 'lower';
+        participant.lowerWins = 0;
+        participant.lowerLosses = 0;
+    }
+};
+
+async function promotedPlayerReachedCenter() {
+    return Boolean(await Duel.exists({
+        phase: { $in: ['s_bracket', 'king'] },
+        $or: [
+            { 'playerA.tier': { $in: [2, 3] } },
+            { 'playerB.tier': { $in: [2, 3] } }
+        ]
+    }));
+}
+
+async function repairLegacyKings() {
+    const legacyKings = await Stage2Participant.find({ status: 'king', kingQualified: { $ne: true } });
+    for (const king of legacyKings) {
+        const decidingDuel = await Duel.findOne({
+            phase: 's_bracket',
+            $or: [
+                { 'playerA.playerId': king.playerId, winner: 'A' },
+                { 'playerB.playerId': king.playerId, winner: 'B' }
+            ]
+        }).sort({ playedAt: -1, createdAt: -1 });
+        king.status = 's_bracket';
+        if (decidingDuel) {
+            const loserId = decidingDuel.winner === 'A' ? decidingDuel.playerB.playerId : decidingDuel.playerA.playerId;
+            const loser = await Stage2Participant.findOne({ playerId: loserId, status: { $in: ['s_bracket', 'king'] } });
+            if (loser) {
+                sendOutOfCenter(loser);
+                await loser.save();
+            }
+        }
+        await king.save();
+    }
+    if (legacyKings.length) {
+        const survivors = await Stage2Participant.find({ status: 's_bracket' });
+        if (survivors.length === 1 && await promotedPlayerReachedCenter()) {
+            survivors[0].status = 'king';
+            survivors[0].kingQualified = true;
+            await survivors[0].save();
+        }
+    }
+}
+
 router.get('/stage2', async (req, res) => {
-    try { res.json(await Stage2Participant.find().sort({ tier: 1, qualifierWins: -1, mapWins: -1 })); }
+    try {
+        await repairLegacyUpperDemotions();
+        await repairLegacyKings();
+        res.json(await Stage2Participant.find().sort({ tier: 1, qualifierWins: -1, mapWins: -1 }));
+    }
     catch (err) { res.status(500).json({ error: 'Failed to fetch stage 2' }); }
 });
 
@@ -40,7 +116,9 @@ router.post('/stage2/initialize', checkAuth, async (req, res) => {
             if (participant.status === 'qualifier') {
                 participant.status = tier === 'S' ? 's_bracket' : 'upper';
                 participant.upperWins = 0;
+                participant.upperLosses = 0;
                 participant.lowerWins = 0;
+                participant.lowerLosses = 0;
                 await participant.save();
             }
             initialized++;
@@ -75,7 +153,8 @@ router.post('/', checkAuth, async (req, res) => {
         const [pa, pb] = await Promise.all([Stage2Participant.findOne({ playerId: a.id }), Stage2Participant.findOne({ playerId: b.id })]);
         if (!pa || !pb) return res.status(400).json({ error: 'Initialize Stage 2 first' });
         const isKingMatch = pa.status === 'king' || pb.status === 'king';
-        if (!isKingMatch && (pa.status !== pb.status || groupA !== groupB)) return res.status(400).json({ error: 'Players must be in the same tier and bracket' });
+        const isCenterMatch = ['s_bracket', 'king'].includes(pa.status) && ['s_bracket', 'king'].includes(pb.status);
+        if (!isCenterMatch && (pa.status !== pb.status || groupA !== groupB)) return res.status(400).json({ error: 'Players must be in the same tier and bracket' });
         const phase = isKingMatch ? 'king' : pa.status;
         const scoreMatch = String(score || '').trim().match(/^(\d+)\s*[:\-]\s*(\d+)$/);
         if (!scoreMatch) return res.status(400).json({ error: 'Enter a BO3 score such as 2:0 or 2:1' });
@@ -94,16 +173,28 @@ router.post('/', checkAuth, async (req, res) => {
         if (phase === 'upper') {
             winnerP.upperWins++;
             if (winnerP.upperWins >= 3) winnerP.status = 's_bracket';
-            loserP.status = 'lower';
+            loserP.upperLosses = (Number(loserP.upperLosses) || 0) + 1;
+            if (loserP.upperLosses >= 2) loserP.status = 'lower';
         } else if (phase === 'lower') {
             winnerP.lowerWins++;
             if (winnerP.lowerWins >= 3) winnerP.status = 's_bracket';
+            loserP.lowerLosses = (Number(loserP.lowerLosses) || 0) + 1;
             loserP.status = 'eliminated';
         } else if (phase === 's_bracket') {
-            loserP.status = 's_bracket'; winnerP.status = 'king';
+            sendOutOfCenter(loserP);
+            winnerP.status = 's_bracket';
+            const remainingInCenter = await Stage2Participant.countDocuments({
+                _id: { $ne: loserP._id },
+                status: { $in: ['s_bracket', 'king'] }
+            });
+            if (remainingInCenter === 1 && await promotedPlayerReachedCenter()) {
+                winnerP.status = 'king';
+                winnerP.kingQualified = true;
+            }
         } else if (phase === 'king') {
-            loserP.status = loserP.tier === 'S' ? 's_bracket' : 'lower';
+            sendOutOfCenter(loserP);
             winnerP.status = 'king';
+            winnerP.kingQualified = true;
         }
         pa.updatedAt = pb.updatedAt = new Date();
         await Promise.all([pa.save(), pb.save()]);
