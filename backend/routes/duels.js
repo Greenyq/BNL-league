@@ -13,8 +13,32 @@ router.get('/', async (req, res) => {
     catch (err) { res.status(500).json({ error: 'Failed to fetch duels' }); }
 });
 
+async function repairLegacyUpperDemotions() {
+    const legacyPlayers = await Stage2Participant.find({ status: 'lower', upperLosses: { $exists: false } });
+    for (const participant of legacyPlayers) {
+        const duels = await Duel.find({
+            $or: [
+                { 'playerA.playerId': participant.playerId },
+                { 'playerB.playerId': participant.playerId }
+            ]
+        }).select('phase winner playerA.playerId playerB.playerId');
+        const upperLosses = duels.filter(duel => {
+            if (duel.phase !== 'upper') return false;
+            const side = duel.playerA.playerId === participant.playerId ? 'A' : 'B';
+            return duel.winner !== side;
+        }).length;
+        const playedLower = duels.some(duel => duel.phase === 'lower');
+        participant.upperLosses = upperLosses;
+        if (!playedLower && upperLosses < 2) participant.status = 'upper';
+        await participant.save();
+    }
+}
+
 router.get('/stage2', async (req, res) => {
-    try { res.json(await Stage2Participant.find().sort({ tier: 1, qualifierWins: -1, mapWins: -1 })); }
+    try {
+        await repairLegacyUpperDemotions();
+        res.json(await Stage2Participant.find().sort({ tier: 1, qualifierWins: -1, mapWins: -1 }));
+    }
     catch (err) { res.status(500).json({ error: 'Failed to fetch stage 2' }); }
 });
 
@@ -40,7 +64,9 @@ router.post('/stage2/initialize', checkAuth, async (req, res) => {
             if (participant.status === 'qualifier') {
                 participant.status = tier === 'S' ? 's_bracket' : 'upper';
                 participant.upperWins = 0;
+                participant.upperLosses = 0;
                 participant.lowerWins = 0;
+                participant.lowerLosses = 0;
                 await participant.save();
             }
             initialized++;
@@ -94,10 +120,12 @@ router.post('/', checkAuth, async (req, res) => {
         if (phase === 'upper') {
             winnerP.upperWins++;
             if (winnerP.upperWins >= 3) winnerP.status = 's_bracket';
-            loserP.status = 'lower';
+            loserP.upperLosses = (Number(loserP.upperLosses) || 0) + 1;
+            if (loserP.upperLosses >= 2) loserP.status = 'lower';
         } else if (phase === 'lower') {
             winnerP.lowerWins++;
             if (winnerP.lowerWins >= 3) winnerP.status = 's_bracket';
+            loserP.lowerLosses = (Number(loserP.lowerLosses) || 0) + 1;
             loserP.status = 'eliminated';
         } else if (phase === 's_bracket') {
             loserP.status = 's_bracket'; winnerP.status = 'king';
