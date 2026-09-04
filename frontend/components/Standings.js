@@ -293,14 +293,9 @@ function Stage2Arena({ participants, viewer, revealNames, onRevealNames }) {
     const panRef = React.useRef(null);
     React.useEffect(() => {
         if (!expanded) return undefined;
-        const previousOverflow = document.body.style.overflow;
         const closeOnEscape = event => { if (event.key === 'Escape') setExpanded(false); };
-        document.body.style.overflow = 'hidden';
         document.addEventListener('keydown', closeOnEscape);
-        return () => {
-            document.body.style.overflow = previousOverflow;
-            document.removeEventListener('keydown', closeOnEscape);
-        };
+        return () => document.removeEventListener('keydown', closeOnEscape);
     }, [expanded]);
     React.useEffect(() => {
         if (!expanded || !arenaRef.current) return;
@@ -475,7 +470,7 @@ function Stage2Arena({ participants, viewer, revealNames, onRevealNames }) {
         {arena}
         {!!groups.eliminated.length && <div className="stage2-eliminated"><strong>{tr('Вылетели', 'Eliminated')}:</strong> {groups.eliminated.map(p => p.name).join(', ')}</div>}
     </div>;
-    return expanded ? ReactDOM.createPortal(content, document.body) : content;
+    return content;
 }
 
 function DraftPoolCard({ row, index }) {
