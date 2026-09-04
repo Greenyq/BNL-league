@@ -285,8 +285,10 @@ function TeamStandingsMobileCard({ row, index }) {
     );
 }
 
-function Stage2Arena({ participants }) {
+function Stage2Arena({ participants, viewer, revealNames, onRevealNames }) {
     const [expanded, setExpanded] = React.useState(false);
+    const [expandedStacks, setExpandedStacks] = React.useState(() => new Set());
+    const [locatePulse, setLocatePulse] = React.useState(0);
     const arenaRef = React.useRef(null);
     const panRef = React.useRef(null);
     React.useEffect(() => {
@@ -348,18 +350,10 @@ function Stage2Arena({ participants }) {
             const length = path.getTotalLength();
             for (let step = 0; step < 3; step++) {
                 const bucket = route.list.filter(player => Math.min(2, Number(player[route.wins]) || 0) === step);
-                const visible = bucket.slice(0, 4);
+                if (!bucket.length) continue;
                 const fraction = Math.min(3, Math.max(0, step)) / 3;
                 const point = path.getPointAtLength(length * fraction);
-                const nearby = path.getPointAtLength(Math.min(length, length * fraction + 4));
-                const dx = nearby.x - point.x, dy = nearby.y - point.y;
-                const magnitude = Math.hypot(dx, dy) || 1;
-                const nx = -dy / magnitude, ny = dx / magnitude;
-                visible.forEach((player, index) => {
-                    const spread = (index - (visible.length - 1) / 2) * 44;
-                    next.push({ id: player.id, player, x: point.x + nx * spread, y: point.y + ny * spread, wins: step, route });
-                });
-                if (bucket.length > visible.length) next.push({ id: `more-${route.id}-${step}`, count: bucket.length - visible.length, x: point.x + nx * 78, y: point.y + ny * 78, route });
+                next.push({ id: `stack-${route.id}-${step}`, players: bucket, x: point.x, y: point.y, wins: step, route });
             }
         }
         const centerVisible = groups.center.slice(0, 7);
@@ -373,17 +367,67 @@ function Stage2Arena({ participants }) {
         setPieces(next);
     }, [participants]);
 
-    const renderPiece = piece => <g key={piece.id} className="stage2-svg-piece" style={{ transform: `translate(${piece.x}px, ${piece.y}px)` }}>
-        <foreignObject x="-66" y="-32" width="132" height="53">
-            {piece.count ? <div className="stage2-map-overflow">+{piece.count}</div> : <div className={`stage2-map-card stage2-map-card--${String(piece.player.tier).toLowerCase()}${piece.player.status === 'king' ? ' is-king' : ''}${piece.route?.bracket === 'lower' ? ' is-lower' : ''}${piece.center ? ' is-center' : ''}`}>
-                <span className="stage2-piece-token">{piece.player.status === 'king' ? '♛' : piece.player.tier}</span>
-                <span className="stage2-piece-name">{piece.player.name}</span>
-                {!piece.center && <span className="stage2-rune-progress" aria-label={`${piece.wins}/3`}>
-                    {[0, 1, 2].map(rune => <i key={rune} className={rune < piece.wins ? 'is-lit' : ''} />)}
-                </span>}
-            </div>}
-        </foreignObject>
-    </g>;
+    const toggleStack = id => setExpandedStacks(current => {
+        const next = new Set(current);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        return next;
+    });
+    const tokenTransform = (index, count, open) => {
+        if (!open) return `translate(${index * 3}px, ${-index * 2}px)`;
+        const angle = (-72 + (144 * index / Math.max(1, count - 1))) * Math.PI / 180;
+        return `translate(${Math.cos(angle) * 38}px, ${Math.sin(angle) * 38}px)`;
+    };
+    const renderToken = (player, wins, index = 0, count = 1, open = false) => {
+        const tier = String(player.tier).toLowerCase();
+        const progress = Math.max(0, Math.min(3, Number(wins) || 0));
+        const circumference = 2 * Math.PI * 17;
+        const mayShowName = Boolean(player.showName);
+        return <button
+            key={player.id}
+            type="button"
+            className={`stage2-token stage2-token--${tier}${player.isSelf ? ' is-self' : ''}${player.isOpponent ? ' is-opponent' : ''}${player.isSelf && locatePulse ? ' is-locating' : ''}`}
+            style={{ transform: tokenTransform(index, count, open), zIndex: index + 1 }}
+            aria-label={mayShowName ? player.name : tr('Анонимный участник', 'Anonymous participant')}
+            title={mayShowName ? player.name : ''}
+            tabIndex={mayShowName ? 0 : -1}
+        >
+            <svg className="stage2-token-ring" viewBox="0 0 42 42" aria-hidden="true">
+                <circle className="stage2-token-ring-track" cx="21" cy="21" r="17" />
+                <circle className="stage2-token-ring-value" cx="21" cy="21" r="17" style={{ strokeDasharray: circumference, strokeDashoffset: circumference * (1 - progress / 3) }} />
+            </svg>
+            <span className="stage2-token-face"><i style={{ '--token-icon': `url('/images/faction-tokens/${player.iconKey}.svg')` }} /></span>
+            {mayShowName && <span className={`stage2-token-name${player.isOpponent || revealNames ? ' is-visible' : ''}`}>{player.name}</span>}
+        </button>;
+    };
+    const renderPiece = piece => {
+        if (piece.players) {
+            const open = expandedStacks.has(piece.id);
+            const shown = piece.players.slice(0, 8);
+            return <g key={piece.id} className="stage2-svg-piece" style={{ transform: `translate(${piece.x}px, ${piece.y}px)` }}>
+                <foreignObject x="-55" y="-55" width="110" height="110" className="stage2-stack-object">
+                    <div className={`stage2-token-stack${open ? ' is-open' : ''}`} onClick={() => toggleStack(piece.id)}>
+                        {shown.map((player, index) => renderToken(player, piece.wins, index, shown.length, open))}
+                        {piece.players.length > 1 && <span className="stage2-stack-count">×{piece.players.length}</span>}
+                    </div>
+                </foreignObject>
+            </g>;
+        }
+        return <g key={piece.id} className="stage2-svg-piece" style={{ transform: `translate(${piece.x}px, ${piece.y}px)` }}>
+            <foreignObject x="-66" y="-32" width="132" height="53">
+                {piece.count ? <div className="stage2-map-overflow">+{piece.count}</div> : <div className={`stage2-map-card stage2-map-card--${String(piece.player.tier).toLowerCase()}${piece.player.status === 'king' ? ' is-king' : ''} is-center`}>
+                    <span className="stage2-piece-token">{piece.player.status === 'king' ? '♛' : piece.player.tier}</span>
+                    <span className="stage2-piece-name">{piece.player.name}</span>
+                </div>}
+            </foreignObject>
+        </g>;
+    };
+    const selfPiece = pieces.find(piece => piece.players?.some(player => player.isSelf));
+    const opponentPiece = pieces.find(piece => piece.players?.some(player => player.isOpponent));
+    const findSelf = () => {
+        setLocatePulse(value => value + 1);
+        if (!expanded) setExpanded(true);
+        window.setTimeout(() => setLocatePulse(0), 2400);
+    };
     return <div
         className={`stage2-arena-wrap${expanded ? ' is-expanded' : ''}`}
         onClick={event => {
@@ -393,6 +437,10 @@ function Stage2Arena({ participants }) {
         <button type="button" className="stage2-expand-button" aria-expanded={expanded} onClick={event => { event.stopPropagation(); setExpanded(value => !value); }}>
             {expanded ? `× ${tr('Закрыть', 'Close')}` : `⛶ ${tr('Развернуть карту', 'Expand map')}`}
         </button>
+        <div className="stage2-map-actions">
+            {viewer?.hasPlayer && <button type="button" className="stage2-map-action" onClick={findSelf}>{tr('⌖ Найти меня', '⌖ Find me')}</button>}
+            {viewer?.canRevealNames && <label className="stage2-name-toggle"><input type="checkbox" checked={revealNames} onChange={event => onRevealNames(event.target.checked)} /> {tr('Показать имена', 'Show names')}</label>}
+        </div>
         <div
             ref={arenaRef}
             className="stage2-arena"
@@ -416,6 +464,7 @@ function Stage2Arena({ participants }) {
                     <path d={route.d} className="stage2-svg-road"/>
                     <path d={route.d} className="stage2-svg-road-flow"/>
                 </g>)}
+                {selfPiece && opponentPiece && <line className="stage2-opponent-thread" x1={selfPiece.x} y1={selfPiece.y} x2={opponentPiece.x} y2={opponentPiece.y} />}
                 <text x="250" y="42" className="stage2-svg-label stage2-svg-label--b">{tr('ВЕРХНЯЯ СЕТКА B', 'TIER B — UPPER')}</text>
                 <text x="250" y="632" className="stage2-svg-label stage2-svg-label--b">{tr('НИЖНЯЯ СЕТКА B', 'TIER B — LOWER')}</text>
                 <text x="950" y="42" className="stage2-svg-label stage2-svg-label--a">{tr('ВЕРХНЯЯ СЕТКА A', 'TIER A — UPPER')}</text>
@@ -776,6 +825,8 @@ function Standings() {
     const [players,    setPlayers]    = React.useState([]);
     const [duels,      setDuels]      = React.useState([]);
     const [stage2,     setStage2]     = React.useState([]);
+    const [stage2Viewer, setStage2Viewer] = React.useState({ isAdmin: false, canRevealNames: false, hasPlayer: false });
+    const [revealStage2Names, setRevealStage2Names] = React.useState(false);
     const [wars,       setWars]       = React.useState([]);
     const [loading,    setLoading]    = React.useState(true);
     const [error,      setError]      = React.useState(null);
@@ -787,23 +838,30 @@ function Standings() {
 
     React.useEffect(() => {
         let active = true;
+        const playerSession = localStorage.getItem('bnl_player_session') || '';
+        const adminSession = localStorage.getItem('bnl_admin_session') || '';
+        const stage2Headers = {
+            ...(playerSession ? { 'x-player-session-id': playerSession } : {}),
+            ...(adminSession ? { 'x-session-id': adminSession } : {})
+        };
         const loadStandings = (initial = false) => Promise.all([
             fetch('/api/players').then(r => r.json()),
-            fetch('/api/duels').then(r => r.json()),
-            fetch('/api/duels/stage2').then(r => r.json()),
+            fetch('/api/duels', { headers: stage2Headers }).then(r => r.json()),
+            fetch(`/api/duels/stage2${revealStage2Names ? '?revealNames=1' : ''}`, { headers: stage2Headers }).then(r => r.json()),
         ])
             .then(([pl, duelData, stage2Data]) => {
                 if (!active) return;
                 setPlayers(Array.isArray(pl) ? pl : []);
                 setDuels(Array.isArray(duelData) ? duelData : []);
-                setStage2(Array.isArray(stage2Data) ? stage2Data : []);
+                setStage2(Array.isArray(stage2Data?.participants) ? stage2Data.participants : (Array.isArray(stage2Data) ? stage2Data : []));
+                setStage2Viewer(stage2Data?.viewer || { isAdmin: false, canRevealNames: false, hasPlayer: false });
                 if (initial) setLoading(false);
             })
             .catch(err  => { if (active && initial) { setError(err.message); setLoading(false); } });
         loadStandings(true);
         const refresh = setInterval(() => loadStandings(false), 10000);
         return () => { active = false; clearInterval(refresh); };
-    }, []);
+    }, [revealStage2Names]);
 
     const duelStats = duels.reduce((map, duel) => {
         for (const side of ['A', 'B']) {
@@ -918,9 +976,9 @@ function Standings() {
                         ))}
                     </div>
                 )}
-                <div className="standings-controls-group standings-controls-group--search">
+                {mode === 'ladder' && <div className="standings-controls-group standings-controls-group--search">
                     <PlayerNameFilterInput value={playerFilter} onChange={setPlayerFilter} />
-                </div>
+                </div>}
                 <div className="standings-controls-group standings-controls-group--modes">
                     <button className={`wow-btn${mode === 'ladder' ? ' active' : ''}`} onClick={() => setMode('ladder')}>{tr('Этап 1 — Ладдер', 'Stage 1 — Ladder')}</button>
                     <button className={`wow-btn${mode === 'duels' ? ' active' : ''}`} onClick={() => { setMode('duels'); setRaceFilter(null); }}>{tr('Этап 2 — Дуэли', 'Stage 2 — Duels')}</button>
@@ -930,9 +988,9 @@ function Standings() {
             {(
                 <>
 
-                    {mode === 'duels' && <Stage2Arena participants={stage2} />}
+                    {mode === 'duels' && <Stage2Arena participants={stage2} viewer={stage2Viewer} revealNames={revealStage2Names} onRevealNames={setRevealStage2Names} />}
 
-                    {loading ? (
+                    {mode === 'ladder' && (loading ? (
                         <div>
                             {[1,2,3,4,5].map(i => (
                                 <div key={i} className="skeleton" style={{ height: 48, marginBottom: 8, borderRadius: 'var(--radius-sm)' }} />
@@ -1022,7 +1080,7 @@ function Standings() {
                                 onPageChange={page => setModePage('players', page)}
                             />
                         </>
-                    )}
+                    ))}
                 </>
             )}
             <AchievementModal row={achievementRow} onClose={() => setAchievementRow(null)} />
