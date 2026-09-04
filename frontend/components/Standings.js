@@ -290,7 +290,6 @@ function Stage2Arena({ participants, viewer, revealNames, onRevealNames }) {
     const [expandedStacks, setExpandedStacks] = React.useState(() => new Set());
     const [locatePulse, setLocatePulse] = React.useState(0);
     const arenaRef = React.useRef(null);
-    const panRef = React.useRef(null);
     React.useEffect(() => {
         if (!expanded) return undefined;
         const closeOnEscape = event => { if (event.key === 'Escape') setExpanded(false); };
@@ -303,24 +302,6 @@ function Stage2Arena({ participants, viewer, revealNames, onRevealNames }) {
         arena.scrollLeft = Math.max(0, (arena.scrollWidth - arena.clientWidth) / 2);
         arena.scrollTop = Math.max(0, (arena.scrollHeight - arena.clientHeight) / 2);
     }, [expanded]);
-    const startPan = event => {
-        if (!expanded || event.button !== 0) return;
-        const arena = arenaRef.current;
-        panRef.current = { x: event.clientX, y: event.clientY, left: arena.scrollLeft, top: arena.scrollTop };
-        arena.setPointerCapture(event.pointerId);
-        arena.classList.add('is-panning');
-    };
-    const movePan = event => {
-        if (!panRef.current || !arenaRef.current) return;
-        arenaRef.current.scrollLeft = panRef.current.left - (event.clientX - panRef.current.x);
-        arenaRef.current.scrollTop = panRef.current.top - (event.clientY - panRef.current.y);
-    };
-    const stopPan = event => {
-        if (!panRef.current) return;
-        panRef.current = null;
-        arenaRef.current?.classList.remove('is-panning');
-        if (arenaRef.current?.hasPointerCapture(event.pointerId)) arenaRef.current.releasePointerCapture(event.pointerId);
-    };
     const groups = {
         upperB: participants.filter(p => p.tier === 'B' && p.status === 'upper'),
         upperA: participants.filter(p => p.tier === 'A' && p.status === 'upper'),
@@ -400,7 +381,20 @@ function Stage2Arena({ participants, viewer, revealNames, onRevealNames }) {
             const shown = piece.players.slice(0, 8);
             return <g key={piece.id} className="stage2-svg-piece" style={{ transform: `translate(${piece.x}px, ${piece.y}px)` }}>
                 <foreignObject x="-55" y="-55" width="110" height="110" className="stage2-stack-object">
-                    <div className={`stage2-token-stack${open ? ' is-open' : ''}`} onClick={() => toggleStack(piece.id)}>
+                    <div
+                        className={`stage2-token-stack${open ? ' is-open' : ''}`}
+                        role="button"
+                        tabIndex="0"
+                        aria-expanded={open}
+                        onClick={event => { event.stopPropagation(); toggleStack(piece.id); }}
+                        onKeyDown={event => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                toggleStack(piece.id);
+                            }
+                        }}
+                    >
                         {shown.map((player, index) => renderToken(player, piece.wins, index, shown.length, open))}
                         {piece.players.length > 1 && <span className="stage2-stack-count">×{piece.players.length}</span>}
                     </div>
@@ -427,11 +421,6 @@ function Stage2Arena({ participants, viewer, revealNames, onRevealNames }) {
             ref={arenaRef}
             className="stage2-arena"
             onClick={() => { if (!expanded) setExpanded(true); }}
-            onPointerDown={startPan}
-            onPointerMove={movePan}
-            onPointerUp={stopPan}
-            onPointerCancel={stopPan}
-            onPointerLeave={stopPan}
         >
             <button type="button" className="stage2-expand-button" aria-expanded={expanded} onClick={event => { event.stopPropagation(); setExpanded(value => !value); }}>
                 {expanded ? `× ${tr('Закрыть', 'Close')}` : `⛶ ${tr('Развернуть карту', 'Expand map')}`}
