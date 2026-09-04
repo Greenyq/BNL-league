@@ -428,20 +428,7 @@ function Stage2Arena({ participants, viewer, revealNames, onRevealNames }) {
         if (!expanded) setExpanded(true);
         window.setTimeout(() => setLocatePulse(0), 2400);
     };
-    return <div
-        className={`stage2-arena-wrap${expanded ? ' is-expanded' : ''}`}
-        onClick={event => {
-            if (expanded && event.target === event.currentTarget) setExpanded(false);
-        }}
-    >
-        <button type="button" className="stage2-expand-button" aria-expanded={expanded} onClick={event => { event.stopPropagation(); setExpanded(value => !value); }}>
-            {expanded ? `× ${tr('Закрыть', 'Close')}` : `⛶ ${tr('Развернуть карту', 'Expand map')}`}
-        </button>
-        <div className="stage2-map-actions">
-            {viewer?.hasPlayer && <button type="button" className="stage2-map-action" onClick={findSelf}>{tr('⌖ Найти меня', '⌖ Find me')}</button>}
-            {viewer?.canRevealNames && <label className="stage2-name-toggle"><input type="checkbox" checked={revealNames} onChange={event => onRevealNames(event.target.checked)} /> {tr('Показать имена', 'Show names')}</label>}
-        </div>
-        <div
+    const arena = <div
             ref={arenaRef}
             className="stage2-arena"
             onClick={() => { if (!expanded) setExpanded(true); }}
@@ -451,6 +438,13 @@ function Stage2Arena({ participants, viewer, revealNames, onRevealNames }) {
             onPointerCancel={stopPan}
             onPointerLeave={stopPan}
         >
+            <button type="button" className="stage2-expand-button" aria-expanded={expanded} onClick={event => { event.stopPropagation(); setExpanded(value => !value); }}>
+                {expanded ? `× ${tr('Закрыть', 'Close')}` : `⛶ ${tr('Развернуть карту', 'Expand map')}`}
+            </button>
+            <div className="stage2-map-actions" onClick={event => event.stopPropagation()}>
+                {viewer?.hasPlayer && <button type="button" className="stage2-map-action" onClick={findSelf}>{tr('⌖ Найти меня', '⌖ Find me')}</button>}
+                {viewer?.canRevealNames && <label className="stage2-name-toggle"><input type="checkbox" checked={revealNames} onChange={event => onRevealNames(event.target.checked)} /> {tr('Показать имена', 'Show names')}</label>}
+            </div>
             <svg className="stage2-map-svg" viewBox="0 0 1200 675" role="img" aria-label={tr('Карта второго этапа', 'Stage 2 tournament map')}>
                 <defs>
                     <filter id="stage2-glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -471,9 +465,17 @@ function Stage2Arena({ participants, viewer, revealNames, onRevealNames }) {
                 <text x="950" y="632" className="stage2-svg-label stage2-svg-label--a">{tr('НИЖНЯЯ СЕТКА A', 'TIER A — LOWER')}</text>
                 <g className="stage2-svg-pieces">{pieces.map(renderPiece)}</g>
             </svg>
-        </div>
+        </div>;
+    const content = <div
+        className={`stage2-arena-wrap${expanded ? ' is-expanded' : ''}`}
+        onClick={event => {
+            if (expanded && event.target === event.currentTarget) setExpanded(false);
+        }}
+    >
+        {arena}
         {!!groups.eliminated.length && <div className="stage2-eliminated"><strong>{tr('Вылетели', 'Eliminated')}:</strong> {groups.eliminated.map(p => p.name).join(', ')}</div>}
     </div>;
+    return expanded ? ReactDOM.createPortal(content, document.body) : content;
 }
 
 function DraftPoolCard({ row, index }) {

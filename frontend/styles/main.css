@@ -2577,10 +2577,10 @@ input[type="datetime-local"] {
 .stage2-map-action { cursor:pointer; }
 .stage2-name-toggle { cursor:pointer; }
 .stage2-name-toggle input { accent-color:#d9ad4e; }
-.stage2-arena-wrap.is-expanded .stage2-map-actions { position:fixed; z-index:2147483001; top:14px; left:14px; }
+.stage2-arena-wrap.is-expanded .stage2-map-actions { top:10px; left:10px; }
 .stage2-arena-wrap.is-expanded { position:fixed; z-index:2147483000; inset:0; display:grid; place-items:center; box-sizing:border-box; margin:0; padding:2vh 2vw; overflow:hidden; overscroll-behavior:contain; background:rgba(0,0,0,.9); }
-.stage2-arena-wrap.is-expanded .stage2-expand-button { position:fixed; z-index:2147483001; top:14px; right:14px; min-height:42px; padding:9px 14px; border-color:#ffe08a; background:#24130e; font-size:.82rem; }
-.stage2-arena-wrap.is-expanded .stage2-arena { width:min(96vw,calc(90vh * 1.7779)); height:auto; max-height:90vh; min-height:0; display:grid; place-items:center; padding:0; overflow:hidden; border-radius:6px; cursor:default; touch-action:auto; user-select:none; }
+.stage2-arena-wrap.is-expanded .stage2-expand-button { top:10px; right:10px; min-height:42px; padding:9px 14px; border-color:#ffe08a; background:#24130e; font-size:.82rem; }
+.stage2-arena-wrap.is-expanded .stage2-arena { width:min(96vw,160vh); max-width:100%; height:auto; max-height:none; min-height:0; aspect-ratio:1672/941; display:grid; place-items:center; padding:0; overflow:hidden; border-radius:6px; cursor:default; touch-action:auto; user-select:none; }
 .stage2-arena-wrap.is-expanded .stage2-arena.is-panning { cursor:grabbing; }
 .stage2-arena-wrap.is-expanded .stage2-board-layout { height:100%; min-height:0; }
 .stage2-arena-wrap.is-expanded .stage2-step-players { max-height:calc(24vh - 54px); }
