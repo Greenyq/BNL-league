@@ -1,15 +1,62 @@
 const express = require('express');
 const { Duel, Stage2Participant } = require('../models/Duel');
-const { Player, PlayerStats } = require('../models/Player');
-const { checkAuth } = require('../middleware/auth');
+const { Player, PlayerStats, PlayerUser, PlayerSession } = require('../models/Player');
+const { checkAuth, getAdminSessionResult } = require('../middleware/auth');
 const { getTierFromMmr } = require('../services/scoring');
 const { suggestDuelPoints } = require('../services/duelScoring');
 
 const router = express.Router();
 const tierOf = (player, stats) => player.tierOverride || stats?.tier || getTierFromMmr(stats?.mmr || player.currentMmr || 0).value;
+const STAGE2_ICON_POOLS = {
+    B: ['b-leaf-swirl', 'b-wolf-head', 'b-stag-head', 'b-crystal-growth', 'b-snowflake-1'],
+    A: ['a-fire-punch', 'a-daemon-skull', 'a-battle-axe', 'a-horned-helm', 'a-burning-eye'],
+    S: ['s-queen-crown', 's-star-swirl', 's-crossed-swords', 's-laurels', 's-hourglass']
+};
+const stableIconFor = participant => {
+    const pool = STAGE2_ICON_POOLS[participant.tier] || STAGE2_ICON_POOLS.S;
+    const seed = String(participant.playerId || participant.id || '');
+    let hash = 2166136261;
+    for (let i = 0; i < seed.length; i++) hash = Math.imul(hash ^ seed.charCodeAt(i), 16777619);
+    return pool[(hash >>> 0) % pool.length];
+};
+
+async function getStage2Viewer(req) {
+    const admin = await getAdminSessionResult(req.headers['x-session-id']);
+    if (admin.session) return { isAdmin: true, participant: null };
+    const sessionId = req.headers['x-player-session-id'];
+    if (!sessionId) return { isAdmin: false, participant: null };
+    const session = await PlayerSession.findOne({ sessionId });
+    if (!session || session.expiresAt < new Date()) return { isAdmin: false, participant: null };
+    const user = await PlayerUser.findById(session.playerUserId);
+    if (!user?.linkedBattleTag) return { isAdmin: false, participant: null };
+    const participant = await Stage2Participant.findOne({ battleTag: user.linkedBattleTag });
+    return { isAdmin: false, participant };
+}
 
 router.get('/', async (req, res) => {
-    try { res.json(await Duel.find().sort({ playedAt: -1, createdAt: -1 })); }
+    try {
+        const [duels, viewer] = await Promise.all([
+            Duel.find().sort({ playedAt: -1, createdAt: -1 }),
+            getStage2Viewer(req)
+        ]);
+        res.json(duels.map(duel => {
+            const json = duel.toJSON();
+            const ownId = viewer.participant?.playerId;
+            const isParticipant = ownId && [json.playerA.playerId, json.playerB.playerId].includes(ownId);
+            if (viewer.isAdmin || isParticipant) return json;
+            return {
+                id: json.id,
+                phase: json.phase,
+                tierGroup: json.tierGroup,
+                playerA: { tier: json.playerA.tier, points: json.playerA.points },
+                playerB: { tier: json.playerB.tier, points: json.playerB.points },
+                winner: json.winner,
+                score: json.score,
+                playedAt: json.playedAt,
+                createdAt: json.createdAt
+            };
+        }));
+    }
     catch (err) { res.status(500).json({ error: 'Failed to fetch duels' }); }
 });
 
@@ -89,7 +136,46 @@ router.get('/stage2', async (req, res) => {
     try {
         await repairLegacyUpperDemotions();
         await repairLegacyKings();
-        res.json(await Stage2Participant.find().sort({ tier: 1, qualifierWins: -1, mapWins: -1 }));
+        const [participants, viewer] = await Promise.all([
+            Stage2Participant.find().sort({ tier: 1, qualifierWins: -1, mapWins: -1 }),
+            getStage2Viewer(req)
+        ]);
+        const own = viewer.participant;
+        const opponentAliases = new Set((own?.opponents || []).map(value => String(value).toLowerCase()));
+        const revealAll = viewer.isAdmin && req.query.revealNames === '1';
+        const sanitized = participants.map(participant => {
+            const isSelf = Boolean(own && String(own.id) === String(participant.id));
+            const isOpponent = Boolean(own && (
+                opponentAliases.has(String(participant.playerId).toLowerCase()) ||
+                opponentAliases.has(String(participant.battleTag).toLowerCase())
+            ));
+            const isArena = ['s_bracket', 'king'].includes(participant.status);
+            const maySeeName = revealAll || isSelf || isOpponent || isArena;
+            return {
+                id: participant.id,
+                tier: participant.tier,
+                status: participant.status,
+                upperWins: participant.upperWins,
+                upperLosses: participant.upperLosses,
+                lowerWins: participant.lowerWins,
+                lowerLosses: participant.lowerLosses,
+                kingQualified: participant.kingQualified,
+                iconKey: stableIconFor(participant),
+                isSelf,
+                isOpponent,
+                showName: maySeeName,
+                name: maySeeName ? participant.name : null
+            };
+        });
+        res.json({
+            participants: sanitized,
+            viewer: {
+                isAdmin: viewer.isAdmin,
+                canRevealNames: viewer.isAdmin,
+                hasPlayer: Boolean(own),
+                revealNames: revealAll
+            }
+        });
     }
     catch (err) { res.status(500).json({ error: 'Failed to fetch stage 2' }); }
 });
