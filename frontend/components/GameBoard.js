@@ -52,7 +52,8 @@ function PlayerPanel({ self, king, guardian, snapshot, send, onMystery, onFind }
     const ctx = snapshot.context;
     const lower = self?.status === 'lower';
     const center = ['s_bracket', 'king'].includes(self?.status);
-    const wins = center ? 0 : Number(lower ? self?.lowerWins : self?.upperWins) || ctx.wins || 0;
+    const recordedWins = Number(lower ? self?.lowerWins : self?.upperWins) || 0;
+    const wins = center ? 0 : Math.max(recordedWins, ctx.wins || 0);
     const losses = Number(lower ? self?.lowerLosses : self?.upperLosses) || 0;
 
     return <aside className="dnd-player-panel">
