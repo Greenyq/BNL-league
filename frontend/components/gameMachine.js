@@ -9,11 +9,20 @@ export const gameMachine = setup({
         won: ({ event }) => event.result === 'win',
         unlocksFork: ({ context, event }) => event.result === 'win' && context.streak + 1 >= 2,
         choseMystery: ({ event }) => event.path === 'mystery',
-        isDragon: ({ context }) => context.encounter === 'dragon'
+        isDragon: ({ context }) => context.encounter === 'dragon',
+        serverUnlocksFork: ({ event }) => event.result === 'win' && event.streak >= 2,
+        serverWon: ({ event }) => event.result === 'win'
     },
     actions: {
         gainWin: assign(({ context }) => ({ wins: Math.min(3, context.wins + 1), streak: context.streak + 1 })),
-        lose: assign({ streak: 0 }),
+        lose: assign(({ context }) => ({ streak: 0, losses: context.losses + 1 })),
+        syncServer: assign(({ context, event }) => ({
+            wins: event.wins ?? context.wins,
+            losses: event.losses ?? context.losses,
+            streak: event.streak ?? context.streak,
+            status: event.status ?? context.status,
+            arenaShield: event.arenaShield ?? context.arenaShield
+        })),
         rememberPath: assign(({ event }) => ({ selectedPath: event.path })),
         reveal: assign(({ event }) => ({ encounter: event.encounter })),
         earnShield: assign({ arenaShield: true }),
@@ -24,7 +33,9 @@ export const gameMachine = setup({
     initial: 'ready',
     context: ({ input }) => ({
         wins: input?.wins || 0,
+        losses: input?.losses || 0,
         streak: input?.streak || 0,
+        status: input?.status || 'upper',
         arenaShield: Boolean(input?.arenaShield),
         selectedPath: null,
         encounter: null
@@ -35,8 +46,15 @@ export const gameMachine = setup({
                 RESULT: [
                     { guard: 'unlocksFork', target: 'choosingPath', actions: 'gainWin' },
                     { guard: 'won', target: 'moving', actions: 'gainWin' },
-                    { target: 'ready', actions: 'lose' }
-                ]
+                    { target: 'defeat', actions: 'lose' }
+                ],
+                SERVER_RESULT: [
+                    { guard: 'serverUnlocksFork', target: 'choosingPath', actions: 'syncServer' },
+                    { guard: 'serverWon', target: 'moving', actions: 'syncServer' },
+                    { target: 'defeat', actions: 'syncServer' }
+                ],
+                RESTORE_ENCOUNTER: { target: 'encounter', actions: 'reveal' },
+                SYNC: { actions: 'syncServer' }
             }
         },
         choosingPath: {
@@ -48,6 +66,7 @@ export const gameMachine = setup({
             }
         },
         moving: { on: { MOTION_DONE: 'ready' } },
+        defeat: { on: { MOTION_DONE: 'ready', SYNC: { actions: 'syncServer' } } },
         movingToMystery: { on: { MOTION_DONE: 'revealing' } },
         revealing: { on: { REVEAL: { target: 'encounter', actions: 'reveal' } } },
         encounter: {
