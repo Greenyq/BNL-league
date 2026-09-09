@@ -58,6 +58,10 @@ export function GameBoard({ participants = [], viewer = {}, revealNames = false,
     React.useEffect(() => () => actor.stop(), [actor]);
     const send = event => actor.send(event);
     const mysteryActive = snapshot.matches('movingToMystery') || snapshot.matches('revealing');
+    const safeMoveActive = snapshot.matches('moving') && snapshot.context.selectedPath === 'safe';
+    const ordinaryProgressX = snapshot.context.wins >= 2 ? 76 : 0;
+    const tokenX = snapshot.context.selectedPath === 'safe' ? 152 : ordinaryProgressX;
+    const tokenY = snapshot.context.selectedPath === 'mystery' ? 34 : 0;
     React.useEffect(() => {
         if (!snapshot.matches('revealing')) return;
         const id = setTimeout(() => send({ type:'REVEAL', encounter: encounterSeed % 2 ? 'dragon' : 'dungeon' }), 650);
@@ -79,7 +83,7 @@ export function GameBoard({ participants = [], viewer = {}, revealNames = false,
             <svg className="dnd-board-effects" viewBox="0 0 1200 675" aria-hidden="true">
                 <Portal active={mysteryActive || snapshot.context.arenaShield}/>
                 {ROUTES.map(route => <path key={route.id} d={route.d} className="dnd-route-sheen" style={{stroke:route.color}}/>)}
-                <motion.g animate={{x: mysteryActive ? 76 : 0, y: mysteryActive ? 34 : 0}} transition={{duration:1.15,ease:[.22,1,.36,1]}} onAnimationComplete={() => mysteryActive && send({type:'MOTION_DONE'})}>
+                <motion.g animate={{x:tokenX,y:tokenY}} transition={{duration:1.15,ease:[.22,1,.36,1]}} onAnimationComplete={() => (mysteryActive || safeMoveActive) && send({type:'MOTION_DONE'})}>
                     {demo && <g transform="translate(348 78)"><circle r="22" className="dnd-demo-token-ring"/><circle r="16" className="dnd-demo-token"/><text y="4" textAnchor="middle">YOU</text></g>}
                 </motion.g>
                 {snapshot.matches('choosingPath') && <g className="dnd-fork-beacon"><circle cx="430" cy="120" r="25"/><text x="430" y="126" textAnchor="middle">?</text></g>}
