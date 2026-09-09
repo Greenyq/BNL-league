@@ -7,10 +7,10 @@ export const gameMachine = setup({
     },
     guards: {
         won: ({ event }) => event.result === 'win',
-        unlocksFork: ({ context, event }) => event.result === 'win' && context.streak + 1 >= 2,
+        unlocksFork: ({ context, event }) => event.result === 'win' && !context.mysteryUsed,
         choseMystery: ({ event }) => event.path === 'mystery',
         isDragon: ({ context }) => context.encounter === 'dragon',
-        serverUnlocksFork: ({ event }) => event.result === 'win' && event.streak >= 2,
+        serverUnlocksFork: ({ context, event }) => event.result === 'win' && !(event.mysteryUsed ?? context.mysteryUsed),
         serverWon: ({ event }) => event.result === 'win'
     },
     actions: {
@@ -21,9 +21,10 @@ export const gameMachine = setup({
             losses: event.losses ?? context.losses,
             streak: event.streak ?? context.streak,
             status: event.status ?? context.status,
-            arenaShield: event.arenaShield ?? context.arenaShield
+            arenaShield: event.arenaShield ?? context.arenaShield,
+            mysteryUsed: event.mysteryUsed ?? context.mysteryUsed
         })),
-        rememberPath: assign(({ event }) => ({ selectedPath: event.path })),
+        rememberPath: assign(({ context, event }) => ({ selectedPath: event.path, mysteryUsed: context.mysteryUsed || event.path === 'mystery' })),
         reveal: assign(({ event }) => ({ encounter: event.encounter })),
         earnShield: assign({ arenaShield: true }),
         resetEncounter: assign({ selectedPath: null, encounter: null })
@@ -37,6 +38,7 @@ export const gameMachine = setup({
         streak: input?.streak || 0,
         status: input?.status || 'upper',
         arenaShield: Boolean(input?.arenaShield),
+        mysteryUsed: Boolean(input?.mysteryUsed),
         selectedPath: null,
         encounter: null
     }),
