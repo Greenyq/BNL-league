@@ -8,6 +8,7 @@ const { suggestDuelPoints } = require('../services/duelScoring');
 const router = express.Router();
 const tierOf = (player, stats) => player.tierOverride || stats?.tier || getTierFromMmr(stats?.mmr || player.currentMmr || 0).value;
 const STAGE2_ICON_POOLS = {
+    C: ['b-leaf-swirl', 'b-crystal-growth', 'b-stag-head', 'b-snowflake-1'],
     B: ['b-leaf-swirl', 'b-wolf-head', 'b-stag-head', 'b-crystal-growth', 'b-snowflake-1'],
     A: ['a-fire-punch', 'a-daemon-skull', 'a-battle-axe', 'a-horned-helm', 'a-burning-eye'],
     S: ['s-queen-crown', 's-star-swirl', 's-crossed-swords', 's-laurels', 's-hourglass']
@@ -89,6 +90,53 @@ const sendOutOfCenter = participant => {
         participant.lowerWins = 0;
         participant.lowerLosses = 0;
     }
+};
+
+const matchmakingGroup = participant => ['s_bracket', 'king'].includes(participant.status)
+    ? `center:${participant.tier}`
+    : `${participant.status}:${participant.tier}`;
+
+// Fill every currently available slot without changing tournament results.
+// Results and bracket movement remain admin-only operations.
+async function autoAssignOpenMatches() {
+    const participants = await Stage2Participant.find({
+        status: { $ne: 'eliminated' },
+        assignedOpponentId: null,
+        specialMoveReady: { $ne: true },
+        encounterStatus: { $nin: ['awaiting_admin', 'pending'] }
+    }).sort({ updatedAt: 1, tier: 1 });
+    const groups = new Map();
+    for (const participant of participants) {
+        const key = matchmakingGroup(participant);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(participant);
+    }
+    const assigned = [];
+    for (const pool of groups.values()) {
+        while (pool.length > 1) {
+            const a = pool.shift();
+            const previous = new Set((a.opponents || []).map(String));
+            let opponentIndex = pool.findIndex(candidate => !previous.has(String(candidate.playerId)));
+            if (opponentIndex < 0) opponentIndex = 0;
+            const [b] = pool.splice(opponentIndex, 1);
+            const now = new Date();
+            a.assignedOpponentId = b.playerId; a.assignedAt = now;
+            b.assignedOpponentId = a.playerId; b.assignedAt = now;
+            if (!a.opponents.includes(String(b.playerId))) a.opponents.push(String(b.playerId));
+            if (!b.opponents.includes(String(a.playerId))) b.opponents.push(String(a.playerId));
+            a.updatedAt = b.updatedAt = now;
+            await Promise.all([a.save(), b.save()]);
+            assigned.push({ playerA: a.name, playerB: b.name, group: matchmakingGroup(a) });
+        }
+    }
+    return assigned;
+}
+
+let matchmakingQueue = Promise.resolve();
+const queueAutoAssignment = () => {
+    const next = matchmakingQueue.then(() => autoAssignOpenMatches());
+    matchmakingQueue = next.catch(() => {});
+    return next;
 };
 
 async function promotedPlayerReachedCenter() {
@@ -210,7 +258,7 @@ router.post('/stage2/initialize', checkAuth, async (req, res) => {
         let initialized = 0;
         for (const player of players) {
             const numericTier = tierOf(player, statsByTag[player.battleTag.toLowerCase()]);
-            const tier = ({ 2: 'B', 3: 'A', 4: 'S' })[numericTier];
+            const tier = ({ 1: 'C', 2: 'B', 3: 'A', 4: 'S' })[numericTier];
             if (!tier) continue;
             const participant = await Stage2Participant.findOneAndUpdate(
                 { playerId: player.id },
@@ -231,7 +279,8 @@ router.post('/stage2/initialize', checkAuth, async (req, res) => {
             }
             initialized++;
         }
-        res.json({ initialized });
+        const assigned = await queueAutoAssignment();
+        res.json({ initialized, assigned });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -278,6 +327,7 @@ router.post('/stage2/:id/special-path', async (req, res) => {
         }
         participant.updatedAt = new Date();
         await participant.save();
+        if (path === 'safe') await queueAutoAssignment();
         // The selected player's identity stays server-side until an admin opens the match.
         res.json({ path, encounterType: participant.encounterType, encounterStatus: participant.encounterStatus });
     } catch (err) { res.status(500).json({ error: err.message }); }
@@ -297,13 +347,20 @@ router.post('/stage2/assign-match', checkAuth, async (req, res) => {
         if (a.status === 'eliminated' || b.status === 'eliminated')
             return res.status(409).json({ error: 'Eliminated players cannot be assigned' });
         const center = value => ['s_bracket', 'king'].includes(value);
-        if (!(center(a.status) && center(b.status)) && (a.status !== b.status || a.tier !== b.tier))
+        if (a.tier !== b.tier || (!(center(a.status) && center(b.status)) && a.status !== b.status))
             return res.status(409).json({ error: 'Players must be in the same tier and bracket' });
         const now = new Date();
         a.assignedOpponentId = b.playerId; a.assignedAt = now;
         b.assignedOpponentId = a.playerId; b.assignedAt = now;
         await Promise.all([a.save(), b.save()]);
         res.json({ success: true, playerA: a.name, playerB: b.name, assignedAt: now });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/stage2/auto-assign', checkAuth, async (req, res) => {
+    try {
+        const assigned = await queueAutoAssignment();
+        res.json({ assigned, count: assigned.length });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -331,7 +388,7 @@ router.post('/stage2/:id/encounter-result', checkAuth, async (req, res) => {
         const opponent = await Stage2Participant.findOne({ playerId: challenger.encounterOpponentId });
         if (!opponent) return res.status(404).json({ error: 'Encounter opponent not found' });
         const challengerWon = req.body.challengerWon === true;
-        const tierNumber = { B: 2, A: 3, S: 4 };
+        const tierNumber = { C: 1, B: 2, A: 3, S: 4 };
         const duel = await Duel.create({
             phase: 'encounter', tierGroup: challenger.tier,
             playerA: { playerId: challenger.playerId, battleTag: challenger.battleTag, name: challenger.name, tier: tierNumber[challenger.tier], points: 0 },
@@ -346,6 +403,7 @@ router.post('/stage2/:id/encounter-result', checkAuth, async (req, res) => {
         }
         challenger.updatedAt = new Date();
         await challenger.save();
+        await queueAutoAssignment();
         res.status(201).json({ duel, encounterStatus: challenger.encounterStatus, arenaShield: challenger.arenaShield });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -371,13 +429,13 @@ router.post('/', checkAuth, async (req, res) => {
         if (!a || !b) return res.status(404).json({ error: 'Player not found' });
         const [sa, sb] = await Promise.all([PlayerStats.findOne({ battleTag: a.battleTag }), PlayerStats.findOne({ battleTag: b.battleTag })]);
         const tierA = tierOf(a, sa), tierB = tierOf(b, sb);
-        const groupA = ({ 2: 'B', 3: 'A', 4: 'S' })[tierA], groupB = ({ 2: 'B', 3: 'A', 4: 'S' })[tierB];
+        const groupA = ({ 1: 'C', 2: 'B', 3: 'A', 4: 'S' })[tierA], groupB = ({ 1: 'C', 2: 'B', 3: 'A', 4: 'S' })[tierB];
         if (!groupA || !groupB) return res.status(400).json({ error: 'Both players must belong to B, A, or S tier' });
         const [pa, pb] = await Promise.all([Stage2Participant.findOne({ playerId: a.id }), Stage2Participant.findOne({ playerId: b.id })]);
         if (!pa || !pb) return res.status(400).json({ error: 'Initialize Stage 2 first' });
         const isKingMatch = pa.status === 'king' || pb.status === 'king';
         const isCenterMatch = ['s_bracket', 'king'].includes(pa.status) && ['s_bracket', 'king'].includes(pb.status);
-        if (!isCenterMatch && (pa.status !== pb.status || groupA !== groupB)) return res.status(400).json({ error: 'Players must be in the same tier and bracket' });
+        if (groupA !== groupB || (!isCenterMatch && pa.status !== pb.status)) return res.status(400).json({ error: 'Players must be in the same tier and bracket' });
         const pairWasAssigned = String(pa.assignedOpponentId || '') === String(pb.playerId)
             && String(pb.assignedOpponentId || '') === String(pa.playerId);
         if (!pairWasAssigned) return res.status(409).json({ error: 'Admin must assign this match before recording its result' });
@@ -453,6 +511,7 @@ router.post('/', checkAuth, async (req, res) => {
         pa.assignedOpponentId = null; pa.assignedAt = null;
         pb.assignedOpponentId = null; pb.assignedAt = null;
         await Promise.all([pa.save(), pb.save()]);
+        await queueAutoAssignment();
         res.status(201).json(duel);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });

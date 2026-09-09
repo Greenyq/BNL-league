@@ -303,16 +303,20 @@ function LegacyStage2Arena({ participants, viewer, revealNames, onRevealNames })
         arena.scrollTop = Math.max(0, (arena.scrollHeight - arena.clientHeight) / 2);
     }, [expanded]);
     const groups = {
+        upperC: participants.filter(p => p.tier === 'C' && p.status === 'upper'),
         upperB: participants.filter(p => p.tier === 'B' && p.status === 'upper'),
         upperA: participants.filter(p => p.tier === 'A' && p.status === 'upper'),
         lowerA: participants.filter(p => p.tier === 'A' && p.status === 'lower'),
         lowerB: participants.filter(p => p.tier === 'B' && p.status === 'lower'),
+        lowerC: participants.filter(p => p.tier === 'C' && p.status === 'lower'),
         center: participants.filter(p => ['s_bracket', 'king'].includes(p.status)),
         eliminated: participants.filter(p => p.status === 'eliminated')
     };
     const pathRefs = React.useRef({});
     const [pieces, setPieces] = React.useState([]);
     const paths = [
+        { id: 'upperC', list: groups.upperC, wins: 'upperWins', tier: 'C', bracket: 'upper', d: 'M82 78 C205 52 330 72 420 112 C500 147 555 151 600 188' },
+        { id: 'lowerC', list: groups.lowerC, wins: 'lowerWins', tier: 'C', bracket: 'lower', d: 'M92 582 C215 550 342 555 448 510 C520 480 568 447 600 408' },
         { id: 'upperB', list: groups.upperB, wins: 'upperWins', tier: 'B', bracket: 'upper', d: 'M82 108 C205 72 320 82 410 118 C492 151 555 151 600 188' },
         { id: 'lowerB', list: groups.lowerB, wins: 'lowerWins', tier: 'B', bracket: 'lower', d: 'M92 542 C215 510 342 520 448 493 C520 474 568 447 600 408' },
         { id: 'upperA', list: groups.upperA, wins: 'upperWins', tier: 'A', bracket: 'upper', d: 'M1118 108 C995 72 880 82 790 118 C708 151 645 151 600 188' },

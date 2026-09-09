@@ -255,7 +255,7 @@ const LANGS = {
         'hero.how2_title': '2. Уведомления в Discord',
         'hero.how2_desc':  'Все участники лиги получат уведомление в Discord: о назначении клан-вара, назначении капитанов и начале драфта.',
         'hero.how3_title': '3. Драфт',
-        'hero.how3_desc':  'Капитаны по очереди выбирают игроков из пула. Игроки разбиты на тиры: Tier B (1000–1400 MMR), Tier A (1400–1700 MMR), Tier S (1700+ MMR).',
+        'hero.how3_desc':  'Игроки разделены на четыре тира: C (800–1349 MMR), B (1350–1549), A (1550–1849), S (1850+).',
         'hero.how4_title': '4. Очки',
         'hero.how4_desc':  'После матчей очки начисляются автоматически по данным W3Champions с учётом разницы MMR соперников.',
     },
@@ -512,7 +512,7 @@ const LANGS = {
         'hero.how2_title': '2. Discord Notifications',
         'hero.how2_desc':  'All league players will be notified on Discord: about clan war schedules, captain assignments, and when drafting begins.',
         'hero.how3_title': '3. Draft',
-        'hero.how3_desc':  'Captains take turns picking players from the pool by tier: Tier B (1000–1400 MMR), Tier A (1400–1700 MMR), Tier S (1700+ MMR).',
+        'hero.how3_desc':  'Players are divided into four tiers: C (800–1349 MMR), B (1350–1549), A (1550–1849), and S (1850+).',
         'hero.how4_title': '4. Points',
         'hero.how4_desc':  'After matches, points are awarded automatically from W3Champions data based on MMR difference.',
     }

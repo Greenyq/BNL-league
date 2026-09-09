@@ -34,9 +34,9 @@ function getLadderMatchPoints(mmrDifference, won) {
 
 function getTierFromMmr(mmr = 0) {
     const value = Number(mmr) || 0;
-    if (value >= 1800) return { value: 4, label: 'S' };
-    if (value >= 1500) return { value: 3, label: 'A' };
-    if (value >= 1200) return { value: 2, label: 'B' };
+    if (value >= 1850) return { value: 4, label: 'S' };
+    if (value >= 1550) return { value: 3, label: 'A' };
+    if (value >= 1350) return { value: 2, label: 'B' };
     if (value >= 800)  return { value: 1, label: 'C' };
     return { value: 0, label: '-' };
 }

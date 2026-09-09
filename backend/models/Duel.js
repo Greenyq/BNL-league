@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const duelSchema = new mongoose.Schema({
     phase:     { type: String, enum: ['qualifier', 'upper', 'lower', 'king', 's_bracket', 'encounter'], default: 'qualifier', index: true },
-    tierGroup: { type: String, enum: ['B', 'A', 'S'], required: true, index: true },
+    tierGroup: { type: String, enum: ['C', 'B', 'A', 'S'], required: true, index: true },
     playerA: {
         playerId:  { type: String, required: true, index: true },
         battleTag: { type: String, required: true, index: true },
@@ -36,7 +36,7 @@ const stage2ParticipantSchema = new mongoose.Schema({
     playerId:  { type: String, required: true, unique: true, index: true },
     battleTag: { type: String, required: true, unique: true, index: true },
     name:      { type: String, required: true },
-    tier:      { type: String, enum: ['B', 'A', 'S'], required: true, index: true },
+    tier:      { type: String, enum: ['C', 'B', 'A', 'S'], required: true, index: true },
     status:    { type: String, enum: ['qualifier', 'upper', 'lower', 'king', 's_bracket', 'eliminated'], required: true },
     qualifierWins:   { type: Number, default: 0 },
     qualifierLosses: { type: Number, default: 0 },
