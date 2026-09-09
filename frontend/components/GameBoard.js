@@ -17,7 +17,7 @@ function DragonMark() {
     return <svg viewBox="0 0 180 110" className="dnd-dragon"><path d="M92 54c24-39 54-43 78-38-19 9-25 23-27 38 12-8 24-9 35-5-14 8-24 20-29 36-18-16-34-20-49-13-4 19-20 30-43 29 14-8 19-18 16-30-21 8-39 5-55-9 20 2 35-5 46-19-13-5-23-14-29-27 22 4 39 14 52 29l5 9Z" /></svg>;
 }
 
-function EncounterOverlay({ snapshot, send, guardian }) {
+function EncounterOverlay({ snapshot, send, guardian, demo }) {
     const dragon = snapshot.matches('dragon');
     const dungeon = snapshot.matches('dungeon');
     const reward = snapshot.matches('reward');
@@ -29,13 +29,13 @@ function EncounterOverlay({ snapshot, send, guardian }) {
                 <motion.div initial={{ x: 380, y: -180, rotate: 18 }} animate={{ x: 0, y: 0, rotate: 0 }} transition={{ duration: 1.1 }}><DragonMark /></motion.div>
                 <small>DRAGON PLAYER AWAKENED</small><h3>{guardian || 'Hidden Player'}</h3>
                 <p>Реальный участник временно становится Ancient Dragon. Победи его в BO3 и получи Arena Shield.</p>
-                <button onClick={() => send({ type: 'ENCOUNTER_WON' })}>Симулировать победу</button>
+                {demo ? <button onClick={() => send({ type: 'ENCOUNTER_WON' })}>Симулировать победу</button> : <div className="dnd-await-result">Ожидается официальный результат боя</div>}
             </>}
             {dungeon && <>
                 <div className="dnd-gate"><i /><span>ᛝ</span><i /></div><small>DUNGEON BOSS REVEALED</small><h3>{guardian || 'Hidden Player'}</h3>
                 <div className="dnd-versus"><b>YOU</b><em>VS</em><b>{guardian || 'PLAYER'}</b></div>
                 <p>Босс данжа — случайно выбранный реальный участник лиги.</p>
-                <button onClick={() => send({ type: 'ENCOUNTER_WON' })}>Симулировать победу</button>
+                {demo ? <button onClick={() => send({ type: 'ENCOUNTER_WON' })}>Симулировать победу</button> : <div className="dnd-await-result">Ожидается официальный результат боя</div>}
             </>}
             {reward && <>
                 <motion.div className="dnd-shield-large" initial={{ scale: 0, rotate: -25 }} animate={{ scale: 1, rotate: 0 }}>◆</motion.div>
@@ -48,21 +48,23 @@ function EncounterOverlay({ snapshot, send, guardian }) {
     </motion.div></AnimatePresence>;
 }
 
-function PlayerPanel({ self, king, guardian, snapshot, send, onMystery, onFind }) {
+function PlayerPanel({ self, king, guardian, snapshot, onSafe, onMystery, onFind, pathError }) {
     const ctx = snapshot.context;
     const lower = self?.status === 'lower';
     const center = ['s_bracket', 'king'].includes(self?.status);
     const recordedWins = Number(lower ? self?.lowerWins : self?.upperWins) || 0;
     const wins = center ? 0 : Math.max(recordedWins, ctx.wins || 0);
-    const losses = Number(lower ? self?.lowerLosses : self?.upperLosses) || 0;
+    const recordedLosses = Number(lower ? self?.lowerLosses : self?.upperLosses) || 0;
+    const losses = Math.max(recordedLosses, ctx.losses || 0);
 
     return <aside className="dnd-player-panel">
         <header><span className="dnd-panel-avatar">{self?.tier || 'B'}</span><div><small>PLAYER CAMPAIGN</small><h3>{self?.name || 'Guest Adventurer'}</h3><p>{center ? 'S Arena' : `Tier ${self?.tier || 'B'} · ${lower ? 'Lower' : 'Upper'} Bracket`}</p></div></header>
         <section><label>ROAD TO THE ARENA <b>{wins}/3</b></label><div className="dnd-runes">{[1, 2, 3].map(n => <i key={n} className={n <= wins ? 'is-lit' : ''} />)}</div></section>
         <div className="dnd-panel-stats"><span><small>LOSSES</small><b>{losses}/{lower ? 1 : 2}</b></span><span><small>WIN STREAK</small><b className="is-fire">🔥 ×{ctx.streak}</b></span></div>
         {snapshot.matches('choosingPath') ? <section className="dnd-panel-choice"><label>CHOOSE YOUR PATH</label>
-            <button onClick={() => send({ type: 'CHOOSE_PATH', path: 'safe' })}><b>Safe Road</b><small>Следующая обычная дуэль</small></button>
+            <button onClick={onSafe}><b>Safe Road</b><small>Следующая обычная дуэль</small></button>
             <button className="is-mystery" onClick={onMystery}><b>Mystery Road</b><small>Dragon Player или Dungeon Boss</small></button>
+            {pathError && <p className="dnd-path-error">{pathError}</p>}
         </section> : <section className="dnd-next-battle"><label>NEXT BATTLE</label><div><strong>{self?.name || 'YOU'}</strong><em>VS</em><strong>{guardian || 'TBD'}</strong></div><small>{center && king ? `King: ${king.name}` : 'Official BO3 duel'}</small></section>}
         <section className={`dnd-panel-relic${ctx.arenaShield ? ' has-relic' : ''}`}><span>{ctx.arenaShield ? '◆' : '◇'}</span><div><label>{ctx.arenaShield ? 'ARENA SHIELD' : 'NO RELIC'}</label><small>{ctx.arenaShield ? '1 charge · S Arena only' : 'Win a special encounter'}</small></div></section>
         <button className="dnd-find-button" onClick={onFind}>⌖ Найти меня на карте</button>
@@ -106,28 +108,68 @@ function CampaignMap({ participants, snapshot, demo, focus }) {
     </svg></div>;
 }
 
-export function GameBoard({ participants = [] }) {
+export function GameBoard({ participants = [], duels = [], viewer = {} }) {
     const demo = new URLSearchParams(location.search).get('dndDemo') === '1';
     const self = participants.find(p => p.isSelf) || participants[0];
     const king = participants.find(p => p.status === 'king');
-    const [actor] = React.useState(() => createActor(gameMachine, { input: { wins: self?.status === 'lower' ? self.lowerWins : self?.upperWins || 0, streak: 0, arenaShield: self?.arenaShield } }).start());
+    const initialWins = self?.status === 'lower' ? self?.lowerWins : self?.upperWins;
+    const initialLosses = self?.status === 'lower' ? self?.lowerLosses : self?.upperLosses;
+    const [actor] = React.useState(() => createActor(gameMachine, { input: { wins: initialWins || 0, losses: initialLosses || 0, streak: self?.winStreak || 0, status: self?.status, arenaShield: self?.arenaShield } }).start());
     const [snapshot, setSnapshot] = React.useState(actor.getSnapshot());
     const [seed, setSeed] = React.useState(0);
     const [focus, setFocus] = React.useState(0);
+    const [assignedEncounter, setAssignedEncounter] = React.useState(null);
+    const [pathError, setPathError] = React.useState('');
+    const previousServerState = React.useRef(null);
     React.useEffect(() => { const sub = actor.subscribe(setSnapshot); setSnapshot(actor.getSnapshot()); return () => sub.unsubscribe(); }, [actor]);
     React.useEffect(() => () => actor.stop(), [actor]);
     const send = event => actor.send(event);
-    React.useEffect(() => { if (!snapshot.matches('moving') && !snapshot.matches('movingToMystery')) return; const id = setTimeout(() => send({ type: 'MOTION_DONE' }), 1300); return () => clearTimeout(id); }, [snapshot.value]);
-    React.useEffect(() => { if (!snapshot.matches('revealing')) return; const id = setTimeout(() => send({ type: 'REVEAL', encounter: seed % 2 ? 'dragon' : 'dungeon' }), 600); return () => clearTimeout(id); }, [snapshot.value, seed]);
+    React.useEffect(() => { if (!snapshot.matches('moving') && !snapshot.matches('movingToMystery') && !snapshot.matches('defeat')) return; const id = setTimeout(() => send({ type: 'MOTION_DONE' }), 1300); return () => clearTimeout(id); }, [snapshot.value]);
+    React.useEffect(() => { if (!snapshot.matches('revealing')) return; const id = setTimeout(() => send({ type: 'REVEAL', encounter: assignedEncounter?.type || (seed % 2 ? 'dragon' : 'dungeon') }), 600); return () => clearTimeout(id); }, [snapshot.value, seed, assignedEncounter]);
+    const serverWins = Number(self?.status === 'lower' ? self?.lowerWins : self?.upperWins) || 0;
+    const serverLosses = Number(self?.status === 'lower' ? self?.lowerLosses : self?.upperLosses) || 0;
+    React.useEffect(() => {
+        if (!self || demo) return;
+        const current = { wins: serverWins, losses: serverLosses, streak: Number(self.winStreak) || 0, status: self.status, arenaShield: Boolean(self.arenaShield) };
+        const previous = previousServerState.current;
+        previousServerState.current = current;
+        if (!previous) {
+            if (self.encounterStatus === 'pending' && self.encounterType) {
+                setAssignedEncounter({ type: self.encounterType, name: self.encounterOpponentName });
+                send({ type: 'RESTORE_ENCOUNTER', encounter: self.encounterType });
+            } else if (self.specialMoveReady) send({ type: 'SERVER_RESULT', result: 'win', ...current });
+            else send({ type: 'SYNC', ...current });
+            return;
+        }
+        const won = current.wins > previous.wins || (current.status === 's_bracket' && previous.status !== 's_bracket' && current.losses <= previous.losses);
+        const lost = current.losses > previous.losses || current.status === 'lower' && previous.status === 'upper' || current.status === 'eliminated' && previous.status !== 'eliminated';
+        if (won || lost) send({ type: 'SERVER_RESULT', result: won ? 'win' : 'loss', ...current });
+        else send({ type: 'SYNC', ...current });
+    }, [self?.id, self?.status, serverWins, serverLosses, self?.winStreak, self?.arenaShield, self?.specialMoveReady, self?.encounterStatus]);
     const candidates = participants.filter(p => p.id !== self?.id && p.status !== 'eliminated');
-    const guardian = candidates[seed % Math.max(1, candidates.length)];
-    const chooseMystery = () => { setSeed(v => v + 1); send({ type: 'CHOOSE_PATH', path: 'mystery' }); };
+    const officialOpponent = participants.find(p => p.isOpponent);
+    const guardian = officialOpponent || candidates[seed % Math.max(1, candidates.length)];
+    const guardianName = assignedEncounter?.name || guardian?.name;
+    const choosePath = async path => {
+        setPathError('');
+        if (demo) { if (path === 'mystery') setSeed(v => v + 1); send({ type: 'CHOOSE_PATH', path }); return; }
+        try {
+            const playerSession = localStorage.getItem('bnl_player_session') || '';
+            const adminSession = localStorage.getItem('bnl_admin_session') || '';
+            const response = await fetch(`/api/duels/stage2/${self.id}/special-path`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(playerSession ? { 'x-player-session-id': playerSession } : {}), ...(adminSession ? { 'x-session-id': adminSession } : {}) }, body: JSON.stringify({ path }) });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Не удалось выбрать путь');
+            if (data.encounterType) setAssignedEncounter({ type: data.encounterType, name: data.encounterOpponentName });
+            send({ type: 'CHOOSE_PATH', path });
+        } catch (err) { setPathError(err.message); }
+    };
     const findSelf = () => { setFocus(v => v + 1); setTimeout(() => setFocus(0), 1200); };
 
     return <div className="dnd-board-shell">
         <div className="dnd-board-heading"><div><small>BNL CAMPAIGN</small><h3>Road to the Frozen Throne</h3></div><div className="dnd-live"><i /> LIVE TOURNAMENT</div></div>
-        <div className="dnd-campaign-layout"><CampaignMap participants={participants} snapshot={snapshot} demo={demo} focus={focus} /><PlayerPanel self={self} king={king} guardian={guardian?.name} snapshot={snapshot} send={send} onMystery={chooseMystery} onFind={findSelf} /></div>
+        <div className={`dnd-campaign-layout${snapshot.matches('defeat') ? ' is-defeat' : ''}`}><CampaignMap participants={participants} snapshot={snapshot} demo={demo} focus={focus} /><PlayerPanel self={self} king={king} guardian={guardianName} snapshot={snapshot} onSafe={() => choosePath('safe')} onMystery={() => choosePath('mystery')} onFind={findSelf} pathError={pathError} /></div>
+        <AnimatePresence>{snapshot.matches('defeat') && <motion.div className="dnd-result-banner is-loss" initial={{ opacity: 0, scale: .8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}><b>DEFEAT</b><span>Серия побед сброшена</span></motion.div>}</AnimatePresence>
         {demo && <div className="dnd-demo-controls"><strong>Demo controls</strong><button onClick={() => send({ type: 'RESULT', result: 'win' })}>⚔ Победа</button><button onClick={() => send({ type: 'RESULT', result: 'loss' })}>☠ Поражение</button><span>Победы: {snapshot.context.wins}/3 · Streak: {snapshot.context.streak}</span></div>}
-        <EncounterOverlay snapshot={snapshot} send={send} guardian={guardian?.name} />
+        <EncounterOverlay snapshot={snapshot} send={send} guardian={guardianName} demo={demo} />
     </div>;
 }
