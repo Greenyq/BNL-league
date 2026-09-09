@@ -51,6 +51,7 @@ const stage2ParticipantSchema = new mongoose.Schema({
     arenaShieldUsedAt: { type: Date, default: null },
     winStreak:       { type: Number, default: 0 },
     specialMoveReady: { type: Boolean, default: false },
+    mysteryUsed:     { type: Boolean, default: false },
     specialPath:     { type: String, enum: ['safe', 'mystery', null], default: null },
     encounterType:   { type: String, enum: ['dragon', 'dungeon', null], default: null },
     encounterOpponentId: { type: String, default: null },
