@@ -114,7 +114,7 @@ export function GameBoard({ participants = [], duels = [], viewer = {} }) {
     const king = participants.find(p => p.status === 'king');
     const initialWins = self?.status === 'lower' ? self?.lowerWins : self?.upperWins;
     const initialLosses = self?.status === 'lower' ? self?.lowerLosses : self?.upperLosses;
-    const [actor] = React.useState(() => createActor(gameMachine, { input: { wins: initialWins || 0, losses: initialLosses || 0, streak: self?.winStreak || 0, status: self?.status, arenaShield: self?.arenaShield } }).start());
+    const [actor] = React.useState(() => createActor(gameMachine, { input: { wins: initialWins || 0, losses: initialLosses || 0, streak: self?.winStreak || 0, status: self?.status, arenaShield: self?.arenaShield, mysteryUsed: self?.mysteryUsed } }).start());
     const [snapshot, setSnapshot] = React.useState(actor.getSnapshot());
     const [seed, setSeed] = React.useState(0);
     const [focus, setFocus] = React.useState(0);
@@ -130,7 +130,7 @@ export function GameBoard({ participants = [], duels = [], viewer = {} }) {
     const serverLosses = Number(self?.status === 'lower' ? self?.lowerLosses : self?.upperLosses) || 0;
     React.useEffect(() => {
         if (!self || demo) return;
-        const current = { wins: serverWins, losses: serverLosses, streak: Number(self.winStreak) || 0, status: self.status, arenaShield: Boolean(self.arenaShield) };
+        const current = { wins: serverWins, losses: serverLosses, streak: Number(self.winStreak) || 0, status: self.status, arenaShield: Boolean(self.arenaShield), mysteryUsed: Boolean(self.mysteryUsed) };
         const previous = previousServerState.current;
         previousServerState.current = current;
         if (!previous) {
@@ -145,7 +145,7 @@ export function GameBoard({ participants = [], duels = [], viewer = {} }) {
         const lost = current.losses > previous.losses || current.status === 'lower' && previous.status === 'upper' || current.status === 'eliminated' && previous.status !== 'eliminated';
         if (won || lost) send({ type: 'SERVER_RESULT', result: won ? 'win' : 'loss', ...current });
         else send({ type: 'SYNC', ...current });
-    }, [self?.id, self?.status, serverWins, serverLosses, self?.winStreak, self?.arenaShield, self?.specialMoveReady, self?.encounterStatus]);
+    }, [self?.id, self?.status, serverWins, serverLosses, self?.winStreak, self?.arenaShield, self?.mysteryUsed, self?.specialMoveReady, self?.encounterStatus]);
     const candidates = participants.filter(p => p.id !== self?.id && p.status !== 'eliminated');
     const officialOpponent = participants.find(p => p.isOpponent);
     const guardian = officialOpponent || candidates[seed % Math.max(1, candidates.length)];
