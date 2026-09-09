@@ -4,14 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { gameMachine } from './gameMachine';
 
 const ROUTES = [
-    { id: 'upperB', tier: 'B', status: 'upper', wins: 'upperWins', d: 'M38 116 C180 52 337 77 455 273', color: '#56d5e8' },
-    { id: 'lowerB', tier: 'B', status: 'lower', wins: 'lowerWins', d: 'M32 562 C190 627 360 560 462 404', color: '#56d5e8' },
-    { id: 'upperA', tier: 'A', status: 'upper', wins: 'upperWins', d: 'M1162 116 C1020 52 863 77 745 273', color: '#dd765f' },
-    { id: 'lowerA', tier: 'A', status: 'lower', wins: 'lowerWins', d: 'M1168 562 C1010 627 840 560 738 404', color: '#dd765f' }
+    { id: 'upperB', tier: 'B', status: 'upper', wins: 'upperWins', d: 'M45 116 C125 118 178 150 188 215 C198 270 169 298 225 316 C305 342 392 313 474 316', color: '#76dceb' },
+    { id: 'lowerB', tier: 'B', status: 'lower', wins: 'lowerWins', d: 'M45 585 C130 580 193 548 268 542 C338 536 381 552 432 518 C468 494 487 457 520 427', color: '#76dceb' },
+    { id: 'upperA', tier: 'A', status: 'upper', wins: 'upperWins', d: 'M1155 116 C1075 118 1022 150 1012 215 C1002 270 1031 298 975 316 C895 342 808 313 726 316', color: '#df806a' },
+    { id: 'lowerA', tier: 'A', status: 'lower', wins: 'lowerWins', d: 'M1155 585 C1070 580 1007 548 932 542 C862 536 819 552 768 518 C732 494 713 457 680 427', color: '#df806a' }
 ];
 
-const DRAGON_BRANCH = 'M455 273 C486 190 526 114 600 67 C674 114 714 190 745 273';
-const DUNGEON_BRANCH = 'M462 404 C500 492 540 560 600 620 C660 560 700 492 738 404';
+const DRAGON_BRANCH = 'M600 270 C600 224 600 178 600 130';
+const DUNGEON_BRANCH = 'M600 430 C600 475 600 520 600 590';
 
 function DragonMark() {
     return <svg viewBox="0 0 180 110" className="dnd-dragon"><path d="M92 54c24-39 54-43 78-38-19 9-25 23-27 38 12-8 24-9 35-5-14 8-24 20-29 36-18-16-34-20-49-13-4 19-20 30-43 29 14-8 19-18 16-30-21 8-39 5-55-9 20 2 35-5 46-19-13-5-23-14-29-27 22 4 39 14 52 29l5 9Z" /></svg>;
@@ -97,7 +97,7 @@ function CampaignMap({ participants, snapshot, demo, focus }) {
     const mystery = snapshot.context.selectedPath === 'mystery';
     return <div className="dnd-map-stage"><svg viewBox="0 0 1200 675" className="dnd-campaign-svg">
         <image href="/images/stage2-dnd-map-v2.jpg" width="1200" height="675" preserveAspectRatio="xMidYMid slice" /><rect width="1200" height="675" className="dnd-map-vignette" />
-        {ROUTES.map(r => <g key={r.id}><path ref={el => refs.current[r.id] = el} d={r.d} className="dnd-road-shadow" /><path d={r.d} className="dnd-road" style={{ stroke: r.color }} /><path d={r.d} className="dnd-road-flow" style={{ stroke: r.color }} /></g>)}
+        {ROUTES.map(r => <g key={r.id}><path ref={el => refs.current[r.id] = el} d={r.d} className="dnd-road-hit" /><path pathLength="100" d={r.d} className="dnd-road-runes" style={{ stroke: r.color }} /></g>)}
         <path d={DRAGON_BRANCH} className={`dnd-event-road${mystery ? ' is-active' : ''}`} /><path d={DUNGEON_BRANCH} className={`dnd-event-road${mystery ? ' is-active' : ''}`} />
         <g className="dnd-location-label"><text x="600" y="38" textAnchor="middle">DRAGON LAIR</text><text x="600" y="660" textAnchor="middle">DUNGEON</text></g>
         <g className="dnd-throne-label"><text x="600" y="345" textAnchor="middle">KING OF THE HILL</text></g>
