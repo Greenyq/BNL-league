@@ -110,11 +110,15 @@ function AchievementPills({ achievements, onOpen }) {
 function AchievementModal({ row, onClose }) {
     React.useEffect(() => {
         if (!row) return undefined;
+        document.body.classList.add('achievement-modal-open');
         const onKeyDown = event => {
             if (event.key === 'Escape') onClose();
         };
         window.addEventListener('keydown', onKeyDown);
-        return () => window.removeEventListener('keydown', onKeyDown);
+        return () => {
+            window.removeEventListener('keydown', onKeyDown);
+            document.body.classList.remove('achievement-modal-open');
+        };
     }, [row, onClose]);
 
     if (!row) return null;
@@ -124,7 +128,7 @@ function AchievementModal({ row, onClose }) {
     const totalBonus = achievements.reduce((sum, key) => sum + (achievementInfo(key).points || 0), 0);
     const playerName = row.player?.name || row.player?.battleTag || tr('Игрок', 'Player');
 
-    return (
+    return ReactDOM.createPortal(
         <div className="achievement-modal-overlay" onClick={onClose}>
             <div className="achievement-modal" role="dialog" aria-modal="true" aria-label={tr('Ачивки игрока', 'Player achievements')} onClick={event => event.stopPropagation()}>
                 <div className="achievement-modal-header">
@@ -153,7 +157,8 @@ function AchievementModal({ row, onClose }) {
                     ))}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
 
@@ -315,8 +320,8 @@ function LegacyStage2Arena({ participants, viewer, revealNames, onRevealNames })
     const pathRefs = React.useRef({});
     const [pieces, setPieces] = React.useState([]);
     const paths = [
-        { id: 'upperC', list: groups.upperC, wins: 'upperWins', tier: 'C', bracket: 'upper', d: 'M82 78 C205 52 330 72 420 112 C500 147 555 151 600 188' },
-        { id: 'lowerC', list: groups.lowerC, wins: 'lowerWins', tier: 'C', bracket: 'lower', d: 'M92 582 C215 550 342 555 448 510 C520 480 568 447 600 408' },
+        { id: 'upperC', list: groups.upperC, wins: 'upperWins', tier: 'C', bracket: 'upper', d: 'M42 54 C154 40 270 66 338 142 C430 245 520 150 600 188' },
+        { id: 'lowerC', list: groups.lowerC, wins: 'lowerWins', tier: 'C', bracket: 'lower', d: 'M42 646 C154 652 275 625 350 566 C455 484 530 450 600 408' },
         { id: 'upperB', list: groups.upperB, wins: 'upperWins', tier: 'B', bracket: 'upper', d: 'M82 108 C205 72 320 82 410 118 C492 151 555 151 600 188' },
         { id: 'lowerB', list: groups.lowerB, wins: 'lowerWins', tier: 'B', bracket: 'lower', d: 'M92 542 C215 510 342 520 448 493 C520 474 568 447 600 408' },
         { id: 'upperA', list: groups.upperA, wins: 'upperWins', tier: 'A', bracket: 'upper', d: 'M1118 108 C995 72 880 82 790 118 C708 151 645 151 600 188' },

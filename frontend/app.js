@@ -45,6 +45,23 @@ function HomePage() {
                     })}
                 </ul>
             </div>
+            <section className="home-campaign-card">
+                <div className="home-campaign-art" role="img" aria-label={t('campaign.image_alt')}>
+                    <img src="/images/stage2-dnd-map-v2.jpg" alt="" />
+                    <span>{t('campaign.badge')}</span>
+                </div>
+                <div className="home-campaign-copy">
+                    <small>{t('campaign.eyebrow')}</small>
+                    <h2>{t('campaign.title')}</h2>
+                    <p>{t('campaign.desc')}</p>
+                    <ul>
+                        <li><b>01</b><span>{t('campaign.point1')}</span></li>
+                        <li><b>02</b><span>{t('campaign.point2')}</span></li>
+                        <li><b>03</b><span>{t('campaign.point3')}</span></li>
+                    </ul>
+                    <a className="home-campaign-link" href="#standings">{t('campaign.cta')} <span>→</span></a>
+                </div>
+            </section>
         </div>
     );
 }

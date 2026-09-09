@@ -258,6 +258,15 @@ const LANGS = {
         'hero.how3_desc':  'Игроки разделены на четыре тира: C (800–1349 MMR), B (1350–1549), A (1550–1849), S (1850+).',
         'hero.how4_title': '4. Очки',
         'hero.how4_desc':  'После матчей очки начисляются автоматически по данным W3Champions с учётом разницы MMR соперников.',
+        'campaign.badge': 'ЭТАП 2',
+        'campaign.eyebrow': 'BNL CAMPAIGN',
+        'campaign.title': 'Путь к Ледяному трону',
+        'campaign.desc': 'После ладдера турнир превращается в живую кампанию Warcraft III. Победы двигают игрока по карте, но маршрут и скрытые испытания могут изменить дорогу к арене.',
+        'campaign.point1': 'Четыре тира и отдельные верхние и нижние маршруты.',
+        'campaign.point2': 'После победы можно выбрать безопасную или таинственную дорогу.',
+        'campaign.point3': 'Dragon и Dungeon — реальные игроки; награда за победу защищает на арене.',
+        'campaign.cta': 'Открыть карту турнира',
+        'campaign.image_alt': 'Карта второго этапа BNL League',
     },
 
     en: {
@@ -515,6 +524,15 @@ const LANGS = {
         'hero.how3_desc':  'Players are divided into four tiers: C (800–1349 MMR), B (1350–1549), A (1550–1849), and S (1850+).',
         'hero.how4_title': '4. Points',
         'hero.how4_desc':  'After matches, points are awarded automatically from W3Champions data based on MMR difference.',
+        'campaign.badge': 'STAGE 2',
+        'campaign.eyebrow': 'BNL CAMPAIGN',
+        'campaign.title': 'Road to the Frozen Throne',
+        'campaign.desc': 'After the ladder, the tournament becomes a living Warcraft III campaign. Wins move players across the map, while route choices and hidden encounters can change the road to the arena.',
+        'campaign.point1': 'Four tiers with separate upper and lower routes.',
+        'campaign.point2': 'After a win, choose the safe road or the mystery road.',
+        'campaign.point3': 'Dragon and Dungeon are real players; victory grants protection in the arena.',
+        'campaign.cta': 'Open the tournament map',
+        'campaign.image_alt': 'BNL League Stage 2 campaign map',
     }
 };
 
