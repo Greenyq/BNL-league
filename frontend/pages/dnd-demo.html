@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>BNL Campaign Demo</title>
+    <link rel="stylesheet" href="/styles/wow-style.css">
+    <link rel="stylesheet" href="/styles/main.css">
+    <style>body{margin:0;background:#05080a}.demo-wrap{width:min(1170px,96vw);margin:24px auto}</style>
+</head>
+<body>
+    <div class="demo-wrap"><div id="demo-root"></div></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="/dist/app.js?v=20260909-one-mystery-v6"></script>
+    <script>
+        const mockPlayers = [
+            {id:'self',name:'Happy',tier:'B',status:'upper',upperWins:1,upperLosses:0,lowerWins:0,lowerLosses:0,isSelf:true,showName:true,iconKey:'b-wolf-head'},
+            {id:'guardian',name:'Raven',tier:'A',status:'upper',upperWins:2,upperLosses:1,lowerWins:0,lowerLosses:0,showName:true,iconKey:'a-daemon-skull'},
+            {id:'fallen',name:'Foggy',tier:'B',status:'lower',upperWins:1,upperLosses:2,lowerWins:1,lowerLosses:0,showName:true,iconKey:'b-stag-head'},
+            {id:'king',name:'Blade',tier:'S',status:'king',upperWins:0,upperLosses:0,lowerWins:0,lowerLosses:0,showName:true,kingQualified:true,iconKey:'s-queen-crown'}
+        ];
+        ReactDOM.createRoot(document.getElementById('demo-root')).render(
+            React.createElement(GameBoard,{participants:mockPlayers,viewer:{hasPlayer:true},legacy:React.createElement('div',{className:'stage2-arena'},React.createElement('svg',{className:'stage2-map-svg',viewBox:'0 0 1200 675'},React.createElement('image',{href:'/images/stage2-fantasy-map.jpg',width:1200,height:675})))})
+        );
+    </script>
+</body>
+</html>

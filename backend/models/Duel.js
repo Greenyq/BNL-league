@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const duelSchema = new mongoose.Schema({
-    phase:     { type: String, enum: ['qualifier', 'upper', 'lower', 'king', 's_bracket'], default: 'qualifier', index: true },
+    phase:     { type: String, enum: ['qualifier', 'upper', 'lower', 'king', 's_bracket', 'encounter'], default: 'qualifier', index: true },
     tierGroup: { type: String, enum: ['B', 'A', 'S'], required: true, index: true },
     playerA: {
         playerId:  { type: String, required: true, index: true },
@@ -46,6 +46,17 @@ const stage2ParticipantSchema = new mongoose.Schema({
     lowerWins:       { type: Number, default: 0 },
     lowerLosses:     { type: Number, default: 0 },
     kingQualified:   { type: Boolean, default: false },
+    // One-use relic. It can only prevent removal from the central S arena.
+    arenaShield:     { type: Boolean, default: false },
+    arenaShieldUsedAt: { type: Date, default: null },
+    winStreak:       { type: Number, default: 0 },
+    specialMoveReady: { type: Boolean, default: false },
+    mysteryUsed:     { type: Boolean, default: false },
+    specialPath:     { type: String, enum: ['safe', 'mystery', null], default: null },
+    encounterType:   { type: String, enum: ['dragon', 'dungeon', null], default: null },
+    encounterOpponentId: { type: String, default: null },
+    encounterOpponentName: { type: String, default: null },
+    encounterStatus: { type: String, enum: ['pending', 'won', 'lost', null], default: null },
     mapWins:         { type: Number, default: 0 },
     mapLosses:       { type: Number, default: 0 },
     opponents:       { type: [String], default: [] },
