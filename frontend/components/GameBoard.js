@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { gameMachine } from './gameMachine';
 
 const ROUTES = [
+    { id: 'upperC', tier: 'C', status: 'upper', wins: 'upperWins', d: 'M45 82 C142 82 207 120 220 194 C232 256 205 282 260 301 C329 325 398 302 474 316', color: '#78d69b' },
+    { id: 'lowerC', tier: 'C', status: 'lower', wins: 'lowerWins', d: 'M45 620 C143 614 215 574 288 566 C358 558 403 566 451 527 C482 501 497 462 520 427', color: '#78d69b' },
     { id: 'upperB', tier: 'B', status: 'upper', wins: 'upperWins', d: 'M45 116 C125 118 178 150 188 215 C198 270 169 298 225 316 C305 342 392 313 474 316', color: '#76dceb' },
     { id: 'lowerB', tier: 'B', status: 'lower', wins: 'lowerWins', d: 'M45 585 C130 580 193 548 268 542 C338 536 381 552 432 518 C468 494 487 457 520 427', color: '#76dceb' },
     { id: 'upperA', tier: 'A', status: 'upper', wins: 'upperWins', d: 'M1155 116 C1075 118 1022 150 1012 215 C1002 270 1031 298 975 316 C895 342 808 313 726 316', color: '#df806a' },
@@ -71,15 +73,25 @@ function PlayerPanel({ self, king, guardian, snapshot, onSafe, onMystery, onFind
     </aside>;
 }
 
-function MapToken({ player, x, y, king, focus }) {
-    return <motion.g initial={{ opacity: 0, scale: .65 }} animate={{ opacity: 1, scale: 1, x, y }} transition={{ type: 'spring', damping: 17 }}>
-        <foreignObject x="-27" y="-27" width="80" height="76"><div className={`dnd-map-token tier-${String(player.tier).toLowerCase()}${player.isSelf ? ' is-self' : ''}${king ? ' is-king' : ''}${player.isSelf && focus ? ' is-focus' : ''}`}><i style={{ backgroundImage: `url('/images/faction-tokens/${player.iconKey}.svg')` }} />{player.showName && <small>{player.name}</small>}</div></foreignObject>
+function MapToken({ player, x, y, king, focus, stackCount = 0, expanded = false, onToggle }) {
+    const toggle = event => { event.stopPropagation(); if (onToggle) onToggle(); };
+    return <motion.g className={onToggle ? 'dnd-token-clickable' : ''} initial={{ opacity: 0, scale: .65 }} animate={{ opacity: 1, scale: 1, x, y }} transition={{ type: 'spring', damping: 17, stiffness: 190 }} onClick={toggle}>
+        <foreignObject x="-34" y="-34" width="92" height="88"><div role={onToggle ? 'button' : undefined} tabIndex={onToggle ? 0 : undefined} aria-label={stackCount > 1 ? `${stackCount} players in this position` : undefined} onKeyDown={event => { if (onToggle && (event.key === 'Enter' || event.key === ' ')) toggle(event); }} className={`dnd-map-token tier-${String(player.tier).toLowerCase()}${player.isSelf ? ' is-self' : ''}${king ? ' is-king' : ''}${player.isSelf && focus ? ' is-focus' : ''}`}><i style={{ backgroundImage: `url('/images/faction-tokens/${player.iconKey}.svg')` }} />{stackCount > 1 && !expanded && <b className="dnd-token-count">×{stackCount}</b>}{player.showName && <small>{player.name}</small>}</div></foreignObject>
     </motion.g>;
+}
+
+function fanOffset(index, total) {
+    const ringIndex = Math.floor(index / 8);
+    const ringSize = Math.min(8, total - ringIndex * 8);
+    const angle = -Math.PI / 2 + (index % 8) * (Math.PI * 2 / ringSize);
+    const radius = 54 + ringIndex * 40;
+    return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
 }
 
 function CampaignMap({ participants, snapshot, focus }) {
     const refs = React.useRef({});
     const [positions, setPositions] = React.useState([]);
+    const [expandedClusters, setExpandedClusters] = React.useState(() => new Set());
     React.useLayoutEffect(() => {
         const next = [];
         for (const player of participants) {
@@ -96,6 +108,25 @@ function CampaignMap({ participants, snapshot, focus }) {
         }
         setPositions(next);
     }, [participants]);
+    const clusters = React.useMemo(() => {
+        const grouped = new Map();
+        for (const position of positions) {
+            const key = `${Math.round(position.x)}:${Math.round(position.y)}`;
+            if (!grouped.has(key)) grouped.set(key, []);
+            grouped.get(key).push(position);
+        }
+        return Array.from(grouped, ([id, players]) => ({
+            id,
+            players: players.sort((a, b) => Number(b.player.isSelf) - Number(a.player.isSelf)),
+            x: players[0].x,
+            y: players[0].y
+        }));
+    }, [positions]);
+    const toggleCluster = id => setExpandedClusters(current => {
+        const next = new Set(current);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        return next;
+    });
     const mystery = snapshot.context.selectedPath === 'mystery';
     return <div className="dnd-map-stage"><svg viewBox="0 0 1200 675" className="dnd-campaign-svg">
         <image href="/images/stage2-dnd-map-v2.jpg" width="1200" height="675" preserveAspectRatio="xMidYMid slice" /><rect width="1200" height="675" className="dnd-map-vignette" />
@@ -103,11 +134,18 @@ function CampaignMap({ participants, snapshot, focus }) {
         <path d={DRAGON_BRANCH} className={`dnd-event-road${mystery ? ' is-active' : ''}`} /><path d={DUNGEON_BRANCH} className={`dnd-event-road${mystery ? ' is-active' : ''}`} />
         <g className="dnd-location-label"><text x="600" y="38" textAnchor="middle">DRAGON LAIR</text><text x="600" y="660" textAnchor="middle">DUNGEON</text></g>
         <g className="dnd-throne-label"><text x="600" y="345" textAnchor="middle">KING OF THE HILL</text></g>
-        {positions.map(p => <MapToken key={p.player.id} {...p} focus={focus} />)}
+        {clusters.flatMap(cluster => {
+            const expanded = expandedClusters.has(cluster.id);
+            const visible = expanded ? cluster.players : cluster.players.slice(0, 1);
+            return visible.map((position, index) => {
+                const offset = expanded && cluster.players.length > 1 ? fanOffset(index, cluster.players.length) : { x: 0, y: 0 };
+                return <MapToken key={position.player.id} {...position} x={cluster.x + offset.x} y={cluster.y + offset.y} focus={focus} stackCount={cluster.players.length} expanded={expanded} onToggle={cluster.players.length > 1 ? () => toggleCluster(cluster.id) : undefined} />;
+            });
+        })}
     </svg></div>;
 }
 
-export function GameBoard({ participants = [], duels = [], viewer = {} }) {
+export function GameBoard({ participants = [], duels = [], viewer = {}, revealNames = false, onRevealNames }) {
     const self = participants.find(p => p.isSelf) || null;
     const king = participants.find(p => p.status === 'king');
     const initialWins = self?.status === 'lower' ? self?.lowerWins : self?.upperWins;
@@ -164,7 +202,7 @@ export function GameBoard({ participants = [], duels = [], viewer = {} }) {
     const findSelf = () => { setFocus(v => v + 1); setTimeout(() => setFocus(0), 1200); };
 
     return <div className="dnd-board-shell">
-        <div className="dnd-board-heading"><div><small>BNL CAMPAIGN</small><h3>Road to the Frozen Throne</h3></div><div className="dnd-live"><i /> LIVE TOURNAMENT</div></div>
+        <div className="dnd-board-heading"><div><small>BNL CAMPAIGN</small><h3>Road to the Frozen Throne</h3></div><div className="dnd-heading-actions">{viewer?.canRevealNames && <label className="dnd-admin-name-toggle"><input type="checkbox" checked={revealNames} onChange={event => onRevealNames?.(event.target.checked)} /><span>{revealNames ? 'Скрыть имена' : 'Показать имена'}</span></label>}<div className="dnd-live"><i /> LIVE TOURNAMENT</div></div></div>
         <div className={`dnd-campaign-layout${snapshot.matches('defeat') ? ' is-defeat' : ''}${!self ? ' is-spectator' : ''}`}><CampaignMap participants={participants} snapshot={snapshot} focus={focus} />{self ? <PlayerPanel self={self} king={king} guardian={guardianName} snapshot={snapshot} onSafe={() => choosePath('safe')} onMystery={() => choosePath('mystery')} onFind={findSelf} pathError={pathError} /> : <aside className="dnd-player-panel dnd-spectator-panel"><small>PLAYER CAMPAIGN</small><h3>Войдите в аккаунт</h3><p>После входа здесь появятся ваша статистика, следующий бой и выбор дороги.</p></aside>}</div>
         <AnimatePresence>{snapshot.matches('defeat') && <motion.div className="dnd-result-banner is-loss" initial={{ opacity: 0, scale: .8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}><b>DEFEAT</b><span>Серия побед сброшена</span></motion.div>}</AnimatePresence>
         <EncounterOverlay snapshot={snapshot} send={send} guardian={guardianName} />

@@ -2720,6 +2720,20 @@ input[type="datetime-local"] {
 @media(max-width:760px){.dnd-board-heading{min-height:58px;padding:9px}.dnd-board-heading h3{font-size:.82rem}.dnd-relic{min-width:105px;padding:5px}.dnd-relic span{font-size:1.25rem}.dnd-choice-panel{right:5px;top:5px;width:54%;padding:8px}.dnd-choice-panel h4{font-size:.76rem;margin:3px 0}.dnd-choice-panel button{padding:5px;font-size:.66rem}.dnd-encounter-card{padding:20px 15px}.dnd-demo-controls span{width:100%;margin-left:0}}
 @media(prefers-reduced-motion:reduce){.dnd-route-sheen,.dnd-portal-halo,.dnd-fork-beacon circle{animation:none}}
 
+/* Larger live campaign surface and expandable player stacks. */
+.dnd-campaign-layout{grid-template-columns:minmax(0,1fr) 320px;min-height:620px}
+.dnd-campaign-svg{min-height:620px}
+.dnd-player-panel{padding:24px 22px}
+.dnd-player-panel h3{font-size:18px}
+.dnd-player-panel p{font-size:12px}
+.dnd-token-clickable{cursor:pointer;outline:none}
+.dnd-token-clickable:focus-visible .dnd-map-token i{box-shadow:0 0 0 4px #111,0 0 0 7px #f2d277,0 0 24px #f2d277}
+.dnd-token-count{position:absolute;top:-5px;right:3px;display:grid;place-items:center;min-width:25px;height:22px;padding:0 5px;border:2px solid #17120b;border-radius:12px;background:#e0ad48;color:#160e07;font:800 11px Arial,sans-serif;box-shadow:0 2px 9px #000,0 0 8px rgba(224,173,72,.65);z-index:3}
+.dnd-map-token.tier-c i{background-color:#0b2116;border-color:#70c98f}
+.dnd-heading-actions{display:flex;align-items:center;gap:18px}.dnd-admin-name-toggle{display:flex;align-items:center;gap:8px;padding:8px 11px;border:1px solid rgba(211,169,75,.48);border-radius:3px;background:rgba(0,0,0,.3);color:#e3c98f;font-size:12px;cursor:pointer}.dnd-admin-name-toggle input{accent-color:#d6a63f}.dnd-admin-name-toggle span{white-space:nowrap}
+@media(max-width:1050px) and (min-width:901px){.dnd-campaign-layout{grid-template-columns:minmax(0,1fr) 285px}.dnd-player-panel{padding:19px 16px}}
+@media(max-width:900px){.dnd-campaign-layout{grid-template-columns:1fr;min-height:0}.dnd-campaign-svg{min-height:auto}.dnd-player-panel{padding:18px 16px}.dnd-heading-actions{gap:8px}.dnd-admin-name-toggle{padding:6px 8px;font-size:10px}}
+
 .points-pill {
     display: inline-flex;
     align-items: center;
