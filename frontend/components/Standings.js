@@ -859,6 +859,7 @@ function Standings() {
     }, [revealStage2Names]);
 
     const duelStats = duels.reduce((map, duel) => {
+        if (duel.phase === 'encounter') return map;
         for (const side of ['A', 'B']) {
             const entry = duel[`player${side}`];
             if (!entry?.battleTag) continue;
@@ -983,7 +984,7 @@ function Standings() {
             {(
                 <>
 
-                    {mode === 'duels' && <Stage2Arena participants={stage2} viewer={stage2Viewer} revealNames={revealStage2Names} onRevealNames={setRevealStage2Names} />}
+                    {mode === 'duels' && <Stage2Arena participants={stage2} duels={duels} viewer={stage2Viewer} revealNames={revealStage2Names} onRevealNames={setRevealStage2Names} />}
 
                     {mode === 'ladder' && (loading ? (
                         <div>
