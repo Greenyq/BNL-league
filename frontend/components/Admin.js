@@ -2282,10 +2282,14 @@ function DuelsTab({ players, showMsg, onRefresh }) {
     const initial = { playerAId: '', playerBId: '', winner: 'A', score: '', notes: '', playedAt: new Date().toISOString().slice(0, 10) };
     const [form, setForm] = React.useState(initial);
     const [duels, setDuels] = React.useState([]);
+    const [encounters, setEncounters] = React.useState([]);
     const [saving, setSaving] = React.useState(false);
     const tier = p => p?.tierOverride || p?.stats?.tier || 0;
     const tierName = n => ({ 1: 'C', 2: 'B', 3: 'A', 4: 'S' }[n] || '—');
-    const loadDuels = React.useCallback(() => fetch('/api/duels').then(r => r.json()).then(d => setDuels(Array.isArray(d) ? d : [])), []);
+    const loadDuels = React.useCallback(() => Promise.all([apiFetch('/api/duels'), apiFetch('/api/duels/stage2?revealNames=1')]).then(([d, stage2]) => {
+        setDuels(Array.isArray(d) ? d : []);
+        setEncounters((stage2?.participants || []).filter(p => p.encounterStatus === 'pending'));
+    }), []);
     React.useEffect(() => { loadDuels(); }, [loadDuels]);
 
     const submit = async e => {
@@ -2307,12 +2311,20 @@ function DuelsTab({ players, showMsg, onRefresh }) {
         try { const r = await apiFetch('/api/duels/stage2/initialize', { method: 'POST' }); showMsg(`✅ ${tr('Участников подготовлено', 'Participants initialized')}: ${r.initialized}`); }
         catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
+    const resolveEncounter = async (participant, challengerWon) => {
+        try {
+            await apiFetch(`/api/duels/stage2/${participant.id}/encounter-result`, { method: 'POST', body: JSON.stringify({ challengerWon }) });
+            showMsg(challengerWon ? `✅ ${tr('Победа в событии: щит выдан', 'Encounter won: shield awarded')}` : `✅ ${tr('Поражение в событии записано', 'Encounter loss recorded')}`);
+            await loadDuels(); onRefresh();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
 
     return <div>
         <h3>{tr('Этап 2 — Дуэли', 'Stage 2 — Duels')}</h3>
         <button type="button" className="btn btn-secondary" onClick={initialize} style={{ marginBottom: 16 }}>{tr('Подготовить участников этапа 2', 'Initialize Stage 2 participants')}</button>
+        {!!encounters.length && <div className="card-elevated" style={{ padding: 18, marginBottom: 18 }}><h4 style={{ marginTop: 0 }}>{tr('Активные DnD-события', 'Active DnD encounters')}</h4>{encounters.map(encounter => <div key={encounter.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 0', borderTop: '1px solid rgba(212,175,55,.2)' }}><strong>{encounter.name}</strong><span>— {encounter.encounterType === 'dragon' ? '🐉 Dragon Player' : '🏰 Dungeon Boss'}: {encounter.encounterOpponentName}</span><button className="btn btn-primary" type="button" onClick={() => resolveEncounter(encounter, true)}>{tr('Игрок победил', 'Player won')}</button><button className="btn btn-secondary" type="button" onClick={() => resolveEncounter(encounter, false)}>{tr('Игрок проиграл', 'Player lost')}</button></div>)}</div>}
         <form className="card-elevated" onSubmit={submit} style={{ padding: 'var(--spacing-xl)', display: 'grid', gap: 12, marginBottom: 24 }}>
-            <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{tr('В основной сетке три победы BO3 переводят в центр S, а поражение — в лузер-сетку. В лузер-сетке также нужны три победы; поражение означает вылет.', 'Three BO3 wins in the main bracket advance to the S center; a loss moves the player to the losers bracket. The losers bracket also requires three wins; a loss eliminates the player.')}</p>
+            <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{tr('В верхней сетке три победы BO3 переводят в центр S, два поражения — в нижнюю сетку. В нижней сетке также нужны три победы; первое поражение означает вылет.', 'Three BO3 wins in the upper bracket advance to the S center; two losses move the player to the lower bracket. The lower bracket also requires three wins; its first loss eliminates the player.')}</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 12 }}>
                 <select required value={form.playerAId} onChange={e => setForm({ ...form, playerAId: e.target.value })}><option value="">{tr('Игрок A', 'Player A')}</option>{players.filter(p => p.id !== form.playerBId).map(p => <option key={p.id} value={p.id}>{playerOption(p)}</option>)}</select>
                 <select required value={form.playerBId} onChange={e => setForm({ ...form, playerBId: e.target.value })}><option value="">{tr('Игрок B', 'Player B')}</option>{players.filter(p => p.id !== form.playerAId).map(p => <option key={p.id} value={p.id}>{playerOption(p)}</option>)}</select>
