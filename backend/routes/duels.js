@@ -141,6 +141,18 @@ router.get('/stage2', async (req, res) => {
             getStage2Viewer(req)
         ]);
         const own = viewer.participant;
+        let ownWinStreak = 0;
+        if (own) {
+            const recentOwnDuels = await Duel.find({
+                phase: { $in: ['upper', 'lower'] },
+                $or: [{ 'playerA.playerId': own.playerId }, { 'playerB.playerId': own.playerId }]
+            }).sort({ playedAt: -1, createdAt: -1 }).select('winner playerA.playerId playerB.playerId').limit(20);
+            for (const duel of recentOwnDuels) {
+                const ownSide = String(duel.playerA.playerId) === String(own.playerId) ? 'A' : 'B';
+                if (duel.winner !== ownSide) break;
+                ownWinStreak++;
+            }
+        }
         const opponentAliases = new Set((own?.opponents || []).map(value => String(value).toLowerCase()));
         const revealAll = viewer.isAdmin && req.query.revealNames === '1';
         const sanitized = participants.map(participant => {
@@ -161,6 +173,12 @@ router.get('/stage2', async (req, res) => {
                 lowerLosses: participant.lowerLosses,
                 kingQualified: participant.kingQualified,
                 arenaShield: Boolean(participant.arenaShield),
+                winStreak: isSelf ? Math.max(Number(participant.winStreak) || 0, ownWinStreak) : undefined,
+                specialMoveReady: isSelf ? Boolean(participant.specialMoveReady) : undefined,
+                specialPath: isSelf || viewer.isAdmin ? participant.specialPath : undefined,
+                encounterType: isSelf || viewer.isAdmin ? participant.encounterType : undefined,
+                encounterOpponentName: isSelf || viewer.isAdmin ? participant.encounterOpponentName : undefined,
+                encounterStatus: isSelf || viewer.isAdmin ? participant.encounterStatus : undefined,
                 iconKey: stableIconFor(participant),
                 isSelf,
                 isOpponent,
@@ -228,6 +246,66 @@ router.post('/stage2/:id/arena-shield', checkAuth, async (req, res) => {
     }
 });
 
+router.post('/stage2/:id/special-path', async (req, res) => {
+    try {
+        const viewer = await getStage2Viewer(req);
+        const participant = await Stage2Participant.findById(req.params.id);
+        if (!participant) return res.status(404).json({ error: 'Stage 2 participant not found' });
+        const ownsParticipant = viewer.participant && String(viewer.participant.id) === String(participant.id);
+        if (!viewer.isAdmin && !ownsParticipant) return res.status(403).json({ error: 'Not allowed' });
+        if (!participant.specialMoveReady) return res.status(409).json({ error: 'Special move is not available' });
+        const path = req.body.path;
+        if (!['safe', 'mystery'].includes(path)) return res.status(400).json({ error: 'Path must be safe or mystery' });
+        participant.specialMoveReady = false;
+        participant.specialPath = path;
+        participant.encounterType = null;
+        participant.encounterOpponentId = null;
+        participant.encounterOpponentName = null;
+        participant.encounterStatus = null;
+        if (path === 'mystery') {
+            const candidates = await Stage2Participant.find({ _id: { $ne: participant._id }, status: { $ne: 'eliminated' } });
+            if (!candidates.length) return res.status(409).json({ error: 'No encounter opponent is available' });
+            const opponent = candidates[Math.floor(Math.random() * candidates.length)];
+            participant.encounterType = Math.random() < .5 ? 'dragon' : 'dungeon';
+            participant.encounterOpponentId = opponent.playerId;
+            participant.encounterOpponentName = opponent.name;
+            participant.encounterStatus = 'pending';
+        }
+        participant.updatedAt = new Date();
+        await participant.save();
+        res.json({ path, encounterType: participant.encounterType, encounterOpponentName: participant.encounterOpponentName, encounterStatus: participant.encounterStatus });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Encounter matches are recorded separately and never change upper/lower bracket counters.
+router.post('/stage2/:id/encounter-result', checkAuth, async (req, res) => {
+    try {
+        const challenger = await Stage2Participant.findById(req.params.id);
+        if (!challenger) return res.status(404).json({ error: 'Stage 2 participant not found' });
+        if (challenger.encounterStatus !== 'pending' || !challenger.encounterOpponentId)
+            return res.status(409).json({ error: 'No pending encounter for this participant' });
+        const opponent = await Stage2Participant.findOne({ playerId: challenger.encounterOpponentId });
+        if (!opponent) return res.status(404).json({ error: 'Encounter opponent not found' });
+        const challengerWon = req.body.challengerWon === true;
+        const tierNumber = { B: 2, A: 3, S: 4 };
+        const duel = await Duel.create({
+            phase: 'encounter', tierGroup: challenger.tier,
+            playerA: { playerId: challenger.playerId, battleTag: challenger.battleTag, name: challenger.name, tier: tierNumber[challenger.tier], points: 0 },
+            playerB: { playerId: opponent.playerId, battleTag: opponent.battleTag, name: opponent.name, tier: tierNumber[opponent.tier], points: 0 },
+            winner: challengerWon ? 'A' : 'B', score: challengerWon ? '2:0' : '0:2',
+            notes: `${challenger.encounterType || 'special'} encounter`, playedAt: req.body.playedAt || new Date()
+        });
+        challenger.encounterStatus = challengerWon ? 'won' : 'lost';
+        if (challengerWon) {
+            challenger.arenaShield = true;
+            challenger.arenaShieldUsedAt = null;
+        }
+        challenger.updatedAt = new Date();
+        await challenger.save();
+        res.status(201).json({ duel, encounterStatus: challenger.encounterStatus, arenaShield: challenger.arenaShield });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.get('/suggestion', checkAuth, (req, res) => {
     const tierA = Number(req.query.tierA);
     const tierB = Number(req.query.tierB);
@@ -270,6 +348,9 @@ router.post('/', checkAuth, async (req, res) => {
             winner, score: `${mapsA}:${mapsB}`, notes, playedAt: playedAt || new Date()
         });
         const winnerP = winner === 'A' ? pa : pb, loserP = winner === 'A' ? pb : pa;
+        winnerP.winStreak = (Number(winnerP.winStreak) || 0) + 1;
+        loserP.winStreak = 0;
+        if (['upper', 'lower'].includes(phase) && winnerP.winStreak >= 2 && !winnerP.arenaShield) winnerP.specialMoveReady = true;
         pa.mapWins += mapsA; pa.mapLosses += mapsB; pb.mapWins += mapsB; pb.mapLosses += mapsA;
         if (phase === 'upper') {
             winnerP.upperWins++;
