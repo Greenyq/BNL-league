@@ -9,7 +9,6 @@ const OUTPUT_FILE = path.join(DIST_DIR, 'app.js');
 
 const FILES = [
     'i18n.js',
-    'components/GameBoard.js',
     'components/Standings.js',
     'components/Teams.js',
     'components/ClanWar.js',
@@ -35,39 +34,6 @@ const GLOBAL_EXPORTS = {
     'components/Portraits.js': ['Portraits'],
 };
 
-async function buildGameBoard() {
-    const result = await esbuild.build({
-        entryPoints: [path.join(FRONTEND_DIR, 'components/GameBoard.js')],
-        bundle: true,
-        write: false,
-        format: 'iife',
-        globalName: 'BNLGameBoardBundle',
-        target: 'es2019',
-        jsx: 'transform',
-        loader: { '.js': 'jsx' },
-        plugins: [{
-            name: 'browser-react-global',
-            setup(build) {
-                build.onResolve({ filter: /^react$/ }, () => ({ path: 'react', namespace: 'react-global' }));
-                build.onResolve({ filter: /^react\/jsx-runtime$/ }, () => ({ path: 'jsx-runtime', namespace: 'react-global' }));
-                build.onResolve({ filter: /^react\/jsx-dev-runtime$/ }, () => ({ path: 'jsx-runtime', namespace: 'react-global' }));
-                build.onResolve({ filter: /^react-dom$/ }, () => ({ path: 'react-dom', namespace: 'react-global' }));
-                build.onLoad({ filter: /.*/, namespace: 'react-global' }, args => ({
-                    contents: args.path === 'react'
-                        ? 'module.exports = globalThis.React;'
-                        : args.path === 'jsx-runtime'
-                            ? `const React = globalThis.React;
-                               const jsx = (type, props, key) => React.createElement(type, key == null ? props : { ...props, key });
-                               module.exports = { Fragment: React.Fragment, jsx, jsxs: jsx, jsxDEV: jsx };`
-                            : 'module.exports = globalThis.ReactDOM;',
-                    loader: 'js'
-                }));
-            }
-        }]
-    });
-    return `${result.outputFiles[0].text}\nObject.assign(globalThis, BNLGameBoardBundle);\n`;
-}
-
 async function buildOne(relativePath) {
     const inputPath = path.join(FRONTEND_DIR, relativePath);
     const source = await fs.readFile(inputPath, 'utf8');
@@ -86,7 +52,7 @@ async function buildOne(relativePath) {
 async function main() {
     await fs.rm(DIST_DIR, { recursive: true, force: true });
     await fs.mkdir(DIST_DIR, { recursive: true });
-    const bundledCode = (await Promise.all(FILES.map(file => file === 'components/GameBoard.js' ? buildGameBoard() : buildOne(file)))).join('\n');
+    const bundledCode = (await Promise.all(FILES.map(buildOne))).join('\n');
     await fs.writeFile(OUTPUT_FILE, bundledCode);
     console.log(`Built ${FILES.length} frontend files into frontend/dist/app.js`);
 }
