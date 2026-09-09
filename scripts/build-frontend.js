@@ -49,11 +49,17 @@ async function buildGameBoard() {
             name: 'browser-react-global',
             setup(build) {
                 build.onResolve({ filter: /^react$/ }, () => ({ path: 'react', namespace: 'react-global' }));
+                build.onResolve({ filter: /^react\/jsx-runtime$/ }, () => ({ path: 'jsx-runtime', namespace: 'react-global' }));
+                build.onResolve({ filter: /^react\/jsx-dev-runtime$/ }, () => ({ path: 'jsx-runtime', namespace: 'react-global' }));
                 build.onResolve({ filter: /^react-dom$/ }, () => ({ path: 'react-dom', namespace: 'react-global' }));
                 build.onLoad({ filter: /.*/, namespace: 'react-global' }, args => ({
                     contents: args.path === 'react'
                         ? 'module.exports = globalThis.React;'
-                        : 'module.exports = globalThis.ReactDOM;',
+                        : args.path === 'jsx-runtime'
+                            ? `const React = globalThis.React;
+                               const jsx = (type, props, key) => React.createElement(type, key == null ? props : { ...props, key });
+                               module.exports = { Fragment: React.Fragment, jsx, jsxs: jsx, jsxDEV: jsx };`
+                            : 'module.exports = globalThis.ReactDOM;',
                     loader: 'js'
                 }));
             }
