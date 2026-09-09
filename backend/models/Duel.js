@@ -46,6 +46,9 @@ const stage2ParticipantSchema = new mongoose.Schema({
     lowerWins:       { type: Number, default: 0 },
     lowerLosses:     { type: Number, default: 0 },
     kingQualified:   { type: Boolean, default: false },
+    // One-use relic. It can only prevent removal from the central S arena.
+    arenaShield:     { type: Boolean, default: false },
+    arenaShieldUsedAt: { type: Date, default: null },
     mapWins:         { type: Number, default: 0 },
     mapLosses:       { type: Number, default: 0 },
     opponents:       { type: [String], default: [] },

@@ -285,7 +285,7 @@ function TeamStandingsMobileCard({ row, index }) {
     );
 }
 
-function Stage2Arena({ participants, viewer, revealNames, onRevealNames }) {
+function LegacyStage2Arena({ participants, viewer, revealNames, onRevealNames }) {
     const [expanded, setExpanded] = React.useState(false);
     const [expandedStacks, setExpandedStacks] = React.useState(() => new Set());
     const [locatePulse, setLocatePulse] = React.useState(0);
@@ -460,6 +460,15 @@ function Stage2Arena({ participants, viewer, revealNames, onRevealNames }) {
         {!!groups.eliminated.length && <div className="stage2-eliminated"><strong>{tr('Вылетели', 'Eliminated')}:</strong> {groups.eliminated.map(p => p.name).join(', ')}</div>}
     </div>;
     return content;
+}
+
+// Rollback switch: append ?legacyArena=1 or set localStorage.bnl_legacy_arena = "1".
+// The legacy implementation above remains intact and owns all real bracket placement.
+function Stage2Arena(props) {
+    const forceLegacy = new URLSearchParams(window.location.search).get('legacyArena') === '1'
+        || localStorage.getItem('bnl_legacy_arena') === '1';
+    if (forceLegacy || typeof GameBoard !== 'function') return <LegacyStage2Arena {...props}/>;
+    return <GameBoard {...props} legacy={<LegacyStage2Arena {...props}/>}/>;
 }
 
 function DraftPoolCard({ row, index }) {

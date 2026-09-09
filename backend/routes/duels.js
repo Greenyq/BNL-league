@@ -160,6 +160,7 @@ router.get('/stage2', async (req, res) => {
                 lowerWins: participant.lowerWins,
                 lowerLosses: participant.lowerLosses,
                 kingQualified: participant.kingQualified,
+                arenaShield: Boolean(participant.arenaShield),
                 iconKey: stableIconFor(participant),
                 isSelf,
                 isOpponent,
@@ -211,6 +212,20 @@ router.post('/stage2/initialize', checkAuth, async (req, res) => {
         }
         res.json({ initialized });
     } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Hook for an encounter reward or an admin action. Shields never stack.
+router.post('/stage2/:id/arena-shield', checkAuth, async (req, res) => {
+    try {
+        const participant = await Stage2Participant.findById(req.params.id);
+        if (!participant) return res.status(404).json({ error: 'Stage 2 participant not found' });
+        participant.arenaShield = req.body.enabled !== false;
+        if (participant.arenaShield) participant.arenaShieldUsedAt = null;
+        await participant.save();
+        res.json({ id: participant.id, arenaShield: participant.arenaShield });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 router.get('/suggestion', checkAuth, (req, res) => {
@@ -267,20 +282,43 @@ router.post('/', checkAuth, async (req, res) => {
             loserP.lowerLosses = (Number(loserP.lowerLosses) || 0) + 1;
             loserP.status = 'eliminated';
         } else if (phase === 's_bracket') {
-            sendOutOfCenter(loserP);
+            const shieldProtected = Boolean(loserP.arenaShield);
+            if (shieldProtected) {
+                loserP.arenaShield = false;
+                loserP.arenaShieldUsedAt = new Date();
+                loserP.status = 's_bracket';
+            } else {
+                sendOutOfCenter(loserP);
+            }
             winnerP.status = 's_bracket';
             const remainingInCenter = await Stage2Participant.countDocuments({
                 _id: { $ne: loserP._id },
                 status: { $in: ['s_bracket', 'king'] }
             });
-            if (remainingInCenter === 1 && await promotedPlayerReachedCenter()) {
+            if (!shieldProtected && remainingInCenter === 1 && await promotedPlayerReachedCenter()) {
                 winnerP.status = 'king';
                 winnerP.kingQualified = true;
             }
         } else if (phase === 'king') {
-            sendOutOfCenter(loserP);
-            winnerP.status = 'king';
-            winnerP.kingQualified = true;
+            if (loserP.status === 'king' && loserP.arenaShield) {
+                // The challenger breaks the king's shield and stays for a rematch.
+                loserP.arenaShield = false;
+                loserP.arenaShieldUsedAt = new Date();
+                loserP.status = 'king';
+                loserP.kingQualified = true;
+                winnerP.status = 's_bracket';
+            } else if (loserP.arenaShield) {
+                // A shielded challenger remains in the arena after losing to the king.
+                loserP.arenaShield = false;
+                loserP.arenaShieldUsedAt = new Date();
+                loserP.status = 's_bracket';
+                winnerP.status = 'king';
+                winnerP.kingQualified = true;
+            } else {
+                sendOutOfCenter(loserP);
+                winnerP.status = 'king';
+                winnerP.kingQualified = true;
+            }
         }
         pa.updatedAt = pb.updatedAt = new Date();
         await Promise.all([pa.save(), pb.save()]);
