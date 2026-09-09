@@ -175,6 +175,7 @@ router.get('/stage2', async (req, res) => {
                 arenaShield: Boolean(participant.arenaShield),
                 winStreak: isSelf ? Math.max(Number(participant.winStreak) || 0, ownWinStreak) : undefined,
                 specialMoveReady: isSelf ? Boolean(participant.specialMoveReady) : undefined,
+                mysteryUsed: isSelf ? Boolean(participant.mysteryUsed) : undefined,
                 specialPath: isSelf || viewer.isAdmin ? participant.specialPath : undefined,
                 encounterType: isSelf || viewer.isAdmin ? participant.encounterType : undefined,
                 encounterOpponentName: isSelf || viewer.isAdmin ? participant.encounterOpponentName : undefined,
@@ -270,6 +271,7 @@ router.post('/stage2/:id/special-path', async (req, res) => {
             participant.encounterOpponentId = opponent.playerId;
             participant.encounterOpponentName = opponent.name;
             participant.encounterStatus = 'pending';
+            participant.mysteryUsed = true;
         }
         participant.updatedAt = new Date();
         await participant.save();
@@ -350,7 +352,8 @@ router.post('/', checkAuth, async (req, res) => {
         const winnerP = winner === 'A' ? pa : pb, loserP = winner === 'A' ? pb : pa;
         winnerP.winStreak = (Number(winnerP.winStreak) || 0) + 1;
         loserP.winStreak = 0;
-        if (['upper', 'lower'].includes(phase) && winnerP.winStreak >= 2 && !winnerP.arenaShield) winnerP.specialMoveReady = true;
+        loserP.specialMoveReady = false;
+        if (['upper', 'lower'].includes(phase) && !winnerP.mysteryUsed) winnerP.specialMoveReady = true;
         pa.mapWins += mapsA; pa.mapLosses += mapsB; pb.mapWins += mapsB; pb.mapLosses += mapsA;
         if (phase === 'upper') {
             winnerP.upperWins++;
