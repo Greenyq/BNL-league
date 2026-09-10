@@ -2338,6 +2338,20 @@ function DuelsTab({ players, showMsg, onRefresh }) {
             await loadDuels(); onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
+    const cancelScheduledPair = async participant => {
+        try {
+            await apiFetch('/api/duels/stage2/unassign-match', { method: 'POST', body: JSON.stringify({ participantId: participant.id }) });
+            showMsg(`✅ ${tr('Назначение отменено', 'Match assignment cancelled')}`);
+            await loadDuels(); onRefresh();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
+    const cancelEncounter = async participant => {
+        try {
+            await apiFetch(`/api/duels/stage2/${participant.id}/cancel-encounter`, { method: 'POST' });
+            showMsg(`✅ ${tr('DnD-бой отменён; игрок снова может выбрать дорогу', 'Encounter cancelled; the player can choose a path again')}`);
+            await loadDuels(); onRefresh();
+        } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
+    };
     const scheduledPairs = React.useMemo(() => {
         const byPlayerId = new Map(stage2Participants.map(participant => [String(participant.playerId || ''), participant]));
         const seen = new Set();
@@ -2361,13 +2375,14 @@ function DuelsTab({ players, showMsg, onRefresh }) {
             <button type="button" className="btn btn-primary" onClick={autoAssign}>{tr('Проверить свободных игроков сейчас', 'Match available players now')}</button>
             {!!scheduledPairs.length && <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
                 <strong>{tr('Назначенные матчи', 'Scheduled matches')} ({scheduledPairs.length})</strong>
-                {scheduledPairs.map(pair => <div key={pair.key} style={{ padding: '9px 11px', border: '1px solid rgba(212,175,55,.25)', background: 'rgba(0,0,0,.22)' }}>
+                {scheduledPairs.map(pair => <div key={pair.key} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '9px 11px', border: '1px solid rgba(212,175,55,.25)', background: 'rgba(0,0,0,.22)' }}>
                     <b>{pair.a.name}</b> <span style={{ color: 'var(--color-text-muted)' }}>vs</span> <b>{pair.b.name}</b>
                     <small style={{ marginLeft: 8, color: 'var(--color-accent-secondary)' }}>Tier {pair.a.tier} · {pair.a.status}{pair.a.assignedMapTitle ? ` · ${pair.a.assignedMapTitle}` : ''}</small>
+                    <button type="button" className="btn btn-secondary" onClick={() => cancelScheduledPair(pair.a)} style={{ marginLeft: 'auto', padding: '4px 9px', fontSize: 11 }}>{tr('Отменить матч', 'Cancel match')}</button>
                 </div>)}
             </div>}
         </div>
-        {!!encounters.length && <div className="card-elevated" style={{ padding: 18, marginBottom: 18 }}><h4 style={{ marginTop: 0 }}>{tr('DnD-события', 'DnD encounters')}</h4>{encounters.map(encounter => <div key={encounter.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 0', borderTop: '1px solid rgba(212,175,55,.2)' }}><strong>{encounter.name}</strong><span>— {encounter.encounterType === 'dragon' ? '🐉 Dragon Player' : '🏰 Dungeon Boss'}: {encounter.encounterOpponentName}</span>{encounter.encounterStatus === 'awaiting_admin' ? <button className="btn btn-primary" type="button" onClick={() => revealEncounter(encounter)}>{tr('Открыть бой игроку', 'Reveal match to player')}</button> : <><button className="btn btn-primary" type="button" onClick={() => resolveEncounter(encounter, true)}>{tr('Игрок победил', 'Player won')}</button><button className="btn btn-secondary" type="button" onClick={() => resolveEncounter(encounter, false)}>{tr('Игрок проиграл', 'Player lost')}</button></>}</div>)}</div>}
+        {!!encounters.length && <div className="card-elevated" style={{ padding: 18, marginBottom: 18 }}><h4 style={{ marginTop: 0 }}>{tr('DnD-события', 'DnD encounters')}</h4>{encounters.map(encounter => <div key={encounter.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 0', borderTop: '1px solid rgba(212,175,55,.2)' }}><strong>{encounter.name}</strong><span>— {encounter.encounterType === 'dragon' ? '🐉 Dragon Player' : '🏰 Dungeon Boss'}: {encounter.encounterOpponentName}</span>{encounter.encounterStatus === 'awaiting_admin' ? <button className="btn btn-primary" type="button" onClick={() => revealEncounter(encounter)}>{tr('Открыть бой игроку', 'Reveal match to player')}</button> : <><button className="btn btn-primary" type="button" onClick={() => resolveEncounter(encounter, true)}>{tr('Игрок победил', 'Player won')}</button><button className="btn btn-secondary" type="button" onClick={() => resolveEncounter(encounter, false)}>{tr('Игрок проиграл', 'Player lost')}</button></>}<button className="btn btn-secondary" type="button" onClick={() => cancelEncounter(encounter)}>{tr('Отменить DnD-бой', 'Cancel encounter')}</button></div>)}</div>}
         <form className="card-elevated" onSubmit={submit} style={{ padding: 'var(--spacing-xl)', display: 'grid', gap: 12, marginBottom: 24 }}>
             <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{tr('В верхней сетке три победы BO3 переводят в центр S, два поражения — в нижнюю сетку. В нижней сетке также нужны три победы; первое поражение означает вылет.', 'Three BO3 wins in the upper bracket advance to the S center; two losses move the player to the lower bracket. The lower bracket also requires three wins; its first loss eliminates the player.')}</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 12 }}>
