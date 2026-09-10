@@ -84,7 +84,7 @@ function fanOffset(index, total) {
     const ringIndex = Math.floor(index / 8);
     const ringSize = Math.min(8, total - ringIndex * 8);
     const angle = -Math.PI / 2 + (index % 8) * (Math.PI * 2 / ringSize);
-    const radius = 54 + ringIndex * 40;
+    const radius = 62 + ringIndex * 46;
     return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
 }
 
@@ -109,18 +109,19 @@ function CampaignMap({ participants, snapshot, focus }) {
         setPositions(next);
     }, [participants]);
     const clusters = React.useMemo(() => {
-        const grouped = new Map();
+        const grouped = [];
+        const clusterDistance = 72;
         for (const position of positions) {
-            const key = `${Math.round(position.x)}:${Math.round(position.y)}`;
-            if (!grouped.has(key)) grouped.set(key, []);
-            grouped.get(key).push(position);
+            const nearby = grouped.find(group => group.players.some(item => Math.hypot(item.x - position.x, item.y - position.y) <= clusterDistance));
+            if (nearby) nearby.players.push(position);
+            else grouped.push({ players: [position] });
         }
-        return Array.from(grouped, ([id, players]) => ({
-            id,
-            players: players.sort((a, b) => Number(b.player.isSelf) - Number(a.player.isSelf)),
-            x: players[0].x,
-            y: players[0].y
-        }));
+        return grouped.map(group => {
+            const players = group.players.sort((a, b) => Number(b.player.isSelf) - Number(a.player.isSelf));
+            const x = players.reduce((sum, item) => sum + item.x, 0) / players.length;
+            const y = players.reduce((sum, item) => sum + item.y, 0) / players.length;
+            return { id: players.map(item => item.player.id).sort().join(':'), players, x, y };
+        });
     }, [positions]);
     const toggleCluster = id => setExpandedClusters(current => {
         const next = new Set(current);
