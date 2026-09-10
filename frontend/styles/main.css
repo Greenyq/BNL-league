@@ -2730,6 +2730,11 @@ input[type="datetime-local"] {
 .dnd-token-clickable:focus-visible .dnd-map-token i{box-shadow:0 0 0 4px #111,0 0 0 7px #f2d277,0 0 24px #f2d277}
 .dnd-token-count{position:absolute;top:-5px;right:3px;display:grid;place-items:center;min-width:25px;height:22px;padding:0 5px;border:2px solid #17120b;border-radius:12px;background:#e0ad48;color:#160e07;font:800 11px Arial,sans-serif;box-shadow:0 2px 9px #000,0 0 8px rgba(224,173,72,.65);z-index:3}
 .dnd-map-token.tier-c i{background-color:#0b2116;border-color:#70c98f}
+.dnd-map-token{--token-accent:#f0d481}
+.dnd-map-token i{position:relative;background:radial-gradient(circle at 38% 30%,#596166 0,#242b2e 47%,#080b0d 78%);border-color:var(--token-accent);box-shadow:0 0 0 3px rgba(0,0,0,.82),inset 0 1px 3px rgba(255,255,255,.32),inset 0 -4px 7px #000,0 0 13px color-mix(in srgb,var(--token-accent) 68%,transparent),0 5px 12px #000}
+.dnd-map-token i::before{content:"";position:absolute;inset:7px;background:linear-gradient(145deg,#fffde4 8%,var(--token-accent) 72%);-webkit-mask:var(--token-icon) center/contain no-repeat;mask:var(--token-icon) center/contain no-repeat;filter:drop-shadow(0 0 3px var(--token-accent))}
+.dnd-map-token.tier-c{--token-accent:#8cf0aa}.dnd-map-token.tier-b{--token-accent:#8cecff}.dnd-map-token.tier-a{--token-accent:#ff9b82}.dnd-map-token.tier-s{--token-accent:#ffe08a}
+.dnd-map-token.is-self i{border-color:#fff0a5;box-shadow:0 0 0 3px #111,inset 0 1px 3px rgba(255,255,255,.4),0 0 21px #f2d277}.dnd-map-token.is-king i{border-color:#fff0a0;box-shadow:0 0 0 4px #281609,inset 0 1px 3px rgba(255,255,255,.42),0 0 25px #ff9c28}
 .dnd-heading-actions{display:flex;align-items:center;gap:18px}.dnd-admin-name-toggle{display:flex;align-items:center;gap:8px;padding:8px 11px;border:1px solid rgba(211,169,75,.48);border-radius:3px;background:rgba(0,0,0,.3);color:#e3c98f;font-size:12px;cursor:pointer}.dnd-admin-name-toggle input{accent-color:#d6a63f}.dnd-admin-name-toggle span{white-space:nowrap}
 @media(max-width:1050px) and (min-width:901px){.dnd-campaign-layout{grid-template-columns:minmax(0,1fr) 285px}.dnd-player-panel{padding:19px 16px}}
 @media(max-width:900px){.dnd-campaign-layout{grid-template-columns:1fr;min-height:0}.dnd-campaign-svg{min-height:auto}.dnd-player-panel{padding:18px 16px}.dnd-heading-actions{gap:8px}.dnd-admin-name-toggle{padding:6px 8px;font-size:10px}}
