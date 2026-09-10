@@ -14,6 +14,14 @@ const ROUTES = [
 
 const DRAGON_BRANCH = 'M600 270 C600 224 600 178 600 130';
 const DUNGEON_BRANCH = 'M600 430 C600 475 600 520 600 590';
+const RELIC_INFO = {
+    arena_shield: ['ARENA SHIELD', 'Защита от одного поражения на арене'],
+    global_shield: ['AEGIS OF FATE', 'Защита от одного поражения в любой сетке'],
+    opponent_skip: ['BANISHMENT RUNE', 'Один раз сменить назначенного соперника'],
+    tier_vision: ['EYE OF TRUE SIGHT', 'Показывает всех игроков своего тира'],
+    map_reroll: ['BIOME SHARD', 'Один раз сменить карту на другой биом'],
+    chaos_shift: ['CHAOS COMPASS', 'Тир и сетка изменены случайным образом']
+};
 
 function DragonMark() {
     return <svg viewBox="0 0 180 110" className="dnd-dragon"><path d="M92 54c24-39 54-43 78-38-19 9-25 23-27 38 12-8 24-9 35-5-14 8-24 20-29 36-18-16-34-20-49-13-4 19-20 30-43 29 14-8 19-18 16-30-21 8-39 5-55-9 20 2 35-5 46-19-13-5-23-14-29-27 22 4 39 14 52 29l5 9Z" /></svg>;
@@ -50,7 +58,7 @@ function EncounterOverlay({ snapshot, send, guardian }) {
     </motion.div></AnimatePresence>;
 }
 
-function PlayerPanel({ self, king, guardian, snapshot, onSafe, onMystery, onFind, pathError }) {
+function PlayerPanel({ self, king, guardian, snapshot, onSafe, onMystery, onFind, onUseRelic, pathError, relicError, relicBusy }) {
     const ctx = snapshot.context;
     const lower = self?.status === 'lower';
     const center = ['s_bracket', 'king'].includes(self?.status);
@@ -59,6 +67,8 @@ function PlayerPanel({ self, king, guardian, snapshot, onSafe, onMystery, onFind
     const recordedLosses = Number(lower ? self?.lowerLosses : self?.upperLosses) || 0;
     const losses = Math.max(recordedLosses, ctx.losses || 0);
     const mysteryLocked = Boolean(self?.relicClaimed || ctx.arenaShield);
+    const relic = RELIC_INFO[self?.relicType] || null;
+    const relicAction = !self?.relicUsedAt && ['opponent_skip', 'map_reroll'].includes(self?.relicType);
 
     return <aside className="dnd-player-panel">
         <header><span className="dnd-panel-avatar">{self?.tier || 'B'}</span><div><small>PLAYER CAMPAIGN</small><h3>{self?.name || 'Guest Adventurer'}</h3><p>{center ? 'S Arena' : `Tier ${self?.tier || 'B'} · ${lower ? 'Lower' : 'Upper'} Bracket`}</p></div></header>
@@ -68,8 +78,8 @@ function PlayerPanel({ self, king, guardian, snapshot, onSafe, onMystery, onFind
             <button onClick={onSafe}><b>Safe Road</b><small>Следующая обычная дуэль</small></button>
             <button className="is-mystery" onClick={onMystery} disabled={mysteryLocked}><b>Mystery Road</b><small>{mysteryLocked ? 'Недоступно: Arena Shield уже получен' : 'Dragon Player или Dungeon Boss'}</small></button>
             {pathError && <p className="dnd-path-error">{pathError}</p>}
-        </section> : snapshot.matches('waitingForAdmin') || self?.encounterStatus === 'awaiting_admin' ? <section className="dnd-next-battle is-locked"><label>MYSTERY ENCOUNTER</label><div><strong>{self?.name || 'YOU'}</strong><em>VS</em><strong>HIDDEN</strong></div><small>Админ откроет соперника, когда бой будет готов</small></section> : <section className="dnd-next-battle"><label>NEXT BATTLE</label><div><strong>{self?.name || 'YOU'}</strong><em>VS</em><strong>{guardian || 'TBD'}</strong></div><small>{center && king && king.showName ? `King: ${king.name}` : 'Official BO3 duel'}</small></section>}
-        <section className={`dnd-panel-relic${ctx.arenaShield ? ' has-relic' : ''}`}><span>{ctx.arenaShield ? '◆' : '◇'}</span><div><label>{ctx.arenaShield ? 'ARENA SHIELD' : 'NO RELIC'}</label><small>{ctx.arenaShield ? '1 charge · S Arena only' : 'Win a special encounter'}</small></div></section>
+        </section> : snapshot.matches('waitingForAdmin') || self?.encounterStatus === 'awaiting_admin' ? <section className="dnd-next-battle is-locked"><label>MYSTERY ENCOUNTER</label><div><strong>{self?.name || 'YOU'}</strong><em>VS</em><strong>HIDDEN</strong></div><small>Админ откроет соперника, когда бой будет готов</small></section> : <section className="dnd-next-battle"><label>NEXT BATTLE</label><div><strong>{self?.name || 'YOU'}</strong><em>VS</em><strong>{guardian || 'TBD'}</strong></div><small>{self?.assignedMapTitle ? `Map: ${self.assignedMapTitle}` : center && king && king.showName ? `King: ${king.name}` : 'Official BO3 duel'}</small></section>}
+        <section className={`dnd-panel-relic${relic ? ' has-relic' : ''}`}><span>{relic ? '◆' : '◇'}</span><div><label>{relic ? relic[0] : 'NO RELIC'}</label><small>{relic ? `${relic[1]}${self?.relicUsedAt ? ' · использован' : ''}` : 'Win a special encounter'}</small>{relicAction && <button type="button" className="dnd-relic-action" disabled={relicBusy || !self?.assignedOpponentId} onClick={onUseRelic}>{relicBusy ? '...' : self.relicType === 'opponent_skip' ? 'Сменить соперника' : 'Сменить биом карты'}</button>}{relicError && <small className="dnd-path-error">{relicError}</small>}</div></section>
         <button className="dnd-find-button" onClick={onFind}>⌖ Найти меня на карте</button>
     </aside>;
 }
@@ -157,6 +167,8 @@ export function GameBoard({ participants = [], duels = [], viewer = {}, revealNa
     const [focus, setFocus] = React.useState(0);
     const [assignedEncounter, setAssignedEncounter] = React.useState(null);
     const [pathError, setPathError] = React.useState('');
+    const [relicError, setRelicError] = React.useState('');
+    const [relicBusy, setRelicBusy] = React.useState(false);
     const previousServerState = React.useRef(null);
     React.useEffect(() => { const sub = actor.subscribe(setSnapshot); setSnapshot(actor.getSnapshot()); return () => sub.unsubscribe(); }, [actor]);
     React.useEffect(() => () => actor.stop(), [actor]);
@@ -202,10 +214,22 @@ export function GameBoard({ participants = [], duels = [], viewer = {}, revealNa
         } catch (err) { setPathError(err.message); }
     };
     const findSelf = () => { setFocus(v => v + 1); setTimeout(() => setFocus(0), 1200); };
+    const useRelic = async () => {
+        setRelicError(''); setRelicBusy(true);
+        try {
+            const playerSession = localStorage.getItem('bnl_player_session') || '';
+            const adminSession = localStorage.getItem('bnl_admin_session') || '';
+            const response = await fetch(`/api/duels/stage2/${self.id}/use-relic`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(playerSession ? { 'x-player-session-id': playerSession } : {}), ...(adminSession ? { 'x-session-id': adminSession } : {}) } });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Не удалось использовать реликт');
+            window.dispatchEvent(new Event('bnl-player-session-change'));
+        } catch (err) { setRelicError(err.message); }
+        setRelicBusy(false);
+    };
 
     return <div className="dnd-board-shell">
         <div className="dnd-board-heading"><div><small>BNL CAMPAIGN</small><h3>Road to the Frozen Throne</h3></div><div className="dnd-heading-actions">{viewer?.canRevealNames && <label className="dnd-admin-name-toggle"><input type="checkbox" checked={revealNames} onChange={event => onRevealNames?.(event.target.checked)} /><span>{revealNames ? 'Скрыть имена' : 'Показать имена'}</span></label>}<div className="dnd-live"><i /> LIVE TOURNAMENT</div></div></div>
-        <div className={`dnd-campaign-layout${snapshot.matches('defeat') ? ' is-defeat' : ''}${!self ? ' is-spectator' : ''}`}><CampaignMap participants={participants} snapshot={snapshot} focus={focus} />{self ? <PlayerPanel self={self} king={king} guardian={guardianName} snapshot={snapshot} onSafe={() => choosePath('safe')} onMystery={() => choosePath('mystery')} onFind={findSelf} pathError={pathError} /> : <aside className="dnd-player-panel dnd-spectator-panel"><small>PLAYER CAMPAIGN</small><h3>Войдите в аккаунт</h3><p>После входа здесь появятся ваша статистика, следующий бой и выбор дороги.</p></aside>}</div>
+        <div className={`dnd-campaign-layout${snapshot.matches('defeat') ? ' is-defeat' : ''}${!self ? ' is-spectator' : ''}`}><CampaignMap participants={participants} snapshot={snapshot} focus={focus} />{self ? <PlayerPanel self={self} king={king} guardian={guardianName} snapshot={snapshot} onSafe={() => choosePath('safe')} onMystery={() => choosePath('mystery')} onFind={findSelf} onUseRelic={useRelic} pathError={pathError} relicError={relicError} relicBusy={relicBusy} /> : <aside className="dnd-player-panel dnd-spectator-panel"><small>PLAYER CAMPAIGN</small><h3>Войдите в аккаунт</h3><p>После входа здесь появятся ваша статистика, следующий бой и выбор дороги.</p></aside>}</div>
         <AnimatePresence>{snapshot.matches('defeat') && <motion.div className="dnd-result-banner is-loss" initial={{ opacity: 0, scale: .8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}><b>DEFEAT</b><span>Серия побед сброшена</span></motion.div>}</AnimatePresence>
         <EncounterOverlay snapshot={snapshot} send={send} guardian={guardianName} />
     </div>;
