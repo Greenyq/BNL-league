@@ -2282,12 +2282,14 @@ function DuelsTab({ players, showMsg, onRefresh }) {
     const [form, setForm] = React.useState(initial);
     const [duels, setDuels] = React.useState([]);
     const [encounters, setEncounters] = React.useState([]);
+    const [stage2Participants, setStage2Participants] = React.useState([]);
     const [saving, setSaving] = React.useState(false);
     const tier = p => p?.tierOverride || p?.stats?.tier || 0;
     const tierName = n => ({ 1: 'C', 2: 'B', 3: 'A', 4: 'S' }[n] || '—');
     const loadDuels = React.useCallback(() => Promise.all([apiFetch('/api/duels'), apiFetch('/api/duels/stage2?revealNames=1')]).then(([d, stage2]) => {
         setDuels(Array.isArray(d) ? d : []);
         const participants = stage2?.participants || [];
+        setStage2Participants(participants);
         setEncounters(participants.filter(p => ['awaiting_admin', 'pending'].includes(p.encounterStatus)));
     }), []);
     React.useEffect(() => { loadDuels(); }, [loadDuels]);
@@ -2321,7 +2323,11 @@ function DuelsTab({ players, showMsg, onRefresh }) {
     const autoAssign = async () => {
         try {
             const result = await apiFetch('/api/duels/stage2/auto-assign', { method: 'POST' });
-            showMsg(`✅ ${tr(`Создано пар: ${result.count}`, `Pairs created: ${result.count}`)}`);
+            const summary = result.summary || {};
+            showMsg(`✅ ${tr(
+                `Новых пар: ${result.count}. Всего назначено: ${summary.scheduled || 0}. Ждут выбора пути: ${summary.waitingForPath || 0}. Свободны: ${summary.free || 0}.`,
+                `New pairs: ${result.count}. Total scheduled: ${summary.scheduled || 0}. Waiting for path: ${summary.waitingForPath || 0}. Free: ${summary.free || 0}.`
+            )}`);
             await loadDuels(); onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
@@ -2332,6 +2338,20 @@ function DuelsTab({ players, showMsg, onRefresh }) {
             await loadDuels(); onRefresh();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
     };
+    const scheduledPairs = React.useMemo(() => {
+        const byPlayerId = new Map(stage2Participants.map(participant => [String(participant.playerId || ''), participant]));
+        const seen = new Set();
+        const pairs = [];
+        for (const participant of stage2Participants) {
+            const opponent = byPlayerId.get(String(participant.assignedOpponentId || ''));
+            if (!opponent) continue;
+            const key = [String(participant.playerId), String(opponent.playerId)].sort().join(':');
+            if (seen.has(key)) continue;
+            seen.add(key);
+            pairs.push({ key, a: participant, b: opponent });
+        }
+        return pairs;
+    }, [stage2Participants]);
     return <div>
         <h3>{tr('Этап 2 — Дуэли', 'Stage 2 — Duels')}</h3>
         <button type="button" className="btn btn-secondary" onClick={initialize} style={{ marginBottom: 16 }}>{tr('Подготовить участников этапа 2', 'Initialize Stage 2 participants')}</button>
@@ -2339,6 +2359,13 @@ function DuelsTab({ players, showMsg, onRefresh }) {
             <h4 style={{ marginTop: 0 }}>{tr('Автоматическое расписание', 'Automatic matchmaking')}</h4>
             <p style={{ color: 'var(--color-text-muted)' }}>{tr('Пары формируются автоматически внутри тира и текущей сетки. Игроки, ожидающие выбора дороги или DnD-боя, не участвуют.', 'Pairs are created automatically within each tier and current bracket. Players waiting for a path choice or DnD encounter are skipped.')}</p>
             <button type="button" className="btn btn-primary" onClick={autoAssign}>{tr('Проверить свободных игроков сейчас', 'Match available players now')}</button>
+            {!!scheduledPairs.length && <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
+                <strong>{tr('Назначенные матчи', 'Scheduled matches')} ({scheduledPairs.length})</strong>
+                {scheduledPairs.map(pair => <div key={pair.key} style={{ padding: '9px 11px', border: '1px solid rgba(212,175,55,.25)', background: 'rgba(0,0,0,.22)' }}>
+                    <b>{pair.a.name}</b> <span style={{ color: 'var(--color-text-muted)' }}>vs</span> <b>{pair.b.name}</b>
+                    <small style={{ marginLeft: 8, color: 'var(--color-accent-secondary)' }}>Tier {pair.a.tier} · {pair.a.status}</small>
+                </div>)}
+            </div>}
         </div>
         {!!encounters.length && <div className="card-elevated" style={{ padding: 18, marginBottom: 18 }}><h4 style={{ marginTop: 0 }}>{tr('DnD-события', 'DnD encounters')}</h4>{encounters.map(encounter => <div key={encounter.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 0', borderTop: '1px solid rgba(212,175,55,.2)' }}><strong>{encounter.name}</strong><span>— {encounter.encounterType === 'dragon' ? '🐉 Dragon Player' : '🏰 Dungeon Boss'}: {encounter.encounterOpponentName}</span>{encounter.encounterStatus === 'awaiting_admin' ? <button className="btn btn-primary" type="button" onClick={() => revealEncounter(encounter)}>{tr('Открыть бой игроку', 'Reveal match to player')}</button> : <><button className="btn btn-primary" type="button" onClick={() => resolveEncounter(encounter, true)}>{tr('Игрок победил', 'Player won')}</button><button className="btn btn-secondary" type="button" onClick={() => resolveEncounter(encounter, false)}>{tr('Игрок проиграл', 'Player lost')}</button></>}</div>)}</div>}
         <form className="card-elevated" onSubmit={submit} style={{ padding: 'var(--spacing-xl)', display: 'grid', gap: 12, marginBottom: 24 }}>
