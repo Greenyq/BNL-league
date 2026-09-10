@@ -206,9 +206,9 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
     const autoTier = (p) => {
         const mmr = p.stats?.mmr || p.currentMmr || 0;
         if (p.stats?.tier != null) return p.stats.tier;
-        if (mmr >= 1800) return 4;
-        if (mmr >= 1500) return 3;
-        if (mmr >= 1200) return 2;
+        if (mmr >= 1850) return 4;
+        if (mmr >= 1550) return 3;
+        if (mmr >= 1350) return 2;
         if (mmr >= 800) return 1;
         return null;
     };
@@ -350,7 +350,6 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                                 <td>
                                     <span className={`tier-pill tier-pill--${({ 1: 'c', 2: 'b', 3: 'a', 4: 's' }[autoTier(p)] || 'u')}`}>{tierLabel(autoTier(p))}</span>
                                     <select
-                                        hidden
                                         value={p.tierOverride || ''}
                                         onChange={e => setTierOverride(p, e.target.value ? Number(e.target.value) : null)}
                                         style={{
@@ -361,10 +360,10 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                                         }}
                                     >
                                         <option value="">{tr('Авто', 'Auto')} ({tierLabel(autoTier(p))})</option>
-                                        <option value="4">S (1800+)</option>
-                                        <option value="3">A (1500-1800)</option>
-                                        <option value="2">B (1200-1500)</option>
-                                        <option value="1">C (800-1200)</option>
+                                        <option value="4">S (1850+)</option>
+                                        <option value="3">A (1550–1849)</option>
+                                        <option value="2">B (1350–1549)</option>
+                                        <option value="1">C (800–1349)</option>
                                     </select>
                                 </td>
                                 <td style={{ display: 'none' }}>
@@ -2347,9 +2346,12 @@ function DuelsTab({ players, showMsg, onRefresh }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 12 }}>
                 <select required value={form.playerAId} onChange={e => setForm({ ...form, playerAId: e.target.value })}><option value="">{tr('Игрок A', 'Player A')}</option>{players.filter(p => p.id !== form.playerBId).map(p => <option key={p.id} value={p.id}>{playerOption(p)}</option>)}</select>
                 <select required value={form.playerBId} onChange={e => setForm({ ...form, playerBId: e.target.value })}><option value="">{tr('Игрок B', 'Player B')}</option>{players.filter(p => p.id !== form.playerAId).map(p => <option key={p.id} value={p.id}>{playerOption(p)}</option>)}</select>
-                <select value={form.winner} onChange={e => setForm({ ...form, winner: e.target.value })}><option value="A">{tr('Победил игрок A', 'Player A won')}</option><option value="B">{tr('Победил игрок B', 'Player B won')}</option></select>
+                <select value={form.winner} onChange={e => setForm({ ...form, winner: e.target.value, score: '' })}><option value="A">{tr('Победил игрок A', 'Player A won')}</option><option value="B">{tr('Победил игрок B', 'Player B won')}</option></select>
                 <input type="date" required value={form.playedAt} onChange={e => setForm({ ...form, playedAt: e.target.value })} />
-                <input value={form.score} maxLength="30" onChange={e => setForm({ ...form, score: e.target.value })} placeholder={tr('Счёт, например 2:1', 'Score, e.g. 2:1')} />
+                <select required value={form.score} onChange={e => setForm({ ...form, score: e.target.value })}>
+                    <option value="">{tr('Выберите счёт', 'Select score')}</option>
+                    {form.winner === 'A' ? <><option value="2:0">2:0</option><option value="2:1">2:1</option></> : <><option value="0:2">0:2</option><option value="1:2">1:2</option></>}
+                </select>
                 <input value={form.notes} maxLength="500" onChange={e => setForm({ ...form, notes: e.target.value })} placeholder={tr('Комментарий', 'Notes')} />
             </div>
             <button className="btn btn-primary" disabled={saving}>{saving ? '...' : tr('Сохранить дуэль', 'Save duel')}</button>

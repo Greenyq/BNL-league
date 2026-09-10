@@ -842,17 +842,18 @@ function Standings() {
 
     React.useEffect(() => {
         let active = true;
-        const playerSession = localStorage.getItem('bnl_player_session') || '';
-        const adminSession = localStorage.getItem('bnl_admin_session') || '';
-        const stage2Headers = {
-            ...(playerSession ? { 'x-player-session-id': playerSession } : {}),
-            ...(adminSession ? { 'x-session-id': adminSession } : {})
-        };
-        const loadStandings = (initial = false) => Promise.all([
+        const loadStandings = (initial = false) => {
+            const playerSession = localStorage.getItem('bnl_player_session') || '';
+            const adminSession = localStorage.getItem('bnl_admin_session') || '';
+            const stage2Headers = {
+                ...(playerSession ? { 'x-player-session-id': playerSession } : {}),
+                ...(adminSession ? { 'x-session-id': adminSession } : {})
+            };
+            return Promise.all([
             fetch('/api/players').then(r => r.json()),
             fetch('/api/duels', { headers: stage2Headers }).then(r => r.json()),
             fetch(`/api/duels/stage2${revealStage2Names ? '?revealNames=1' : ''}`, { headers: stage2Headers }).then(r => r.json()),
-        ])
+            ])
             .then(([pl, duelData, stage2Data]) => {
                 if (!active) return;
                 setPlayers(Array.isArray(pl) ? pl : []);
@@ -862,9 +863,18 @@ function Standings() {
                 if (initial) setLoading(false);
             })
             .catch(err  => { if (active && initial) { setError(err.message); setLoading(false); } });
+        };
         loadStandings(true);
         const refresh = setInterval(() => loadStandings(false), 10000);
-        return () => { active = false; clearInterval(refresh); };
+        const refreshForSession = () => loadStandings(false);
+        window.addEventListener('bnl-player-session-change', refreshForSession);
+        window.addEventListener('bnl-admin-session-change', refreshForSession);
+        return () => {
+            active = false;
+            clearInterval(refresh);
+            window.removeEventListener('bnl-player-session-change', refreshForSession);
+            window.removeEventListener('bnl-admin-session-change', refreshForSession);
+        };
     }, [revealStage2Names]);
 
     const duelStats = duels.reduce((map, duel) => {
