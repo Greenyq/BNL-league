@@ -21,6 +21,8 @@ const stableIconFor = participant => {
     for (let i = 0; i < seed.length; i++) hash = Math.imul(hash ^ seed.charCodeAt(i), 16777619);
     return pool[(hash >>> 0) % pool.length];
 };
+const hasClaimedRelic = participant => Boolean(participant?.arenaShield || participant?.arenaShieldUsedAt);
+const duelPairKey = (firstId, secondId) => [String(firstId), String(secondId)].sort().join(':');
 
 async function pruneRemovedStage2Participants() {
     const playerIds = new Set((await Player.find({}).select('_id')).map(player => String(player.id)));
@@ -122,12 +124,16 @@ const matchmakingGroup = participant => ['s_bracket', 'king'].includes(participa
 // Fill every currently available slot without changing tournament results.
 // Results and bracket movement remain admin-only operations.
 async function autoAssignOpenMatches() {
-    const participants = await Stage2Participant.find({
-        status: { $ne: 'eliminated' },
-        assignedOpponentId: null,
-        specialMoveReady: { $ne: true },
-        encounterStatus: { $nin: ['awaiting_admin', 'pending'] }
-    }).sort({ updatedAt: 1, tier: 1 });
+    const [participants, completedDuels] = await Promise.all([
+        Stage2Participant.find({
+            status: { $ne: 'eliminated' },
+            assignedOpponentId: null,
+            specialMoveReady: { $ne: true },
+            encounterStatus: { $nin: ['awaiting_admin', 'pending'] }
+        }).sort({ updatedAt: 1, tier: 1 }),
+        Duel.find({ phase: { $ne: 'encounter' } }).select('playerA.playerId playerB.playerId')
+    ]);
+    const completedPairs = new Set(completedDuels.map(duel => duelPairKey(duel.playerA.playerId, duel.playerB.playerId)));
     const groups = new Map();
     for (const participant of participants) {
         const key = matchmakingGroup(participant);
@@ -137,11 +143,21 @@ async function autoAssignOpenMatches() {
     const assigned = [];
     for (const pool of groups.values()) {
         while (pool.length > 1) {
-            const a = pool.shift();
-            const previous = new Set((a.opponents || []).map(String));
-            let opponentIndex = pool.findIndex(candidate => !previous.has(String(candidate.playerId)));
-            if (opponentIndex < 0) opponentIndex = 0;
-            const [b] = pool.splice(opponentIndex, 1);
+            let pairIndexes = null;
+            for (let first = 0; first < pool.length && !pairIndexes; first++) {
+                for (let second = first + 1; second < pool.length; second++) {
+                    if (!completedPairs.has(duelPairKey(pool[first].playerId, pool[second].playerId))) {
+                        pairIndexes = [first, second];
+                        break;
+                    }
+                }
+            }
+            // Every remaining combination has already been played. They wait
+            // for bracket movement instead of receiving a repeat opponent.
+            if (!pairIndexes) break;
+            const [firstIndex, secondIndex] = pairIndexes;
+            const [b] = pool.splice(secondIndex, 1);
+            const [a] = pool.splice(firstIndex, 1);
             const now = new Date();
             a.assignedOpponentId = b.playerId; a.assignedAt = now;
             b.assignedOpponentId = a.playerId; b.assignedAt = now;
@@ -265,6 +281,7 @@ router.get('/stage2', async (req, res) => {
                 lowerLosses: participant.lowerLosses,
                 kingQualified: participant.kingQualified,
                 arenaShield: Boolean(participant.arenaShield),
+                relicClaimed: isSelf || viewer.isAdmin ? hasClaimedRelic(participant) : undefined,
                 winStreak: isSelf ? Math.max(Number(participant.winStreak) || 0, ownWinStreak) : undefined,
                 specialMoveReady: isSelf || viewer.isAdmin ? Boolean(participant.specialMoveReady) : undefined,
                 mysteryUsed: isSelf ? Boolean(participant.mysteryUsed) : undefined,
@@ -352,6 +369,9 @@ router.post('/stage2/:id/special-path', async (req, res) => {
         if (!participant.specialMoveReady) return res.status(409).json({ error: 'Special move is not available' });
         const path = req.body.path;
         if (!['safe', 'mystery'].includes(path)) return res.status(400).json({ error: 'Path must be safe or mystery' });
+        if (path === 'mystery' && hasClaimedRelic(participant)) {
+            return res.status(409).json({ error: 'A player who has claimed the Arena Shield cannot enter Mystery Road again' });
+        }
         participant.specialMoveReady = false;
         participant.specialPath = path;
         participant.encounterType = null;
@@ -359,7 +379,15 @@ router.post('/stage2/:id/special-path', async (req, res) => {
         participant.encounterOpponentName = null;
         participant.encounterStatus = null;
         if (path === 'mystery') {
-            const candidates = await Stage2Participant.find({ _id: { $ne: participant._id }, status: { $ne: 'eliminated' } });
+            const candidates = await Stage2Participant.find({
+                _id: { $ne: participant._id },
+                status: { $ne: 'eliminated' },
+                arenaShield: { $ne: true },
+                arenaShieldUsedAt: null,
+                assignedOpponentId: null,
+                specialMoveReady: { $ne: true },
+                encounterStatus: { $nin: ['awaiting_admin', 'pending'] }
+            });
             if (!candidates.length) return res.status(409).json({ error: 'No encounter opponent is available' });
             const opponent = candidates[Math.floor(Math.random() * candidates.length)];
             participant.encounterType = Math.random() < .5 ? 'dragon' : 'dungeon';
@@ -481,6 +509,14 @@ router.post('/', checkAuth, async (req, res) => {
         const isKingMatch = pa.status === 'king' || pb.status === 'king';
         const isCenterMatch = ['s_bracket', 'king'].includes(pa.status) && ['s_bracket', 'king'].includes(pb.status);
         if (groupA !== groupB || (!isCenterMatch && pa.status !== pb.status)) return res.status(400).json({ error: 'Players must be in the same tier and bracket' });
+        const previousDuel = await Duel.exists({
+            phase: { $ne: 'encounter' },
+            $or: [
+                { 'playerA.playerId': a.id, 'playerB.playerId': b.id },
+                { 'playerA.playerId': b.id, 'playerB.playerId': a.id }
+            ]
+        });
+        if (previousDuel) return res.status(409).json({ error: 'These players have already played each other' });
         const phase = isKingMatch ? 'king' : pa.status;
         const scoreMatch = String(score || '').trim().match(/^(\d+)\s*[:\-]\s*(\d+)$/);
         if (!scoreMatch) return res.status(400).json({ error: 'Enter a BO3 score such as 2:0 or 2:1' });
@@ -511,7 +547,9 @@ router.post('/', checkAuth, async (req, res) => {
         winnerP.winStreak = (Number(winnerP.winStreak) || 0) + 1;
         loserP.winStreak = 0;
         loserP.specialMoveReady = false;
-        if (['upper', 'lower'].includes(phase) && !winnerP.mysteryUsed) winnerP.specialMoveReady = true;
+        if (['upper', 'lower'].includes(phase) && !winnerP.mysteryUsed && !hasClaimedRelic(winnerP)) winnerP.specialMoveReady = true;
+        if (!pa.opponents.includes(String(pb.playerId))) pa.opponents.push(String(pb.playerId));
+        if (!pb.opponents.includes(String(pa.playerId))) pb.opponents.push(String(pa.playerId));
         pa.mapWins += mapsA; pa.mapLosses += mapsB; pb.mapWins += mapsB; pb.mapLosses += mapsA;
         if (phase === 'upper') {
             winnerP.upperWins++;
