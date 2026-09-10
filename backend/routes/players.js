@@ -4,6 +4,7 @@ const crypto   = require('crypto');
 const { Player, PlayerStats, PlayerCache, ManualPointsAdjustment,
         PlayerUser, PlayerSession, PasswordReset } = require('../models/Player');
 const { Portrait } = require('../models/Portrait');
+const { Stage2Participant } = require('../models/Duel');
 const { checkAuth } = require('../middleware/auth');
 const { recalculateAllPlayerStats } = require('../services/scoring');
 const { searchPlayer, searchPlayers } = require('../services/w3champions');
@@ -412,7 +413,29 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
     try {
-        await Player.findByIdAndDelete(req.params.id);
+        const player = await Player.findByIdAndDelete(req.params.id);
+        if (!player) return res.status(404).json({ error: 'Player not found' });
+
+        // Stage 2 keeps its own progress document. Remove it together with the
+        // league player so a stale token cannot remain on the campaign map.
+        await Stage2Participant.deleteMany({
+            $or: [
+                { playerId: String(player.id) },
+                { battleTag: { $regex: new RegExp(`^${escapeRegex(player.battleTag)}$`, 'i') } }
+            ]
+        });
+        // Do not delete historical duels, but release any pending assignments
+        // and encounters which pointed at the removed player.
+        await Promise.all([
+            Stage2Participant.updateMany(
+                { assignedOpponentId: String(player.id) },
+                { $set: { assignedOpponentId: null, assignedAt: null } }
+            ),
+            Stage2Participant.updateMany(
+                { encounterOpponentId: String(player.id) },
+                { $set: { encounterOpponentId: null, encounterOpponentName: null, encounterStatus: null, encounterRevealedAt: null } }
+            )
+        ]);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });

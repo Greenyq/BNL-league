@@ -21,6 +21,26 @@ const stableIconFor = participant => {
     return pool[(hash >>> 0) % pool.length];
 };
 
+async function pruneRemovedStage2Participants() {
+    const playerIds = new Set((await Player.find({}).select('_id')).map(player => String(player.id)));
+    const stale = (await Stage2Participant.find({}).select('playerId'))
+        .filter(participant => !playerIds.has(String(participant.playerId)));
+    if (!stale.length) return;
+
+    const stalePlayerIds = stale.map(participant => String(participant.playerId));
+    await Stage2Participant.deleteMany({ _id: { $in: stale.map(participant => participant._id) } });
+    await Promise.all([
+        Stage2Participant.updateMany(
+            { assignedOpponentId: { $in: stalePlayerIds } },
+            { $set: { assignedOpponentId: null, assignedAt: null } }
+        ),
+        Stage2Participant.updateMany(
+            { encounterOpponentId: { $in: stalePlayerIds } },
+            { $set: { encounterOpponentId: null, encounterOpponentName: null, encounterStatus: null, encounterRevealedAt: null } }
+        )
+    ]);
+}
+
 async function getStage2Viewer(req) {
     const admin = await getAdminSessionResult(req.headers['x-session-id']);
     if (admin.session) return { isAdmin: true, participant: null };
@@ -182,6 +202,8 @@ async function repairLegacyKings() {
 
 router.get('/stage2', async (req, res) => {
     try {
+        // Self-heal records left behind by older versions of player deletion.
+        await pruneRemovedStage2Participants();
         await repairLegacyUpperDemotions();
         await repairLegacyKings();
         const [participants, viewer] = await Promise.all([
