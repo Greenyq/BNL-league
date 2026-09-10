@@ -2363,7 +2363,7 @@ function DuelsTab({ players, showMsg, onRefresh }) {
                 <strong>{tr('Назначенные матчи', 'Scheduled matches')} ({scheduledPairs.length})</strong>
                 {scheduledPairs.map(pair => <div key={pair.key} style={{ padding: '9px 11px', border: '1px solid rgba(212,175,55,.25)', background: 'rgba(0,0,0,.22)' }}>
                     <b>{pair.a.name}</b> <span style={{ color: 'var(--color-text-muted)' }}>vs</span> <b>{pair.b.name}</b>
-                    <small style={{ marginLeft: 8, color: 'var(--color-accent-secondary)' }}>Tier {pair.a.tier} · {pair.a.status}</small>
+                    <small style={{ marginLeft: 8, color: 'var(--color-accent-secondary)' }}>Tier {pair.a.tier} · {pair.a.status}{pair.a.assignedMapTitle ? ` · ${pair.a.assignedMapTitle}` : ''}</small>
                 </div>)}
             </div>}
         </div>
