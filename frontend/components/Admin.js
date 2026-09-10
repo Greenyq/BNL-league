@@ -206,9 +206,9 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
     const autoTier = (p) => {
         const mmr = p.stats?.mmr || p.currentMmr || 0;
         if (p.stats?.tier != null) return p.stats.tier;
-        if (mmr >= 1800) return 4;
-        if (mmr >= 1500) return 3;
-        if (mmr >= 1200) return 2;
+        if (mmr >= 1850) return 4;
+        if (mmr >= 1550) return 3;
+        if (mmr >= 1350) return 2;
         if (mmr >= 800) return 1;
         return null;
     };
@@ -350,7 +350,6 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                                 <td>
                                     <span className={`tier-pill tier-pill--${({ 1: 'c', 2: 'b', 3: 'a', 4: 's' }[autoTier(p)] || 'u')}`}>{tierLabel(autoTier(p))}</span>
                                     <select
-                                        hidden
                                         value={p.tierOverride || ''}
                                         onChange={e => setTierOverride(p, e.target.value ? Number(e.target.value) : null)}
                                         style={{
@@ -361,10 +360,10 @@ function PlayersTab({ players, teams, onRefresh, showMsg }) {
                                         }}
                                     >
                                         <option value="">{tr('Авто', 'Auto')} ({tierLabel(autoTier(p))})</option>
-                                        <option value="4">S (1800+)</option>
-                                        <option value="3">A (1500-1800)</option>
-                                        <option value="2">B (1200-1500)</option>
-                                        <option value="1">C (800-1200)</option>
+                                        <option value="4">S (1850+)</option>
+                                        <option value="3">A (1550–1849)</option>
+                                        <option value="2">B (1350–1549)</option>
+                                        <option value="1">C (800–1349)</option>
                                     </select>
                                 </td>
                                 <td style={{ display: 'none' }}>
