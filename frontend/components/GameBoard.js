@@ -58,6 +58,7 @@ function PlayerPanel({ self, king, guardian, snapshot, onSafe, onMystery, onFind
     const wins = center ? 0 : Math.max(recordedWins, ctx.wins || 0);
     const recordedLosses = Number(lower ? self?.lowerLosses : self?.upperLosses) || 0;
     const losses = Math.max(recordedLosses, ctx.losses || 0);
+    const mysteryLocked = Boolean(self?.relicClaimed || ctx.arenaShield);
 
     return <aside className="dnd-player-panel">
         <header><span className="dnd-panel-avatar">{self?.tier || 'B'}</span><div><small>PLAYER CAMPAIGN</small><h3>{self?.name || 'Guest Adventurer'}</h3><p>{center ? 'S Arena' : `Tier ${self?.tier || 'B'} · ${lower ? 'Lower' : 'Upper'} Bracket`}</p></div></header>
@@ -65,7 +66,7 @@ function PlayerPanel({ self, king, guardian, snapshot, onSafe, onMystery, onFind
         <div className="dnd-panel-stats"><span><small>LOSSES</small><b>{losses}/{lower ? 1 : 2}</b></span><span><small>WIN STREAK</small><b className="is-fire">🔥 ×{ctx.streak}</b></span></div>
         {snapshot.matches('choosingPath') ? <section className="dnd-panel-choice"><label>CHOOSE YOUR PATH</label>
             <button onClick={onSafe}><b>Safe Road</b><small>Следующая обычная дуэль</small></button>
-            <button className="is-mystery" onClick={onMystery}><b>Mystery Road</b><small>Dragon Player или Dungeon Boss</small></button>
+            <button className="is-mystery" onClick={onMystery} disabled={mysteryLocked}><b>Mystery Road</b><small>{mysteryLocked ? 'Недоступно: Arena Shield уже получен' : 'Dragon Player или Dungeon Boss'}</small></button>
             {pathError && <p className="dnd-path-error">{pathError}</p>}
         </section> : snapshot.matches('waitingForAdmin') || self?.encounterStatus === 'awaiting_admin' ? <section className="dnd-next-battle is-locked"><label>MYSTERY ENCOUNTER</label><div><strong>{self?.name || 'YOU'}</strong><em>VS</em><strong>HIDDEN</strong></div><small>Админ откроет соперника, когда бой будет готов</small></section> : <section className="dnd-next-battle"><label>NEXT BATTLE</label><div><strong>{self?.name || 'YOU'}</strong><em>VS</em><strong>{guardian || 'TBD'}</strong></div><small>{center && king && king.showName ? `King: ${king.name}` : 'Official BO3 duel'}</small></section>}
         <section className={`dnd-panel-relic${ctx.arenaShield ? ' has-relic' : ''}`}><span>{ctx.arenaShield ? '◆' : '◇'}</span><div><label>{ctx.arenaShield ? 'ARENA SHIELD' : 'NO RELIC'}</label><small>{ctx.arenaShield ? '1 charge · S Arena only' : 'Win a special encounter'}</small></div></section>
