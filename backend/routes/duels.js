@@ -139,14 +139,19 @@ const matchmakingGroup = participant => ['s_bracket', 'king'].includes(participa
     : `${participant.status}:${participant.tier}`;
 
 async function repairInvalidAssignments() {
-    const participants = await Stage2Participant.find({ assignedOpponentId: { $ne: null } });
+    const [participants, completedDuels] = await Promise.all([
+        Stage2Participant.find({ assignedOpponentId: { $ne: null } }),
+        Duel.find({ phase: { $ne: 'encounter' } }).select('playerA.playerId playerB.playerId')
+    ]);
+    const completedPairs = new Set(completedDuels.map(duel => duelPairKey(duel.playerA.playerId, duel.playerB.playerId)));
     const byPlayerId = new Map(participants.map(participant => [String(participant.playerId), participant]));
     const invalidIds = new Set();
     for (const participant of participants) {
         const opponent = byPlayerId.get(String(participant.assignedOpponentId || ''));
         const isMutual = opponent && String(opponent.assignedOpponentId || '') === String(participant.playerId);
         const isCompatible = opponent && matchmakingGroup(opponent) === matchmakingGroup(participant);
-        if (!isMutual || !isCompatible) {
+        const alreadyPlayed = opponent && completedPairs.has(duelPairKey(participant.playerId, opponent.playerId));
+        if (!isMutual || !isCompatible || alreadyPlayed) {
             invalidIds.add(participant.id);
             if (opponent) invalidIds.add(opponent.id);
         }
@@ -159,13 +164,58 @@ async function repairInvalidAssignments() {
     return invalidIds.size;
 }
 
+async function repairInvalidEncounters() {
+    const [encounters, participants, duels] = await Promise.all([
+        Stage2Participant.find({ encounterStatus: { $in: ['awaiting_admin', 'pending'] } }),
+        Stage2Participant.find({}),
+        Duel.find({}).select('playerA.playerId playerB.playerId')
+    ]);
+    const byPlayerId = new Map(participants.map(participant => [String(participant.playerId), participant]));
+    const completedPairs = new Set(duels.map(duel => duelPairKey(duel.playerA.playerId, duel.playerB.playerId)));
+    const reserved = new Set();
+    let repaired = 0;
+    for (const challenger of encounters) {
+        const bossId = String(challenger.encounterOpponentId || '');
+        const boss = byPlayerId.get(bossId);
+        const invalid = !boss
+            || boss.status === 'eliminated'
+            || boss.tier !== challenger.tier
+            || Boolean(boss.assignedOpponentId)
+            || hasClaimedRelic(boss)
+            || reserved.has(bossId)
+            || completedPairs.has(duelPairKey(challenger.playerId, bossId));
+        if (!invalid) {
+            reserved.add(bossId);
+            continue;
+        }
+        challenger.encounterType = null;
+        challenger.encounterOpponentId = null;
+        challenger.encounterOpponentName = null;
+        challenger.encounterStatus = null;
+        challenger.encounterRevealedAt = null;
+        challenger.specialPath = null;
+        challenger.specialMoveReady = true;
+        challenger.mysteryUsed = false;
+        challenger.updatedAt = new Date();
+        await challenger.save();
+        repaired++;
+    }
+    return repaired;
+}
+
 // Fill every currently available slot without changing tournament results.
 // Results and bracket movement remain admin-only operations.
 async function autoAssignOpenMatches() {
     await repairInvalidAssignments();
+    await repairInvalidEncounters();
+    const reservedBossIds = (await Stage2Participant.find({
+        encounterStatus: { $in: ['awaiting_admin', 'pending'] },
+        encounterOpponentId: { $ne: null }
+    }).select('encounterOpponentId')).map(participant => String(participant.encounterOpponentId));
     const [participants, completedDuels, tournamentMaps] = await Promise.all([
         Stage2Participant.find({
             status: { $ne: 'eliminated' },
+            playerId: { $nin: reservedBossIds },
             assignedOpponentId: null,
             specialMoveReady: { $ne: true },
             encounterStatus: { $nin: ['awaiting_admin', 'pending'] }
@@ -311,6 +361,7 @@ router.get('/stage2', async (req, res) => {
         await repairLegacyUpperDemotions();
         await repairLegacyKings();
         await repairInvalidAssignments();
+        await repairInvalidEncounters();
         const [participants, viewer] = await Promise.all([
             Stage2Participant.find().sort({ tier: 1, qualifierWins: -1, mapWins: -1 }),
             getStage2Viewer(req)
@@ -457,8 +508,22 @@ router.post('/stage2/:id/special-path', async (req, res) => {
         participant.encounterOpponentName = null;
         participant.encounterStatus = null;
         if (path === 'mystery') {
+            const playedDuels = await Duel.find({
+                $or: [
+                    { 'playerA.playerId': participant.playerId },
+                    { 'playerB.playerId': participant.playerId }
+                ]
+            }).select('playerA.playerId playerB.playerId');
+            const playedOpponentIds = playedDuels.map(duel => String(duel.playerA.playerId) === String(participant.playerId)
+                ? String(duel.playerB.playerId)
+                : String(duel.playerA.playerId));
+            const reservedBossIds = (await Stage2Participant.find({
+                encounterStatus: { $in: ['awaiting_admin', 'pending'] },
+                encounterOpponentId: { $ne: null }
+            }).select('encounterOpponentId')).map(entry => String(entry.encounterOpponentId));
             const candidates = await Stage2Participant.find({
                 _id: { $ne: participant._id },
+                playerId: { $nin: [...playedOpponentIds, ...reservedBossIds] },
                 tier: participant.tier,
                 status: { $ne: 'eliminated' },
                 arenaShield: { $ne: true },
@@ -510,6 +575,20 @@ router.post('/stage2/assign-match', checkAuth, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.post('/stage2/unassign-match', checkAuth, async (req, res) => {
+    try {
+        const participant = await Stage2Participant.findById(req.body.participantId);
+        if (!participant) return res.status(404).json({ error: 'Stage 2 participant not found' });
+        const opponent = participant.assignedOpponentId
+            ? await Stage2Participant.findOne({ playerId: participant.assignedOpponentId })
+            : null;
+        clearAssignment(participant);
+        if (opponent && String(opponent.assignedOpponentId || '') === String(participant.playerId)) clearAssignment(opponent);
+        await Promise.all([participant.save(), opponent?.save()].filter(Boolean));
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.post('/stage2/auto-assign', checkAuth, async (req, res) => {
     try {
         const assigned = await queueAutoAssignment();
@@ -529,6 +608,27 @@ router.post('/stage2/:id/reveal-encounter', checkAuth, async (req, res) => {
         participant.encounterRevealedAt = new Date();
         await participant.save();
         res.json({ encounterType: participant.encounterType, opponentName: participant.encounterOpponentName });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/stage2/:id/cancel-encounter', checkAuth, async (req, res) => {
+    try {
+        const participant = await Stage2Participant.findById(req.params.id);
+        if (!participant) return res.status(404).json({ error: 'Stage 2 participant not found' });
+        if (!['awaiting_admin', 'pending'].includes(participant.encounterStatus)) {
+            return res.status(409).json({ error: 'No active encounter to cancel' });
+        }
+        participant.encounterType = null;
+        participant.encounterOpponentId = null;
+        participant.encounterOpponentName = null;
+        participant.encounterStatus = null;
+        participant.encounterRevealedAt = null;
+        participant.specialPath = null;
+        participant.specialMoveReady = true;
+        participant.mysteryUsed = false;
+        participant.updatedAt = new Date();
+        await participant.save();
+        res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
