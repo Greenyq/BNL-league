@@ -179,7 +179,6 @@ async function repairInvalidEncounters() {
         const boss = byPlayerId.get(bossId);
         const invalid = !boss
             || boss.status === 'eliminated'
-            || boss.tier !== challenger.tier
             || Boolean(boss.assignedOpponentId)
             || hasClaimedRelic(boss)
             || reserved.has(bossId)
@@ -524,7 +523,6 @@ router.post('/stage2/:id/special-path', async (req, res) => {
             const candidates = await Stage2Participant.find({
                 _id: { $ne: participant._id },
                 playerId: { $nin: [...playedOpponentIds, ...reservedBossIds] },
-                tier: participant.tier,
                 status: { $ne: 'eliminated' },
                 arenaShield: { $ne: true },
                 arenaShieldUsedAt: null,
@@ -535,7 +533,28 @@ router.post('/stage2/:id/special-path', async (req, res) => {
                 encounterStatus: { $nin: ['awaiting_admin', 'pending'] }
             });
             if (!candidates.length) return res.status(409).json({ error: 'No encounter opponent is available' });
-            const opponent = candidates[Math.floor(Math.random() * candidates.length)];
+            const sameTierCandidates = candidates.filter(candidate => candidate.tier === participant.tier);
+            let opponent = chooseRandom(sameTierCandidates);
+            if (!opponent) {
+                const candidatePlayerIds = candidates.map(candidate => candidate.playerId);
+                const playerIds = [participant.playerId, ...candidatePlayerIds];
+                const players = await Player.find({ _id: { $in: playerIds } }).select('_id battleTag currentMmr');
+                const stats = await PlayerStats.find({
+                    battleTag: { $in: players.map(player => player.battleTag).filter(Boolean) }
+                }).select('battleTag mmr');
+                const playersById = new Map(players.map(player => [String(player.id), player]));
+                const statsByTag = new Map(stats.filter(stat => stat.battleTag).map(stat => [String(stat.battleTag).toLowerCase(), stat]));
+                const tierMidpoint = { C: 1075, B: 1450, A: 1700, S: 1900 };
+                const getMmr = candidate => {
+                    const player = playersById.get(String(candidate.playerId));
+                    const stat = statsByTag.get(String(player?.battleTag || candidate.battleTag || '').toLowerCase());
+                    return Number(stat?.mmr || player?.currentMmr || tierMidpoint[candidate.tier] || 0);
+                };
+                const challengerMmr = getMmr(participant);
+                opponent = [...candidates].sort((first, second) =>
+                    Math.abs(getMmr(first) - challengerMmr) - Math.abs(getMmr(second) - challengerMmr)
+                )[0];
+            }
             participant.encounterType = Math.random() < .5 ? 'dragon' : 'dungeon';
             participant.encounterOpponentId = opponent.playerId;
             participant.encounterOpponentName = opponent.name;
