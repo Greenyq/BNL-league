@@ -7,6 +7,7 @@ const { suggestDuelPoints } = require('../services/duelScoring');
 
 const router = express.Router();
 const tierOf = (player, stats) => player.tierOverride || stats?.tier || getTierFromMmr(stats?.mmr || player.currentMmr || 0).value;
+const escapeRegex = value => String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const STAGE2_ICON_POOLS = {
     C: ['b-leaf-swirl', 'b-crystal-growth', 'b-stag-head', 'b-snowflake-1'],
     B: ['b-leaf-swirl', 'b-wolf-head', 'b-stag-head', 'b-crystal-growth', 'b-snowflake-1'],
@@ -43,15 +44,17 @@ async function pruneRemovedStage2Participants() {
 
 async function getStage2Viewer(req) {
     const admin = await getAdminSessionResult(req.headers['x-session-id']);
-    if (admin.session) return { isAdmin: true, participant: null };
+    const isAdmin = Boolean(admin.session);
     const sessionId = req.headers['x-player-session-id'];
-    if (!sessionId) return { isAdmin: false, participant: null };
+    if (!sessionId) return { isAdmin, participant: null };
     const session = await PlayerSession.findOne({ sessionId });
-    if (!session || session.expiresAt < new Date()) return { isAdmin: false, participant: null };
+    if (!session || session.expiresAt < new Date()) return { isAdmin, participant: null };
     const user = await PlayerUser.findById(session.playerUserId);
-    if (!user?.linkedBattleTag) return { isAdmin: false, participant: null };
-    const participant = await Stage2Participant.findOne({ battleTag: user.linkedBattleTag });
-    return { isAdmin: false, participant };
+    if (!user?.linkedBattleTag) return { isAdmin, participant: null };
+    const participant = await Stage2Participant.findOne({
+        battleTag: { $regex: new RegExp(`^${escapeRegex(user.linkedBattleTag)}$`, 'i') }
+    });
+    return { isAdmin, participant };
 }
 
 router.get('/', async (req, res) => {
