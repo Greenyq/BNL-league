@@ -249,6 +249,8 @@ async function awardRandomRelic(participant) {
     if (relicType === 'chaos_shift') {
         const tiers = ['C', 'B', 'A', 'S'].filter(tier => tier !== participant.tier);
         participant.tier = chooseRandom(tiers);
+        const numericTier = { C: 1, B: 2, A: 3, S: 4 }[participant.tier];
+        await Player.findByIdAndUpdate(participant.playerId, { tierOverride: numericTier, updatedAt: new Date() });
         participant.status = participant.tier === 'S' ? 's_bracket' : chooseRandom(['upper', 'lower']);
         participant.upperWins = 0;
         participant.upperLosses = 0;
