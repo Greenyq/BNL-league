@@ -162,6 +162,24 @@ const queueAutoAssignment = () => {
     return next;
 };
 
+async function matchmakingSummary() {
+    const participants = await Stage2Participant.find({ status: { $ne: 'eliminated' } });
+    const byPlayerId = new Map(participants.map(participant => [String(participant.playerId), participant]));
+    const scheduled = new Set();
+    for (const participant of participants) {
+        const opponentId = String(participant.assignedOpponentId || '');
+        const opponent = byPlayerId.get(opponentId);
+        if (!opponent || String(opponent.assignedOpponentId || '') !== String(participant.playerId)) continue;
+        scheduled.add([String(participant.playerId), opponentId].sort().join(':'));
+    }
+    return {
+        scheduled: scheduled.size,
+        waitingForPath: participants.filter(participant => participant.specialMoveReady).length,
+        waitingForEncounter: participants.filter(participant => ['awaiting_admin', 'pending'].includes(participant.encounterStatus)).length,
+        free: participants.filter(participant => !participant.assignedOpponentId && !participant.specialMoveReady && !['awaiting_admin', 'pending'].includes(participant.encounterStatus)).length
+    };
+}
+
 async function promotedPlayerReachedCenter() {
     return Boolean(await Duel.exists({
         phase: { $in: ['s_bracket', 'king'] },
@@ -238,6 +256,7 @@ router.get('/stage2', async (req, res) => {
             const maySeeName = revealAll || isSelf || isOpponent;
             return {
                 id: participant.id,
+                playerId: viewer.isAdmin ? participant.playerId : undefined,
                 tier: participant.tier,
                 status: participant.status,
                 upperWins: participant.upperWins,
@@ -247,7 +266,7 @@ router.get('/stage2', async (req, res) => {
                 kingQualified: participant.kingQualified,
                 arenaShield: Boolean(participant.arenaShield),
                 winStreak: isSelf ? Math.max(Number(participant.winStreak) || 0, ownWinStreak) : undefined,
-                specialMoveReady: isSelf ? Boolean(participant.specialMoveReady) : undefined,
+                specialMoveReady: isSelf || viewer.isAdmin ? Boolean(participant.specialMoveReady) : undefined,
                 mysteryUsed: isSelf ? Boolean(participant.mysteryUsed) : undefined,
                 specialPath: isSelf || viewer.isAdmin ? participant.specialPath : undefined,
                 encounterType: isSelf || viewer.isAdmin ? participant.encounterType : undefined,
@@ -385,7 +404,8 @@ router.post('/stage2/assign-match', checkAuth, async (req, res) => {
 router.post('/stage2/auto-assign', checkAuth, async (req, res) => {
     try {
         const assigned = await queueAutoAssignment();
-        res.json({ assigned, count: assigned.length });
+        const summary = await matchmakingSummary();
+        res.json({ assigned, count: assigned.length, summary });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
