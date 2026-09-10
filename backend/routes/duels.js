@@ -1,6 +1,7 @@
 const express = require('express');
 const { Duel, Stage2Participant } = require('../models/Duel');
 const { Player, PlayerStats, PlayerUser, PlayerSession } = require('../models/Player');
+const { MapFile } = require('../models/Map');
 const { checkAuth, getAdminSessionResult } = require('../middleware/auth');
 const { getTierFromMmr } = require('../services/scoring');
 const { suggestDuelPoints } = require('../services/duelScoring');
@@ -21,8 +22,24 @@ const stableIconFor = participant => {
     for (let i = 0; i < seed.length; i++) hash = Math.imul(hash ^ seed.charCodeAt(i), 16777619);
     return pool[(hash >>> 0) % pool.length];
 };
-const hasClaimedRelic = participant => Boolean(participant?.arenaShield || participant?.arenaShieldUsedAt);
+const RELIC_TYPES = ['arena_shield', 'global_shield', 'opponent_skip', 'tier_vision', 'map_reroll', 'chaos_shift'];
+const hasClaimedRelic = participant => Boolean(participant?.relicAwardedAt || participant?.relicType || participant?.arenaShield || participant?.arenaShieldUsedAt);
 const duelPairKey = (firstId, secondId) => [String(firstId), String(secondId)].sort().join(':');
+const clearAssignment = participant => {
+    participant.assignedOpponentId = null;
+    participant.assignedAt = null;
+    participant.assignedMapId = null;
+    participant.assignedMapTitle = null;
+    participant.assignedMapLabelId = null;
+};
+const applyAssignedMap = (first, second, map) => {
+    for (const participant of [first, second]) {
+        participant.assignedMapId = map ? String(map.id) : null;
+        participant.assignedMapTitle = map?.title || null;
+        participant.assignedMapLabelId = map?.labelId || null;
+    }
+};
+const chooseRandom = items => items.length ? items[Math.floor(Math.random() * items.length)] : null;
 
 async function pruneRemovedStage2Participants() {
     const playerIds = new Set((await Player.find({}).select('_id')).map(player => String(player.id)));
@@ -121,17 +138,40 @@ const matchmakingGroup = participant => ['s_bracket', 'king'].includes(participa
     ? `center:${participant.tier}`
     : `${participant.status}:${participant.tier}`;
 
+async function repairInvalidAssignments() {
+    const participants = await Stage2Participant.find({ assignedOpponentId: { $ne: null } });
+    const byPlayerId = new Map(participants.map(participant => [String(participant.playerId), participant]));
+    const invalidIds = new Set();
+    for (const participant of participants) {
+        const opponent = byPlayerId.get(String(participant.assignedOpponentId || ''));
+        const isMutual = opponent && String(opponent.assignedOpponentId || '') === String(participant.playerId);
+        const isCompatible = opponent && matchmakingGroup(opponent) === matchmakingGroup(participant);
+        if (!isMutual || !isCompatible) {
+            invalidIds.add(participant.id);
+            if (opponent) invalidIds.add(opponent.id);
+        }
+    }
+    if (!invalidIds.size) return 0;
+    await Stage2Participant.updateMany(
+        { _id: { $in: Array.from(invalidIds) } },
+        { $set: { assignedOpponentId: null, assignedAt: null, assignedMapId: null, assignedMapTitle: null, assignedMapLabelId: null } }
+    );
+    return invalidIds.size;
+}
+
 // Fill every currently available slot without changing tournament results.
 // Results and bracket movement remain admin-only operations.
 async function autoAssignOpenMatches() {
-    const [participants, completedDuels] = await Promise.all([
+    await repairInvalidAssignments();
+    const [participants, completedDuels, tournamentMaps] = await Promise.all([
         Stage2Participant.find({
             status: { $ne: 'eliminated' },
             assignedOpponentId: null,
             specialMoveReady: { $ne: true },
             encounterStatus: { $nin: ['awaiting_admin', 'pending'] }
         }).sort({ updatedAt: 1, tier: 1 }),
-        Duel.find({ phase: { $ne: 'encounter' } }).select('playerA.playerId playerB.playerId')
+        Duel.find({ phase: { $ne: 'encounter' } }).select('playerA.playerId playerB.playerId'),
+        MapFile.find({}).select('_id title labelId')
     ]);
     const completedPairs = new Set(completedDuels.map(duel => duelPairKey(duel.playerA.playerId, duel.playerB.playerId)));
     const groups = new Map();
@@ -146,7 +186,9 @@ async function autoAssignOpenMatches() {
             let pairIndexes = null;
             for (let first = 0; first < pool.length && !pairIndexes; first++) {
                 for (let second = first + 1; second < pool.length; second++) {
-                    if (!completedPairs.has(duelPairKey(pool[first].playerId, pool[second].playerId))) {
+                    const firstAvoids = (pool[first].avoidedOpponentIds || []).map(String).includes(String(pool[second].playerId));
+                    const secondAvoids = (pool[second].avoidedOpponentIds || []).map(String).includes(String(pool[first].playerId));
+                    if (!firstAvoids && !secondAvoids && !completedPairs.has(duelPairKey(pool[first].playerId, pool[second].playerId))) {
                         pairIndexes = [first, second];
                         break;
                     }
@@ -161,6 +203,7 @@ async function autoAssignOpenMatches() {
             const now = new Date();
             a.assignedOpponentId = b.playerId; a.assignedAt = now;
             b.assignedOpponentId = a.playerId; b.assignedAt = now;
+            applyAssignedMap(a, b, chooseRandom(tournamentMaps));
             if (!a.opponents.includes(String(b.playerId))) a.opponents.push(String(b.playerId));
             if (!b.opponents.includes(String(a.playerId))) b.opponents.push(String(a.playerId));
             a.updatedAt = b.updatedAt = now;
@@ -194,6 +237,28 @@ async function matchmakingSummary() {
         waitingForEncounter: participants.filter(participant => ['awaiting_admin', 'pending'].includes(participant.encounterStatus)).length,
         free: participants.filter(participant => !participant.assignedOpponentId && !participant.specialMoveReady && !['awaiting_admin', 'pending'].includes(participant.encounterStatus)).length
     };
+}
+
+async function awardRandomRelic(participant) {
+    const relicType = chooseRandom(RELIC_TYPES);
+    const now = new Date();
+    participant.relicType = relicType;
+    participant.relicAwardedAt = now;
+    participant.relicUsedAt = null;
+    if (relicType === 'arena_shield') participant.arenaShield = true;
+    if (relicType === 'chaos_shift') {
+        const tiers = ['C', 'B', 'A', 'S'].filter(tier => tier !== participant.tier);
+        participant.tier = chooseRandom(tiers);
+        participant.status = participant.tier === 'S' ? 's_bracket' : chooseRandom(['upper', 'lower']);
+        participant.upperWins = 0;
+        participant.upperLosses = 0;
+        participant.lowerWins = 0;
+        participant.lowerLosses = 0;
+        participant.kingQualified = false;
+        participant.relicUsedAt = now;
+        clearAssignment(participant);
+    }
+    return relicType;
 }
 
 async function promotedPlayerReachedCenter() {
@@ -243,6 +308,7 @@ router.get('/stage2', async (req, res) => {
         await pruneRemovedStage2Participants();
         await repairLegacyUpperDemotions();
         await repairLegacyKings();
+        await repairInvalidAssignments();
         const [participants, viewer] = await Promise.all([
             Stage2Participant.find().sort({ tier: 1, qualifierWins: -1, mapWins: -1 }),
             getStage2Viewer(req)
@@ -264,12 +330,13 @@ router.get('/stage2', async (req, res) => {
         if (own?.assignedOpponentId) assignedIds.add(String(own.assignedOpponentId));
         if (own?.encounterStatus === 'pending' && own?.encounterOpponentId) assignedIds.add(String(own.encounterOpponentId));
         const revealAll = viewer.isAdmin && req.query.revealNames === '1';
+        const hasTierVision = own?.relicType === 'tier_vision';
         const sanitized = participants.map(participant => {
             const isSelf = Boolean(own && String(own.id) === String(participant.id));
             const assignedToViewer = Boolean(own && assignedIds.has(String(participant.playerId)));
             const viewerAssignedToParticipant = Boolean(own && String(participant.assignedOpponentId || '') === String(own.playerId));
             const isOpponent = assignedToViewer || viewerAssignedToParticipant;
-            const maySeeName = revealAll || isSelf || isOpponent;
+            const maySeeName = revealAll || isSelf || isOpponent || Boolean(hasTierVision && participant.tier === own.tier);
             return {
                 id: participant.id,
                 playerId: viewer.isAdmin ? participant.playerId : undefined,
@@ -282,6 +349,8 @@ router.get('/stage2', async (req, res) => {
                 kingQualified: participant.kingQualified,
                 arenaShield: Boolean(participant.arenaShield),
                 relicClaimed: isSelf || viewer.isAdmin ? hasClaimedRelic(participant) : undefined,
+                relicType: isSelf || viewer.isAdmin ? participant.relicType : undefined,
+                relicUsedAt: isSelf || viewer.isAdmin ? participant.relicUsedAt : undefined,
                 winStreak: isSelf ? Math.max(Number(participant.winStreak) || 0, ownWinStreak) : undefined,
                 specialMoveReady: isSelf || viewer.isAdmin ? Boolean(participant.specialMoveReady) : undefined,
                 mysteryUsed: isSelf ? Boolean(participant.mysteryUsed) : undefined,
@@ -291,6 +360,8 @@ router.get('/stage2', async (req, res) => {
                 encounterStatus: isSelf || viewer.isAdmin ? participant.encounterStatus : undefined,
                 assignedOpponentId: isSelf || viewer.isAdmin ? participant.assignedOpponentId : undefined,
                 assignedAt: isSelf || viewer.isAdmin ? participant.assignedAt : undefined,
+                assignedMapId: isSelf || isOpponent || viewer.isAdmin ? participant.assignedMapId : undefined,
+                assignedMapTitle: isSelf || isOpponent || viewer.isAdmin ? participant.assignedMapTitle : undefined,
                 iconKey: stableIconFor(participant),
                 isSelf,
                 isOpponent,
@@ -351,7 +422,12 @@ router.post('/stage2/:id/arena-shield', checkAuth, async (req, res) => {
         const participant = await Stage2Participant.findById(req.params.id);
         if (!participant) return res.status(404).json({ error: 'Stage 2 participant not found' });
         participant.arenaShield = req.body.enabled !== false;
-        if (participant.arenaShield) participant.arenaShieldUsedAt = null;
+        if (participant.arenaShield) {
+            participant.arenaShieldUsedAt = null;
+            participant.relicType = 'arena_shield';
+            participant.relicAwardedAt = participant.relicAwardedAt || new Date();
+            participant.relicUsedAt = null;
+        }
         await participant.save();
         res.json({ id: participant.id, arenaShield: participant.arenaShield });
     } catch (err) {
@@ -381,9 +457,12 @@ router.post('/stage2/:id/special-path', async (req, res) => {
         if (path === 'mystery') {
             const candidates = await Stage2Participant.find({
                 _id: { $ne: participant._id },
+                tier: participant.tier,
                 status: { $ne: 'eliminated' },
                 arenaShield: { $ne: true },
                 arenaShieldUsedAt: null,
+                relicType: null,
+                relicAwardedAt: null,
                 assignedOpponentId: null,
                 specialMoveReady: { $ne: true },
                 encounterStatus: { $nin: ['awaiting_admin', 'pending'] }
@@ -451,6 +530,45 @@ router.post('/stage2/:id/reveal-encounter', checkAuth, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.post('/stage2/:id/use-relic', async (req, res) => {
+    try {
+        const viewer = await getStage2Viewer(req);
+        const participant = await Stage2Participant.findById(req.params.id);
+        if (!participant) return res.status(404).json({ error: 'Stage 2 participant not found' });
+        const ownsParticipant = viewer.participant && String(viewer.participant.id) === String(participant.id);
+        if (!viewer.isAdmin && !ownsParticipant) return res.status(403).json({ error: 'Not allowed' });
+        if (participant.relicUsedAt) return res.status(409).json({ error: 'This relic has already been used' });
+        if (!['opponent_skip', 'map_reroll'].includes(participant.relicType)) {
+            return res.status(409).json({ error: 'This relic is passive or activates automatically' });
+        }
+        const opponent = participant.assignedOpponentId
+            ? await Stage2Participant.findOne({ playerId: participant.assignedOpponentId })
+            : null;
+        if (!opponent) return res.status(409).json({ error: 'No assigned opponent' });
+
+        if (participant.relicType === 'opponent_skip') {
+            if (!participant.avoidedOpponentIds.includes(String(opponent.playerId))) {
+                participant.avoidedOpponentIds.push(String(opponent.playerId));
+            }
+            clearAssignment(participant);
+            clearAssignment(opponent);
+        } else {
+            const alternatives = await MapFile.find({
+                labelId: { $ne: participant.assignedMapLabelId },
+                _id: { $ne: participant.assignedMapId }
+            }).select('_id title labelId');
+            const replacement = chooseRandom(alternatives);
+            if (!replacement) return res.status(409).json({ error: 'No map from another biome is available' });
+            applyAssignedMap(participant, opponent, replacement);
+        }
+        participant.relicUsedAt = new Date();
+        participant.updatedAt = opponent.updatedAt = new Date();
+        await Promise.all([participant.save(), opponent.save()]);
+        if (participant.relicType === 'opponent_skip') await queueAutoAssignment();
+        res.json({ success: true, relicType: participant.relicType, assignedMapTitle: participant.assignedMapTitle });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // Encounter matches are recorded separately and never change upper/lower bracket counters.
 router.post('/stage2/:id/encounter-result', checkAuth, async (req, res) => {
     try {
@@ -470,14 +588,14 @@ router.post('/stage2/:id/encounter-result', checkAuth, async (req, res) => {
             notes: `${challenger.encounterType || 'special'} encounter`, playedAt: req.body.playedAt || new Date()
         });
         challenger.encounterStatus = challengerWon ? 'won' : 'lost';
+        let relicType = null;
         if (challengerWon) {
-            challenger.arenaShield = true;
-            challenger.arenaShieldUsedAt = null;
+            relicType = await awardRandomRelic(challenger);
         }
         challenger.updatedAt = new Date();
         await challenger.save();
         await queueAutoAssignment();
-        res.status(201).json({ duel, encounterStatus: challenger.encounterStatus, arenaShield: challenger.arenaShield });
+        res.status(201).json({ duel, encounterStatus: challenger.encounterStatus, relicType, arenaShield: challenger.arenaShield });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -536,12 +654,18 @@ router.post('/', checkAuth, async (req, res) => {
                 { $set: { assignedOpponentId: null, assignedAt: null } }
             );
         }
+        if (!pa.assignedMapId || String(pa.assignedOpponentId || '') !== String(pb.playerId)) {
+            applyAssignedMap(pa, pb, chooseRandom(await MapFile.find({}).select('_id title labelId')));
+        }
 
         const duel = await Duel.create({
             phase, tierGroup: phase === 'king' ? 'S' : groupA,
             playerA: { playerId: a.id, battleTag: a.battleTag, name: a.name, tier: tierA, points: 0 },
             playerB: { playerId: b.id, battleTag: b.battleTag, name: b.name, tier: tierB, points: 0 },
-            winner, score: `${mapsA}:${mapsB}`, notes, playedAt: playedAt || new Date()
+            winner, score: `${mapsA}:${mapsB}`, notes, playedAt: playedAt || new Date(),
+            assignedMapId: pa.assignedMapId,
+            assignedMapTitle: pa.assignedMapTitle,
+            assignedMapLabelId: pa.assignedMapLabelId
         });
         const winnerP = winner === 'A' ? pa : pb, loserP = winner === 'A' ? pb : pa;
         winnerP.winStreak = (Number(winnerP.winStreak) || 0) + 1;
@@ -551,21 +675,30 @@ router.post('/', checkAuth, async (req, res) => {
         if (!pa.opponents.includes(String(pb.playerId))) pa.opponents.push(String(pb.playerId));
         if (!pb.opponents.includes(String(pa.playerId))) pb.opponents.push(String(pa.playerId));
         pa.mapWins += mapsA; pa.mapLosses += mapsB; pb.mapWins += mapsB; pb.mapLosses += mapsA;
+        const globalShieldProtected = loserP.relicType === 'global_shield' && !loserP.relicUsedAt;
+        if (globalShieldProtected) loserP.relicUsedAt = new Date();
         if (phase === 'upper') {
             winnerP.upperWins++;
             if (winnerP.upperWins >= 3) winnerP.status = 's_bracket';
-            loserP.upperLosses = (Number(loserP.upperLosses) || 0) + 1;
-            if (loserP.upperLosses >= 2) loserP.status = 'lower';
+            if (!globalShieldProtected) {
+                loserP.upperLosses = (Number(loserP.upperLosses) || 0) + 1;
+                if (loserP.upperLosses >= 2) loserP.status = 'lower';
+            }
         } else if (phase === 'lower') {
             winnerP.lowerWins++;
             if (winnerP.lowerWins >= 3) winnerP.status = 's_bracket';
-            loserP.lowerLosses = (Number(loserP.lowerLosses) || 0) + 1;
-            loserP.status = 'eliminated';
+            if (!globalShieldProtected) {
+                loserP.lowerLosses = (Number(loserP.lowerLosses) || 0) + 1;
+                loserP.status = 'eliminated';
+            }
         } else if (phase === 's_bracket') {
-            const shieldProtected = Boolean(loserP.arenaShield);
+            const shieldProtected = globalShieldProtected || Boolean(loserP.arenaShield);
             if (shieldProtected) {
-                loserP.arenaShield = false;
-                loserP.arenaShieldUsedAt = new Date();
+                if (!globalShieldProtected) {
+                    loserP.arenaShield = false;
+                    loserP.arenaShieldUsedAt = new Date();
+                    loserP.relicUsedAt = new Date();
+                }
                 loserP.status = 's_bracket';
             } else {
                 sendOutOfCenter(loserP);
@@ -580,17 +713,24 @@ router.post('/', checkAuth, async (req, res) => {
                 winnerP.kingQualified = true;
             }
         } else if (phase === 'king') {
-            if (loserP.status === 'king' && loserP.arenaShield) {
+            const kingProtected = globalShieldProtected || loserP.arenaShield;
+            if (loserP.status === 'king' && kingProtected) {
                 // The challenger breaks the king's shield and stays for a rematch.
-                loserP.arenaShield = false;
-                loserP.arenaShieldUsedAt = new Date();
+                if (!globalShieldProtected) {
+                    loserP.arenaShield = false;
+                    loserP.arenaShieldUsedAt = new Date();
+                    loserP.relicUsedAt = new Date();
+                }
                 loserP.status = 'king';
                 loserP.kingQualified = true;
                 winnerP.status = 's_bracket';
-            } else if (loserP.arenaShield) {
+            } else if (kingProtected) {
                 // A shielded challenger remains in the arena after losing to the king.
-                loserP.arenaShield = false;
-                loserP.arenaShieldUsedAt = new Date();
+                if (!globalShieldProtected) {
+                    loserP.arenaShield = false;
+                    loserP.arenaShieldUsedAt = new Date();
+                    loserP.relicUsedAt = new Date();
+                }
                 loserP.status = 's_bracket';
                 winnerP.status = 'king';
                 winnerP.kingQualified = true;
@@ -601,8 +741,8 @@ router.post('/', checkAuth, async (req, res) => {
             }
         }
         pa.updatedAt = pb.updatedAt = new Date();
-        pa.assignedOpponentId = null; pa.assignedAt = null;
-        pb.assignedOpponentId = null; pb.assignedAt = null;
+        clearAssignment(pa);
+        clearAssignment(pb);
         await Promise.all([pa.save(), pb.save()]);
         await queueAutoAssignment();
         res.status(201).json(duel);
