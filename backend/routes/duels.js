@@ -461,15 +461,25 @@ router.post('/', checkAuth, async (req, res) => {
         const isKingMatch = pa.status === 'king' || pb.status === 'king';
         const isCenterMatch = ['s_bracket', 'king'].includes(pa.status) && ['s_bracket', 'king'].includes(pb.status);
         if (groupA !== groupB || (!isCenterMatch && pa.status !== pb.status)) return res.status(400).json({ error: 'Players must be in the same tier and bracket' });
-        const pairWasAssigned = String(pa.assignedOpponentId || '') === String(pb.playerId)
-            && String(pb.assignedOpponentId || '') === String(pa.playerId);
-        if (!pairWasAssigned) return res.status(409).json({ error: 'Admin must assign this match before recording its result' });
         const phase = isKingMatch ? 'king' : pa.status;
         const scoreMatch = String(score || '').trim().match(/^(\d+)\s*[:\-]\s*(\d+)$/);
         if (!scoreMatch) return res.status(400).json({ error: 'Enter a BO3 score such as 2:0 or 2:1' });
         const mapsA = Number(scoreMatch[1]), mapsB = Number(scoreMatch[2]);
         if (!((mapsA === 2 && mapsB <= 1) || (mapsB === 2 && mapsA <= 1)) || (winner === 'A') !== (mapsA > mapsB))
             return res.status(400).json({ error: 'Winner and BO3 score do not match' });
+
+        // Selecting both players in the admin result form is itself an explicit
+        // assignment. Release any old automatic pairings before recording it.
+        const displacedOpponentIds = [pa.assignedOpponentId, pb.assignedOpponentId]
+            .filter(Boolean)
+            .map(String)
+            .filter(id => id !== String(pa.playerId) && id !== String(pb.playerId));
+        if (displacedOpponentIds.length) {
+            await Stage2Participant.updateMany(
+                { playerId: { $in: displacedOpponentIds } },
+                { $set: { assignedOpponentId: null, assignedAt: null } }
+            );
+        }
 
         const duel = await Duel.create({
             phase, tierGroup: phase === 'king' ? 'S' : groupA,
