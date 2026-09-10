@@ -6,7 +6,7 @@ const { Player, PlayerStats, PlayerCache, ManualPointsAdjustment,
 const { Portrait } = require('../models/Portrait');
 const { Stage2Participant } = require('../models/Duel');
 const { checkAuth } = require('../middleware/auth');
-const { recalculateAllPlayerStats } = require('../services/scoring');
+const { recalculateAllPlayerStats, getTierFromMmr } = require('../services/scoring');
 const { searchPlayer, searchPlayers } = require('../services/w3champions');
 
 const router = express.Router();
@@ -403,9 +403,58 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
     try {
+        if (Object.prototype.hasOwnProperty.call(req.body, 'tierOverride')) {
+            const override = req.body.tierOverride == null || req.body.tierOverride === ''
+                ? null
+                : Number(req.body.tierOverride);
+            if (override !== null && ![1, 2, 3, 4].includes(override)) {
+                return res.status(400).json({ error: 'Tier must be Auto, C, B, A, or S' });
+            }
+            req.body.tierOverride = override;
+        }
         const player = await Player.findByIdAndUpdate(req.params.id, { ...req.body, updatedAt: Date.now() }, { new: true });
         if (!player) return res.status(404).json({ error: 'Player not found' });
-        res.json(player);
+
+        let stage2Participant = null;
+        if (Object.prototype.hasOwnProperty.call(req.body, 'tierOverride')) {
+            const stats = await PlayerStats.findOne({ battleTag: player.battleTag });
+            const numericTier = player.tierOverride || stats?.tier || getTierFromMmr(stats?.mmr || player.currentMmr || 0).value;
+            const tier = ({ 1: 'C', 2: 'B', 3: 'A', 4: 'S' })[numericTier];
+            if (tier) {
+                stage2Participant = await Stage2Participant.findOne({ playerId: player.id });
+                if (!stage2Participant) {
+                    stage2Participant = new Stage2Participant({
+                        playerId: player.id,
+                        battleTag: player.battleTag,
+                        name: player.name,
+                        tier,
+                        status: tier === 'S' ? 's_bracket' : 'upper'
+                    });
+                } else {
+                    const wasCenter = ['s_bracket', 'king'].includes(stage2Participant.status);
+                    const previousOpponentId = stage2Participant.assignedOpponentId;
+                    stage2Participant.battleTag = player.battleTag;
+                    stage2Participant.name = player.name;
+                    stage2Participant.tier = tier;
+                    if (tier === 'S' && !wasCenter) stage2Participant.status = 's_bracket';
+                    if (tier !== 'S' && wasCenter) {
+                        stage2Participant.status = 'upper';
+                        stage2Participant.kingQualified = false;
+                    }
+                    if (previousOpponentId) {
+                        await Stage2Participant.updateOne(
+                            { playerId: previousOpponentId, assignedOpponentId: player.id },
+                            { $set: { assignedOpponentId: null, assignedAt: null } }
+                        );
+                    }
+                }
+                stage2Participant.assignedOpponentId = null;
+                stage2Participant.assignedAt = null;
+                stage2Participant.updatedAt = new Date();
+                await stage2Participant.save();
+            }
+        }
+        res.json({ ...player.toJSON(), stage2Participant });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
