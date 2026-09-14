@@ -1537,6 +1537,7 @@ function PortraitsTab({ showMsg }) {
     const [form,       setForm]       = React.useState(EMPTY_FORM);
     const [editingId,  setEditingId]  = React.useState(null);
     const [saving,     setSaving]     = React.useState(false);
+    const [portraitFile, setPortraitFile] = React.useState(null);
 
     const load = async () => {
         try {
@@ -1559,14 +1560,12 @@ function PortraitsTab({ showMsg }) {
         e.preventDefault();
         setSaving(true);
         try {
-            const body = { ...form, race: parseInt(form.race), pointsRequired: parseInt(form.pointsRequired) };
-            if (editingId) {
-                await apiFetch(`/api/portraits/${editingId}`, { method: 'PUT', body: JSON.stringify(body) });
-                showMsg(`✅ ${tr('Портрет обновлён', 'Portrait updated')}`);
-            } else {
-                await apiFetch('/api/portraits', { method: 'POST', body: JSON.stringify(body) });
-                showMsg(`✅ ${tr('Портрет добавлен', 'Portrait added')}`);
-            }
+            const body = new FormData();
+            body.append('name', form.name); body.append('race', String(parseInt(form.race)||0)); body.append('pointsRequired', String(parseInt(form.pointsRequired)||0));
+            if (portraitFile) body.append('image', portraitFile);
+            const response = await fetch(editingId ? `/api/portraits/${editingId}` : '/api/portraits', { method: editingId ? 'PUT' : 'POST', headers: {'x-session-id':getSession()}, body });
+            const data = await response.json().catch(()=>({})); if(!response.ok) throw new Error(data.error||'Portrait save failed');
+            showMsg(`✅ ${editingId ? tr('Портрет обновлён','Portrait updated') : tr('Портрет добавлен','Portrait added')}`);
             cancel();
             load();
         } catch (err) { showMsg(`❌ ${err.message}`, 'error'); }
@@ -1627,10 +1626,7 @@ function PortraitsTab({ showMsg }) {
                             type="number" placeholder={tr('Очков для разблокировки (0 = бесплатно)', 'Points to unlock (0 = free)')} min="0" required
                             value={form.pointsRequired} onChange={e => setForm({ ...form, pointsRequired: e.target.value })}
                         />
-                        <input
-                            type="text" placeholder={tr('URL изображения', 'Image URL')} required
-                            value={form.imageUrl} onChange={e => setForm({ ...form, imageUrl: e.target.value })}
-                        />
+                        <label>{tr('Загрузить изображение','Upload image')}<input type="file" accept="image/png,image/jpeg,image/webp" required={!editingId} onChange={e=>{const file=e.target.files?.[0]||null;setPortraitFile(file);if(file){const reader=new FileReader();reader.onload=()=>setForm(current=>({...current,imageUrl:String(reader.result||'')}));reader.readAsDataURL(file);}}} /></label>
                         {form.imageUrl && (
                             <img src={form.imageUrl} alt="preview" onError={e => e.target.style.display='none'}
                                 style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 8, border: '2px solid var(--color-accent-primary)' }} />
@@ -1692,7 +1688,7 @@ function PortraitsTab({ showMsg }) {
 
 // ── Вкладка Manage maps ──────────────────────────────────────────────────────
 const EMPTY_MAP_FORM = { title: '', description: '', labelId: '' };
-const EMPTY_LABEL_FORM = { name: '' };
+const EMPTY_LABEL_FORM = { name: '', season: 'Season 1', active: true };
 
 function titleFromMapFile(fileName) {
     return (fileName || '').replace(/\.[^/.]+$/, '').trim();
@@ -1748,7 +1744,7 @@ function ManageMapsTab({ showMsg }) {
         setSavingLabel(true);
         try {
             const body = JSON.stringify({
-                name: labelForm.name.trim(),
+                name: labelForm.name.trim(), season: labelForm.season.trim() || 'Season 1', active: labelForm.active,
             });
             if (editingLabelId) {
                 await apiFetch(`/api/maps/labels/${editingLabelId}`, { method: 'PUT', body });
@@ -1766,7 +1762,7 @@ function ManageMapsTab({ showMsg }) {
 
     const editLabel = (label) => {
         setEditingLabelId(label.id);
-        setLabelForm({ name: label.name || '' });
+        setLabelForm({ name: label.name || '', season: label.season || 'Season 1', active: label.active !== false });
         setMapsSubtab('label-form');
     };
 
@@ -1849,7 +1845,7 @@ function ManageMapsTab({ showMsg }) {
     const allMaps = labels.flatMap(label => (label.maps || []).map(map => ({ ...map, labelName: label.name })));
     const mapsSubtabs = [
         { id: 'maps', label: `Manage maps (${allMaps.length})` },
-        { id: 'labels', label: `Manage labels (${labels.length})` },
+        { id: 'labels', label: `Manage biomes (${labels.length})` },
     ];
     const showMapForm = mapsSubtab === 'upload' || mapsSubtab === 'edit-map';
 
@@ -1874,18 +1870,15 @@ function ManageMapsTab({ showMsg }) {
             {mapsSubtab === 'label-form' && (
                 <div className="card-elevated" style={{ padding: 'var(--spacing-xl)', marginBottom: 'var(--spacing-xl)', maxWidth: 560 }}>
                     <h4 style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-accent-primary)' }}>
-                        {editingLabelId ? 'Edit label' : 'Add label'}
+                        {editingLabelId ? 'Edit biome' : 'Add biome'}
                     </h4>
                     <form onSubmit={saveLabel} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-                        <input
-                            value={labelForm.name}
-                            onChange={e => setLabelForm({ ...labelForm, name: e.target.value })}
-                            placeholder="Label name"
-                            required
-                        />
+                        <input value={labelForm.season} onChange={e=>setLabelForm({...labelForm,season:e.target.value})} placeholder="Season (for example: Season 3)" required />
+                        <input value={labelForm.name} onChange={e=>setLabelForm({...labelForm,name:e.target.value})} placeholder="Biome name (for example: Autumn Forest)" required />
+                        <label><input type="checkbox" checked={labelForm.active} onChange={e=>setLabelForm({...labelForm,active:e.target.checked})} /> Active map pool</label>
                         <div style={{ display: 'flex', gap: 8 }}>
                             <button className="btn btn-primary" disabled={savingLabel || !labelForm.name.trim()}>
-                                {savingLabel ? '...' : (editingLabelId ? 'Save label' : 'Add label')}
+                                {savingLabel ? '...' : (editingLabelId ? 'Save biome' : 'Add biome')}
                             </button>
                             <button type="button" className="btn btn-secondary" onClick={() => { resetLabelForm(); setMapsSubtab('labels'); }}>Cancel</button>
                         </div>
@@ -1908,7 +1901,7 @@ function ManageMapsTab({ showMsg }) {
                             >
                                 <option value="">Select label</option>
                                 {labels.map(label => (
-                                    <option key={label.id} value={label.id}>{label.name}</option>
+                                    <option key={label.id} value={label.id}>{label.season || 'Season 1'} — {label.name}</option>
                                 ))}
                             </select>
                             {!labels.length && (
@@ -1964,9 +1957,9 @@ function ManageMapsTab({ showMsg }) {
             ) : mapsSubtab === 'labels' ? (
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 'var(--spacing-md)', flexWrap: 'wrap' }}>
-                        <h4 style={{ color: 'var(--color-accent-primary)', marginBottom: 0 }}>Labels ({labels.length})</h4>
+                        <h4 style={{ color: 'var(--color-accent-primary)', marginBottom: 0 }}>Biomes ({labels.length})</h4>
                         <button type="button" className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.86em' }} onClick={addLabel}>
-                            Add label
+                            Add biome
                         </button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>

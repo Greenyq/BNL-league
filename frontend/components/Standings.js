@@ -825,7 +825,7 @@ function DraftPoolStandings({ page, onPageChange, playerFilter }) {
 // ── Рейтинг игроков (оригинал) ────────────────────────────────────────────────
 function Standings() {
     useLang();
-    const [mode,       setMode]       = React.useState('ladder');
+    const [mode,       setMode]       = React.useState('duels');
     const [players,    setPlayers]    = React.useState([]);
     const [duels,      setDuels]      = React.useState([]);
     const [stage2,     setStage2]     = React.useState([]);
@@ -975,30 +975,7 @@ function Standings() {
         <div className="animate-fade-in wow-section-page">
             <WoWSectionTitle>{t('standings.title')}</WoWSectionTitle>
 
-            {/* Single row: race filters (left) + mode buttons (right) */}
-            <div className="wow-filter-bar standings-controls">
-                {/* Race filter — only visible in players mode */}
-                {mode === 'ladder' && (
-                    <div className="standings-controls-group standings-controls-group--filters">
-                        {RACE_KEYS.map(r => (
-                            <button
-                                key={String(r)}
-                                className={`wow-btn${raceFilter === r ? ' active' : ''}`}
-                                onClick={() => setRaceFilter(r)}
-                            >
-                                {r === null ? t('race.all') : t(`race.${r}`)}
-                            </button>
-                        ))}
-                    </div>
-                )}
-                {mode === 'ladder' && <div className="standings-controls-group standings-controls-group--search">
-                    <PlayerNameFilterInput value={playerFilter} onChange={setPlayerFilter} />
-                </div>}
-                <div className="standings-controls-group standings-controls-group--modes">
-                    <button className={`wow-btn${mode === 'ladder' ? ' active' : ''}`} onClick={() => setMode('ladder')}>{tr('Этап 1 — Ладдер', 'Stage 1 — Ladder')}</button>
-                    <button className={`wow-btn${mode === 'duels' ? ' active' : ''}`} onClick={() => { setMode('duels'); setRaceFilter(null); }}>{tr('Этап 2 — Дуэли', 'Stage 2 — Duels')}</button>
-                </div>
-            </div>
+            <div className="wow-filter-bar standings-controls"><span className="wow-btn active">{tr('Кампания BNL','BNL Campaign')}</span></div>
 
             {(
                 <>

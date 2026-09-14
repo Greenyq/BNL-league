@@ -4023,3 +4023,5 @@ body.achievement-modal-open {
     border-color: rgba(255, 215, 0, 0.35) !important;
     background: rgba(212, 175, 55, 0.04) !important;
 }
+
+.dnd-map-assignment{margin-top:10px;padding:12px 14px;border:1px solid rgba(212,175,55,.35);background:rgba(11,18,25,.72)}.dnd-map-assignment label,.dnd-map-assignment strong,.dnd-map-assignment small{display:block}.dnd-map-assignment label{color:#c9a961;font-size:.66rem;letter-spacing:.16em}.dnd-map-assignment strong{margin-top:4px;color:#f1dfad}.dnd-map-assignment small{margin-top:3px;color:var(--color-text-muted)}
