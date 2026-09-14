@@ -1,7 +1,7 @@
 const express = require('express');
 const { Duel, Stage2Participant } = require('../models/Duel');
 const { Player, PlayerStats, PlayerUser, PlayerSession } = require('../models/Player');
-const { MapFile } = require('../models/Map');
+const { MapFile, MapLabel } = require('../models/Map');
 const { checkAuth, getAdminSessionResult } = require('../middleware/auth');
 const { getTierFromMmr } = require('../services/scoring');
 const { suggestDuelPoints } = require('../services/duelScoring');
@@ -31,13 +31,23 @@ const clearAssignment = participant => {
     participant.assignedMapId = null;
     participant.assignedMapTitle = null;
     participant.assignedMapLabelId = null;
+    participant.assignedMapBiome = null;
+    participant.assignedMapSeason = null;
 };
 const applyAssignedMap = (first, second, map) => {
     for (const participant of [first, second]) {
         participant.assignedMapId = map ? String(map.id) : null;
         participant.assignedMapTitle = map?.title || null;
         participant.assignedMapLabelId = map?.labelId || null;
+        participant.assignedMapBiome = map?.biomeName || null;
+        participant.assignedMapSeason = map?.season || null;
     }
+};
+const loadTournamentMaps = async () => {
+    const biomes = await MapLabel.find({ active: { $ne: false } }).select('_id name season');
+    const byId = new Map(biomes.map(b => [String(b.id), b]));
+    const maps = await MapFile.find({ labelId: { $in: [...byId.keys()] } }).select('_id title labelId');
+    return maps.map(map => { const biome=byId.get(String(map.labelId)); return {id:map.id,title:map.title,labelId:map.labelId,biomeName:biome?.name||'Unknown',season:biome?.season||'Season 1'}; });
 };
 const chooseRandom = items => items.length ? items[Math.floor(Math.random() * items.length)] : null;
 
@@ -159,7 +169,7 @@ async function repairInvalidAssignments() {
     if (!invalidIds.size) return 0;
     await Stage2Participant.updateMany(
         { _id: { $in: Array.from(invalidIds) } },
-        { $set: { assignedOpponentId: null, assignedAt: null, assignedMapId: null, assignedMapTitle: null, assignedMapLabelId: null } }
+        { $set: { assignedOpponentId: null, assignedAt: null, assignedMapId: null, assignedMapTitle: null, assignedMapLabelId: null, assignedMapBiome: null, assignedMapSeason: null } }
     );
     return invalidIds.size;
 }
@@ -220,7 +230,7 @@ async function autoAssignOpenMatches() {
             encounterStatus: { $nin: ['awaiting_admin', 'pending'] }
         }).sort({ updatedAt: 1, tier: 1 }),
         Duel.find({ phase: { $ne: 'encounter' } }).select('playerA.playerId playerB.playerId'),
-        MapFile.find({}).select('_id title labelId')
+        loadTournamentMaps()
     ]);
     const completedPairs = new Set(completedDuels.map(duel => duelPairKey(duel.playerA.playerId, duel.playerB.playerId)));
     const groups = new Map();
@@ -414,6 +424,8 @@ router.get('/stage2', async (req, res) => {
                 assignedAt: isSelf || viewer.isAdmin ? participant.assignedAt : undefined,
                 assignedMapId: isSelf || isOpponent || viewer.isAdmin ? participant.assignedMapId : undefined,
                 assignedMapTitle: isSelf || isOpponent || viewer.isAdmin ? participant.assignedMapTitle : undefined,
+                assignedMapBiome: isSelf || isOpponent || viewer.isAdmin ? participant.assignedMapBiome : undefined,
+                assignedMapSeason: isSelf || isOpponent || viewer.isAdmin ? participant.assignedMapSeason : undefined,
                 iconKey: stableIconFor(participant),
                 isSelf,
                 isOpponent,
@@ -674,10 +686,7 @@ router.post('/stage2/:id/use-relic', async (req, res) => {
             clearAssignment(participant);
             clearAssignment(opponent);
         } else {
-            const alternatives = await MapFile.find({
-                labelId: { $ne: participant.assignedMapLabelId },
-                _id: { $ne: participant.assignedMapId }
-            }).select('_id title labelId');
+            const alternatives = (await loadTournamentMaps()).filter(map => String(map.labelId) !== String(participant.assignedMapLabelId) && String(map.id) !== String(participant.assignedMapId));
             const replacement = chooseRandom(alternatives);
             if (!replacement) return res.status(409).json({ error: 'No map from another biome is available' });
             applyAssignedMap(participant, opponent, replacement);
@@ -776,7 +785,7 @@ router.post('/', checkAuth, async (req, res) => {
             );
         }
         if (!pa.assignedMapId || String(pa.assignedOpponentId || '') !== String(pb.playerId)) {
-            applyAssignedMap(pa, pb, chooseRandom(await MapFile.find({}).select('_id title labelId')));
+            applyAssignedMap(pa, pb, chooseRandom(await loadTournamentMaps()));
         }
 
         const duel = await Duel.create({

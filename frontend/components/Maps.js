@@ -78,6 +78,7 @@ function Maps() {
                                     }}
                                 >
                                     <span>
+                                        <small style={{ display:'block',color:'var(--color-text-muted)' }}>{label.season || 'Season 1'}</small>
                                         <strong style={{ display: 'block', marginBottom: 6, color: 'var(--color-accent-primary)' }}>{label.name}</strong>
                                         <span style={{ color: 'var(--color-text-muted)', fontSize: '0.9em' }}>
                                             {maps.length} · {isExpanded ? t('maps.hide') : t('maps.show')}

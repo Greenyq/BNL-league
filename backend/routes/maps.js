@@ -69,7 +69,7 @@ async function ensureLabel(labelId) {
 router.get('/', async (req, res) => {
     try {
         const [labels, maps] = await Promise.all([
-            MapLabel.find().sort({ name: 1 }).lean(),
+            MapLabel.find().sort({ season: 1, name: 1 }).lean(),
             MapFile.find().select(LIST_FIELDS).sort({ title: 1 }).lean(),
         ]);
 
@@ -112,7 +112,8 @@ router.post('/labels', checkAuth, async (req, res) => {
         const name = clean(req.body.name);
         if (!name) return res.status(400).json({ error: 'Label name is required' });
 
-        const label = await MapLabel.create({ name });
+        const season = clean(req.body.season) || 'Season 1';
+        const label = await MapLabel.create({ name, season, active: req.body.active !== false });
         res.json(label);
     } catch (err) {
         if (err.code === 11000) return res.status(400).json({ error: 'Label already exists' });
@@ -127,7 +128,7 @@ router.put('/labels/:id', checkAuth, async (req, res) => {
 
         const label = await MapLabel.findByIdAndUpdate(
             req.params.id,
-            { $set: { name, updatedAt: Date.now() }, $unset: { description: '' } },
+            { $set: { name, season: clean(req.body.season) || 'Season 1', active: req.body.active !== false, updatedAt: Date.now() }, $unset: { description: '' } },
             { new: true, runValidators: true }
         );
         if (!label) return res.status(404).json({ error: 'Label not found' });

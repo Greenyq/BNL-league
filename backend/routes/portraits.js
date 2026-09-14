@@ -1,59 +1,8 @@
-const express  = require('express');
-const router   = express.Router();
-const { Portrait } = require('../models/Portrait');
-const { checkAuth } = require('../middleware/auth');
-
-// GET /api/portraits — public list, sorted by race then pointsRequired
-router.get('/', async (req, res) => {
-    try {
-        const portraits = await Portrait.find().sort({ race: 1, pointsRequired: 1 });
-        res.json(portraits);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch portraits' });
-    }
-});
-
-// POST /api/portraits — admin: create portrait
-router.post('/', checkAuth, async (req, res) => {
-    try {
-        const { name, race, pointsRequired, imageUrl } = req.body;
-        if (!name || !imageUrl) return res.status(400).json({ error: 'name and imageUrl required' });
-        const portrait = await Portrait.create({
-            name,
-            race: parseInt(race) || 0,
-            pointsRequired: parseInt(pointsRequired) || 0,
-            imageUrl,
-        });
-        res.json(portrait);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// PUT /api/portraits/:id — admin: update portrait
-router.put('/:id', checkAuth, async (req, res) => {
-    try {
-        const { name, race, pointsRequired, imageUrl } = req.body;
-        const portrait = await Portrait.findByIdAndUpdate(
-            req.params.id,
-            { name, race: parseInt(race), pointsRequired: parseInt(pointsRequired), imageUrl, updatedAt: Date.now() },
-            { new: true }
-        );
-        if (!portrait) return res.status(404).json({ error: 'Portrait not found' });
-        res.json(portrait);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// DELETE /api/portraits/:id — admin: delete portrait
-router.delete('/:id', checkAuth, async (req, res) => {
-    try {
-        await Portrait.findByIdAndDelete(req.params.id);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-module.exports = router;
+const express=require('express');const multer=require('multer');const router=express.Router();const{Portrait}=require('../models/Portrait');const{checkAuth}=require('../middleware/auth');
+const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:2*1024*1024},fileFilter:(req,file,cb)=>['image/png','image/jpeg','image/webp'].includes(file.mimetype)?cb(null,true):cb(new Error('Only PNG, JPG and WEBP images are allowed'))});
+const receive=(req,res,next)=>upload.single('image')(req,res,err=>err?res.status(400).json({error:err.code==='LIMIT_FILE_SIZE'?'Portrait must be 2 MB or smaller':err.message}):next());
+const dataUrl=file=>file?`data:${file.mimetype};base64,${file.buffer.toString('base64')}`:null;
+router.get('/',async(req,res)=>{try{res.json(await Portrait.find().sort({race:1,pointsRequired:1}));}catch{res.status(500).json({error:'Failed to fetch portraits'});}});
+router.post('/',checkAuth,receive,async(req,res)=>{try{const imageUrl=dataUrl(req.file);if(!req.body.name||!imageUrl)return res.status(400).json({error:'Name and image file are required'});res.json(await Portrait.create({name:req.body.name,race:parseInt(req.body.race)||0,pointsRequired:parseInt(req.body.pointsRequired)||0,imageUrl}));}catch(err){res.status(500).json({error:err.message});}});
+router.put('/:id',checkAuth,receive,async(req,res)=>{try{const updates={name:req.body.name,race:parseInt(req.body.race)||0,pointsRequired:parseInt(req.body.pointsRequired)||0,updatedAt:Date.now()};if(req.file)updates.imageUrl=dataUrl(req.file);const item=await Portrait.findByIdAndUpdate(req.params.id,updates,{new:true,runValidators:true});if(!item)return res.status(404).json({error:'Portrait not found'});res.json(item);}catch(err){res.status(500).json({error:err.message});}});
+router.delete('/:id',checkAuth,async(req,res)=>{try{await Portrait.findByIdAndDelete(req.params.id);res.json({success:true});}catch(err){res.status(500).json({error:err.message});}});module.exports=router;

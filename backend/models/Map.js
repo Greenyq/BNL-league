@@ -7,11 +7,15 @@ const toJSON = {
 };
 
 const mapLabelSchema = new mongoose.Schema({
-    name:        { type: String, required: true, trim: true, unique: true },
+    name:        { type: String, required: true, trim: true },
+    season:      { type: String, required: true, trim: true, default: 'Season 1', index: true },
+    active:      { type: Boolean, default: true, index: true },
     createdAt:   { type: Date, default: Date.now },
     updatedAt:   { type: Date, default: Date.now }
 });
 mapLabelSchema.set('toJSON', toJSON);
+
+mapLabelSchema.index({ season: 1, name: 1 }, { unique: true });
 
 const mapFileSchema = new mongoose.Schema({
     labelId:      { type: String, required: true, index: true },
