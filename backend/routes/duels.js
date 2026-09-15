@@ -47,7 +47,7 @@ const loadTournamentMaps = async () => {
     const biomes = await MapLabel.find({ active: { $ne: false } }).select('_id name season kind');
     const byId = new Map(biomes.map(b => [String(b.id), b]));
     const maps = await MapFile.find({ labelId: { $in: [...byId.keys()] } }).select('_id title labelId');
-    return maps.map(map => { const biome=byId.get(String(map.labelId)); return {id:map.id,title:map.title,labelId:map.labelId,biomeName:biome?.name||'Unknown',season:biome?.season||'Season 1',kind:biome?.kind||'biome'}; });
+    return maps.map(map => { const biome=byId.get(String(map.labelId)); return {id:map.id,title:map.title,labelId:map.labelId,biomeName:biome?.name||'Unknown',season:biome?.season||'Season 3',kind:biome?.kind||'biome'}; });
 };
 const chooseRandom = items => items.length ? items[Math.floor(Math.random() * items.length)] : null;
 
