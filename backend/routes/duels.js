@@ -44,10 +44,10 @@ const applyAssignedMap = (first, second, map) => {
     }
 };
 const loadTournamentMaps = async () => {
-    const biomes = await MapLabel.find({ active: { $ne: false } }).select('_id name season');
+    const biomes = await MapLabel.find({ active: { $ne: false } }).select('_id name season kind');
     const byId = new Map(biomes.map(b => [String(b.id), b]));
     const maps = await MapFile.find({ labelId: { $in: [...byId.keys()] } }).select('_id title labelId');
-    return maps.map(map => { const biome=byId.get(String(map.labelId)); return {id:map.id,title:map.title,labelId:map.labelId,biomeName:biome?.name||'Unknown',season:biome?.season||'Season 1'}; });
+    return maps.map(map => { const biome=byId.get(String(map.labelId)); return {id:map.id,title:map.title,labelId:map.labelId,biomeName:biome?.name||'Unknown',season:biome?.season||'Season 1',kind:biome?.kind||'biome'}; });
 };
 const chooseRandom = items => items.length ? items[Math.floor(Math.random() * items.length)] : null;
 
@@ -262,7 +262,9 @@ async function autoAssignOpenMatches() {
             const now = new Date();
             a.assignedOpponentId = b.playerId; a.assignedAt = now;
             b.assignedOpponentId = a.playerId; b.assignedAt = now;
-            applyAssignedMap(a, b, chooseRandom(tournamentMaps));
+            const arenaMatch = ['king', 's_bracket'].includes(a.status) || ['king', 's_bracket'].includes(b.status);
+            const mapPool = tournamentMaps.filter(map => arenaMatch ? map.kind === 'arena' : map.kind !== 'arena');
+            applyAssignedMap(a, b, chooseRandom(mapPool));
             if (!a.opponents.includes(String(b.playerId))) a.opponents.push(String(b.playerId));
             if (!b.opponents.includes(String(a.playerId))) b.opponents.push(String(a.playerId));
             a.updatedAt = b.updatedAt = now;
@@ -686,7 +688,8 @@ router.post('/stage2/:id/use-relic', async (req, res) => {
             clearAssignment(participant);
             clearAssignment(opponent);
         } else {
-            const alternatives = (await loadTournamentMaps()).filter(map => String(map.labelId) !== String(participant.assignedMapLabelId) && String(map.id) !== String(participant.assignedMapId));
+            const arenaMatch = ['king', 's_bracket'].includes(participant.status);
+            const alternatives = (await loadTournamentMaps()).filter(map => (arenaMatch ? map.kind === 'arena' : map.kind !== 'arena') && String(map.labelId) !== String(participant.assignedMapLabelId) && String(map.id) !== String(participant.assignedMapId));
             const replacement = chooseRandom(alternatives);
             if (!replacement) return res.status(409).json({ error: 'No map from another biome is available' });
             applyAssignedMap(participant, opponent, replacement);
@@ -785,7 +788,8 @@ router.post('/', checkAuth, async (req, res) => {
             );
         }
         if (!pa.assignedMapId || String(pa.assignedOpponentId || '') !== String(pb.playerId)) {
-            applyAssignedMap(pa, pb, chooseRandom(await loadTournamentMaps()));
+            const maps = await loadTournamentMaps();
+            applyAssignedMap(pa, pb, chooseRandom(maps.filter(map => phase === 'king' || phase === 's_bracket' ? map.kind === 'arena' : map.kind !== 'arena')));
         }
 
         const duel = await Duel.create({
