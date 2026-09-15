@@ -4025,6 +4025,7 @@ body.achievement-modal-open {
 }
 
 .dnd-map-assignment{margin-top:10px;padding:12px 14px;border:1px solid rgba(212,175,55,.35);background:rgba(11,18,25,.72)}.dnd-map-assignment label,.dnd-map-assignment strong,.dnd-map-assignment small{display:block}.dnd-map-assignment label{color:#c9a961;font-size:.66rem;letter-spacing:.16em}.dnd-map-assignment strong{margin-top:4px;color:#f1dfad}.dnd-map-assignment small{margin-top:3px;color:var(--color-text-muted)}
+.dnd-map-assignment.has-preview{display:grid;grid-template-columns:92px minmax(0,1fr);align-items:center;gap:12px}.dnd-map-assignment>img{width:92px;aspect-ratio:4/3;object-fit:cover;border:1px solid rgba(212,175,55,.4);border-radius:7px;box-shadow:0 5px 16px rgba(0,0,0,.45)}
 
 .map-biome-section { padding:10px; border:1px solid rgba(212,175,55,.18); border-radius:18px; background:radial-gradient(circle at 50% 0,rgba(78,111,61,.15),transparent 55%); }
 .map-biome-section.is-arena { border-color:rgba(216,91,55,.35); background:radial-gradient(circle at 50% 0,rgba(151,53,33,.2),transparent 60%); }
