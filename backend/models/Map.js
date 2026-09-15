@@ -8,7 +8,7 @@ const toJSON = {
 
 const mapLabelSchema = new mongoose.Schema({
     name:        { type: String, required: true, trim: true },
-    season:      { type: String, required: true, trim: true, default: 'Season 1', index: true },
+    season:      { type: String, required: true, trim: true, default: 'Season 3', index: true },
     active:      { type: Boolean, default: true, index: true },
     kind:        { type: String, enum: ['biome', 'arena'], default: 'biome' },
     createdAt:   { type: Date, default: Date.now },
