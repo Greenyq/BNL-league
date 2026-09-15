@@ -103,7 +103,7 @@
                     <div class="progress-bar__glow"></div>
                     <div class="progress-bar__endcap progress-bar__endcap--left"></div>
                     <div class="progress-bar__track">
-                        <div id="progress-bar-fill" class="progress-bar__fill" style="width: 50%;"></div>
+                        <div id="progress-bar-fill" class="progress-bar__fill" style="width: 0%;"></div>
                     </div>
                     <div class="progress-bar__endcap progress-bar__endcap--right"></div>
                 </div>
@@ -499,7 +499,7 @@
     }
 
     function loadSeasonProgress() {
-        fetch('/api/clan-wars/progress')
+        fetch('/api/duels/progress')
             .then(function(r) {
                 if (!r.ok) throw new Error('Failed to load season progress');
                 return r.json();
