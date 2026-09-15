@@ -6,7 +6,7 @@ const LANGS = {
     ru: {
         // Nav
         'nav.home':       'Главная',
-        'nav.standings':  'Рейтинг',
+        'nav.standings':  'Сезон 3',
         'nav.teams':      'Команды',
         'nav.clanwar':    'Клан-вары',
         'nav.mymatches':  'Мои матчи',
