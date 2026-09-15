@@ -91,7 +91,7 @@
                 <a href="#profile" onclick="navigate('profile'); return false;"></a>
                 <p>
                     BREAKING NEW LIMITS
-                    <span id="start-game-sub" class="logo-season-status">Сезон 2 стартует <strong class="logo-season-date">3 мая 2026</strong></span>
+                    <span id="start-game-sub" class="logo-season-status">Сезон 3</span>
                 </p>
             </div>
 
@@ -351,9 +351,9 @@
         updateHeaderProfileLink(lang);
         updateOnlineLabel(lang);
         var sgSub = document.getElementById('start-game-sub');
-        if (sgSub) sgSub.innerHTML = lang === 'en'
-            ? 'Season 2 starts <strong class="logo-season-date">May 3, 2026</strong>'
-            : 'Сезон 2 стартует <strong class="logo-season-date">3 мая 2026</strong>';
+        if (sgSub) sgSub.textContent = lang === 'en'
+            ? 'Season 3'
+            : 'Сезон 3';
     }
 
     // ── Season progress label i18n ───────────────────────────────────────
