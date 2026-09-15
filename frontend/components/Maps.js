@@ -65,7 +65,7 @@ function Maps() {
                                     className="map-biome-header"
                                 >
                                     <span>
-                                        <small>{label.season || 'Season 1'} · {label.kind === 'arena' ? tr('Специальный пул', 'Special pool') : tr('Биом', 'Biome')}</small>
+                                        <small>{label.season || 'Season 3'} · {label.kind === 'arena' ? tr('Специальный пул', 'Special pool') : tr('Биом', 'Biome')}</small>
                                         <strong>{label.name}</strong>
                                         <span style={{ color: 'var(--color-text-muted)', fontSize: '0.9em' }}>
                                             {maps.length} · {isExpanded ? t('maps.hide') : t('maps.show')}
