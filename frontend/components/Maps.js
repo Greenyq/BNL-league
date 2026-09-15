@@ -2,6 +2,7 @@
 
 function Maps() {
     useLang();
+    const tr = (ru, en) => getLang() === 'en' ? en : ru;
     const [labels, setLabels] = React.useState([]);
     const [expandedLabels, setExpandedLabels] = React.useState({});
     const [loading, setLoading] = React.useState(true);
