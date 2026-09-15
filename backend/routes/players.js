@@ -238,7 +238,8 @@ router.put('/auth/select-portrait', async (req, res) => {
         const player = await playerWithStats(playerUser.linkedBattleTag);
         if (!player) return res.status(404).json({ error: 'Player not found - re-link your BattleTag' });
 
-        const portraitDoc = await Portrait.findOne({ imageUrl: portrait });
+        const portraitId = String(portrait).match(/^\/api\/portraits\/([a-f\d]{24})\/image$/i)?.[1];
+        const portraitDoc = portraitId ? await Portrait.findById(portraitId) : await Portrait.findOne({ imageUrl: portrait });
         if (!portraitDoc) return res.status(404).json({ error: 'Portrait not found' });
 
         const mainRace = player.mainRace ?? player.race;
@@ -254,7 +255,7 @@ router.put('/auth/select-portrait', async (req, res) => {
 
         const updated = await Player.findOneAndUpdate(
             playerQ(playerUser.linkedBattleTag),
-            { selectedPortrait: portrait, selectedPortraitId: portraitDoc.id, updatedAt: Date.now() },
+            { selectedPortrait: `/api/portraits/${portraitDoc.id}/image`, selectedPortraitId: portraitDoc.id, updatedAt: Date.now() },
             { new: true }
         );
         if (!updated) return res.status(404).json({ error: 'Player not found — re-link your BattleTag' });
