@@ -113,6 +113,41 @@ router.get('/', async (req, res) => {
     catch (err) { res.status(500).json({ error: 'Failed to fetch duels' }); }
 });
 
+// GET /api/duels/progress — live Season 3 match progress.
+// A completed duel is already stored in Duel. An assigned match exists only on
+// the two Stage2Participant records until its result is submitted, so count
+// each unique assigned pair once.
+router.get('/progress', async (req, res) => {
+    try {
+        const [finished, participants] = await Promise.all([
+            Duel.countDocuments({}),
+            Stage2Participant.find({})
+                .select('playerId assignedOpponentId encounterOpponentId encounterStatus')
+                .lean()
+        ]);
+
+        const participantIds = new Set(participants.map(participant => String(participant.playerId)));
+        const assignedPairs = new Set();
+        for (const participant of participants) {
+            const opponentId = String(participant.assignedOpponentId || '');
+            if (opponentId && participantIds.has(opponentId)) {
+                assignedPairs.add(duelPairKey(participant.playerId, opponentId));
+            }
+
+            const encounterOpponentId = String(participant.encounterOpponentId || '');
+            if (['awaiting_admin', 'pending'].includes(participant.encounterStatus)
+                && encounterOpponentId
+                && participantIds.has(encounterOpponentId)) {
+                assignedPairs.add(duelPairKey(participant.playerId, encounterOpponentId));
+            }
+        }
+
+        res.json({ finished, total: finished + assignedPairs.size });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch Season 3 progress' });
+    }
+});
+
 async function repairLegacyUpperDemotions() {
     const legacyPlayers = await Stage2Participant.find({ status: 'lower', upperLosses: { $exists: false } });
     for (const participant of legacyPlayers) {
