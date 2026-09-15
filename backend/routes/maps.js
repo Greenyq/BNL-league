@@ -37,9 +37,17 @@ const gameFields=file=>({originalName:file.originalname,mimeType:file.mimetype||
 
 async function ensureCatalog(){
   for(const [name,kind,maps] of CATALOG){
-    let label=await MapLabel.findOne({season:'Season 1',name});
-    if(!label)label=await MapLabel.create({season:'Season 1',name,kind,active:true});
-    else if(label.kind!==kind){label.kind=kind;await label.save();}
+    // Older installations have a unique `name_1` index and labels without a
+    // season. Reuse and upgrade those records instead of inserting duplicates.
+    let label=await MapLabel.findOne({name});
+    if(!label){
+      try{label=await MapLabel.create({season:'Season 1',name,kind,active:true});}
+      catch(err){if(err.code!==11000)throw err;label=await MapLabel.findOne({name});}
+    }
+    if(!label)throw new Error(`Failed to initialize biome: ${name}`);
+    if(label.season!=='Season 1'||label.kind!==kind||label.active===undefined){
+      label.season='Season 1';label.kind=kind;if(label.active===undefined)label.active=true;await label.save();
+    }
     for(const [title,image] of maps){
       const previewImageUrl=`/images/maps/season-1/${image}`;
       await MapFile.updateOne({labelId:String(label.id),title},{ $setOnInsert:{labelId:String(label.id),title,description:''},$set:{previewImageUrl}},{upsert:true});
