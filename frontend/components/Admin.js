@@ -1688,7 +1688,7 @@ function PortraitsTab({ showMsg }) {
 
 // ── Вкладка Manage maps ──────────────────────────────────────────────────────
 const EMPTY_MAP_FORM = { title: '', description: '', labelId: '' };
-const EMPTY_LABEL_FORM = { name: '', season: 'Season 1', active: true };
+const EMPTY_LABEL_FORM = { name: '', season: 'Season 1', active: true, kind: 'biome' };
 
 function titleFromMapFile(fileName) {
     return (fileName || '').replace(/\.[^/.]+$/, '').trim();
@@ -1703,10 +1703,12 @@ function ManageMapsTab({ showMsg }) {
     const [mapForm, setMapForm] = React.useState(EMPTY_MAP_FORM);
     const [editingMap, setEditingMap] = React.useState(null);
     const [file, setFile] = React.useState(null);
+    const [previewFile, setPreviewFile] = React.useState(null);
     const [savingLabel, setSavingLabel] = React.useState(false);
     const [savingMap, setSavingMap] = React.useState(false);
     const [mapsSubtab, setMapsSubtab] = React.useState('maps');
     const fileRef = React.useRef(null);
+    const previewRef = React.useRef(null);
 
     const load = React.useCallback(async () => {
         setLoading(true);
@@ -1735,7 +1737,9 @@ function ManageMapsTab({ showMsg }) {
         setEditingMap(null);
         setMapForm({ ...EMPTY_MAP_FORM, labelId: labels[0]?.id || '' });
         setFile(null);
+        setPreviewFile(null);
         if (fileRef.current) fileRef.current.value = '';
+        if (previewRef.current) previewRef.current.value = '';
     };
 
     const saveLabel = async (e) => {
@@ -1744,7 +1748,7 @@ function ManageMapsTab({ showMsg }) {
         setSavingLabel(true);
         try {
             const body = JSON.stringify({
-                name: labelForm.name.trim(), season: labelForm.season.trim() || 'Season 1', active: labelForm.active,
+                name: labelForm.name.trim(), season: labelForm.season.trim() || 'Season 1', active: labelForm.active, kind: labelForm.kind,
             });
             if (editingLabelId) {
                 await apiFetch(`/api/maps/labels/${editingLabelId}`, { method: 'PUT', body });
@@ -1762,7 +1766,7 @@ function ManageMapsTab({ showMsg }) {
 
     const editLabel = (label) => {
         setEditingLabelId(label.id);
-        setLabelForm({ name: label.name || '', season: label.season || 'Season 1', active: label.active !== false });
+        setLabelForm({ name: label.name || '', season: label.season || 'Season 1', active: label.active !== false, kind: label.kind || 'biome' });
         setMapsSubtab('label-form');
     };
 
@@ -1790,8 +1794,8 @@ function ManageMapsTab({ showMsg }) {
             return;
         }
         if (!mapForm.title.trim()) return;
-        if (!editingMap && !file) {
-            showMsg('❌ Map file is required', 'error');
+        if (!editingMap && !file && !previewFile) {
+            showMsg('❌ Add a preview image or Warcraft map file', 'error');
             return;
         }
 
@@ -1802,6 +1806,7 @@ function ManageMapsTab({ showMsg }) {
             form.append('description', mapForm.description.trim());
             form.append('labelId', mapForm.labelId);
             if (file) form.append('file', file);
+            if (previewFile) form.append('preview', previewFile);
 
             const sid = getSession();
             const res = await fetch(editingMap ? `/api/maps/${editingMap.id}` : '/api/maps', {
@@ -1828,7 +1833,9 @@ function ManageMapsTab({ showMsg }) {
             labelId: map.labelId || labels.find(label => label.name === map.labelName)?.id || '',
         });
         setFile(null);
+        setPreviewFile(null);
         if (fileRef.current) fileRef.current.value = '';
+        if (previewRef.current) previewRef.current.value = '';
         setMapsSubtab('edit-map');
     };
 
@@ -1875,6 +1882,10 @@ function ManageMapsTab({ showMsg }) {
                     <form onSubmit={saveLabel} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
                         <input value={labelForm.season} onChange={e=>setLabelForm({...labelForm,season:e.target.value})} placeholder="Season (for example: Season 3)" required />
                         <input value={labelForm.name} onChange={e=>setLabelForm({...labelForm,name:e.target.value})} placeholder="Biome name (for example: Autumn Forest)" required />
+                        <select value={labelForm.kind} onChange={e=>setLabelForm({...labelForm,kind:e.target.value})}>
+                            <option value="biome">Regular biome</option>
+                            <option value="arena">Hero Arena</option>
+                        </select>
                         <label><input type="checkbox" checked={labelForm.active} onChange={e=>setLabelForm({...labelForm,active:e.target.checked})} /> Active map pool</label>
                         <div style={{ display: 'flex', gap: 8 }}>
                             <button className="btn btn-primary" disabled={savingLabel || !labelForm.name.trim()}>
@@ -1899,7 +1910,7 @@ function ManageMapsTab({ showMsg }) {
                                 required
                                 style={{ width: '100%', background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '2px solid var(--color-bg-lighter)', borderRadius: 'var(--radius-md)', padding: '10px 14px' }}
                             >
-                                <option value="">Select label</option>
+                                <option value="">Select biome</option>
                                 {labels.map(label => (
                                     <option key={label.id} value={label.id}>{label.season || 'Season 1'} — {label.name}</option>
                                 ))}
@@ -1923,6 +1934,12 @@ function ManageMapsTab({ showMsg }) {
                             rows="3"
                             style={{ background: 'var(--color-bg-lighter)', color: 'var(--color-text-primary)', border: '2px solid var(--color-bg-lighter)', borderRadius: 'var(--radius-md)', padding: '10px 14px', resize: 'vertical' }}
                         />
+                        <label style={{ color: 'var(--color-text-secondary)' }}>
+                            Map preview (PNG, JPG or WEBP)
+                            <input ref={previewRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={e => setPreviewFile(e.target.files[0] || null)} style={{ display: 'block', marginTop: 6 }} />
+                        </label>
+                        {(previewFile || editingMap?.previewImageUrl) && <img src={previewFile ? URL.createObjectURL(previewFile) : editingMap.previewImageUrl} alt="" style={{ width: 220, aspectRatio: '4/3', objectFit: 'cover', borderRadius: 8 }} />}
+                        <label style={{ color: 'var(--color-text-secondary)' }}>Warcraft III file (optional until available)</label>
                         <input
                             ref={fileRef}
                             type="file"
@@ -1934,16 +1951,15 @@ function ManageMapsTab({ showMsg }) {
                                     setMapForm({ ...mapForm, title: titleFromMapFile(selected.name) });
                                 }
                             }}
-                            required={!editingMap}
                             style={{ color: 'var(--color-text-secondary)' }}
                         />
                         {editingMap && (
                             <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>
-                                Current file: {editingMap.originalName} · {globalThis.formatMapSize(editingMap.size)}
+                                {editingMap.originalName ? `Current file: ${editingMap.originalName} · ${globalThis.formatMapSize(editingMap.size)}` : 'Game file not attached yet'}
                             </div>
                         )}
                         <div style={{ display: 'flex', gap: 8 }}>
-                            <button className="btn btn-primary" disabled={savingMap || !mapForm.title.trim() || !mapForm.labelId || (!editingMap && !file)}>
+                            <button className="btn btn-primary" disabled={savingMap || !mapForm.title.trim() || !mapForm.labelId || (!editingMap && !file && !previewFile)}>
                                 {savingMap ? '...' : (editingMap ? 'Save map' : 'Upload map')}
                             </button>
                             <button type="button" className="btn btn-secondary" onClick={() => { resetMapForm(); setMapsSubtab('maps'); }}>Cancel</button>
@@ -1971,7 +1987,7 @@ function ManageMapsTab({ showMsg }) {
                                     <div>
                                         <div style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{label.name}</div>
                                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>
-                                            {(label.maps || []).length} maps
+                                            {label.season || 'Season 1'} · {label.kind === 'arena' ? 'Hero Arena' : 'Biome'} · {(label.maps || []).length} maps
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', gap: 6 }}>
@@ -2005,16 +2021,17 @@ function ManageMapsTab({ showMsg }) {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
                                     {(label.maps || []).map(map => (
                                         <div key={map.id} className="card-elevated" style={{ padding: 'var(--spacing-md)' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                                                {map.previewImageUrl && <img src={map.previewImageUrl} alt="" style={{ width: 150, aspectRatio: '4/3', objectFit: 'cover', borderRadius: 8 }} />}
                                                 <div style={{ flex: 1, minWidth: 220 }}>
                                                     <div style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{map.title}</div>
                                                     {map.description && <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.88em', marginTop: 5 }}>{map.description}</div>}
                                                     <div style={{ color: 'var(--color-text-muted)', fontSize: '0.82em', marginTop: 5 }}>
-                                                        {map.originalName} · {globalThis.formatMapSize(map.size)}
+                                                        {map.originalName ? `${map.originalName} · ${globalThis.formatMapSize(map.size)}` : 'Preview only · game file pending'}
                                                     </div>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                                                    <a href={`/api/maps/${map.id}/download`} className="btn btn-secondary" style={{ textDecoration: 'none', padding: '6px 12px', fontSize: '0.82em' }}>Download</a>
+                                                    {map.originalName && <a href={`/api/maps/${map.id}/download`} className="btn btn-secondary" style={{ textDecoration: 'none', padding: '6px 12px', fontSize: '0.82em' }}>Download</a>}
                                                     <button onClick={() => editMap({ ...map, labelId: map.labelId || label.id, labelName: label.name })} style={{ background: 'rgba(33,150,243,0.15)', color: '#2196f3', border: '1px solid rgba(33,150,243,0.3)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: '0.82em' }}>Edit</button>
                                                     <button onClick={() => deleteMap(map)} style={{ background: 'rgba(244,67,54,0.12)', color: 'var(--color-error)', border: '1px solid rgba(244,67,54,0.3)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: '0.82em' }}>Delete</button>
                                                 </div>

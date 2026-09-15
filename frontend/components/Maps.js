@@ -56,30 +56,16 @@ function Maps() {
                         const isExpanded = !!expandedLabels[label.id];
 
                         return (
-                            <section key={label.id}>
+                            <section key={label.id} className={`map-biome-section${label.kind === 'arena' ? ' is-arena' : ''}`}>
                                 <button
                                     type="button"
                                     onClick={() => toggleLabel(label.id)}
                                     aria-expanded={isExpanded}
-                                    style={{
-                                        width: '100%',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        gap: 'var(--spacing-md)',
-                                        marginBottom: isExpanded ? 'var(--spacing-lg)' : 0,
-                                        padding: 'var(--spacing-lg) var(--spacing-xl)',
-                                        background: 'rgba(20, 16, 10, 0.7)',
-                                        border: '1px solid rgba(238, 221, 161, 0.2)',
-                                        borderRadius: 'var(--radius-lg)',
-                                        color: 'var(--color-text-primary)',
-                                        cursor: 'pointer',
-                                        textAlign: 'left',
-                                    }}
+                                    className="map-biome-header"
                                 >
                                     <span>
-                                        <small style={{ display:'block',color:'var(--color-text-muted)' }}>{label.season || 'Season 1'}</small>
-                                        <strong style={{ display: 'block', marginBottom: 6, color: 'var(--color-accent-primary)' }}>{label.name}</strong>
+                                        <small>{label.season || 'Season 1'} · {label.kind === 'arena' ? tr('Специальный пул', 'Special pool') : tr('Биом', 'Biome')}</small>
+                                        <strong>{label.name}</strong>
                                         <span style={{ color: 'var(--color-text-muted)', fontSize: '0.9em' }}>
                                             {maps.length} · {isExpanded ? t('maps.hide') : t('maps.show')}
                                         </span>
@@ -90,31 +76,29 @@ function Maps() {
                                 </button>
 
                                 {isExpanded && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+                                    <div className="map-gallery-grid">
                                         {maps.map(map => (
-                                            <div key={map.id} className="card-elevated" style={{ padding: 'var(--spacing-lg)' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--spacing-md)', flexWrap: 'wrap' }}>
-                                                    <div style={{ flex: '1 1 220px', minWidth: 0, overflowWrap: 'anywhere' }}>
-                                                        <h4 style={{ marginBottom: 6, color: 'var(--color-text-primary)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{map.title}</h4>
+                                            <article key={map.id} className="map-gallery-card">
+                                                {map.previewImageUrl
+                                                    ? <img src={map.previewImageUrl} alt={map.title} />
+                                                    : <div className="map-gallery-placeholder">WARCRAFT III</div>}
+                                                <div className="map-gallery-copy">
+                                                    <div>
+                                                        <h4>{map.title}</h4>
                                                         {map.description && (
-                                                            <p style={{ color: 'var(--color-text-secondary)', marginBottom: 8, lineHeight: 1.5 }}>
-                                                                {map.description}
-                                                            </p>
+                                                            <p>{map.description}</p>
                                                         )}
-                                                        <div style={{ color: 'var(--color-text-muted)', fontSize: '0.86em', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
-                                                            {map.originalName} · {globalThis.formatMapSize(map.size)}
-                                                        </div>
+                                                        <small>{map.originalName ? `${map.originalName} · ${globalThis.formatMapSize(map.size)}` : tr('Игровой файл скоро', 'Game file coming soon')}</small>
                                                     </div>
-                                                    <a
+                                                    {map.originalName && <a
                                                         className="btn btn-primary"
                                                         href={`/api/maps/${map.id}/download`}
                                                         download
-                                                        style={{ textDecoration: 'none', whiteSpace: 'nowrap' }}
                                                     >
                                                         {t('maps.download')}
-                                                    </a>
+                                                    </a>}
                                                 </div>
-                                            </div>
+                                            </article>
                                         ))}
                                     </div>
                                 )}

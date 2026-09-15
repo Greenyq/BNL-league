@@ -10,6 +10,7 @@ const mapLabelSchema = new mongoose.Schema({
     name:        { type: String, required: true, trim: true },
     season:      { type: String, required: true, trim: true, default: 'Season 1', index: true },
     active:      { type: Boolean, default: true, index: true },
+    kind:        { type: String, enum: ['biome', 'arena'], default: 'biome' },
     createdAt:   { type: Date, default: Date.now },
     updatedAt:   { type: Date, default: Date.now }
 });
@@ -21,11 +22,12 @@ const mapFileSchema = new mongoose.Schema({
     labelId:      { type: String, required: true, index: true },
     title:        { type: String, required: true, trim: true },
     description:  { type: String, default: '', trim: true },
-    originalName: { type: String, required: true },
-    mimeType:     { type: String, required: true, default: 'application/octet-stream' },
-    extension:    { type: String, required: true },
-    size:         { type: Number, required: true },
-    fileData:     { type: String, required: true },
+    previewImageUrl: { type: String, default: '' },
+    originalName: { type: String, default: '' },
+    mimeType:     { type: String, default: 'application/octet-stream' },
+    extension:    { type: String, default: '' },
+    size:         { type: Number, default: 0 },
+    fileData:     { type: String, default: '' },
     createdAt:    { type: Date, default: Date.now },
     updatedAt:    { type: Date, default: Date.now }
 });

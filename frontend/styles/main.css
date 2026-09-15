@@ -4025,3 +4025,21 @@ body.achievement-modal-open {
 }
 
 .dnd-map-assignment{margin-top:10px;padding:12px 14px;border:1px solid rgba(212,175,55,.35);background:rgba(11,18,25,.72)}.dnd-map-assignment label,.dnd-map-assignment strong,.dnd-map-assignment small{display:block}.dnd-map-assignment label{color:#c9a961;font-size:.66rem;letter-spacing:.16em}.dnd-map-assignment strong{margin-top:4px;color:#f1dfad}.dnd-map-assignment small{margin-top:3px;color:var(--color-text-muted)}
+
+.map-biome-section { padding:10px; border:1px solid rgba(212,175,55,.18); border-radius:18px; background:radial-gradient(circle at 50% 0,rgba(78,111,61,.15),transparent 55%); }
+.map-biome-section.is-arena { border-color:rgba(216,91,55,.35); background:radial-gradient(circle at 50% 0,rgba(151,53,33,.2),transparent 60%); }
+.map-biome-header { width:100%; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 22px; color:var(--color-text-primary); cursor:pointer; text-align:left; border:1px solid rgba(238,221,161,.2); border-radius:12px; background:linear-gradient(135deg,rgba(29,24,15,.96),rgba(12,15,12,.92)); }
+.map-biome-header small,.map-biome-header strong { display:block; }
+.map-biome-header small { color:var(--color-text-muted); font-size:.68rem; letter-spacing:.16em; text-transform:uppercase; }
+.map-biome-header strong { margin-top:5px; color:var(--color-accent-primary); font-family:var(--font-heading); font-size:1.35rem; }
+.map-gallery-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; padding:16px 4px 4px; }
+.map-gallery-card { overflow:hidden; border:1px solid rgba(212,175,55,.28); border-radius:12px; background:linear-gradient(180deg,rgba(27,31,24,.96),rgba(12,14,12,.98)); box-shadow:0 12px 28px rgba(0,0,0,.3); }
+.map-gallery-card>img,.map-gallery-placeholder { display:block; width:100%; aspect-ratio:4/3; object-fit:cover; border-bottom:1px solid rgba(212,175,55,.25); }
+.map-gallery-placeholder { display:grid; place-items:center; color:#8e825f; letter-spacing:.18em; background:radial-gradient(circle,#263426,#101510); }
+.map-gallery-copy { min-height:132px; display:flex; flex-direction:column; justify-content:space-between; gap:12px; padding:14px; }
+.map-gallery-copy h4 { margin:0 0 5px; color:#f2deb0; }
+.map-gallery-copy p { margin:0 0 6px; color:var(--color-text-secondary); font-size:.86rem; }
+.map-gallery-copy small { color:var(--color-text-muted); }
+.map-gallery-copy .btn { align-self:flex-start; text-decoration:none; }
+@media (max-width:900px) { .map-gallery-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:560px) { .map-gallery-grid { grid-template-columns:1fr; } .map-biome-header { padding:15px 16px; } }
