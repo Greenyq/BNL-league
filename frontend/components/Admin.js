@@ -1688,7 +1688,7 @@ function PortraitsTab({ showMsg }) {
 
 // ── Вкладка Manage maps ──────────────────────────────────────────────────────
 const EMPTY_MAP_FORM = { title: '', description: '', labelId: '' };
-const EMPTY_LABEL_FORM = { name: '', season: 'Season 1', active: true, kind: 'biome' };
+const EMPTY_LABEL_FORM = { name: '', season: 'Season 3', active: true, kind: 'biome' };
 
 function titleFromMapFile(fileName) {
     return (fileName || '').replace(/\.[^/.]+$/, '').trim();
