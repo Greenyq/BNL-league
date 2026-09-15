@@ -33,6 +33,7 @@ const clearAssignment = participant => {
     participant.assignedMapLabelId = null;
     participant.assignedMapBiome = null;
     participant.assignedMapSeason = null;
+    participant.assignedMapPreviewUrl = null;
 };
 const applyAssignedMap = (first, second, map) => {
     for (const participant of [first, second]) {
@@ -41,13 +42,14 @@ const applyAssignedMap = (first, second, map) => {
         participant.assignedMapLabelId = map?.labelId || null;
         participant.assignedMapBiome = map?.biomeName || null;
         participant.assignedMapSeason = map?.season || null;
+        participant.assignedMapPreviewUrl = map?.previewImageUrl || null;
     }
 };
 const loadTournamentMaps = async () => {
     const biomes = await MapLabel.find({ active: { $ne: false } }).select('_id name season kind');
     const byId = new Map(biomes.map(b => [String(b.id), b]));
-    const maps = await MapFile.find({ labelId: { $in: [...byId.keys()] } }).select('_id title labelId');
-    return maps.map(map => { const biome=byId.get(String(map.labelId)); return {id:map.id,title:map.title,labelId:map.labelId,biomeName:biome?.name||'Unknown',season:biome?.season||'Season 1',kind:biome?.kind||'biome'}; });
+    const maps = await MapFile.find({ labelId: { $in: [...byId.keys()] } }).select('_id title labelId previewImageUrl');
+    return maps.map(map => { const biome=byId.get(String(map.labelId)); return {id:map.id,title:map.title,labelId:map.labelId,biomeName:biome?.name||'Unknown',season:biome?.season||'Season 1',kind:biome?.kind||'biome',previewImageUrl:map.previewImageUrl||null}; });
 };
 const chooseRandom = items => items.length ? items[Math.floor(Math.random() * items.length)] : null;
 
@@ -169,7 +171,7 @@ async function repairInvalidAssignments() {
     if (!invalidIds.size) return 0;
     await Stage2Participant.updateMany(
         { _id: { $in: Array.from(invalidIds) } },
-        { $set: { assignedOpponentId: null, assignedAt: null, assignedMapId: null, assignedMapTitle: null, assignedMapLabelId: null, assignedMapBiome: null, assignedMapSeason: null } }
+        { $set: { assignedOpponentId: null, assignedAt: null, assignedMapId: null, assignedMapTitle: null, assignedMapLabelId: null, assignedMapBiome: null, assignedMapSeason: null, assignedMapPreviewUrl: null } }
     );
     return invalidIds.size;
 }
@@ -428,6 +430,7 @@ router.get('/stage2', async (req, res) => {
                 assignedMapTitle: isSelf || isOpponent || viewer.isAdmin ? participant.assignedMapTitle : undefined,
                 assignedMapBiome: isSelf || isOpponent || viewer.isAdmin ? participant.assignedMapBiome : undefined,
                 assignedMapSeason: isSelf || isOpponent || viewer.isAdmin ? participant.assignedMapSeason : undefined,
+                assignedMapPreviewUrl: isSelf || isOpponent || viewer.isAdmin ? participant.assignedMapPreviewUrl : undefined,
                 iconKey: stableIconFor(participant),
                 isSelf,
                 isOpponent,
@@ -799,7 +802,10 @@ router.post('/', checkAuth, async (req, res) => {
             winner, score: `${mapsA}:${mapsB}`, notes, playedAt: playedAt || new Date(),
             assignedMapId: pa.assignedMapId,
             assignedMapTitle: pa.assignedMapTitle,
-            assignedMapLabelId: pa.assignedMapLabelId
+            assignedMapLabelId: pa.assignedMapLabelId,
+            assignedMapBiome: pa.assignedMapBiome,
+            assignedMapSeason: pa.assignedMapSeason,
+            assignedMapPreviewUrl: pa.assignedMapPreviewUrl
         });
         const winnerP = winner === 'A' ? pa : pb, loserP = winner === 'A' ? pb : pa;
         winnerP.winStreak = (Number(winnerP.winStreak) || 0) + 1;
