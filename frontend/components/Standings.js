@@ -853,13 +853,21 @@ function Standings() {
             fetch('/api/players').then(r => r.json()),
             fetch('/api/duels', { headers: stage2Headers }).then(r => r.json()),
             fetch(`/api/duels/stage2${revealStage2Names ? '?revealNames=1' : ''}`, { headers: stage2Headers }).then(r => r.json()),
+            playerSession
+                ? fetch('/api/players/auth/me', { headers: { 'x-player-session-id': playerSession } })
+                    .then(async response => ({ ok: response.ok, data: await response.json().catch(() => null) }))
+                : Promise.resolve({ ok: false, data: null }),
             ])
-            .then(([pl, duelData, stage2Data]) => {
+            .then(([pl, duelData, stage2Data, authState]) => {
                 if (!active) return;
                 setPlayers(Array.isArray(pl) ? pl : []);
                 setDuels(Array.isArray(duelData) ? duelData : []);
                 setStage2(Array.isArray(stage2Data?.participants) ? stage2Data.participants : (Array.isArray(stage2Data) ? stage2Data : []));
-                setStage2Viewer(stage2Data?.viewer || { isAdmin: false, canRevealNames: false, hasPlayer: false });
+                setStage2Viewer({
+                    ...(stage2Data?.viewer || { isAdmin: false, canRevealNames: false, hasPlayer: false }),
+                    isAuthenticated: Boolean(authState?.ok),
+                    hasLinkedPlayer: Boolean(authState?.data?.playerData)
+                });
                 if (initial) setLoading(false);
             })
             .catch(err  => { if (active && initial) { setError(err.message); setLoading(false); } });
