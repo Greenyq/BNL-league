@@ -171,6 +171,7 @@
     var PLAYER_SESSION_EVENT = 'bnl-player-session-change';
     var pendingAdminNavRequestId = 0;
     var pendingPlayerUsernameRequest = null;
+    var verifiedPlayerSessionId = null;
 
     var NAV_LABELS = {
         ru: { home: 'Главная', standings: 'Сезон 3', teams: 'Команды', clanwar: 'Клан-вары', mymatches: 'Мои матчи', matches: 'Матчи', bnlvsall: 'BNL vs All', maps: 'Карты', profile: 'Профиль', admin: 'Админ' },
@@ -201,7 +202,7 @@
             setStoredPlayerUsername(null);
             return;
         }
-        if (getStoredPlayerUsername() || pendingPlayerUsernameRequest) return;
+        if (verifiedPlayerSessionId === sid || pendingPlayerUsernameRequest) return;
 
         pendingPlayerUsernameRequest = fetch('/api/players/auth/me', {
             headers: { 'x-player-session-id': sid }
@@ -220,6 +221,7 @@
                 });
             })
             .then(function(data) {
+                verifiedPlayerSessionId = sid;
                 setStoredPlayerUsername(data.user && data.user.username ? data.user.username : null);
                 updateHeaderProfileLink();
             })
