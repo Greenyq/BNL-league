@@ -2408,8 +2408,8 @@ function DuelsTab({ players, showMsg, onRefresh }) {
             </div>
             <button className="btn btn-primary" disabled={saving}>{saving ? '...' : tr('Сохранить дуэль', 'Save duel')}</button>
         </form>
-        <div className="standings-table-wrap"><table className="standings-table"><thead><tr><th>{tr('Дата', 'Date')}</th><th>{tr('Дуэль', 'Duel')}</th><th>{tr('Счёт', 'Score')}</th><th>{tr('Сетка', 'Bracket')}</th></tr></thead><tbody>
-            {duels.map(d => <tr key={d.id}><td>{new Date(d.playedAt).toLocaleDateString()}</td><td>{d.playerA.name} ({tierName(d.playerA.tier)}) vs {d.playerB.name} ({tierName(d.playerB.tier)})</td><td>{d.score || '—'}</td><td>{({ upper: tr('Основная', 'Main'), lower: tr('Лузер', 'Losers'), s_bracket: 'S', king: tr('Царь горы', 'King of the Hill') })[d.phase] || d.phase}</td></tr>)}
+        <div className="standings-table-wrap"><table className="standings-table"><thead><tr><th>{tr('Дата', 'Date')}</th><th>{tr('Дуэль', 'Duel')}</th><th>{tr('Счёт', 'Score')}</th><th>{tr('Сетка', 'Bracket')}</th><th>{tr('Действия', 'Actions')}</th></tr></thead><tbody>
+            {duels.map(d => <tr key={d.id}><td>{new Date(d.playedAt).toLocaleDateString()}</td><td>{d.playerA.name} ({tierName(d.playerA.tier)}) vs {d.playerB.name} ({tierName(d.playerB.tier)})</td><td>{d.score || '—'}</td><td>{({ upper: tr('Основная', 'Main'), lower: tr('Лузер', 'Losers'), s_bracket: 'S', king: tr('Царь горы', 'King of the Hill') })[d.phase] || d.phase}</td><td><button type="button" className="btn" onClick={() => remove(d.id)} style={{ padding: '6px 10px', minWidth: 0, color: '#ff8b8b', borderColor: 'rgba(255, 107, 107, 0.45)' }} title={tr('Удалить дуэль', 'Delete duel')} aria-label={tr(`Удалить дуэль: ${d.playerA.name} против ${d.playerB.name}`, `Delete duel: ${d.playerA.name} versus ${d.playerB.name}`)}>🗑 {tr('Удалить', 'Delete')}</button></td></tr>)}
         </tbody></table></div>
     </div>;
 }
