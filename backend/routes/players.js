@@ -437,7 +437,11 @@ router.put('/:id', async (req, res) => {
                     stage2Participant.battleTag = player.battleTag;
                     stage2Participant.name = player.name;
                     stage2Participant.tier = tier;
-                    if (tier === 'S' && !wasCenter) stage2Participant.status = 's_bracket';
+                    // Tier S starts in the center, but an S player sent to the
+                    // lower bracket must stay there until earning three wins.
+                    if (tier === 'S' && !wasCenter && !['lower', 'eliminated'].includes(stage2Participant.status)) {
+                        stage2Participant.status = 's_bracket';
+                    }
                     if (tier !== 'S' && wasCenter) {
                         stage2Participant.status = 'upper';
                         stage2Participant.kingQualified = false;
