@@ -9,7 +9,8 @@ const ROUTES = [
     { id: 'upperB', tier: 'B', status: 'upper', wins: 'upperWins', d: 'M45 116 C125 118 178 150 188 215 C198 270 169 298 225 316 C305 342 392 313 474 316', color: '#76dceb' },
     { id: 'lowerB', tier: 'B', status: 'lower', wins: 'lowerWins', d: 'M45 585 C130 580 193 548 268 542 C338 536 381 552 432 518 C468 494 487 457 520 427', color: '#76dceb' },
     { id: 'upperA', tier: 'A', status: 'upper', wins: 'upperWins', d: 'M1155 116 C1075 118 1022 150 1012 215 C1002 270 1031 298 975 316 C895 342 808 313 726 316', color: '#df806a' },
-    { id: 'lowerA', tier: 'A', status: 'lower', wins: 'lowerWins', d: 'M1155 585 C1070 580 1007 548 932 542 C862 536 819 552 768 518 C732 494 713 457 680 427', color: '#df806a' }
+    { id: 'lowerA', tier: 'A', status: 'lower', wins: 'lowerWins', d: 'M1155 585 C1070 580 1007 548 932 542 C862 536 819 552 768 518 C732 494 713 457 680 427', color: '#df806a' },
+    { id: 'lowerS', tier: 'S', status: 'lower', wins: 'lowerWins', d: 'M600 646 C520 614 494 551 526 497 C544 466 569 441 600 420', color: '#f2cf67' }
 ];
 
 const DRAGON_BRANCH = 'M600 270 C600 224 600 178 600 130';

@@ -170,13 +170,9 @@ async function repairLegacyUpperDemotions() {
 }
 
 const sendOutOfCenter = participant => {
-    if (participant.tier === 'S') {
-        participant.status = 'eliminated';
-    } else {
-        participant.status = 'lower';
-        participant.lowerWins = 0;
-        participant.lowerLosses = 0;
-    }
+    participant.status = 'lower';
+    participant.lowerWins = 0;
+    participant.lowerLosses = 0;
 };
 
 const matchmakingGroup = participant => ['s_bracket', 'king'].includes(participant.status)

@@ -314,6 +314,7 @@ function LegacyStage2Arena({ participants, viewer, revealNames, onRevealNames })
         lowerA: participants.filter(p => p.tier === 'A' && p.status === 'lower'),
         lowerB: participants.filter(p => p.tier === 'B' && p.status === 'lower'),
         lowerC: participants.filter(p => p.tier === 'C' && p.status === 'lower'),
+        lowerS: participants.filter(p => p.tier === 'S' && p.status === 'lower'),
         center: participants.filter(p => ['s_bracket', 'king'].includes(p.status)),
         eliminated: participants.filter(p => p.status === 'eliminated')
     };
@@ -325,7 +326,8 @@ function LegacyStage2Arena({ participants, viewer, revealNames, onRevealNames })
         { id: 'upperB', list: groups.upperB, wins: 'upperWins', tier: 'B', bracket: 'upper', d: 'M82 108 C205 72 320 82 410 118 C492 151 555 151 600 188' },
         { id: 'lowerB', list: groups.lowerB, wins: 'lowerWins', tier: 'B', bracket: 'lower', d: 'M92 542 C215 510 342 520 448 493 C520 474 568 447 600 408' },
         { id: 'upperA', list: groups.upperA, wins: 'upperWins', tier: 'A', bracket: 'upper', d: 'M1118 108 C995 72 880 82 790 118 C708 151 645 151 600 188' },
-        { id: 'lowerA', list: groups.lowerA, wins: 'lowerWins', tier: 'A', bracket: 'lower', d: 'M1108 542 C985 510 858 520 752 493 C680 474 632 447 600 408' }
+        { id: 'lowerA', list: groups.lowerA, wins: 'lowerWins', tier: 'A', bracket: 'lower', d: 'M1108 542 C985 510 858 520 752 493 C680 474 632 447 600 408' },
+        { id: 'lowerS', list: groups.lowerS, wins: 'lowerWins', tier: 'S', bracket: 'lower', d: 'M600 646 C520 614 494 551 526 497 C544 466 569 441 600 408' }
     ];
     React.useLayoutEffect(() => {
         const next = [];
@@ -456,6 +458,7 @@ function LegacyStage2Arena({ participants, viewer, revealNames, onRevealNames })
                 <text x="250" y="632" className="stage2-svg-label stage2-svg-label--b">{tr('НИЖНЯЯ СЕТКА B', 'TIER B — LOWER')}</text>
                 <text x="950" y="42" className="stage2-svg-label stage2-svg-label--a">{tr('ВЕРХНЯЯ СЕТКА A', 'TIER A — UPPER')}</text>
                 <text x="950" y="632" className="stage2-svg-label stage2-svg-label--a">{tr('НИЖНЯЯ СЕТКА A', 'TIER A — LOWER')}</text>
+                <text x="600" y="652" className="stage2-svg-label stage2-svg-label--s">{tr('НИЖНЯЯ СЕТКА S', 'TIER S — LOWER')}</text>
                 <g className="stage2-svg-pieces">{pieces.map(renderPiece)}</g>
             </svg>
         </div>;
