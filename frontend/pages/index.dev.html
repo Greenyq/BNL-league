@@ -513,7 +513,7 @@
     }
 
     function loadSeasonProgress() {
-        fetch('/api/duels/progress')
+        fetch('/api/duels/progress', { cache: 'no-store' })
             .then(function(r) {
                 if (!r.ok) throw new Error('Failed to load season progress');
                 return r.json();
@@ -524,10 +524,16 @@
                 setSeasonProgress(finished, total);
             })
             .catch(function() {
-                setSeasonProgress(0, 0);
+                // Keep the last successful count during a temporary API error.
             });
     }
     loadSeasonProgress();
+    window.setInterval(function() {
+        if (!document.hidden) loadSeasonProgress();
+    }, 30000);
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) loadSeasonProgress();
+    });
 </script>
 
 </body>
