@@ -142,6 +142,7 @@ router.get('/progress', async (req, res) => {
             }
         }
 
+        res.set('Cache-Control', 'no-store');
         res.json({ finished, total: finished + assignedPairs.size });
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch Season 3 progress' });
