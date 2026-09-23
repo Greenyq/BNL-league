@@ -70,6 +70,8 @@ function PlayerPanel({ self, king, guardian, snapshot, onSafe, onMystery, onFind
     const mysteryLocked = Boolean(self?.relicClaimed || ctx.arenaShield);
     const relic = RELIC_INFO[self?.relicType] || null;
     const relicAction = !self?.relicUsedAt && ['opponent_skip', 'map_reroll'].includes(self?.relicType);
+    const assignedMapTitles = (self?.assignedMaps || []).map(map => map.title).filter(Boolean);
+    const mapList = assignedMapTitles.length ? assignedMapTitles.join(' · ') : self?.assignedMapTitle;
 
     return <aside className="dnd-player-panel">
         <header><span className="dnd-panel-avatar">{self?.tier || 'B'}</span><div><small>PLAYER CAMPAIGN</small><h3>{self?.name || 'Guest Adventurer'}</h3><p>{center ? 'S Arena' : `Tier ${self?.tier || 'B'} · ${lower ? 'Lower' : 'Upper'} Bracket`}</p></div></header>
@@ -79,9 +81,9 @@ function PlayerPanel({ self, king, guardian, snapshot, onSafe, onMystery, onFind
             <button onClick={onSafe}><b>Safe Road</b><small>Следующая обычная дуэль</small></button>
             <button className="is-mystery" onClick={onMystery} disabled={mysteryLocked}><b>Mystery Road</b><small>{mysteryLocked ? 'Недоступно: Arena Shield уже получен' : 'Dragon Player или Dungeon Boss'}</small></button>
             {pathError && <p className="dnd-path-error">{pathError}</p>}
-        </section> : snapshot.matches('waitingForAdmin') || self?.encounterStatus === 'awaiting_admin' ? <section className="dnd-next-battle is-locked"><label>MYSTERY ENCOUNTER</label><div><strong>{self?.name || 'YOU'}</strong><em>VS</em><strong>HIDDEN</strong></div><small>Админ откроет соперника, когда бой будет готов</small></section> : <section className="dnd-next-battle"><label>NEXT BATTLE</label><div><strong>{self?.name || 'YOU'}</strong><em>VS</em><strong>{guardian || 'TBD'}</strong></div><small>{self?.assignedMapTitle ? `Map: ${self.assignedMapTitle}` : center && king && king.showName ? `King: ${king.name}` : 'Official BO3 duel'}</small></section>}
+        </section> : snapshot.matches('waitingForAdmin') || self?.encounterStatus === 'awaiting_admin' ? <section className="dnd-next-battle is-locked"><label>MYSTERY ENCOUNTER</label><div><strong>{self?.name || 'YOU'}</strong><em>VS</em><strong>HIDDEN</strong></div><small>Админ откроет соперника, когда бой будет готов</small></section> : <section className="dnd-next-battle"><label>NEXT BATTLE</label><div><strong>{self?.name || 'YOU'}</strong><em>VS</em><strong>{guardian || 'TBD'}</strong></div><small>{mapList ? `BO3 maps: ${mapList}` : center && king && king.showName ? `King: ${king.name}` : 'Official BO3 duel'}</small></section>}
         <section className={`dnd-panel-relic${relic ? ' has-relic' : ''}`}><span>{relic ? '◆' : '◇'}</span><div><label>{relic ? relic[0] : 'NO RELIC'}</label><small>{relic ? `${relic[1]}${self?.relicUsedAt ? ' · использован' : ''}` : 'Win a special encounter'}</small>{relicAction && <button type="button" className="dnd-relic-action" disabled={relicBusy || !self?.assignedOpponentId} onClick={onUseRelic}>{relicBusy ? '...' : self.relicType === 'opponent_skip' ? 'Сменить соперника' : 'Сменить биом карты'}</button>}{relicError && <small className="dnd-path-error">{relicError}</small>}</div></section>
-        <section className="dnd-map-assignment"><label>MAP BIOME</label><strong>{self?.assignedMapBiome || 'Not assigned'}</strong><small>{self?.assignedMapSeason || 'Active season'}{self?.assignedMapTitle ? ` · ${self.assignedMapTitle}` : ''}</small></section>
+        <section className="dnd-map-assignment"><label>BO3 MAPS · SAME BIOME</label><strong>{self?.assignedMapBiome || 'Not assigned'}</strong><small>{self?.assignedMapSeason || 'Active season'}{mapList ? ` · ${mapList}` : ''}</small></section>
         <button className="dnd-find-button" onClick={onFind}>⌖ Найти меня на карте</button>
     </aside>;
 }

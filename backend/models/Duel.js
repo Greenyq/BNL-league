@@ -1,5 +1,13 @@
 const mongoose = require('mongoose');
 
+const assignedMapSchema = new mongoose.Schema({
+    mapId:     { type: String, required: true },
+    title:     { type: String, required: true },
+    labelId:   { type: String, required: true },
+    biomeName: { type: String, default: null },
+    season:    { type: String, default: null }
+}, { _id: false });
+
 const duelSchema = new mongoose.Schema({
     phase:     { type: String, enum: ['qualifier', 'upper', 'lower', 'king', 's_bracket', 'encounter'], default: 'qualifier', index: true },
     tierGroup: { type: String, enum: ['C', 'B', 'A', 'S'], required: true, index: true },
@@ -23,6 +31,7 @@ const duelSchema = new mongoose.Schema({
     assignedMapLabelId: { type: String, default: null },
     assignedMapBiome: { type: String, default: null },
     assignedMapSeason: { type: String, default: null },
+    assignedMaps: { type: [assignedMapSchema], default: [] },
     score:    { type: String, trim: true, maxlength: 30, default: '' },
     notes:    { type: String, trim: true, maxlength: 500, default: '' },
     playedAt: { type: Date, required: true, default: Date.now },
@@ -73,6 +82,7 @@ const stage2ParticipantSchema = new mongoose.Schema({
     assignedMapLabelId: { type: String, default: null },
     assignedMapBiome: { type: String, default: null },
     assignedMapSeason: { type: String, default: null },
+    assignedMaps: { type: [assignedMapSchema], default: [] },
     avoidedOpponentIds: { type: [String], default: [] },
     mapWins:         { type: Number, default: 0 },
     mapLosses:       { type: Number, default: 0 },

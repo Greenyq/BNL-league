@@ -33,14 +33,43 @@ const clearAssignment = participant => {
     participant.assignedMapLabelId = null;
     participant.assignedMapBiome = null;
     participant.assignedMapSeason = null;
+    participant.assignedMaps = [];
 };
-const applyAssignedMap = (first, second, map) => {
+const mapAssignment = map => map ? ({
+    mapId: String(map.id || map.mapId),
+    title: map.title,
+    labelId: String(map.labelId),
+    biomeName: map.biomeName || null,
+    season: map.season || null
+}) : null;
+const shuffle = items => {
+    const result = [...items];
+    for (let index = result.length - 1; index > 0; index--) {
+        const swapWith = Math.floor(Math.random() * (index + 1));
+        [result[index], result[swapWith]] = [result[swapWith], result[index]];
+    }
+    return result;
+};
+const chooseMapSeries = (maps, existingMap = null, count = 3) => {
+    if (!maps.length && !existingMap) return [];
+    const first = existingMap || chooseRandom(maps);
+    if (!first) return [];
+    const sameBiome = maps.filter(map => String(map.labelId) === String(first.labelId));
+    const firstId = String(first.id || first.mapId);
+    return [first, ...shuffle(sameBiome.filter(map => String(map.id || map.mapId) !== firstId))]
+        .slice(0, count)
+        .map(mapAssignment);
+};
+const applyAssignedMaps = (first, second, maps) => {
+    const assignments = (maps || []).map(mapAssignment).filter(Boolean);
+    const primary = assignments[0] || null;
     for (const participant of [first, second]) {
-        participant.assignedMapId = map ? String(map.id) : null;
-        participant.assignedMapTitle = map?.title || null;
-        participant.assignedMapLabelId = map?.labelId || null;
-        participant.assignedMapBiome = map?.biomeName || null;
-        participant.assignedMapSeason = map?.season || null;
+        participant.assignedMapId = primary?.mapId || null;
+        participant.assignedMapTitle = primary?.title || null;
+        participant.assignedMapLabelId = primary?.labelId || null;
+        participant.assignedMapBiome = primary?.biomeName || null;
+        participant.assignedMapSeason = primary?.season || null;
+        participant.assignedMaps = assignments;
     }
 };
 const loadTournamentMaps = async () => {
@@ -50,6 +79,57 @@ const loadTournamentMaps = async () => {
     return maps.map(map => { const biome=byId.get(String(map.labelId)); return {id:map.id,title:map.title,labelId:map.labelId,biomeName:biome?.name||'Unknown',season:biome?.season||'Season 3',kind:biome?.kind||'biome'}; });
 };
 const chooseRandom = items => items.length ? items[Math.floor(Math.random() * items.length)] : null;
+
+// Upgrade active matches created before BO3 map pools existed. The original
+// selected map remains game 1; two more unique maps are taken from its biome.
+async function repairAssignedMapSeries() {
+    const participants = await Stage2Participant.find({ assignedOpponentId: { $ne: null } });
+    if (!participants.length) return 0;
+    const tournamentMaps = await loadTournamentMaps();
+    const byPlayerId = new Map(participants.map(participant => [String(participant.playerId), participant]));
+    const repairedPairs = new Set();
+    let repaired = 0;
+    for (const participant of participants) {
+        const opponent = byPlayerId.get(String(participant.assignedOpponentId || ''));
+        if (!opponent || String(opponent.assignedOpponentId || '') !== String(participant.playerId)) continue;
+        const pairKey = duelPairKey(participant.playerId, opponent.playerId);
+        if (repairedPairs.has(pairKey)) continue;
+        repairedPairs.add(pairKey);
+        const current = (participant.assignedMaps || []).map(map => ({
+            id: map.mapId, title: map.title, labelId: map.labelId,
+            biomeName: map.biomeName, season: map.season
+        }));
+        const validSeries = current.length >= 3
+            && new Set(current.map(map => String(map.labelId))).size === 1
+            && new Set(current.map(map => String(map.id))).size === current.length;
+        if (validSeries) {
+            const opponentSeries = opponent.assignedMaps || [];
+            if (opponentSeries.length !== current.length) {
+                applyAssignedMaps(participant, opponent, current);
+                await Promise.all([participant.save(), opponent.save()]);
+                repaired++;
+            }
+            continue;
+        }
+        const legacyMap = tournamentMaps.find(map => String(map.id) === String(participant.assignedMapId))
+            || (participant.assignedMapId && participant.assignedMapLabelId ? {
+                id: participant.assignedMapId,
+                title: participant.assignedMapTitle || 'Assigned map',
+                labelId: participant.assignedMapLabelId,
+                biomeName: participant.assignedMapBiome,
+                season: participant.assignedMapSeason
+            } : null);
+        const arenaMatch = ['king', 's_bracket'].includes(participant.status)
+            || ['king', 's_bracket'].includes(opponent.status);
+        const eligibleMaps = tournamentMaps.filter(map => arenaMatch ? map.kind === 'arena' : map.kind !== 'arena');
+        const series = chooseMapSeries(eligibleMaps, legacyMap);
+        if (!series.length) continue;
+        applyAssignedMaps(participant, opponent, series);
+        await Promise.all([participant.save(), opponent.save()]);
+        repaired++;
+    }
+    return repaired;
+}
 
 async function pruneRemovedStage2Participants() {
     const playerIds = new Set((await Player.find({}).select('_id')).map(player => String(player.id)));
@@ -62,7 +142,11 @@ async function pruneRemovedStage2Participants() {
     await Promise.all([
         Stage2Participant.updateMany(
             { assignedOpponentId: { $in: stalePlayerIds } },
-            { $set: { assignedOpponentId: null, assignedAt: null } }
+            { $set: {
+                assignedOpponentId: null, assignedAt: null,
+                assignedMapId: null, assignedMapTitle: null, assignedMapLabelId: null,
+                assignedMapBiome: null, assignedMapSeason: null, assignedMaps: []
+            } }
         ),
         Stage2Participant.updateMany(
             { encounterOpponentId: { $in: stalePlayerIds } },
@@ -201,7 +285,7 @@ async function repairInvalidAssignments() {
     if (!invalidIds.size) return 0;
     await Stage2Participant.updateMany(
         { _id: { $in: Array.from(invalidIds) } },
-        { $set: { assignedOpponentId: null, assignedAt: null, assignedMapId: null, assignedMapTitle: null, assignedMapLabelId: null, assignedMapBiome: null, assignedMapSeason: null } }
+        { $set: { assignedOpponentId: null, assignedAt: null, assignedMapId: null, assignedMapTitle: null, assignedMapLabelId: null, assignedMapBiome: null, assignedMapSeason: null, assignedMaps: [] } }
     );
     return invalidIds.size;
 }
@@ -249,6 +333,7 @@ async function repairInvalidEncounters() {
 async function autoAssignOpenMatches() {
     await repairInvalidAssignments();
     await repairInvalidEncounters();
+    await repairAssignedMapSeries();
     const reservedBossIds = (await Stage2Participant.find({
         encounterStatus: { $in: ['awaiting_admin', 'pending'] },
         encounterOpponentId: { $ne: null }
@@ -296,7 +381,7 @@ async function autoAssignOpenMatches() {
             b.assignedOpponentId = a.playerId; b.assignedAt = now;
             const arenaMatch = ['king', 's_bracket'].includes(a.status) || ['king', 's_bracket'].includes(b.status);
             const mapPool = tournamentMaps.filter(map => arenaMatch ? map.kind === 'arena' : map.kind !== 'arena');
-            applyAssignedMap(a, b, chooseRandom(mapPool));
+            applyAssignedMaps(a, b, chooseMapSeries(mapPool));
             if (!a.opponents.includes(String(b.playerId))) a.opponents.push(String(b.playerId));
             if (!b.opponents.includes(String(a.playerId))) b.opponents.push(String(a.playerId));
             a.updatedAt = b.updatedAt = now;
@@ -405,6 +490,7 @@ router.get('/stage2', async (req, res) => {
         await repairLegacyKings();
         await repairInvalidAssignments();
         await repairInvalidEncounters();
+        await repairAssignedMapSeries();
         const [participants, viewer] = await Promise.all([
             Stage2Participant.find().sort({ tier: 1, qualifierWins: -1, mapWins: -1 }),
             getStage2Viewer(req)
@@ -460,6 +546,7 @@ router.get('/stage2', async (req, res) => {
                 assignedMapTitle: isSelf || isOpponent || viewer.isAdmin ? participant.assignedMapTitle : undefined,
                 assignedMapBiome: isSelf || isOpponent || viewer.isAdmin ? participant.assignedMapBiome : undefined,
                 assignedMapSeason: isSelf || isOpponent || viewer.isAdmin ? participant.assignedMapSeason : undefined,
+                assignedMaps: isSelf || isOpponent || viewer.isAdmin ? participant.assignedMaps : undefined,
                 iconKey: stableIconFor(participant),
                 isSelf,
                 isOpponent,
@@ -635,8 +722,11 @@ router.post('/stage2/assign-match', checkAuth, async (req, res) => {
         const now = new Date();
         a.assignedOpponentId = b.playerId; a.assignedAt = now;
         b.assignedOpponentId = a.playerId; b.assignedAt = now;
+        const tournamentMaps = await loadTournamentMaps();
+        const arenaMatch = center(a.status) || center(b.status);
+        applyAssignedMaps(a, b, chooseMapSeries(tournamentMaps.filter(map => arenaMatch ? map.kind === 'arena' : map.kind !== 'arena')));
         await Promise.all([a.save(), b.save()]);
-        res.json({ success: true, playerA: a.name, playerB: b.name, assignedAt: now });
+        res.json({ success: true, playerA: a.name, playerB: b.name, assignedAt: now, assignedMaps: a.assignedMaps });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -721,16 +811,16 @@ router.post('/stage2/:id/use-relic', async (req, res) => {
             clearAssignment(opponent);
         } else {
             const arenaMatch = ['king', 's_bracket'].includes(participant.status);
-            const alternatives = (await loadTournamentMaps()).filter(map => (arenaMatch ? map.kind === 'arena' : map.kind !== 'arena') && String(map.labelId) !== String(participant.assignedMapLabelId) && String(map.id) !== String(participant.assignedMapId));
+            const alternatives = (await loadTournamentMaps()).filter(map => (arenaMatch ? map.kind === 'arena' : map.kind !== 'arena') && String(map.labelId) !== String(participant.assignedMapLabelId));
             const replacement = chooseRandom(alternatives);
             if (!replacement) return res.status(409).json({ error: 'No map from another biome is available' });
-            applyAssignedMap(participant, opponent, replacement);
+            applyAssignedMaps(participant, opponent, chooseMapSeries(alternatives, replacement));
         }
         participant.relicUsedAt = new Date();
         participant.updatedAt = opponent.updatedAt = new Date();
         await Promise.all([participant.save(), opponent.save()]);
         if (participant.relicType === 'opponent_skip') await queueAutoAssignment();
-        res.json({ success: true, relicType: participant.relicType, assignedMapTitle: participant.assignedMapTitle });
+        res.json({ success: true, relicType: participant.relicType, assignedMapTitle: participant.assignedMapTitle, assignedMaps: participant.assignedMaps });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -819,9 +909,20 @@ router.post('/', checkAuth, async (req, res) => {
                 { $set: { assignedOpponentId: null, assignedAt: null } }
             );
         }
-        if (!pa.assignedMapId || String(pa.assignedOpponentId || '') !== String(pb.playerId)) {
+        const isCurrentPair = String(pa.assignedOpponentId || '') === String(pb.playerId);
+        if ((pa.assignedMaps || []).length < 3 || !isCurrentPair) {
             const maps = await loadTournamentMaps();
-            applyAssignedMap(pa, pb, chooseRandom(maps.filter(map => phase === 'king' || phase === 's_bracket' ? map.kind === 'arena' : map.kind !== 'arena')));
+            const eligibleMaps = maps.filter(map => phase === 'king' || phase === 's_bracket' ? map.kind === 'arena' : map.kind !== 'arena');
+            const existingMap = isCurrentPair && pa.assignedMapId
+                ? eligibleMaps.find(map => String(map.id) === String(pa.assignedMapId)) || {
+                    id: pa.assignedMapId,
+                    title: pa.assignedMapTitle || 'Assigned map',
+                    labelId: pa.assignedMapLabelId,
+                    biomeName: pa.assignedMapBiome,
+                    season: pa.assignedMapSeason
+                }
+                : null;
+            applyAssignedMaps(pa, pb, chooseMapSeries(eligibleMaps, existingMap));
         }
 
         const duel = await Duel.create({
@@ -831,7 +932,10 @@ router.post('/', checkAuth, async (req, res) => {
             winner, score: `${mapsA}:${mapsB}`, notes, playedAt: playedAt || new Date(),
             assignedMapId: pa.assignedMapId,
             assignedMapTitle: pa.assignedMapTitle,
-            assignedMapLabelId: pa.assignedMapLabelId
+            assignedMapLabelId: pa.assignedMapLabelId,
+            assignedMapBiome: pa.assignedMapBiome,
+            assignedMapSeason: pa.assignedMapSeason,
+            assignedMaps: pa.assignedMaps
         });
         const winnerP = winner === 'A' ? pa : pb, loserP = winner === 'A' ? pb : pa;
         winnerP.winStreak = (Number(winnerP.winStreak) || 0) + 1;
