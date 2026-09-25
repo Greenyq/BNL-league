@@ -72,11 +72,12 @@ function PlayerPanel({ self, king, guardian, snapshot, onSafe, onMystery, onFind
     const relicAction = !self?.relicUsedAt && ['opponent_skip', 'map_reroll'].includes(self?.relicType);
     const assignedMapTitles = (self?.assignedMaps || []).map(map => map.title).filter(Boolean);
     const mapList = assignedMapTitles.length ? assignedMapTitles.join(' · ') : self?.assignedMapTitle;
+    const streak = Math.max(Number(self?.winStreak) || 0, Number(ctx.streak) || 0);
 
     return <aside className="dnd-player-panel">
         <header><span className="dnd-panel-avatar">{self?.tier || 'B'}</span><div><small>PLAYER CAMPAIGN</small><h3>{self?.name || 'Guest Adventurer'}</h3><p>{center ? 'S Arena' : `Tier ${self?.tier || 'B'} · ${lower ? 'Lower' : 'Upper'} Bracket`}</p></div></header>
         <section><label>ROAD TO THE ARENA <b>{wins}/3</b></label><div className="dnd-runes">{[1, 2, 3].map(n => <i key={n} className={n <= wins ? 'is-lit' : ''} />)}</div></section>
-        <div className="dnd-panel-stats"><span><small>LOSSES</small><b>{losses}/{lower ? 1 : 2}</b></span><span><small>WIN STREAK</small><b className="is-fire">🔥 ×{ctx.streak}</b></span></div>
+        <div className="dnd-panel-stats"><span><small>LOSSES</small><b>{losses}/{lower ? 1 : 2}</b></span><span><small>WIN STREAK</small><b className="is-fire">🔥 ×{streak}</b></span></div>
         {snapshot.matches('choosingPath') ? <section className="dnd-panel-choice"><label>CHOOSE YOUR PATH</label>
             <button onClick={onSafe}><b>Safe Road</b><small>Следующая обычная дуэль</small></button>
             <button className="is-mystery" onClick={onMystery} disabled={mysteryLocked}><b>Mystery Road</b><small>{mysteryLocked ? 'Недоступно: Arena Shield уже получен' : 'Dragon Player или Dungeon Boss'}</small></button>
@@ -188,20 +189,25 @@ export function GameBoard({ participants = [], duels = [], viewer = {}, revealNa
         previousServerState.current = current;
         if (self.encounterStatus === 'pending' && self.encounterType) {
             setAssignedEncounter({ type: self.encounterType, name: self.encounterOpponentName });
-            send({ type: 'RESTORE_ENCOUNTER', encounter: self.encounterType });
+            send({ type: 'RESTORE_ENCOUNTER', encounter: self.encounterType, ...current });
+            return;
+        }
+        if (self.encounterStatus === 'awaiting_admin') {
+            send({ type: 'RESTORE_WAIT', ...current });
+            return;
+        }
+        if (self.specialMoveReady) {
+            send({ type: 'RESTORE_PATH', ...current });
             return;
         }
         if (!previous) {
-            if (self.encounterStatus === 'awaiting_admin') {
-                send({ type: 'RESTORE_WAIT' });
-            } else if (self.specialMoveReady) send({ type: 'SERVER_RESULT', result: 'win', ...current });
-            else send({ type: 'SYNC', ...current });
+            send({ type: 'RESTORE_READY', ...current });
             return;
         }
         const won = current.wins > previous.wins || (current.status === 's_bracket' && previous.status !== 's_bracket' && current.losses <= previous.losses);
         const lost = current.losses > previous.losses || current.status === 'lower' && previous.status === 'upper' || current.status === 'eliminated' && previous.status !== 'eliminated';
         if (won || lost) send({ type: 'SERVER_RESULT', result: won ? 'win' : 'loss', ...current });
-        else send({ type: 'SYNC', ...current });
+        else send({ type: 'RESTORE_READY', ...current });
     }, [self?.id, self?.status, serverWins, serverLosses, self?.winStreak, self?.arenaShield, self?.mysteryUsed, self?.specialMoveReady, self?.encounterStatus]);
     const officialOpponent = participants.find(p => p.isOpponent);
     const guardianName = assignedEncounter?.name || officialOpponent?.name;

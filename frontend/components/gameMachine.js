@@ -43,6 +43,14 @@ export const gameMachine = setup({
         selectedPath: null,
         encounter: null
     }),
+    // Server state is authoritative. These restore events work from every
+    // client state, including a cancelled encounter that was waiting on admin.
+    on: {
+        RESTORE_PATH: { target: '.choosingPath', actions: 'syncServer' },
+        RESTORE_WAIT: { target: '.waitingForAdmin', actions: 'syncServer' },
+        RESTORE_ENCOUNTER: { target: '.encounter', actions: ['syncServer', 'reveal'] },
+        RESTORE_READY: { target: '.ready', actions: 'syncServer' }
+    },
     states: {
         ready: {
             on: {
@@ -56,8 +64,6 @@ export const gameMachine = setup({
                     { guard: 'serverWon', target: 'moving', actions: 'syncServer' },
                     { target: 'defeat', actions: 'syncServer' }
                 ],
-                RESTORE_ENCOUNTER: { target: 'encounter', actions: 'reveal' },
-                RESTORE_WAIT: { target: 'waitingForAdmin' },
                 SYNC: { actions: 'syncServer' }
             }
         },
@@ -72,7 +78,6 @@ export const gameMachine = setup({
         },
         waitingForAdmin: {
             on: {
-                RESTORE_ENCOUNTER: { target: 'encounter', actions: 'reveal' },
                 SYNC: { actions: 'syncServer' }
             }
         },
