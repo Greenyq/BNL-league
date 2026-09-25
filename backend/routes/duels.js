@@ -37,6 +37,14 @@ const clearAssignment = participant => {
     participant.assignedMapSeason = null;
     participant.assignedMaps = [];
 };
+const clearAssignedMaps = participant => {
+    participant.assignedMapId = null;
+    participant.assignedMapTitle = null;
+    participant.assignedMapLabelId = null;
+    participant.assignedMapBiome = null;
+    participant.assignedMapSeason = null;
+    participant.assignedMaps = [];
+};
 const mapAssignment = map => map ? ({
     mapId: String(map.id || map.mapId),
     title: map.title,
@@ -65,7 +73,7 @@ const chooseMapSeries = (maps, existingMap = null, count = 3) => {
 const applyAssignedMaps = (first, second, maps) => {
     const assignments = (maps || []).map(mapAssignment).filter(Boolean);
     const primary = assignments[0] || null;
-    for (const participant of [first, second]) {
+    for (const participant of new Set([first, second])) {
         participant.assignedMapId = primary?.mapId || null;
         participant.assignedMapTitle = primary?.title || null;
         participant.assignedMapLabelId = primary?.labelId || null;
@@ -131,6 +139,34 @@ async function repairAssignedMapSeries() {
         if (!series.length) continue;
         applyAssignedMaps(participant, opponent, series);
         await Promise.all([participant.save(), opponent.save()]);
+        repaired++;
+    }
+    return repaired;
+}
+
+// Mystery encounters do not use assignedOpponentId, so they are not covered by
+// the regular pairing repair above. Give both new and already-active encounters
+// their own BO3 series from one biome.
+async function repairEncounterMapSeries() {
+    const encounters = await Stage2Participant.find({
+        encounterStatus: { $in: ['awaiting_admin', 'pending'] },
+        encounterOpponentId: { $ne: null }
+    });
+    if (!encounters.length) return 0;
+    const tournamentMaps = await loadTournamentMaps();
+    const eligibleMaps = tournamentMaps.filter(map => map.kind !== 'arena');
+    let repaired = 0;
+    for (const participant of encounters) {
+        const current = participant.assignedMaps || [];
+        const validSeries = current.length >= 3
+            && new Set(current.map(map => String(map.labelId))).size === 1
+            && new Set(current.map(map => String(map.mapId))).size === current.length;
+        if (validSeries) continue;
+        const series = chooseMapSeries(eligibleMaps);
+        if (!series.length) continue;
+        applyAssignedMaps(participant, participant, series);
+        participant.updatedAt = new Date();
+        await participant.save();
         repaired++;
     }
     return repaired;
@@ -377,6 +413,7 @@ async function autoAssignOpenMatches() {
     await repairInvalidAssignments();
     await repairInvalidEncounters();
     await repairAssignedMapSeries();
+    await repairEncounterMapSeries();
     const reservedBossIds = (await Stage2Participant.find({
         encounterStatus: { $in: ['awaiting_admin', 'pending'] },
         encounterOpponentId: { $ne: null }
@@ -707,12 +744,22 @@ router.post('/stage2/:id/special-path', async (req, res) => {
             participant.encounterStatus = 'awaiting_admin';
             participant.encounterRevealedAt = null;
             participant.mysteryUsed = true;
+            const tournamentMaps = await loadTournamentMaps();
+            const series = chooseMapSeries(tournamentMaps.filter(map => map.kind !== 'arena'));
+            if (!series.length) return res.status(409).json({ error: 'No tournament maps are available for this encounter' });
+            applyAssignedMaps(participant, participant, series);
         }
         participant.updatedAt = new Date();
         await participant.save();
         if (path === 'safe') await queueAutoAssignment();
         // The selected player's identity stays server-side until an admin opens the match.
-        res.json({ path, encounterType: participant.encounterType, encounterStatus: participant.encounterStatus });
+        res.json({
+            path,
+            encounterType: participant.encounterType,
+            encounterStatus: participant.encounterStatus,
+            assignedMapTitle: participant.assignedMapTitle,
+            assignedMaps: participant.assignedMaps
+        });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -794,6 +841,7 @@ router.post('/stage2/:id/cancel-encounter', checkAuth, async (req, res) => {
         participant.specialPath = null;
         participant.specialMoveReady = true;
         participant.mysteryUsed = false;
+        clearAssignedMaps(participant);
         participant.updatedAt = new Date();
         await participant.save();
         res.json({ success: true });
@@ -853,6 +901,12 @@ router.post('/stage2/:id/encounter-result', checkAuth, async (req, res) => {
             playerA: { playerId: challenger.playerId, battleTag: challenger.battleTag, name: challenger.name, tier: tierNumber[challenger.tier], points: 0 },
             playerB: { playerId: opponent.playerId, battleTag: opponent.battleTag, name: opponent.name, tier: tierNumber[opponent.tier], points: 0 },
             winner: challengerWon ? 'A' : 'B', score: challengerWon ? '2:0' : '0:2',
+            assignedMapId: challenger.assignedMapId,
+            assignedMapTitle: challenger.assignedMapTitle,
+            assignedMapLabelId: challenger.assignedMapLabelId,
+            assignedMapBiome: challenger.assignedMapBiome,
+            assignedMapSeason: challenger.assignedMapSeason,
+            assignedMaps: challenger.assignedMaps,
             notes: `${challenger.encounterType || 'special'} encounter`, playedAt: req.body.playedAt || new Date()
         });
         challenger.encounterStatus = challengerWon ? 'won' : 'lost';
@@ -860,6 +914,7 @@ router.post('/stage2/:id/encounter-result', checkAuth, async (req, res) => {
         if (challengerWon) {
             relicType = await awardRandomRelic(challenger);
         }
+        clearAssignedMaps(challenger);
         challenger.updatedAt = new Date();
         await challenger.save();
         await queueAutoAssignment();
