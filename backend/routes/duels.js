@@ -5,6 +5,8 @@ const { MapFile, MapLabel } = require('../models/Map');
 const { checkAuth, getAdminSessionResult } = require('../middleware/auth');
 const { getTierFromMmr } = require('../services/scoring');
 const { suggestDuelPoints } = require('../services/duelScoring');
+const { ensureMapCatalog } = require('../services/mapCatalog');
+const { maximumPairing } = require('../services/pairing');
 
 const router = express.Router();
 const tierOf = (player, stats) => player.tierOverride || stats?.tier || getTierFromMmr(stats?.mmr || player.currentMmr || 0).value;
@@ -73,6 +75,9 @@ const applyAssignedMaps = (first, second, maps) => {
     }
 };
 const loadTournamentMaps = async () => {
+    // Matchmaking can run before anyone has opened the map gallery. Ensure the
+    // default catalog exists so a valid pair can never be stored without maps.
+    await ensureMapCatalog();
     const biomes = await MapLabel.find({ active: { $ne: false } }).select('_id name season kind');
     const byId = new Map(biomes.map(b => [String(b.id), b]));
     const maps = await MapFile.find({ labelId: { $in: [...byId.keys()] } }).select('_id title labelId');
@@ -358,24 +363,13 @@ async function autoAssignOpenMatches() {
     }
     const assigned = [];
     for (const pool of groups.values()) {
-        while (pool.length > 1) {
-            let pairIndexes = null;
-            for (let first = 0; first < pool.length && !pairIndexes; first++) {
-                for (let second = first + 1; second < pool.length; second++) {
-                    const firstAvoids = (pool[first].avoidedOpponentIds || []).map(String).includes(String(pool[second].playerId));
-                    const secondAvoids = (pool[second].avoidedOpponentIds || []).map(String).includes(String(pool[first].playerId));
-                    if (!firstAvoids && !secondAvoids && !completedPairs.has(duelPairKey(pool[first].playerId, pool[second].playerId))) {
-                        pairIndexes = [first, second];
-                        break;
-                    }
-                }
-            }
-            // Every remaining combination has already been played. They wait
-            // for bracket movement instead of receiving a repeat opponent.
-            if (!pairIndexes) break;
-            const [firstIndex, secondIndex] = pairIndexes;
-            const [b] = pool.splice(secondIndex, 1);
-            const [a] = pool.splice(firstIndex, 1);
+        const canPair = (a, b) => {
+            const firstAvoids = (a.avoidedOpponentIds || []).map(String).includes(String(b.playerId));
+            const secondAvoids = (b.avoidedOpponentIds || []).map(String).includes(String(a.playerId));
+            return !firstAvoids && !secondAvoids && !completedPairs.has(duelPairKey(a.playerId, b.playerId));
+        };
+        const pairs = maximumPairing(pool, canPair);
+        for (const [a, b] of pairs) {
             const now = new Date();
             a.assignedOpponentId = b.playerId; a.assignedAt = now;
             b.assignedOpponentId = a.playerId; b.assignedAt = now;
@@ -488,9 +482,10 @@ router.get('/stage2', async (req, res) => {
         await pruneRemovedStage2Participants();
         await repairLegacyUpperDemotions();
         await repairLegacyKings();
-        await repairInvalidAssignments();
-        await repairInvalidEncounters();
-        await repairAssignedMapSeries();
+        // Besides repairing legacy records, fill any schedule holes left by an
+        // older greedy matchmaking run. This also upgrades existing pairs that
+        // were created before the map catalog had been initialized.
+        await queueAutoAssignment();
         const [participants, viewer] = await Promise.all([
             Stage2Participant.find().sort({ tier: 1, qualifierWins: -1, mapWins: -1 }),
             getStage2Viewer(req)
