@@ -5,6 +5,8 @@ const { MapFile, MapLabel } = require('../models/Map');
 const { checkAuth, getAdminSessionResult } = require('../middleware/auth');
 const { getTierFromMmr } = require('../services/scoring');
 const { suggestDuelPoints } = require('../services/duelScoring');
+const { ensureMapCatalog } = require('../services/mapCatalog');
+const { maximumPairing } = require('../services/pairing');
 
 const router = express.Router();
 const tierOf = (player, stats) => player.tierOverride || stats?.tier || getTierFromMmr(stats?.mmr || player.currentMmr || 0).value;
@@ -73,6 +75,9 @@ const applyAssignedMaps = (first, second, maps) => {
     }
 };
 const loadTournamentMaps = async () => {
+    // Matchmaking can run before anyone has opened the map gallery. Ensure the
+    // default catalog exists so a valid pair can never be stored without maps.
+    await ensureMapCatalog();
     const biomes = await MapLabel.find({ active: { $ne: false } }).select('_id name season kind');
     const byId = new Map(biomes.map(b => [String(b.id), b]));
     const maps = await MapFile.find({ labelId: { $in: [...byId.keys()] } }).select('_id title labelId');
@@ -305,6 +310,7 @@ async function repairInvalidEncounters() {
         const boss = byPlayerId.get(bossId);
         const invalid = !boss
             || boss.status === 'eliminated'
+            || boss.tier !== challenger.tier
             || Boolean(boss.assignedOpponentId)
             || hasClaimedRelic(boss)
             || reserved.has(bossId)
@@ -328,9 +334,46 @@ async function repairInvalidEncounters() {
     return repaired;
 }
 
+// Older records can contain a stale/reset streak even though the duel history
+// is correct. Rebuild the current consecutive-win count from authoritative
+// non-encounter results so cancellation and migrations cannot erase it.
+async function repairWinStreaks() {
+    const [participants, duels] = await Promise.all([
+        Stage2Participant.find({}).select('_id playerId winStreak'),
+        Duel.find({ phase: { $ne: 'encounter' } })
+            .sort({ playedAt: -1, createdAt: -1 })
+            .select('winner playerA.playerId playerB.playerId')
+            .lean()
+    ]);
+    const streaks = new Map(participants.map(participant => [String(participant.playerId), { count: 0, active: true }]));
+    for (const duel of duels) {
+        const sides = [
+            [String(duel.playerA.playerId), 'A'],
+            [String(duel.playerB.playerId), 'B']
+        ];
+        for (const [playerId, side] of sides) {
+            const streak = streaks.get(playerId);
+            if (!streak?.active) continue;
+            if (duel.winner === side) streak.count++;
+            else streak.active = false;
+        }
+    }
+    const updates = participants
+        .filter(participant => Number(participant.winStreak) !== (streaks.get(String(participant.playerId))?.count || 0))
+        .map(participant => ({
+            updateOne: {
+                filter: { _id: participant._id },
+                update: { $set: { winStreak: streaks.get(String(participant.playerId))?.count || 0 } }
+            }
+        }));
+    if (updates.length) await Stage2Participant.bulkWrite(updates);
+    return updates.length;
+}
+
 // Fill every currently available slot without changing tournament results.
 // Results and bracket movement remain admin-only operations.
 async function autoAssignOpenMatches() {
+    await repairWinStreaks();
     await repairInvalidAssignments();
     await repairInvalidEncounters();
     await repairAssignedMapSeries();
@@ -358,24 +401,13 @@ async function autoAssignOpenMatches() {
     }
     const assigned = [];
     for (const pool of groups.values()) {
-        while (pool.length > 1) {
-            let pairIndexes = null;
-            for (let first = 0; first < pool.length && !pairIndexes; first++) {
-                for (let second = first + 1; second < pool.length; second++) {
-                    const firstAvoids = (pool[first].avoidedOpponentIds || []).map(String).includes(String(pool[second].playerId));
-                    const secondAvoids = (pool[second].avoidedOpponentIds || []).map(String).includes(String(pool[first].playerId));
-                    if (!firstAvoids && !secondAvoids && !completedPairs.has(duelPairKey(pool[first].playerId, pool[second].playerId))) {
-                        pairIndexes = [first, second];
-                        break;
-                    }
-                }
-            }
-            // Every remaining combination has already been played. They wait
-            // for bracket movement instead of receiving a repeat opponent.
-            if (!pairIndexes) break;
-            const [firstIndex, secondIndex] = pairIndexes;
-            const [b] = pool.splice(secondIndex, 1);
-            const [a] = pool.splice(firstIndex, 1);
+        const canPair = (a, b) => {
+            const firstAvoids = (a.avoidedOpponentIds || []).map(String).includes(String(b.playerId));
+            const secondAvoids = (b.avoidedOpponentIds || []).map(String).includes(String(a.playerId));
+            return !firstAvoids && !secondAvoids && !completedPairs.has(duelPairKey(a.playerId, b.playerId));
+        };
+        const pairs = maximumPairing(pool, canPair);
+        for (const [a, b] of pairs) {
             const now = new Date();
             a.assignedOpponentId = b.playerId; a.assignedAt = now;
             b.assignedOpponentId = a.playerId; b.assignedAt = now;
@@ -488,9 +520,10 @@ router.get('/stage2', async (req, res) => {
         await pruneRemovedStage2Participants();
         await repairLegacyUpperDemotions();
         await repairLegacyKings();
-        await repairInvalidAssignments();
-        await repairInvalidEncounters();
-        await repairAssignedMapSeries();
+        // Besides repairing legacy records, fill any schedule holes left by an
+        // older greedy matchmaking run. This also upgrades existing pairs that
+        // were created before the map catalog had been initialized.
+        await queueAutoAssignment();
         const [participants, viewer] = await Promise.all([
             Stage2Participant.find().sort({ tier: 1, qualifierWins: -1, mapWins: -1 }),
             getStage2Viewer(req)
@@ -656,6 +689,7 @@ router.post('/stage2/:id/special-path', async (req, res) => {
             const candidates = await Stage2Participant.find({
                 _id: { $ne: participant._id },
                 playerId: { $nin: [...playedOpponentIds, ...reservedBossIds] },
+                tier: participant.tier,
                 status: { $ne: 'eliminated' },
                 arenaShield: { $ne: true },
                 arenaShieldUsedAt: null,
@@ -665,29 +699,8 @@ router.post('/stage2/:id/special-path', async (req, res) => {
                 specialMoveReady: { $ne: true },
                 encounterStatus: { $nin: ['awaiting_admin', 'pending'] }
             });
-            if (!candidates.length) return res.status(409).json({ error: 'No encounter opponent is available' });
-            const sameTierCandidates = candidates.filter(candidate => candidate.tier === participant.tier);
-            let opponent = chooseRandom(sameTierCandidates);
-            if (!opponent) {
-                const candidatePlayerIds = candidates.map(candidate => candidate.playerId);
-                const playerIds = [participant.playerId, ...candidatePlayerIds];
-                const players = await Player.find({ _id: { $in: playerIds } }).select('_id battleTag currentMmr');
-                const stats = await PlayerStats.find({
-                    battleTag: { $in: players.map(player => player.battleTag).filter(Boolean) }
-                }).select('battleTag mmr');
-                const playersById = new Map(players.map(player => [String(player.id), player]));
-                const statsByTag = new Map(stats.filter(stat => stat.battleTag).map(stat => [String(stat.battleTag).toLowerCase(), stat]));
-                const tierMidpoint = { C: 1075, B: 1450, A: 1700, S: 1900 };
-                const getMmr = candidate => {
-                    const player = playersById.get(String(candidate.playerId));
-                    const stat = statsByTag.get(String(player?.battleTag || candidate.battleTag || '').toLowerCase());
-                    return Number(stat?.mmr || player?.currentMmr || tierMidpoint[candidate.tier] || 0);
-                };
-                const challengerMmr = getMmr(participant);
-                opponent = [...candidates].sort((first, second) =>
-                    Math.abs(getMmr(first) - challengerMmr) - Math.abs(getMmr(second) - challengerMmr)
-                )[0];
-            }
+            if (!candidates.length) return res.status(409).json({ error: `No Tier ${participant.tier} encounter opponent is available` });
+            const opponent = chooseRandom(candidates);
             participant.encounterType = Math.random() < .5 ? 'dragon' : 'dungeon';
             participant.encounterOpponentId = opponent.playerId;
             participant.encounterOpponentName = opponent.name;

@@ -3,21 +3,13 @@ const path = require('path');
 const multer = require('multer');
 const { MapLabel, MapFile } = require('../models/Map');
 const { checkAuth } = require('../middleware/auth');
+const { ensureMapCatalog } = require('../services/mapCatalog');
 
 const router = express.Router();
 const MAP_EXTENSIONS = new Set(['.w3x', '.w3m']);
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const LIST_FIELDS = '-fileData';
-const CATALOG = [
-  ['Великие Земли','biome',[['Lost Temple','great-lands/lost-temple.jpg'],['Scrimmage','great-lands/scrimmage.jpg'],['Twisted Meadows','great-lands/twisted-meadows.jpg']]],
-  ['Диагональная тройка','biome',[['Autumn Leaves v2','diagonal-three/autumn-leaves-v2.jpg'],['Tidehunters','diagonal-three/tidehunters.jpg'],['Turtle Rock v2','diagonal-three/turtle-rock-v2.jpg']]],
-  ['Ледяной Рубеж','biome',[['Frozen Meadows','icy-frontier/frozen-meadows.jpg'],['Northern Isles','icy-frontier/northern-isles.jpg'],['Springtime','icy-frontier/springtime.jpg']]],
-  ['Смежный мир','biome',[['Echo Isles v2','adjacent-world/echo-isles-v2.jpg'],['Shallow Grave','adjacent-world/shallow-grave.jpg'],['Terenas Stand','adjacent-world/terenas-stand.jpg']]],
-  ['Три сезона','biome',[['Autumn Leaves v2','three-seasons/autumn-leaves-v2.jpg'],['Hammerfall','three-seasons/hammerfall.jpg'],['Last Refuge','three-seasons/last-refuge.jpg']]],
-  ['Арена героев','arena',[['Last Refuge BNL','hero-arena/last-refuge-bnl.png'],['Lost BNL','hero-arena/lost-temple-bnl.jpg'],['Scrimmage BNL','hero-arena/scrimmage-bnl.jpg'],['Shadow BNL','hero-arena/shallow-grave-bnl.jpg'],['Springtime BNL','hero-arena/springtime-bnl.jpg']]],
-];
-
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_SIZE },
@@ -35,29 +27,9 @@ const gameFile=req=>req.files?.file?.[0]||null;
 const previewFile=req=>req.files?.preview?.[0]||null;
 const gameFields=file=>({originalName:file.originalname,mimeType:file.mimetype||'application/octet-stream',extension:path.extname(file.originalname||'').toLowerCase(),size:file.size,fileData:dataUrl(file)});
 
-async function ensureCatalog(){
-  for(const [name,kind,maps] of CATALOG){
-    // Older installations have a unique `name_1` index and labels without a
-    // season. Reuse and upgrade those records instead of inserting duplicates.
-    let label=await MapLabel.findOne({name});
-    if(!label){
-      try{label=await MapLabel.create({season:'Season 3',name,kind,active:true});}
-      catch(err){if(err.code!==11000)throw err;label=await MapLabel.findOne({name});}
-    }
-    if(!label)throw new Error(`Failed to initialize biome: ${name}`);
-    if(label.season!=='Season 3'||label.kind!==kind||label.active===undefined){
-      label.season='Season 3';label.kind=kind;if(label.active===undefined)label.active=true;await label.save();
-    }
-    for(const [title,image] of maps){
-      const previewImageUrl=`/images/maps/season-1/${image}`;
-      await MapFile.updateOne({labelId:String(label.id),title},{ $setOnInsert:{labelId:String(label.id),title,description:''},$set:{previewImageUrl}},{upsert:true});
-    }
-  }
-}
-
 router.get('/',async(req,res)=>{
   try{
-    await ensureCatalog();
+    await ensureMapCatalog();
     const [labels,maps]=await Promise.all([MapLabel.find().sort({season:1,kind:1,name:1}).lean(),MapFile.find().select(LIST_FIELDS).sort({title:1}).lean()]);
     const grouped=maps.reduce((a,m)=>{(a[m.labelId]||=[]).push(serialize(m));return a;},{});
     res.json(labels.map(l=>({...serialize(l),season:l.season||'Season 3',active:l.active!==false,kind:l.kind||'biome',maps:grouped[l._id.toString()]||[]})));
