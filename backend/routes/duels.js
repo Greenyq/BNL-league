@@ -597,7 +597,7 @@ router.get('/stage2', async (req, res) => {
             return {
                 id: participant.id,
                 playerId: viewer.isAdmin ? participant.playerId : undefined,
-                tier: { $in: Object.keys(tierRank).filter(tier => tierRank[tier] >= tierRank[participant.tier]) },
+                tier: participant.tier,
                 status: participant.status,
                 upperWins: participant.upperWins,
                 upperLosses: participant.upperLosses,
@@ -731,7 +731,7 @@ router.post('/stage2/:id/special-path', async (req, res) => {
             const candidates = await Stage2Participant.find({
                 _id: { $ne: participant._id },
                 playerId: { $nin: [...playedOpponentIds, ...reservedBossIds] },
-                tier: participant.tier,
+                tier: { $in: Object.keys(tierRank).filter(tier => tierRank[tier] >= tierRank[participant.tier]) },
                 status: { $ne: 'eliminated' },
                 arenaShield: { $ne: true },
                 arenaShieldUsedAt: null,
