@@ -2293,6 +2293,7 @@ function DuelsTab({ players, showMsg, onRefresh }) {
     const [duels, setDuels] = React.useState([]);
     const [encounters, setEncounters] = React.useState([]);
     const [stage2Participants, setStage2Participants] = React.useState([]);
+    const [matchmakingReport, setMatchmakingReport] = React.useState(null);
     const [saving, setSaving] = React.useState(false);
     const tier = p => p?.tierOverride || p?.stats?.tier || 0;
     const tierName = n => ({ 1: 'C', 2: 'B', 3: 'A', 4: 'S' }[n] || '—');
@@ -2334,6 +2335,7 @@ function DuelsTab({ players, showMsg, onRefresh }) {
         try {
             const result = await apiFetch('/api/duels/stage2/auto-assign', { method: 'POST' });
             const summary = result.summary || {};
+            setMatchmakingReport(summary);
             showMsg(`✅ ${tr(
                 `Новых пар: ${result.count}. Всего назначено: ${summary.scheduled || 0}. Ждут выбора пути: ${summary.waitingForPath || 0}. Свободны: ${summary.free || 0}.`,
                 `New pairs: ${result.count}. Total scheduled: ${summary.scheduled || 0}. Waiting for path: ${summary.waitingForPath || 0}. Free: ${summary.free || 0}.`
@@ -2383,6 +2385,19 @@ function DuelsTab({ players, showMsg, onRefresh }) {
             <h4 style={{ marginTop: 0 }}>{tr('Автоматическое расписание', 'Automatic matchmaking')}</h4>
             <p style={{ color: 'var(--color-text-muted)' }}>{tr('Пары формируются автоматически внутри тира и текущей сетки. Игроки, ожидающие выбора дороги или DnD-боя, не участвуют.', 'Pairs are created automatically within each tier and current bracket. Players waiting for a path choice or DnD encounter are skipped.')}</p>
             <button type="button" className="btn btn-primary" onClick={autoAssign}>{tr('Проверить свободных игроков сейчас', 'Match available players now')}</button>
+            {matchmakingReport && <div style={{ marginTop: 12 }}>
+                <p>{tr(`Свободны для обычных матчей: ${matchmakingReport.free || 0}. Зарезервированы как боссы: ${matchmakingReport.reservedBosses || 0}.`, `Available for regular matches: ${matchmakingReport.free || 0}. Reserved as bosses: ${matchmakingReport.reservedBosses || 0}.`)}</p>
+                {!!matchmakingReport.unmatched?.length && <div style={{ display: 'grid', gap: 6 }}>
+                    <strong>{tr('Без назначенной пары', 'Without an assigned match')}</strong>
+                    {matchmakingReport.unmatched.map((entry, index) => <div key={`${entry.name}-${index}`}>
+                        {entry.name} — Tier {entry.tier}, {entry.status}: {entry.reason === 'no_free_player_in_group'
+                            ? tr('нет свободных игроков в этой сетке и тире', 'no other free player in this bracket and tier')
+                            : entry.reason === 'previous_matches_or_skips'
+                                ? tr('со всеми свободными игроками уже сыграл или пропустил их реликвией', 'already played or skipped every free player')
+                                : tr('есть доступный соперник — требуется повторная проверка подбора', 'an eligible opponent remains — matchmaking needs another check')}
+                    </div>)}
+                </div>}
+            </div>}
             {!!scheduledPairs.length && <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
                 <strong>{tr('Назначенные матчи', 'Scheduled matches')} ({scheduledPairs.length})</strong>
                 {scheduledPairs.map(pair => <div key={pair.key} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '9px 11px', border: '1px solid rgba(212,175,55,.25)', background: 'rgba(0,0,0,.22)' }}>
