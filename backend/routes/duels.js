@@ -27,6 +27,8 @@ const stableIconFor = participant => {
 const RELIC_TYPES = ['arena_shield', 'global_shield', 'opponent_skip', 'tier_vision', 'map_reroll', 'chaos_shift'];
 const hasClaimedRelic = participant => Boolean(participant?.relicAwardedAt || participant?.relicType || participant?.arenaShield || participant?.arenaShieldUsedAt);
 const duelPairKey = (firstId, secondId) => [String(firstId), String(secondId)].sort().join(':');
+const tierRank = { C: 0, B: 1, A: 2, S: 3 };
+const validEncounterTier = (challenger, boss) => tierRank[boss.tier] >= tierRank[challenger.tier];
 const clearAssignment = participant => {
     participant.assignedOpponentId = null;
     participant.assignedAt = null;
@@ -308,7 +310,7 @@ const matchmakingGroup = participant => ['s_bracket', 'king'].includes(participa
 async function repairInvalidAssignments() {
     const [participants, completedDuels] = await Promise.all([
         Stage2Participant.find({ assignedOpponentId: { $ne: null } }),
-        Duel.find({ phase: { $ne: 'encounter' } }).select('playerA.playerId playerB.playerId')
+        Duel.find({}).select('playerA.playerId playerB.playerId')
     ]);
     const completedPairs = new Set(completedDuels.map(duel => duelPairKey(duel.playerA.playerId, duel.playerB.playerId)));
     const byPlayerId = new Map(participants.map(participant => [String(participant.playerId), participant]));
@@ -317,7 +319,8 @@ async function repairInvalidAssignments() {
         const opponent = byPlayerId.get(String(participant.assignedOpponentId || ''));
         const isMutual = opponent && String(opponent.assignedOpponentId || '') === String(participant.playerId);
         const isCompatible = opponent && matchmakingGroup(opponent) === matchmakingGroup(participant);
-        const alreadyPlayed = opponent && completedPairs.has(duelPairKey(participant.playerId, opponent.playerId));
+        const alreadyPlayed = opponent && !['king', 's_bracket'].includes(participant.status)
+            && completedPairs.has(duelPairKey(participant.playerId, opponent.playerId));
         if (!isMutual || !isCompatible || alreadyPlayed) {
             invalidIds.add(participant.id);
             if (opponent) invalidIds.add(opponent.id);
@@ -346,7 +349,7 @@ async function repairInvalidEncounters() {
         const boss = byPlayerId.get(bossId);
         const invalid = !boss
             || boss.status === 'eliminated'
-            || boss.tier !== challenger.tier
+            || !validEncounterTier(challenger, boss)
             || Boolean(boss.assignedOpponentId)
             || hasClaimedRelic(boss)
             || reserved.has(bossId)
@@ -426,7 +429,7 @@ async function autoAssignOpenMatches() {
             specialMoveReady: { $ne: true },
             encounterStatus: { $nin: ['awaiting_admin', 'pending'] }
         }).sort({ updatedAt: 1, tier: 1 }),
-        Duel.find({ phase: { $ne: 'encounter' } }).select('playerA.playerId playerB.playerId'),
+        Duel.find({}).select('playerA.playerId playerB.playerId'),
         loadTournamentMaps()
     ]);
     const completedPairs = new Set(completedDuels.map(duel => duelPairKey(duel.playerA.playerId, duel.playerB.playerId)));
@@ -441,7 +444,9 @@ async function autoAssignOpenMatches() {
         const canPair = (a, b) => {
             const firstAvoids = (a.avoidedOpponentIds || []).map(String).includes(String(b.playerId));
             const secondAvoids = (b.avoidedOpponentIds || []).map(String).includes(String(a.playerId));
-            return !firstAvoids && !secondAvoids && !completedPairs.has(duelPairKey(a.playerId, b.playerId));
+            const beforeCenter = !['king', 's_bracket'].includes(a.status);
+            return !firstAvoids && !secondAvoids
+                && (!beforeCenter || !completedPairs.has(duelPairKey(a.playerId, b.playerId)));
         };
         const pairs = maximumPairing(pool, canPair);
         for (const [a, b] of pairs) {
@@ -592,7 +597,7 @@ router.get('/stage2', async (req, res) => {
             return {
                 id: participant.id,
                 playerId: viewer.isAdmin ? participant.playerId : undefined,
-                tier: participant.tier,
+                tier: { $in: Object.keys(tierRank).filter(tier => tierRank[tier] >= tierRank[participant.tier]) },
                 status: participant.status,
                 upperWins: participant.upperWins,
                 upperLosses: participant.upperLosses,
@@ -736,8 +741,9 @@ router.post('/stage2/:id/special-path', async (req, res) => {
                 specialMoveReady: { $ne: true },
                 encounterStatus: { $nin: ['awaiting_admin', 'pending'] }
             });
-            if (!candidates.length) return res.status(409).json({ error: `No Tier ${participant.tier} encounter opponent is available` });
-            const opponent = chooseRandom(candidates);
+            if (!candidates.length) return res.status(409).json({ error: `No eligible encounter opponent is available at Tier ${participant.tier} or above` });
+            const nearestTier = Math.min(...candidates.map(candidate => tierRank[candidate.tier]));
+            const opponent = chooseRandom(candidates.filter(candidate => tierRank[candidate.tier] === nearestTier));
             participant.encounterType = Math.random() < .5 ? 'dragon' : 'dungeon';
             participant.encounterOpponentId = opponent.playerId;
             participant.encounterOpponentName = opponent.name;
@@ -951,13 +957,12 @@ router.post('/', checkAuth, async (req, res) => {
         const isCenterMatch = ['s_bracket', 'king'].includes(pa.status) && ['s_bracket', 'king'].includes(pb.status);
         if (groupA !== groupB || (!isCenterMatch && pa.status !== pb.status)) return res.status(400).json({ error: 'Players must be in the same tier and bracket' });
         const previousDuel = await Duel.exists({
-            phase: { $ne: 'encounter' },
             $or: [
                 { 'playerA.playerId': a.id, 'playerB.playerId': b.id },
                 { 'playerA.playerId': b.id, 'playerB.playerId': a.id }
             ]
         });
-        if (previousDuel) return res.status(409).json({ error: 'These players have already played each other' });
+        if (previousDuel && !isCenterMatch) return res.status(409).json({ error: 'These players have already played each other before the center' });
         const phase = isKingMatch ? 'king' : pa.status;
         const scoreMatch = String(score || '').trim().match(/^(\d+)\s*[:\-]\s*(\d+)$/);
         if (!scoreMatch) return res.status(400).json({ error: 'Enter a BO3 score such as 2:0 or 2:1' });
