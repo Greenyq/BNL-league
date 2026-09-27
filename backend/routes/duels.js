@@ -474,8 +474,15 @@ const queueAutoAssignment = () => {
 };
 
 async function matchmakingSummary() {
-    const participants = await Stage2Participant.find({ status: { $ne: 'eliminated' } });
+    const [participants, duels] = await Promise.all([
+        Stage2Participant.find({ status: { $ne: 'eliminated' } }),
+        Duel.find({}).select('playerA.playerId playerB.playerId')
+    ]);
     const byPlayerId = new Map(participants.map(participant => [String(participant.playerId), participant]));
+    const completedPairs = new Set(duels.map(duel => duelPairKey(duel.playerA.playerId, duel.playerB.playerId)));
+    const reservedBossIds = new Set(participants
+        .filter(participant => ['awaiting_admin', 'pending'].includes(participant.encounterStatus))
+        .map(participant => String(participant.encounterOpponentId || '')));
     const scheduled = new Set();
     for (const participant of participants) {
         const opponentId = String(participant.assignedOpponentId || '');
@@ -483,11 +490,34 @@ async function matchmakingSummary() {
         if (!opponent || String(opponent.assignedOpponentId || '') !== String(participant.playerId)) continue;
         scheduled.add([String(participant.playerId), opponentId].sort().join(':'));
     }
+    const freePlayers = participants.filter(participant => !participant.assignedOpponentId
+        && !participant.specialMoveReady
+        && !['awaiting_admin', 'pending'].includes(participant.encounterStatus)
+        && !reservedBossIds.has(String(participant.playerId)));
+    const unmatched = freePlayers.map(participant => {
+        const group = matchmakingGroup(participant);
+        const peers = freePlayers.filter(other => String(other.playerId) !== String(participant.playerId)
+            && matchmakingGroup(other) === group);
+        const available = peers.filter(other => {
+            const avoided = (participant.avoidedOpponentIds || []).map(String).includes(String(other.playerId))
+                || (other.avoidedOpponentIds || []).map(String).includes(String(participant.playerId));
+            return !avoided && (group.startsWith('center:')
+                || !completedPairs.has(duelPairKey(participant.playerId, other.playerId)));
+        });
+        return {
+            name: participant.name, tier: participant.tier, status: participant.status,
+            group, peers: peers.length, eligiblePeers: available.length,
+            reason: available.length ? 'eligible_peer_waiting'
+                : peers.length ? 'previous_matches_or_skips' : 'no_free_player_in_group'
+        };
+    });
     return {
         scheduled: scheduled.size,
         waitingForPath: participants.filter(participant => participant.specialMoveReady).length,
         waitingForEncounter: participants.filter(participant => ['awaiting_admin', 'pending'].includes(participant.encounterStatus)).length,
-        free: participants.filter(participant => !participant.assignedOpponentId && !participant.specialMoveReady && !['awaiting_admin', 'pending'].includes(participant.encounterStatus)).length
+        reservedBosses: reservedBossIds.size,
+        free: freePlayers.length,
+        unmatched
     };
 }
 
