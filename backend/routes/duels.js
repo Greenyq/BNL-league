@@ -335,13 +335,11 @@ async function repairInvalidAssignments() {
 }
 
 async function repairInvalidEncounters() {
-    const [encounters, participants, duels] = await Promise.all([
+    const [encounters, participants] = await Promise.all([
         Stage2Participant.find({ encounterStatus: { $in: ['awaiting_admin', 'pending'] } }),
-        Stage2Participant.find({}),
-        Duel.find({}).select('playerA.playerId playerB.playerId')
+        Stage2Participant.find({})
     ]);
     const byPlayerId = new Map(participants.map(participant => [String(participant.playerId), participant]));
-    const completedPairs = new Set(duels.map(duel => duelPairKey(duel.playerA.playerId, duel.playerB.playerId)));
     const reserved = new Set();
     let repaired = 0;
     for (const challenger of encounters) {
@@ -352,8 +350,7 @@ async function repairInvalidEncounters() {
             || !validEncounterTier(challenger, boss)
             || Boolean(boss.assignedOpponentId)
             || hasClaimedRelic(boss)
-            || reserved.has(bossId)
-            || completedPairs.has(duelPairKey(challenger.playerId, bossId));
+            || reserved.has(bossId);
         if (!invalid) {
             reserved.add(bossId);
             continue;
@@ -745,22 +742,13 @@ router.post('/stage2/:id/special-path', async (req, res) => {
         participant.encounterOpponentName = null;
         participant.encounterStatus = null;
         if (path === 'mystery') {
-            const playedDuels = await Duel.find({
-                $or: [
-                    { 'playerA.playerId': participant.playerId },
-                    { 'playerB.playerId': participant.playerId }
-                ]
-            }).select('playerA.playerId playerB.playerId');
-            const playedOpponentIds = playedDuels.map(duel => String(duel.playerA.playerId) === String(participant.playerId)
-                ? String(duel.playerB.playerId)
-                : String(duel.playerA.playerId));
             const reservedBossIds = (await Stage2Participant.find({
                 encounterStatus: { $in: ['awaiting_admin', 'pending'] },
                 encounterOpponentId: { $ne: null }
             }).select('encounterOpponentId')).map(entry => String(entry.encounterOpponentId));
             const candidates = await Stage2Participant.find({
                 _id: { $ne: participant._id },
-                playerId: { $nin: [...playedOpponentIds, ...reservedBossIds] },
+                playerId: { $nin: reservedBossIds },
                 tier: { $in: Object.keys(tierRank).filter(tier => tierRank[tier] >= tierRank[participant.tier]) },
                 status: { $ne: 'eliminated' },
                 arenaShield: { $ne: true },
