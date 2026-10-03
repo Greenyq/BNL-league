@@ -77,7 +77,7 @@ function PlayerPanel({ self, king, guardian, snapshot, onSafe, onMystery, onFind
     return <aside className="dnd-player-panel">
         <header><span className="dnd-panel-avatar">{self?.tier || 'B'}</span><div><small>PLAYER CAMPAIGN</small><h3>{self?.name || 'Guest Adventurer'}</h3><p>{center ? 'S Arena' : `Tier ${self?.tier || 'B'} · ${lower ? 'Lower' : 'Upper'} Bracket`}</p></div></header>
         <section><label>ROAD TO THE ARENA <b>{wins}/3</b></label><div className="dnd-runes">{[1, 2, 3].map(n => <i key={n} className={n <= wins ? 'is-lit' : ''} />)}</div></section>
-        <div className="dnd-panel-stats"><span><small>LOSSES</small><b>{losses}/{lower ? 1 : 2}</b></span><span><small>WIN STREAK</small><b className="is-fire">🔥 ×{streak}</b></span></div>
+        <div className="dnd-panel-stats"><span><small>LOSSES</small><b>{losses}/2</b></span><span><small>WIN STREAK</small><b className="is-fire">🔥 ×{streak}</b></span></div>
         {snapshot.matches('choosingPath') ? <section className="dnd-panel-choice"><label>CHOOSE YOUR PATH</label>
             <button onClick={onSafe}><b>Safe Road</b><small>Следующая обычная дуэль</small></button>
             <button className="is-mystery" onClick={onMystery} disabled={mysteryLocked}><b>Mystery Road</b><small>{mysteryLocked ? 'Недоступно: Arena Shield уже получен' : 'Dragon Player или Dungeon Boss'}</small></button>
