@@ -410,6 +410,9 @@ async function repairWinStreaks() {
 // Fill every currently available slot without changing tournament results.
 // Results and bracket movement remain admin-only operations.
 async function autoAssignOpenMatches() {
+    // Repair old one-loss eliminations for every matchmaking entry point,
+    // including the admin button, without requiring a visit to the map first.
+    await restorePrematureLowerEliminations(Stage2Participant);
     await repairWinStreaks();
     await repairInvalidAssignments();
     await repairInvalidEncounters();
@@ -590,7 +593,6 @@ router.get('/stage2', async (req, res) => {
         await pruneRemovedStage2Participants();
         await repairLegacyUpperDemotions();
         await repairLegacyKings();
-        await restorePrematureLowerEliminations(Stage2Participant);
         // Besides repairing legacy records, fill any schedule holes left by an
         // older greedy matchmaking run. This also upgrades existing pairs that
         // were created before the map catalog had been initialized.
