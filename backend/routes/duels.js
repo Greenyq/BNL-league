@@ -7,6 +7,7 @@ const { getTierFromMmr } = require('../services/scoring');
 const { suggestDuelPoints } = require('../services/duelScoring');
 const { ensureMapCatalog } = require('../services/mapCatalog');
 const { maximumPairing } = require('../services/pairing');
+const { applyLowerBracketLoss, restorePrematureLowerEliminations } = require('../services/lowerBracket');
 
 const router = express.Router();
 const tierOf = (player, stats) => player.tierOverride || stats?.tier || getTierFromMmr(stats?.mmr || player.currentMmr || 0).value;
@@ -589,6 +590,7 @@ router.get('/stage2', async (req, res) => {
         await pruneRemovedStage2Participants();
         await repairLegacyUpperDemotions();
         await repairLegacyKings();
+        await restorePrematureLowerEliminations(Stage2Participant);
         // Besides repairing legacy records, fill any schedule holes left by an
         // older greedy matchmaking run. This also upgrades existing pairs that
         // were created before the map catalog had been initialized.
@@ -1049,8 +1051,7 @@ router.post('/', checkAuth, async (req, res) => {
             winnerP.lowerWins++;
             if (winnerP.lowerWins >= 3) winnerP.status = 's_bracket';
             if (!globalShieldProtected) {
-                loserP.lowerLosses = (Number(loserP.lowerLosses) || 0) + 1;
-                loserP.status = 'eliminated';
+                applyLowerBracketLoss(loserP);
             }
         } else if (phase === 's_bracket') {
             const shieldProtected = globalShieldProtected || Boolean(loserP.arenaShield);
