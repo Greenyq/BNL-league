@@ -2392,8 +2392,8 @@ function DuelsTab({ players, showMsg, onRefresh }) {
                     {matchmakingReport.unmatched.map((entry, index) => <div key={`${entry.name}-${index}`}>
                         {entry.name} — Tier {entry.tier}, {entry.status}: {entry.reason === 'no_free_player_in_group'
                             ? tr('нет свободных игроков в этой сетке и тире', 'no other free player in this bracket and tier')
-                            : entry.reason === 'previous_matches_or_skips'
-                                ? tr('со всеми свободными игроками уже сыграл или пропустил их реликвией', 'already played or skipped every free player')
+                            : entry.reason === 'relic_skips'
+                                ? tr('все свободные соперники пропущены реликвией', 'all free opponents were skipped by a relic')
                                 : tr('есть доступный соперник — требуется повторная проверка подбора', 'an eligible opponent remains — matchmaking needs another check')}
                     </div>)}
                 </div>}
