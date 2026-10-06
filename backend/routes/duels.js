@@ -309,20 +309,14 @@ const matchmakingGroup = participant => ['s_bracket', 'king'].includes(participa
     : `${participant.status}:${participant.tier}`;
 
 async function repairInvalidAssignments() {
-    const [participants, completedDuels] = await Promise.all([
-        Stage2Participant.find({ assignedOpponentId: { $ne: null } }),
-        Duel.find({}).select('playerA.playerId playerB.playerId')
-    ]);
-    const completedPairs = new Set(completedDuels.map(duel => duelPairKey(duel.playerA.playerId, duel.playerB.playerId)));
+    const participants = await Stage2Participant.find({ assignedOpponentId: { $ne: null } });
     const byPlayerId = new Map(participants.map(participant => [String(participant.playerId), participant]));
     const invalidIds = new Set();
     for (const participant of participants) {
         const opponent = byPlayerId.get(String(participant.assignedOpponentId || ''));
         const isMutual = opponent && String(opponent.assignedOpponentId || '') === String(participant.playerId);
         const isCompatible = opponent && matchmakingGroup(opponent) === matchmakingGroup(participant);
-        const alreadyPlayed = opponent && !['king', 's_bracket'].includes(participant.status)
-            && completedPairs.has(duelPairKey(participant.playerId, opponent.playerId));
-        if (!isMutual || !isCompatible || alreadyPlayed) {
+        if (!isMutual || !isCompatible) {
             invalidIds.add(participant.id);
             if (opponent) invalidIds.add(opponent.id);
         }
@@ -422,7 +416,7 @@ async function autoAssignOpenMatches() {
         encounterStatus: { $in: ['awaiting_admin', 'pending'] },
         encounterOpponentId: { $ne: null }
     }).select('encounterOpponentId')).map(participant => String(participant.encounterOpponentId));
-    const [participants, completedDuels, tournamentMaps] = await Promise.all([
+    const [participants, tournamentMaps] = await Promise.all([
         Stage2Participant.find({
             status: { $ne: 'eliminated' },
             playerId: { $nin: reservedBossIds },
@@ -430,10 +424,8 @@ async function autoAssignOpenMatches() {
             specialMoveReady: { $ne: true },
             encounterStatus: { $nin: ['awaiting_admin', 'pending'] }
         }).sort({ updatedAt: 1, tier: 1 }),
-        Duel.find({}).select('playerA.playerId playerB.playerId'),
         loadTournamentMaps()
     ]);
-    const completedPairs = new Set(completedDuels.map(duel => duelPairKey(duel.playerA.playerId, duel.playerB.playerId)));
     const groups = new Map();
     for (const participant of participants) {
         const key = matchmakingGroup(participant);
@@ -445,9 +437,8 @@ async function autoAssignOpenMatches() {
         const canPair = (a, b) => {
             const firstAvoids = (a.avoidedOpponentIds || []).map(String).includes(String(b.playerId));
             const secondAvoids = (b.avoidedOpponentIds || []).map(String).includes(String(a.playerId));
-            const beforeCenter = !['king', 's_bracket'].includes(a.status);
-            return !firstAvoids && !secondAvoids
-                && (!beforeCenter || !completedPairs.has(duelPairKey(a.playerId, b.playerId)));
+            // Previous matches do not block rematches; relic skips still apply.
+            return !firstAvoids && !secondAvoids;
         };
         const pairs = maximumPairing(pool, canPair);
         for (const [a, b] of pairs) {
@@ -475,12 +466,8 @@ const queueAutoAssignment = () => {
 };
 
 async function matchmakingSummary() {
-    const [participants, duels] = await Promise.all([
-        Stage2Participant.find({ status: { $ne: 'eliminated' } }),
-        Duel.find({}).select('playerA.playerId playerB.playerId')
-    ]);
+    const participants = await Stage2Participant.find({ status: { $ne: 'eliminated' } });
     const byPlayerId = new Map(participants.map(participant => [String(participant.playerId), participant]));
-    const completedPairs = new Set(duels.map(duel => duelPairKey(duel.playerA.playerId, duel.playerB.playerId)));
     const reservedBossIds = new Set(participants
         .filter(participant => ['awaiting_admin', 'pending'].includes(participant.encounterStatus))
         .map(participant => String(participant.encounterOpponentId || '')));
@@ -502,14 +489,13 @@ async function matchmakingSummary() {
         const available = peers.filter(other => {
             const avoided = (participant.avoidedOpponentIds || []).map(String).includes(String(other.playerId))
                 || (other.avoidedOpponentIds || []).map(String).includes(String(participant.playerId));
-            return !avoided && (group.startsWith('center:')
-                || !completedPairs.has(duelPairKey(participant.playerId, other.playerId)));
+            return !avoided;
         });
         return {
             name: participant.name, tier: participant.tier, status: participant.status,
             group, peers: peers.length, eligiblePeers: available.length,
             reason: available.length ? 'eligible_peer_waiting'
-                : peers.length ? 'previous_matches_or_skips' : 'no_free_player_in_group'
+                : peers.length ? 'relic_skips' : 'no_free_player_in_group'
         };
     });
     return {
@@ -978,13 +964,6 @@ router.post('/', checkAuth, async (req, res) => {
         const isKingMatch = pa.status === 'king' || pb.status === 'king';
         const isCenterMatch = ['s_bracket', 'king'].includes(pa.status) && ['s_bracket', 'king'].includes(pb.status);
         if (groupA !== groupB || (!isCenterMatch && pa.status !== pb.status)) return res.status(400).json({ error: 'Players must be in the same tier and bracket' });
-        const previousDuel = await Duel.exists({
-            $or: [
-                { 'playerA.playerId': a.id, 'playerB.playerId': b.id },
-                { 'playerA.playerId': b.id, 'playerB.playerId': a.id }
-            ]
-        });
-        if (previousDuel && !isCenterMatch) return res.status(409).json({ error: 'These players have already played each other before the center' });
         const phase = isKingMatch ? 'king' : pa.status;
         const scoreMatch = String(score || '').trim().match(/^(\d+)\s*[:\-]\s*(\d+)$/);
         if (!scoreMatch) return res.status(400).json({ error: 'Enter a BO3 score such as 2:0 or 2:1' });
