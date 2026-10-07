@@ -9,6 +9,8 @@ const { ensureMapCatalog } = require('../services/mapCatalog');
 const { maximumPairing } = require('../services/pairing');
 const { applyLowerBracketLoss, restorePrematureLowerEliminations } = require('../services/lowerBracket');
 
+const { promoteSoleBracketPlayers } = require('../services/bracketPromotion');
+
 const router = express.Router();
 const tierOf = (player, stats) => player.tierOverride || stats?.tier || getTierFromMmr(stats?.mmr || player.currentMmr || 0).value;
 const escapeRegex = value => String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -410,6 +412,7 @@ async function autoAssignOpenMatches() {
     await repairWinStreaks();
     await repairInvalidAssignments();
     await repairInvalidEncounters();
+    await promoteSoleBracketPlayers(Stage2Participant, clearAssignment);
     await repairAssignedMapSeries();
     await repairEncounterMapSeries();
     const reservedBossIds = (await Stage2Participant.find({
