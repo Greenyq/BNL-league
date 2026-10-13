@@ -14,7 +14,8 @@ const router = express.Router();
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const SESSION_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days
 const escapeRegex = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const isValidBattleTag = t => /^[a-zA-Z0-9_\u0400-\u04FF]{2,12}#\d+$/.test(t) && t.length <= 30;
+// Accept Unicode letters and combining marks without changing the player's tag.
+const isValidBattleTag = t => typeof t === 'string' && /^[\p{L}0-9_][\p{L}\p{M}0-9_]{1,11}#\d+$/u.test(t.normalize('NFC')) && t.length <= 30;
 const normalizeBattleTag = t => String(t || '').trim().toLowerCase();
 
 // Returns player doc merged with stats (or null). Case-insensitive battleTag lookup.
